@@ -160,11 +160,21 @@ do
 				mkdir ${LOGDIR}/${PROJECT}
 			fi
  
+			function finish {
+                                if [ -f ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.locked ]
+                                then
+                                        echo "TRAPPED"
+                                        rm ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.locked      
+                                fi
+                        }
+                        trap finish HUP INT QUIT TERM EXIT ERR
+			
 			WHOAMI=$(whoami)
 			HOSTN=$(hostname)
 		        LOGGER=${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.logger
-			if [ ! -f ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.started ]
+			if [[ ! -f ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.started  && ! -f ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.locked ]]
 			then
+				touch ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.locked
 				cd ${PROJECTSDIR}/${PROJECT}/run01/jobs/
 				sh submit.sh
 
@@ -173,6 +183,7 @@ do
 
 				printf "Pipeline: ${pipeline}\nStarttime:`date +%d/%m/%Y` `date +%H:%M`\nProject: $PROJECT\nStarted by: $WHOAMI\nHost: ${HOSTN}\n\nProgress can be followed via the command squeue -u $WHOAMI on $HOSTN.\nYou will receive an email when the pipeline is finished!\n\nCheers from the GCC :)" | mail -s "NGS_DNA pipeline is started for project $PROJECT on `date +%d/%m/%Y` `date +%H:%M`" ${ONTVANGER}
 				sleep 40
+				rm -f ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.locked
 			fi
 		done
 	fi
