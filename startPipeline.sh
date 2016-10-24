@@ -15,11 +15,11 @@ myhost=$(hostname)
 
 pipeline="dna"
 
-NGS_DNA="NGS_DNA/3.2.6"
+NGS_DNA="3.2.6"
 
 if [ "${pipeline}" == "dna" ] 
 then
-	module load ${NGS_DNA}
+	module load NGS_DNA/${NGS_DNA}
 fi
 
 count=0 
@@ -128,6 +128,8 @@ do
 
 			echo "copying $EBROOTNGS_AUTOMATED/automated_generate_template.sh to ${GENERATEDSCRIPTS}/${run}_${sequencer}/generate.sh" >> $LOGGER
                        	cp ${EBROOTNGS_AUTOMATED}/automated_generate_template.sh ${GENERATEDSCRIPTS}/${run}_${sequencer}/generate.sh
+
+			perl -pi -e "s|VERSIONFROMSTARTPIPELINESCRIPT|${NGS_DNA}|" ${GENERATEDSCRIPTS}/${run}_${sequencer}/generate.sh
 
 			if [ -f ${GENERATEDSCRIPTS}/${run}_${sequencer}/${run}_${sequencer}.csv ]
 			then
