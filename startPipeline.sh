@@ -15,7 +15,7 @@ myhost=$(hostname)
 
 pipeline="dna"
 
-NGS_DNA="NGS_DNA/3.2.5"
+NGS_DNA="NGS_DNA/3.2.6"
 
 if [ "${pipeline}" == "dna" ] 
 then
