@@ -5,7 +5,7 @@ set -u
 
 ### NEEDS 2 arguments! PROJECT AND BATCH
 
-module load NGS_DNA/3.2.5
+module load NGS_DNA/VERSIONFROMSTARTPIPELINESCRIPT
 module list 
 HOST=$(hostname)
 THISDIR=$(pwd)
