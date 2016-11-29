@@ -37,11 +37,11 @@ do
         elif [ "${groupname}" == "umcg-gd" ]
         then
             	echo "mailTo is umcg-gd"
-                if [ -f /groups/umcg-gd/${tmpDirectory}/logs/mailinglistDiagnostiek.txt ]
+                if [ -f /groups/umcg-gd/${tmpDirectory}/logs/mailinglistDiagnostiekCrash.txt ]
                 then
-                       	mailTo=$(cat /groups/umcg-gd/${tmpDirectory}/logs/mailinglistDiagnostiek.txt)
+                       	mailTo=$(cat /groups/umcg-gd/${tmpDirectory}/logs/mailinglistDiagnostiekCrash.txt)
                 else
-                      	echo "mailingListDiagnostiek.txt bestaat niet!!"
+                      	echo "mailingListDiagnostiekCrash.txt bestaat niet!!"
                         exit 0
                 fi
         fi

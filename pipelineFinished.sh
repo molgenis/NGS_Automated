@@ -92,6 +92,10 @@ do
                                 exit 0
                         fi
                 fi
+		tar -zcvf  ${PROJECTSDIR}/${projectName}/*/jobs//allJobs.tar.gz ${PROJECTSDIR}/${projectName}/*/jobs//*.{err,out,sh.finished,env,sh}
+		echo "all files in the jobs directory are now zipped into one file"
+
+		rm ${PROJECTSDIR}/${projectName}/*/jobs/*{err,out,sh.finished,env,sh,CORRECT}
                 printf "The results can be found: ${PROJECTSDIR}/${projectName} \n\nCheers from the GCC :)"| mail -s "NGS_DNA pipeline is finished for project ${projectName} on `date +%d/%m/%Y` `date +%H:%M`" ${mailTo}
                 touch ${LOGDIR}/${projectName}/${projectName}.pipeline.finished.mailed
 

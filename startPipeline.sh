@@ -170,7 +170,7 @@ do
                                         rm ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.locked      
                                 fi
                         }
-                        trap finish HUP INT QUIT TERM EXIT ERR
+			trap finish HUP INT QUIT TERM EXIT ERR
 			
 			WHOAMI=$(whoami)
 			HOSTN=$(hostname)
@@ -191,3 +191,6 @@ do
 		done
 	fi
 done
+
+trap - EXIT
+exit 0
