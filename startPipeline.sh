@@ -72,7 +72,7 @@ do
 	miSeqRun="no"
 	while read line
         do
-        	if [[ "${line}" == *"CARDIO_v"* || "${line}" == *"DER_v"* || "${line}" == *"DYS_v"* || "${line}" == *"EPI_v"* || "${line}" == *"LEVER_v"* || "${line}" == *"NEURO_v"* || "${line}" == *"ONCO_v"* || "${line}" == *"PCS_v"* ]]
+        	if [[ "${line}" == *"CARDIO_v"* || "${line}" == *"DER_v"* || "${line}" == *"DYS_v"* || "${line}" == *"EPI_v"* || "${line}" == *"FH_v"* || "${line}" == *"LEVER_v"* || "${line}" == *"MYO_v"* || || "${line}" == *"NEURO_v"* || "${line}" == *"ONCO_v"* || "${line}" == *"PCS_v"* || "${line}" == *"TID_v"* ]]
 		then
 			miSeqRun="yes"
 			break
@@ -117,7 +117,7 @@ do
 				pipelineVersion=$(module list | grep -o -P 'NGS_DNA(.+)')
 				printf "The version which is now loaded is $pipelineVersion${normal}\n\n"
 			fi
-                       	mkdir -p ${GENERATEDSCRIPTS}/${run}_${sequencer}/
+                       	mkdir -p ${GENERATEDSCRIPTS}/${filePrefix}/
 
 			batching="_chr"
 
@@ -126,22 +126,22 @@ do
 				batching="_small"
 			fi
 
-			echo "copying $EBROOTNGS_AUTOMATED/automated_generate_template.sh to ${GENERATEDSCRIPTS}/${run}_${sequencer}/generate.sh" >> $LOGGER
-                       	cp ${EBROOTNGS_AUTOMATED}/automated_generate_template.sh ${GENERATEDSCRIPTS}/${run}_${sequencer}/generate.sh
+			echo "copying $EBROOTNGS_AUTOMATED/automated_generate_template.sh to ${GENERATEDSCRIPTS}/${filePrefix}/generate.sh" >> $LOGGER
+                       	cp ${EBROOTNGS_AUTOMATED}/automated_generate_template.sh ${GENERATEDSCRIPTS}/${filePrefix}/generate.sh
 
-			perl -pi -e "s|VERSIONFROMSTARTPIPELINESCRIPT|${NGS_DNA}|" ${GENERATEDSCRIPTS}/${run}_${sequencer}/generate.sh
+			perl -pi -e "s|VERSIONFROMSTARTPIPELINESCRIPT|${NGS_DNA}|" ${GENERATEDSCRIPTS}/${filePrefix}/generate.sh
 
-			if [ -f ${GENERATEDSCRIPTS}/${run}_${sequencer}/${run}_${sequencer}.csv ]
+			if [ -f ${GENERATEDSCRIPTS}/${filePrefix}/${filePrefix}.csv ]
 			then
-				echo "${GENERATEDSCRIPTS}/${run}_${sequencer}/${run}_${sequencer}.csv already existed, will now be removed and will be replaced by a fresh copy" >> $LOGGER
-				rm ${GENERATEDSCRIPTS}/${run}_${sequencer}/${run}_${sequencer}.csv
+				echo "${GENERATEDSCRIPTS}/${filePrefix}/${filePrefix}.csv already existed, will now be removed and will be replaced by a fresh copy" >> $LOGGER
+				rm ${GENERATEDSCRIPTS}/${filePrefix}/${filePrefix}.csv
 			fi
 
-			cp ${SAMPLESHEETSDIR}/${csvFile} ${GENERATEDSCRIPTS}/${run}_${sequencer}/${run}_${sequencer}.csv
+			cp ${SAMPLESHEETSDIR}/${csvFile} ${GENERATEDSCRIPTS}/${filePrefix}/
 
-			cd ${GENERATEDSCRIPTS}/${run}_${sequencer}/
+			cd ${GENERATEDSCRIPTS}/${filePrefix}/
 
-			sh ${GENERATEDSCRIPTS}/${run}_${sequencer}/generate.sh "${run}_${sequencer}" ${batching} > ${GENERATEDSCRIPTS}/${run}_${sequencer}/generate.logger 2>&1 
+			sh ${GENERATEDSCRIPTS}/${filePrefix}/generate.sh "${filePrefix}" ${batching} > ${GENERATEDSCRIPTS}/${filePrefix}/generate.logger 2>&1 
 
 			cd scripts
 

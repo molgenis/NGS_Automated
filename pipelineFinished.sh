@@ -92,7 +92,14 @@ do
                                 exit 0
                         fi
                 fi
-		tar -zcvf  ${PROJECTSDIR}/${projectName}/*/jobs//allJobs.tar.gz ${PROJECTSDIR}/${projectName}/*/jobs//*.{err,out,sh.finished,env,sh}
+		cd ${PROJECTSDIR}/${projectName}/*/jobs/
+		zip -gr ${PROJECTSDIR}/${projectName}/*/jobs//allJobs.zip *.err
+		zip -gr ${PROJECTSDIR}/${projectName}/*/jobs//allJobs.zip *.out
+		zip -gr ${PROJECTSDIR}/${projectName}/*/jobs//allJobs.zip *.sh.finished
+		zip -gr ${PROJECTSDIR}/${projectName}/*/jobs//allJobs.zip *.env
+		zip -gr ${PROJECTSDIR}/${projectName}/*/jobs//allJobs.zip *.sh
+		zip -gr ${PROJECTSDIR}/${projectName}/*/jobs//allJobs.zip molgenis.*
+
 		echo "all files in the jobs directory are now zipped into one file"
 
 		rm ${PROJECTSDIR}/${projectName}/*/jobs/*{err,out,sh.finished,env,sh,CORRECT}
