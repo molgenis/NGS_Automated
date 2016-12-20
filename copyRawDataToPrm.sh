@@ -78,13 +78,19 @@ do
           	PROJECTARRAY+="${line} "
 
         done<${LOGDIR}/TMP/${filePrefix}.unique.projects
+	
+	copyRawDiagnosticsClusterToPrm=""
+        makeRawDataDir=""
 
-
-
-	copyRawDiagnosticsClusterToPrm="${RAWDATADIR}/${filePrefix}/* ${groupname}-dm@calculon.hpc.rug.nl:${RAWDATADIRPRM}/${filePrefix}"
-	makeRawDataDir=$(ssh ${groupname}-dm@calculon.hpc.rug.nl "sh ${RAWDATADIRPRM}/../checkRawData.sh ${RAWDATADIRPRM} ${filePrefix}")
-
-	if [[ -f $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToDiagnosticsCluster && ! -f $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToPrm ]]
+	if [ ${myhost} == "calculon" ]
+	then
+		copyRawDiagnosticsClusterToPrm="${RAWDATADIR}/${filePrefix}/* ${RAWDATADIRPRM}/${filePrefix}"
+		makeRawDataDir=$(sh ${RAWDATADIRPRM}/../checkRawData.sh ${RAWDATADIRPRM} ${filePrefix})
+	else
+		copyRawDiagnosticsClusterToPrm="${RAWDATADIR}/${filePrefix}/* ${groupname}-dm@calculon.hpc.rug.nl:${RAWDATADIRPRM}/${filePrefix}"
+	        makeRawDataDir=$(ssh ${groupname}-dm@calculon.hpc.rug.nl "sh ${RAWDATADIRPRM}/../checkRawData.sh ${RAWDATADIRPRM} ${filePrefix}")
+	fi
+	if [[ -f $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToCluster && ! -f $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToPrm ]]
 	then
 		echo "working on ${filePrefix}"
 		countFilesRawDataDirTmp=$(ls ${RAWDATADIR}/${filePrefix}/${filePrefix}* | wc -l)
@@ -96,10 +102,23 @@ do
 		fi
 		if [ "${makeRawDataDir}" == "t" ]
                 then
-                        countFilesRawDataDirPrm=$(ssh ${groupname}-dm@calculon.hpc.rug.nl "ls ${RAWDATADIRPRM}/${filePrefix}/${filePrefix}* | wc -l")
+			countFilesRawDataDirPrm=""
+			if [ ${myhost} == "calculon" ]
+        		then
+				countFilesRawDataDirPrm=$(ls ${RAWDATADIRPRM}/${filePrefix}/${filePrefix}* | wc -l)                    
+			else			
+				countFilesRawDataDirPrm=$(ssh ${groupname}-dm@calculon.hpc.rug.nl "ls ${RAWDATADIRPRM}/${filePrefix}/${filePrefix}* | wc -l")                    
+			fi
                         if [ ${countFilesRawDataDirTmp} -eq ${countFilesRawDataDirPrm} ]
                         then
-                                COPIEDTOPRM=$(ssh ${groupname}-dm@calculon.hpc.rug.nl "sh ${RAWDATADIRPRM}/../check.sh ${RAWDATADIRPRM} ${filePrefix}")
+				COPIEDTOPRM=""
+				if [ ${myhost} == "calculon" ]
+                	        then
+                        	        COPIEDTOPRM=$(sh ${RAWDATADIRPRM}/../check.sh ${RAWDATADIRPRM} ${filePrefix})
+				else
+					COPIEDTOPRM=$(ssh ${groupname}-dm@calculon.hpc.rug.nl "sh ${RAWDATADIRPRM}/../check.sh ${RAWDATADIRPRM} ${filePrefix}")
+				fi	
+				
 				if [[ "${COPIEDTOPRM}" == *"FAILED"* ]]
                                 then
                                         echo "md5sum check failed, the copying will start again" >> ${LOGGER}
@@ -107,8 +126,15 @@ do
 					echo "copy failed" >> $LOGDIR/${filePrefix}/${filePrefix}.failed
                                 elif [[ "${COPIEDTOPRM}" == *"PASS"* ]]
                                 then
-					scp ${SAMPLESHEETSDIR}/${csvFile} ${groupname}-dm@calculon.hpc.rug.nl:${RAWDATADIRPRM}/${filePrefix}/
-					scp ${SAMPLESHEETSDIR}/${csvFile} ${groupname}-dm@calculon.hpc.rug.nl:${SAMPLESHEETSPRMDIR}
+					if [ ${myhost} == "calculon" ]
+					then	
+						scp ${SAMPLESHEETSDIR}/${csvFile} ${groupname}-dm@localhost:${RAWDATADIRPRM}/${filePrefix}/
+						scp ${SAMPLESHEETSDIR}/${csvFile} ${groupname}-dm@localhost:${SAMPLESHEETSPRMDIR}
+					else
+						scp ${SAMPLESHEETSDIR}/${csvFile} ${groupname}-dm@calculon.hpc.rug.nl:${RAWDATADIRPRM}/${filePrefix}/
+						scp ${SAMPLESHEETSDIR}/${csvFile} ${groupname}-dm@calculon.hpc.rug.nl:${SAMPLESHEETSPRMDIR}
+					
+					fi
 					echo "finished copying data to calculon" >> ${LOGGER}
 					
 					echo "finished with rawdata" >> ${LOGDIR}/${filePrefix}/${filePrefix}.copyToPrm.logger
