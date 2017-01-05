@@ -59,7 +59,7 @@ do
 	function finish {
         	if [ -f ${LOGDIR}/${filePrefix}/${filePrefix}.copyToDiagnosticsCluster.locked ]
                 then
-                	echo "TRAPPED"
+                	echo "${filePrefix} TRAPPED"
                         rm ${LOGDIR}/${filePrefix}/${filePrefix}.copyToDiagnosticsCluster.locked
                 	exit 1
 		fi

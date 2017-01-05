@@ -60,7 +60,7 @@ echo "working on $line"
 	function finish {
         	if [ -f ${LOGDIR}/${filePrefix}/${filePrefix}.copyToCluster.locked ]
                 then
-                	echo "TRAPPED"
+                	echo "${filePrefix} TRAPPED"
                         rm ${LOGDIR}/${filePrefix}/${filePrefix}.copyToCluster.locked
                 	exit 1
 		fi

@@ -106,7 +106,7 @@ do
 	function finish {
         if [ -f ${LOGDIR}/${filePrefix}/${filePrefix}.pipeline.locked ]
         then
-	       	echo "TRAPPED"
+	       	echo "${filePrefix} TRAPPED"
 	        rm ${LOGDIR}/${filePrefix}/${filePrefix}.pipeline.locked
 	        fi
         }
@@ -245,7 +245,7 @@ do
 			function finishProject {
                                 if [ -f ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.locked ]
                                 then
-                                        echo "TRAPPED"
+                                        echo "${PROJECT} TRAPPED"
                                         rm ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.locked      
                                 fi
                         }
@@ -254,7 +254,7 @@ do
 			WHOAMI=$(whoami)
 			HOSTN=$(hostname)
 		        LOGGER=${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.logger
-			if [[ ! -f ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.started  && ! -f ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.locked ]]
+			if [[ ! -f ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.started  && ! -f ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.locked && ! -f ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.finished ]]
 			then
 				touch ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.locked
 				cd ${PROJECTSDIR}/${PROJECT}/run01/jobs/

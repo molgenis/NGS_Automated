@@ -25,7 +25,7 @@ BATCH=$2
 ##Some error handling
 function errorExitandCleanUp()
 {
-        echo "TRAPPED"
+        echo "${PROJECT} TRAPPED"
 	if [ ! -f /groups/${GROUP}/${TMPDIRECTORY}/logs/${PROJECT}.generating.failed.mailed ]
         then
               	mailTo="helpdesk.gcc.groningen@gmail.com"

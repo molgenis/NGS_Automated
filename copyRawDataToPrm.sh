@@ -17,10 +17,6 @@ myhost=$(hostname)
 ls ${SAMPLESHEETSDIR}/*.csv > ${SAMPLESHEETSDIR}/allSampleSheets_DiagnosticsCluster.txt
 pipeline="dna"
 
-function finish {
-	echo "TRAPPED"
-		rm -f ${LOGDIR}/copyDataToPrm.sh.locked
-}
 trap finish HUP INT QUIT TERM EXIT ERR
 
 ARR=()
@@ -78,6 +74,12 @@ do
           	PROJECTARRAY+="${line} "
 
         done<${LOGDIR}/TMP/${filePrefix}.unique.projects
+
+	function finish {
+	echo "${filePrefix} TRAPPED"
+		rm -f ${LOGDIR}/copyDataToPrm.sh.locked
+	}
+
 	
 	copyRawDiagnosticsClusterToPrm=""
         makeRawDataDir=""
