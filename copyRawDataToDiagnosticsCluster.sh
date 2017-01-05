@@ -33,18 +33,6 @@ do
 	filePrefix="${csvFile%.*}"
 	LOGGER=${LOGDIR}/${filePrefix}/${filePrefix}.copyToDiagnosticsCluster.logger
 
-	if [ ! -d ${LOGDIR}/${filePrefix}/ ]
-	then
-		mkdir ${LOGDIR}/${filePrefix}/
-	fi
- 
-	function finish {
-		if [ -f ${LOGDIR}/${filePrefix}/${filePrefix}.copyToDiagnosticsCluster.locked ]
-        	then
-	        	echo "TRAPPED"
-        		rm ${LOGDIR}/${filePrefix}/${filePrefix}.copyToDiagnosticsCluster.locked
-		fi
-	}
 	trap finish HUP INT QUIT TERM EXIT ERR
 
 	FINISHED="no"
@@ -58,10 +46,25 @@ do
 	if ssh umcg-ateambot@${gattacaAddress} ls ${GATTACA}/logs/${filePrefix}_Demultiplexing.finished 1> /dev/null 2>&1 
 	then
 		### Demultiplexing is finished
+		if [ ! -d ${LOGDIR}/${filePrefix}/ ]
+		then
+			mkdir ${LOGDIR}/${filePrefix}/
+		fi
+ 
 		printf ""
 	else
 		continue;
 	fi
+
+	function finish {
+        	if [ -f ${LOGDIR}/${filePrefix}/${filePrefix}.copyToDiagnosticsCluster.locked ]
+                then
+                	echo "${filePrefix} TRAPPED"
+                        rm ${LOGDIR}/${filePrefix}/${filePrefix}.copyToDiagnosticsCluster.locked
+                	exit 1
+		fi
+			
+                }
 
 	if [ -f $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToDiagnosticsCluster ]
 	then
