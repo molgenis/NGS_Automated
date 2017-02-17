@@ -18,13 +18,6 @@ ls -1 ${PROJECTSDIR} > ${LOGDIR}/allProjects.txt
 
 pipeline="dna"
 
-function finish {
-	echo "TRAPPED"
-	if [ -f ${LOGDIR}/copyProjectDataToPrm.sh.locked ]
-	then
-		rm ${LOGDIR}/copyProjectDataToPrm.sh.locked
-	fi
-}
 trap finish HUP INT QUIT TERM EXIT ERR
 
 ARR=()
@@ -37,6 +30,15 @@ echo "Logfiles will be written to $LOGDIR"
 for line in ${ARR[@]}
 do
         projectName=${line}
+
+	function finish {
+	echo "${line} TRAPPED"
+	if [ -f ${LOGDIR}/copyProjectDataToPrm.sh.locked ]
+	then
+		rm ${LOGDIR}/copyProjectDataToPrm.sh.locked
+	fi
+	}
+
         LOGGER=${LOGDIR}/${projectName}/${projectName}.copyProjectDataToPrm.logger
 	
         FINISHED="no"
