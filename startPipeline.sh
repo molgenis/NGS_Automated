@@ -14,7 +14,7 @@ echo "MYINSTALLDIR ${MYINSTALLATIONDIR}"
 . ${MYINSTALLATIONDIR}/sharedConfig.cfg
 
 
-NGS_DNA="3.2.6"
+NGS_DNA="3.3.1"
 NGS_RNA="3.2.4-Molgenis-Compute-v16.05.1-Java-1.8.0_45"
 
 count=0 
