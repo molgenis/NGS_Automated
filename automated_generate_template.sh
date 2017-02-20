@@ -1,14 +1,9 @@
 #!/bin/bash
 
-set -e 
-set -u
-
-### NEEDS 2 arguments! PROJECT AND BATCH
-
 module load NGS_DNA/VERSIONFROMSTARTPIPELINESCRIPT
 module list 
 HOST=$(hostname)
-THISDIR=$(pwd)
+thisDir=$(pwd)
 
 ENVIRONMENT_PARAMETERS="parameters_${HOST%%.*}.csv"
 TMPDIRECTORY=$(basename $(cd ../../ && pwd ))
@@ -19,29 +14,43 @@ WORKDIR="/groups/${GROUP}/${TMPDIRECTORY}"
 RUNID=run01
 
 ## Normal user, please leave BATCH at _chr
-## Expert modus: small batchsize (6) fill in '_small', per chromsome '_chr'
-BATCH=$2
+## For expert modus: small batchsize (6) fill in '_small'  or per chromosome fill in _chr
+BATCH="$2"
 
 ##Some error handling
 function errorExitandCleanUp()
 {
         echo "${PROJECT} TRAPPED"
-	if [ ! -f /groups/${GROUP}/${TMPDIRECTORY}/logs/${PROJECT}.generating.failed.mailed ]
+        if [ ! -f /groups/${GROUP}/${TMPDIRECTORY}/logs/${PROJECT}.generating.failed.mailed ]
         then
-              	mailTo="helpdesk.gcc.groningen@gmail.com"
-                tail -50 ${WORKDIR}/generatedscripts/${PROJECT}/generate.logger	| mail -s "The generate script has crashed for run/project ${PROJECT}" ${mailTo}
-                touch /groups/${GROUP}/${TMPDIRECTORY}/logs/${PROJECT}.generating.failed.mailed 
+            	mailTo="helpdesk.gcc.groningen@gmail.com"
+                tail -50 ${WORKDIR}/generatedscripts/${PROJECT}/generate.logger | mail -s "The generate script has crashed for run/project ${PROJECT}" ${mailTo}
+                touch /groups/${GROUP}/${TMPDIRECTORY}/logs/${PROJECT}.generating.failed.mailed
         fi
 }
 trap "errorExitandCleanUp" HUP INT QUIT TERM EXIT ERR
 
-SAMPLESIZE=$(( $(sh ${EBROOTNGS_DNA}/samplesize.sh ${WORKDIR}/generatedscripts/${PROJECT}/${PROJECT}.csv $THISDIR) -1 ))
+samplesheet=${WORKDIR}/generatedscripts/${PROJECT}/${PROJECT}.csv
+mac2unix $samplesheet
+
+python ${EBROOTNGS_DNA}/samplesize.py ${samplesheet} $thisDir
+SAMPLESIZE=$(cat externalSampleIDs.txt | uniq | wc -l)
+
+python ${EBROOTNGS_DNA}/gender.py $samplesheet
+var=$(cat ${samplesheet}.tmp | wc -l)
+
+if [ $var != 0 ]
+then
+    	mv ${samplesheet}.tmp ${samplesheet}
+        echo "samplesheet updated with Gender column"
+fi
 echo "Samplesize is $SAMPLESIZE"
+
 if [ $SAMPLESIZE -gt 199 ]
 then
     	WORKFLOW=${EBROOTNGS_DNA}/workflow_samplesize_bigger_than_200.csv
 else
-    	WORKFLOW=${EBROOTNGS_DNA}/workflow.csv
+        WORKFLOW=${EBROOTNGS_DNA}/workflow.csv
 fi
 
 if [ -f .compute.properties ];
@@ -54,7 +63,7 @@ then
     	rm -rf ${WORKDIR}/generatedscripts/${PROJECT}/out.csv
 fi
 
-echo "tmpName,${TMPDIRECTORY}" > ${WORKDIR}/generatedscripts/${PROJECT}/tmpdir_parameters.csv
+echo "tmpName,${TMPDIRECTORY}" > ${WORKDIR}/generatedscripts/${PROJECT}/tmpdir_parameters.csv 
 
 perl ${EBROOTNGS_DNA}/convertParametersGitToMolgenis.pl ${WORKDIR}/generatedscripts/${PROJECT}/tmpdir_parameters.csv > \
 ${WORKDIR}/generatedscripts/${PROJECT}/tmpdir_parameters_converted.csv
@@ -72,8 +81,8 @@ sh $EBROOTMOLGENISMINCOMPUTE/molgenis_compute.sh \
 -p ${WORKDIR}/generatedscripts/${PROJECT}/out.csv \
 -p ${WORKDIR}/generatedscripts/${PROJECT}/group_parameters.csv \
 -p ${WORKDIR}/generatedscripts/${PROJECT}/environment_parameters.csv \
--p ${EBROOTNGS_DNA}/batchIDList${BATCH}.csv \
 -p ${WORKDIR}/generatedscripts/${PROJECT}/tmpdir_parameters_converted.csv \
+-p ${EBROOTNGS_DNA}/batchIDList${BATCH}.csv \
 -p ${WORKDIR}/generatedscripts/${PROJECT}/${PROJECT}.csv \
 -w ${EBROOTNGS_DNA}/create_in-house_ngs_projects_workflow.csv \
 -rundir ${WORKDIR}/generatedscripts/${PROJECT}/scripts \
@@ -90,5 +99,3 @@ worksheet=${WORKDIR}/generatedscripts/${PROJECT}/${PROJECT}.csv" \
 -weave \
 --generate
 
-trap - EXIT
-exit 0

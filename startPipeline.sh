@@ -62,15 +62,7 @@ do
 
 	cat ${LOGDIR}/TMP/${filePrefix}.tmp2 | sort -V | uniq > ${LOGDIR}/TMP/${filePrefix}.uniq.projects
 	
-	if [[ "${pipeline}" == *"RNA"* ]]
-	then
-		module load NGS_RNA/${NGS_RNA}
-		echo "RNA"
-	elif [ "${pipeline}" == "DNA" ]
-	then
-		module load NGS_DNA/${NGS_DNA}
-		echo "DNA"
-	fi
+
 
         PROJECTARRAY=()
         while read line
@@ -123,6 +115,7 @@ do
                	        echo "RNA-Lexogen" >> ${LOGGER}
                	elif [ "${pipeline}" == "RNA" ]
                	then
+			module load NGS_RNA/${NGS_RNA}
 
 			projectName=""
 			workflowRNA="hisat"
@@ -181,8 +174,10 @@ do
 			rm ${LOGDIR}/${filePrefix}/${filePrefix}.pipeline.locked
                        	touch $LOGDIR/${filePrefix}/${filePrefix}.scriptsGenerated
 
-               	elif [ "${pipeline}" == "dna" ]
+               	elif [ "${pipeline}" == "DNA" ]
                	then
+			module load NGS_DNA/${NGS_DNA}
+
 			if pipelineVersion=$(module list | grep -o -P 'NGS_DNA(.+)')
 			then
 				echo ""
