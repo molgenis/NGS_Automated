@@ -36,7 +36,6 @@ do
                 mailTo="helpdesk.gcc.groningen@gmail.com"
         elif [ "${groupname}" == "umcg-gd" ]
         then
-            	echo "mailTo is umcg-gd"
                 if [ -f /groups/umcg-gd/${tmpDirectory}/logs/mailinglistDiagnostiekCrash.txt ]
                 then
                        	mailTo=$(cat /groups/umcg-gd/${tmpDirectory}/logs/mailinglistDiagnostiekCrash.txt)
@@ -49,6 +48,7 @@ do
 	if [ ! -f ${LOGDIR}/${projectName}.pipeline.failed.mailed ]
 	then
 		HEADER=$(head -1 ${LOGDIR}/${projectName}.pipeline.failed)
+		echo "mailed error to ${mailTo}"
 		cat ${LOGDIR}/${projectName}.pipeline.failed | mail -s "The NGS_DNA pipeline on $myhost has crashed for project ${projectName} on step ${HEADER}" ${mailTo}
 		touch ${LOGDIR}/${projectName}.pipeline.failed.mailed
 	fi

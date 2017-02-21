@@ -8,22 +8,30 @@ groupname=$1
 MYINSTALLATIONDIR=$( cd -P "$( dirname "$0" )" && pwd )
 ##source config file (zinc-finger.gcc.rug.nl.cfg, leucine-zipper.gcc.rug.nl, calculon.cfg OR gattaca.cfg)
 myhost=$(hostname)
-echo "MYINSTALLDIR ${MYINSTALLATIONDIR}"
+#echo "MYINSTALLDIR ${MYINSTALLATIONDIR}"
 . ${MYINSTALLATIONDIR}/${groupname}.cfg
 . ${MYINSTALLATIONDIR}/${myhost}.cfg
 . ${MYINSTALLATIONDIR}/sharedConfig.cfg
 
 
 NGS_DNA="3.3.1"
-NGS_RNA="3.2.4-Molgenis-Compute-v16.05.1-Java-1.8.0_45"
+NGS_RNA="3.2.4"
 
 count=0 
-echo "Logfiles will be written to $LOGDIR"
-echo "Samplesheets= ${SAMPLESHEETSDIR}"
+#echo "Logfiles will be written to $LOGDIR"
+#echo "Samplesheets= ${SAMPLESHEETSDIR}"
+counting==$(ls ${SAMPLESHEETSDIR}/*.csv | wc -l)
+ehco "Checking $counting files "
+echo "${SAMPLESHEETSDIR}/*.csv"
 for i in $(ls ${SAMPLESHEETSDIR}/*.csv) 
 do
   	csvFile=$(basename $i)
         filePrefix="${csvFile%.*}"
+
+	if [ -f $LOGDIR/${filePrefix}/${filePrefix}.scriptsGenerated ]
+	then
+		continue
+	fi
 
 	##get header to decide later which column is project
 	HEADER=$(head -1 ${i})
@@ -61,8 +69,6 @@ do
 	done
 
 	cat ${LOGDIR}/TMP/${filePrefix}.tmp2 | sort -V | uniq > ${LOGDIR}/TMP/${filePrefix}.uniq.projects
-	
-
 
         PROJECTARRAY=()
         while read line
@@ -124,6 +130,7 @@ do
 			for PROJECT in ${PROJECTARRAY[@]}
                 	do
                	        	projectName=${PROJECT}
+				
 			done
 		
 			echo "RNA" >> ${LOGGER}
@@ -166,7 +173,7 @@ do
                         cd ${GENERATEDSCRIPTS}/${filePrefix}/
 
                         echo "sh ${GENERATEDSCRIPTS}/${filePrefix}/generate.sh "${filePrefix}" ${build} ${specie} ${workflowRNA}"
-			
+			echo "sh ${GENERATEDSCRIPTS}/${filePrefix}/generate.sh "${filePrefix}" ${build} ${specie} ${workflowRNA}" > ${GENERATEDSCRIPTS}/${filePrefix}/generate.logger
                         sh ${GENERATEDSCRIPTS}/${filePrefix}/generate.sh "${filePrefix}" ${build} ${specie} ${workflowRNA} > ${GENERATEDSCRIPTS}/${filePrefix}/generate.logger 2>&1
                         cd scripts
 			touch ${LOGDIR}/${filePrefix}/${filePrefix}.pipeline.locked
@@ -257,7 +264,7 @@ do
 
 				touch ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.started
 				echo "${PROJECT} started" >> $LOGGER
-
+				echo "${PROJECT} started"	
 				printf "Pipeline: ${pipeline}\nStarttime:`date +%d/%m/%Y` `date +%H:%M`\nProject: $PROJECT\nStarted by: $WHOAMI\nHost: ${HOSTN}\n\nProgress can be followed via the command squeue -u $WHOAMI on $HOSTN.\nYou will receive an email when the pipeline is finished!\n\nCheers from the GCC :)" | mail -s "NGS_DNA pipeline is started for project $PROJECT on `date +%d/%m/%Y` `date +%H:%M`" ${ONTVANGER}
 				sleep 40
 				rm -f ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.locked
