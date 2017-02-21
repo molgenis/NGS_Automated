@@ -29,7 +29,12 @@ echo "Logfiles will be written to $LOGDIR"
 
 for line in ${gattacaSamplesheets[@]}
 do
+
 	csvFile=$(basename $line)
+	if [[ $csvFile == *"dummy"* ]]
+	then
+		continue
+	fi
 	filePrefix="${csvFile%.*}"
 	LOGGER=${LOGDIR}/${filePrefix}/${filePrefix}.copyToDiagnosticsCluster.logger
 
@@ -122,7 +127,6 @@ do
 				fi
 			done
 			touch $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToDiagnosticsCluster
-			touch ${filePrefix}.md5sums.checked
 
 		else
 			echo "Retry: Copying data to DiagnosticsCluster" >> $LOGGER
