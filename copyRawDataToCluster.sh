@@ -1,4 +1,4 @@
-#!/bin/bash
+\#!/bin/bash
 
 set -e
 set -u
@@ -16,6 +16,8 @@ myhost=$(hostname)
 . ${MYINSTALLATIONDIR}/sharedConfig.cfg
 
 ### VERVANG DOOR UMCG-ATEAMBOT USER
+if ls ${SAMPLESHEETSDIR}/*.csv 1> /dev/null 2>&1
+then
 ssh ${groupname}-ateambot@${gattacaAddress} "ls ${GATTACA}/Samplesheets/*.csv" > ${SAMPLESHEETSDIR}/allSampleSheets_${GAT}.txt
 
 gattacaSamplesheets=()
@@ -31,6 +33,10 @@ for line in ${gattacaSamplesheets[@]}
 do
 echo "working on $line"
 	csvFile=$(basename $line)
+	if [[ $csvFile == *"dummy"* ]]
+        then
+                continue
+        fi
 	filePrefix="${csvFile%.*}"
 	LOGGER=${LOGDIR}/${filePrefix}/${filePrefix}.copyToCluster.logger
 
@@ -123,7 +129,6 @@ echo "working on $line"
 				fi
 			done
 			touch $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToCluster
-			touch ${filePrefix}.md5sums.checked
 
 		else
 			echo "Retry: Copying data to Cluster" >> $LOGGER
