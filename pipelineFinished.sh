@@ -70,7 +70,6 @@ do
 			touch ${LOGDIR}/${projectName}/${rawDataName}
 		fi
 	
-		mv ${LOGDIR}/${projectName}.pipeline.finished ${LOGDIR}/${projectName}/
 
 	else
 		echo "there is/are missing some files:${projectName}.pipeline.logger or  ${projectName}.pipeline.started"
@@ -104,6 +103,7 @@ do
 
 		rm ${PROJECTSDIR}/${projectName}/*/jobs/*{err,out,sh.finished,env,sh,CORRECT}
                 printf "The results can be found: ${PROJECTSDIR}/${projectName} \n\nCheers from the GCC :)"| mail -s "NGS_DNA pipeline is finished for project ${projectName} on `date +%d/%m/%Y` `date +%H:%M`" ${mailTo}
+		mv ${LOGDIR}/${projectName}.pipeline.finished ${LOGDIR}/${projectName}/
                 touch ${LOGDIR}/${projectName}/${projectName}.pipeline.finished.mailed
 
         fi
