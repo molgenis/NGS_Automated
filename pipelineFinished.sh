@@ -91,17 +91,18 @@ do
                                 exit 0
                         fi
                 fi
-		cd ${PROJECTSDIR}/${projectName}/*/jobs/
-		zip -gr ${PROJECTSDIR}/${projectName}/*/jobs//allJobs.zip *.err
-		zip -gr ${PROJECTSDIR}/${projectName}/*/jobs//allJobs.zip *.out
-		zip -gr ${PROJECTSDIR}/${projectName}/*/jobs//allJobs.zip *.sh.finished
-		zip -gr ${PROJECTSDIR}/${projectName}/*/jobs//allJobs.zip *.env
-		zip -gr ${PROJECTSDIR}/${projectName}/*/jobs//allJobs.zip *.sh
-		zip -gr ${PROJECTSDIR}/${projectName}/*/jobs//allJobs.zip molgenis.*
+		#cd ${PROJECTSDIR}/${projectName}/*/jobs/
+	
+		#zip -gr ${LOGDIR}/${projectName}/allJobs.zip *.err
+		#zip -gr ${LOGDIR}/${projectName}/allJobs.zip *.out
+		#zip -gr ${LOGDIR}/${projectName}/allJobs.zip *.sh.finished
+		#zip -gr ${LOGDIR}/${projectName}/allJobs.zip *.env
+		#zip -gr ${LOGDIR}/${projectName}/allJobs.zip *.sh
+		#zip -gr ${LOGDIR}/${projectName}/allJobs.zip molgenis.*
+		
+		#echo "all files in the jobs directory are now zipped into one file"
 
-		echo "all files in the jobs directory are now zipped into one file"
-
-		rm ${PROJECTSDIR}/${projectName}/*/jobs/*{err,out,sh.finished,env,sh,CORRECT}
+		#rm ${PROJECTSDIR}/${projectName}/*/jobs/*{err,out,sh.finished,env,sh,CORRECT}
                 printf "The results can be found: ${PROJECTSDIR}/${projectName} \n\nCheers from the GCC :)"| mail -s "NGS_DNA pipeline is finished for project ${projectName} on `date +%d/%m/%Y` `date +%H:%M`" ${mailTo}
 		mv ${LOGDIR}/${projectName}.pipeline.finished ${LOGDIR}/${projectName}/
                 touch ${LOGDIR}/${projectName}/${projectName}.pipeline.finished.mailed
