@@ -99,3 +99,5 @@ worksheet=${WORKDIR}/generatedscripts/${PROJECT}/${PROJECT}.csv" \
 -weave \
 --generate
 
+trap - EXIT
+exit 0

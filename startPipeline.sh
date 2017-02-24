@@ -27,12 +27,7 @@ then
 	do
   		csvFile=$(basename $i)
         	filePrefix="${csvFile%.*}"
-	
-		if [ -f $LOGDIR/${filePrefix}/${filePrefix}.scriptsGenerated ]
-		then
-			continue
-		fi
-	
+		
 		##get header to decide later which column is project
 		HEADER=$(head -1 ${i})
 	
