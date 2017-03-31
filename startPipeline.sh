@@ -14,7 +14,7 @@ myhost=$(hostname)
 . ${MYINSTALLATIONDIR}/sharedConfig.cfg
 
 
-NGS_DNA="3.3.1"
+NGS_DNA="3.3.3"
 NGS_RNA="3.2.4"
 
 count=0 
