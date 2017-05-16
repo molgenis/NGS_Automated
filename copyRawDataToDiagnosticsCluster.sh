@@ -96,6 +96,13 @@ do
 	then
 		mkdir -p ${RAWDATADIR}/${filePrefix}/Info
 		echo "Copying data to DiagnosticsCluster.." >> $LOGGER
+		printf "project,group,demultiplexing,copy_data,which_pipeline,copy_prm\n" > $LOGDIR/${filePrefix}/${filePrefix}.uploading
+                printf "${filePrefix},${group},finished,started,," >> $LOGDIR/${filePrefix}/${filePrefix}.uploading
+
+                CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
+                TOKEN=${CURLRESPONSE:10:32}
+
+                curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@$LOGDIR/${filePrefix}/${filePrefix}.uploading" -FentityName='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
 		rsync -r -a ${copyRawGatToDiagnosticsCluster}
 	fi
 
@@ -127,6 +134,13 @@ do
 				fi
 			done
 			touch $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToDiagnosticsCluster
+			printf "project,group,demultiplexing,copy_data,which_pipeline,copy_prm\n" > $LOGDIR/${filePrefix}/${filePrefix}.uploading
+			printf "${filePrefix},${group},finished,finished,," >> $LOGDIR/${filePrefix}/${filePrefix}.uploading
+
+			CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
+			TOKEN=${CURLRESPONSE:10:32}
+
+			curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@$LOGDIR/${filePrefix}/${filePrefix}.uploading" -FentityName='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
 
 		else
 			echo "Retry: Copying data to DiagnosticsCluster" >> $LOGGER
