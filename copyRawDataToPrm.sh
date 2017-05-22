@@ -149,9 +149,10 @@ do
 							echo -e "Demultiplex statistics ${filePrefix}: \n\n ${logFileStatistics}" | mail -s "Demultiplex statistics ${filePrefix}" ${GAFmail}
 						fi
 						echo -e "De data voor project ${filePrefix} is gekopieerd naar ${RAWDATADIRPRM}" | mail -s "${filePrefix} copied to permanent storage" ${ONTVANGER}
-						touch $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToPrm
 					fi
-						rm -f $LOGDIR/${filePrefix}/${filePrefix}.failed
+
+					touch $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToPrm
+					rm -f $LOGDIR/${filePrefix}/${filePrefix}.failed
                                 fi
                         else
 				echo "$filePrefix: $countFilesRawDataDirTmp | $countFilesRawDataDirPrm"
