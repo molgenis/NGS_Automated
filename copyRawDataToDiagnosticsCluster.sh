@@ -96,7 +96,7 @@ do
 	then
 		mkdir -p ${RAWDATADIR}/${filePrefix}/Info
 		echo "Copying data to DiagnosticsCluster.." >> $LOGGER
-		printf "project,group,demultiplexing,copy_data,which_pipeline,copy_prm\n" > $LOGDIR/${filePrefix}/${filePrefix}.uploading
+		printf "run_id,group,demultiplexing,copy_raw,projects,date\n" > $LOGDIR/${filePrefix}/${filePrefix}.uploading
                 printf "${filePrefix},${group},finished,started,," >> $LOGDIR/${filePrefix}/${filePrefix}.uploading
 
                 CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
@@ -134,7 +134,7 @@ do
 				fi
 			done
 			touch $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToDiagnosticsCluster
-			printf "project,group,demultiplexing,copy_data,which_pipeline,copy_prm\n" > $LOGDIR/${filePrefix}/${filePrefix}.uploading
+			printf "run_id,group,demultiplexing,copy_raw,projects,date\n" > $LOGDIR/${filePrefix}/${filePrefix}.uploading
 			printf "${filePrefix},${group},finished,finished,," >> $LOGDIR/${filePrefix}/${filePrefix}.uploading
 
 			CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)

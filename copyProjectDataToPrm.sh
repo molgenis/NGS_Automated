@@ -27,17 +27,20 @@ ARR+=($i)
 done<${LOGDIR}/allProjects.txt
 
 echo "Logfiles will be written to $LOGDIR"
+
+function finish {
+echo "${line} TRAPPED"
+if [ -f ${LOGDIR}/copyProjectDataToPrm.sh.locked ]
+then
+	rm ${LOGDIR}/copyProjectDataToPrm.sh.locked
+fi
+}
+module load hashdeep/4.4-foss-2015b
+
+
 for line in ${ARR[@]}
 do
         projectName=${line}
-
-	function finish {
-	echo "${line} TRAPPED"
-	if [ -f ${LOGDIR}/copyProjectDataToPrm.sh.locked ]
-	then
-		rm ${LOGDIR}/copyProjectDataToPrm.sh.locked
-	fi
-	}
 
         LOGGER=${LOGDIR}/${projectName}/${projectName}.copyProjectDataToPrm.logger
 	
@@ -51,13 +54,12 @@ do
         fi
 	##command to check if projectfolder exists
 	makeProjectDataDir=$(ssh ${groupname}-dm@calculon.hpc.rug.nl "sh ${PROJECTSDIRPRM}/checkProjectData.sh ${PROJECTSDIRPRM} ${projectName}")	
-	
 	copyProjectDataDiagnosticsClusterToPrm="${PROJECTSDIR}/${projectName}/* ${groupname}-dm@calculon.hpc.rug.nl:${PROJECTSDIRPRM}/${projectName}"
+
 	if [[ -f $LOGDIR/${projectName}/${projectName}.pipeline.finished && ! -f $LOGDIR/${projectName}/${projectName}.projectDataCopiedToPrm ]]
 	then
 		echo "working on ${projectName}"
 		countFilesProjectDataDirTmp=$(ls -R ${PROJECTSDIR}/${projectName}/*/results/ | wc -l)
-		module load hashdeep/4.4-foss-2015b
 		cd ${PROJECTSDIR}/${projectName}/
 		if [ ! -f ${PROJECTSDIR}/${projectName}/${projectName}.allResultmd5sums ]
 		then
@@ -81,6 +83,7 @@ do
                         countFilesProjectDataDirPrm=$(ssh ${groupname}-dm@calculon.hpc.rug.nl "ls -R ${PROJECTSDIRPRM}/${projectName}/*/results/ | wc -l")
                         if [ ${countFilesProjectDataDirTmp} -eq ${countFilesProjectDataDirPrm} ]
                         then
+  				echo "${countFilesProjectDataDirTmp} -eq ${countFilesProjectDataDirPrm}"
                                 COPIEDTOPRM=$(ssh ${groupname}-dm@calculon.hpc.rug.nl "sh ${PROJECTSDIRPRM}/check.sh ${PROJECTSDIRPRM} ${projectName}")
 				if [[ "${COPIEDTOPRM}" == *"FAILED"* ]]
                                 then
