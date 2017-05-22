@@ -252,32 +252,22 @@ then
 				HOSTN=$(hostname)
 		        	LOGGER=${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.logger
 				if [[ ! -f ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.started  && ! -f ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.locked && ! -f ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.finished ]]
-				then
-
-                                        echo "${PROJECT}"
+                                then
+                                    	echo "${PROJECT}"
 
                                         touch ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.locked
                                         cd ${PROJECTSDIR}/${PROJECT}/run01/jobs/
 
                                         ## creating jobs entity
                                         echo -e "job\tproject_job\tproject\tstarted_date\tfinished_date\tstatus" >  ${LOGDIR}/${PROJECT}/jobsPerProject.tsv
-                                        grep '^processJob' submit.sh | tr '"' ' ' | awk -v pro=$PROJECT '{OFS="\t"} {print $2,pro"_"$2,pro,"","",""}' >>  ${LOGDIR}/${PROJECT}/jobsPerProject.tsv
+                                        grep 'processJob' submit.sh | tr '"' ' ' | awk -v pro=$PROJECT '{OFS="\t"} {print $2,pro"_"$2,pro,"","",""}' >>  ${LOGDIR}/${PROJECT}/jobsPerProject.tsv
 
                                         CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
                                         TOKEN=${CURLRESPONSE:10:32}
                                         curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${LOGDIR}/${PROJECT}/jobsPerProject.tsv" -FentityName='status_jobs' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
                                         echo "curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${LOGDIR}/${PROJECT}/jobsPerProject.tsv" -FentityName='status_jobs' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile"
                                 
-				        ## create project entity
-                                        echo "project,run_id,pipeline,copy_results_prm,date" >  ${LOGDIR}/${PROJECT}/project.csv
-                                        echo "${PROJECT},${filePrefix},"DNA",," >>  ${LOGDIR}/${PROJECT}/project.csv
-
-                                        CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
-                                        TOKEN=${CURLRESPONSE:10:32}
-                                        curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${LOGDIR}/${PROJECT}/project.csv" -FentityName='status_projects' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
-                                  	echo "curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${LOGDIR}/${PROJECT}/project.csv" -FentityName='status_projects' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile"
-                                        sleep 10
-					
+                                        sleep 10					
 					sh submit.sh
 	
 					touch ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.started
