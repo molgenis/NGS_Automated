@@ -92,7 +92,7 @@ do
 		copyRawDiagnosticsClusterToPrm="${RAWDATADIR}/${filePrefix}/* ${groupname}-dm@calculon.hpc.rug.nl:${RAWDATADIRPRM}/${filePrefix}"
 	        makeRawDataDir=$(ssh ${groupname}-dm@calculon.hpc.rug.nl "sh ${RAWDATADIRPRM}/../checkRawData.sh ${RAWDATADIRPRM} ${filePrefix}")
 	fi
-	if [[ -f $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToCluster && ! -f $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToPrm ]]
+	if [[ -f $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToCluster || -f $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToDiagnosticsCluster ]] && [ ! -f $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToPrm ]
 	then
 		echo "working on ${filePrefix}"
 		countFilesRawDataDirTmp=$(ls ${RAWDATADIR}/${filePrefix}/${filePrefix}* | wc -l)
