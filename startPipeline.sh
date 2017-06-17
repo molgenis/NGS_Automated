@@ -6,13 +6,14 @@ set -u
 groupname=$1
 
 MYINSTALLATIONDIR=$( cd -P "$( dirname "$0" )" && pwd )
-##source config file (zinc-finger.gcc.rug.nl.cfg, leucine-zipper.gcc.rug.nl, calculon.cfg OR gattaca.cfg)
-myhost=$(hostname)
-#echo "MYINSTALLDIR ${MYINSTALLATIONDIR}"
-. ${MYINSTALLATIONDIR}/${groupname}.cfg
-. ${MYINSTALLATIONDIR}/${myhost}.cfg
-. ${MYINSTALLATIONDIR}/sharedConfig.cfg
 
+#
+# Source config files.
+#
+HOSTNAME_SHORT=$(hostname -s)
+. ${MYINSTALLATIONDIR}/${groupname}.cfg
+. ${MYINSTALLATIONDIR}/${HOSTNAME_SHORT}.cfg
+. ${MYINSTALLATIONDIR}/sharedConfig.cfg
 
 NGS_DNA="3.3.3"
 NGS_RNA="3.2.4"
