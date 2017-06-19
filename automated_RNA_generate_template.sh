@@ -3,7 +3,7 @@
 module load NGS_RNA/VERSIONFROMSTARTPIPELINESCRIPT
 module list
 
-HOST=$(hostname)
+HOSTNAME_SHORT=$(hostname -s)
 ##Running script for checking the environment variables
 
 ENVIRONMENT="${HOST%%.*}"
@@ -39,14 +39,14 @@ ${WORKDIR}/generatedscripts/${PROJECT}/parameters.${BUILD}.csv
 perl ${EBROOTNGS_RNA}/convertParametersGitToMolgenis.pl ${EBROOTNGS_RNA}/parameters.${SPECIES}.csv > \
 ${WORKDIR}/generatedscripts/${PROJECT}/parameters.${SPECIES}.csv
 
-perl ${EBROOTNGS_RNA}/convertParametersGitToMolgenis.pl ${EBROOTNGS_RNA}/parameters.${ENVIRONMENT}.csv > \
-${WORKDIR}/generatedscripts/${PROJECT}/parameters.${ENVIRONMENT}.csv
+perl ${EBROOTNGS_RNA}/convertParametersGitToMolgenis.pl ${EBROOTNGS_RNA}/parameters.${HOSTNAME_SHORT}.csv > \
+${WORKDIR}/generatedscripts/${PROJECT}/parameters.${HOSTNAME_SHORT}.csv
 
 sh ${EBROOTMOLGENISMINCOMPUTE}/molgenis_compute.sh \
 -p ${WORKDIR}/generatedscripts/${PROJECT}/parameters.csv \
 -p ${WORKDIR}/generatedscripts/${PROJECT}/parameters.${BUILD}.csv \
 -p ${WORKDIR}/generatedscripts/${PROJECT}/parameters.${SPECIES}.csv \
--p ${WORKDIR}/generatedscripts/${PROJECT}/parameters.${ENVIRONMENT}.csv \
+-p ${WORKDIR}/generatedscripts/${PROJECT}/parameters.${HOSTNAME_SHORT}.csv \
 -p ${WORKDIR}/generatedscripts/${PROJECT}/${PROJECT}.csv \
 -p ${EBROOTNGS_RNA}/chromosomes.${SPECIES}.csv \
 -w ${EBROOTNGS_RNA}/create_in-house_ngs_projects_workflow.csv \
@@ -62,4 +62,4 @@ worksheet=${WORKDIR}/generatedscripts/${PROJECT}/${PROJECT}.csv;\
 parameters_build=${WORKDIR}/generatedscripts/${PROJECT}/parameters.${BUILD}.csv;\
 parameters_species=${WORKDIR}/generatedscripts/${PROJECT}/parameters.${SPECIES}.csv;\
 parameters_chromosomes=${EBROOTNGS_RNA}/chromosomes.${SPECIES}.csv;\
-parameters_environment=${WORKDIR}/generatedscripts/${PROJECT}/parameters.${ENVIRONMENT}.csv;"
+parameters_environment=${WORKDIR}/generatedscripts/${PROJECT}/parameters.${HOSTNAME_SHORT}.csv;"
