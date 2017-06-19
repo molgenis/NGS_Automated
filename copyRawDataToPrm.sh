@@ -7,10 +7,12 @@ MYINSTALLATIONDIR=$( cd -P "$( dirname "$0" )" && pwd )
 
 groupname=$1
 
-##source config file (zinc-finger.gcc.rug.nl.cfg, leucine-zipper.gcc.rug.nl OR gattaca.cfg)
-myhost=$(hostname)
+#
+# Source config files.
+#
+HOSTNAME_SHORT=$(hostname -s)
 . ${MYINSTALLATIONDIR}/${groupname}.cfg
-. ${MYINSTALLATIONDIR}/${myhost}.cfg
+. ${MYINSTALLATIONDIR}/${HOSTNAME_SHORT}.cfg
 . ${MYINSTALLATIONDIR}/sharedConfig.cfg
 
 ### VERVANG DOOR UMCG-ATEAMBOT USER
@@ -84,7 +86,7 @@ do
 	copyRawDiagnosticsClusterToPrm=""
         makeRawDataDir=""
 
-	if [ ${myhost} == "calculon" ]
+	if [ ${HOSTNAME_SHORT} == "calculon" ]
 	then
 		copyRawDiagnosticsClusterToPrm="${RAWDATADIR}/${filePrefix}/* ${RAWDATADIRPRM}/${filePrefix}"
 		makeRawDataDir=$(sh ${RAWDATADIRPRM}/../checkRawData.sh ${RAWDATADIRPRM} ${filePrefix})
@@ -105,7 +107,7 @@ do
 		if [ "${makeRawDataDir}" == "t" ]
                 then
 			countFilesRawDataDirPrm=""
-			if [ ${myhost} == "calculon" ]
+			if [ ${HOSTNAME_SHORT} == "calculon" ]
         		then
 				countFilesRawDataDirPrm=$(ls ${RAWDATADIRPRM}/${filePrefix}/${filePrefix}* | wc -l)                    
 			else			
@@ -114,7 +116,7 @@ do
                         if [ ${countFilesRawDataDirTmp} -eq ${countFilesRawDataDirPrm} ]
                         then
 				COPIEDTOPRM=""
-				if [ ${myhost} == "calculon" ]
+				if [ ${HOSTNAME_SHORT} == "calculon" ]
                 	        then
                         	        COPIEDTOPRM=$(sh ${RAWDATADIRPRM}/../check.sh ${RAWDATADIRPRM} ${filePrefix})
 				else
@@ -128,7 +130,7 @@ do
 					echo "copy failed" >> $LOGDIR/${filePrefix}/${filePrefix}.failed
                                 elif [[ "${COPIEDTOPRM}" == *"PASS"* ]]
                                 then
-					if [ ${myhost} == "calculon" ]
+					if [ ${HOSTNAME_SHORT} == "calculon" ]
 					then	
 						scp ${SAMPLESHEETSDIR}/${csvFile} ${groupname}-dm@localhost:${RAWDATADIRPRM}/${filePrefix}/
 						scp ${SAMPLESHEETSDIR}/${csvFile} ${groupname}-dm@localhost:${SAMPLESHEETSPRMDIR}

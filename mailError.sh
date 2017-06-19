@@ -6,10 +6,12 @@ set -u
 groupname=$1
 MYINSTALLATIONDIR=$( cd -P "$( dirname "$0" )" && pwd )
 
-##source config file (zinc-finger.gcc.rug.nl.cfg, leucine-zipper.gcc.rug.nl OR gattaca.cfg)
-myhost=$(hostname)
+#
+# Source config files.
+#
+HOSTNAME_SHORT=$(hostname -s)
 . ${MYINSTALLATIONDIR}/${groupname}.cfg
-. ${MYINSTALLATIONDIR}/${myhost}.cfg
+. ${MYINSTALLATIONDIR}/${HOSTNAME_SHORT}.cfg
 . ${MYINSTALLATIONDIR}/sharedConfig.cfg
 
 ALLFINISHED=()
@@ -49,7 +51,7 @@ do
 	then
 		HEADER=$(head -1 ${LOGDIR}/${projectName}.pipeline.failed)
 		echo "mailed error to ${mailTo}"
-		cat ${LOGDIR}/${projectName}.pipeline.failed | mail -s "The NGS_DNA pipeline on $myhost has crashed for project ${projectName} on step ${HEADER}" ${mailTo}
+		cat ${LOGDIR}/${projectName}.pipeline.failed | mail -s "The NGS_DNA pipeline on ${HOSTNAME_SHORT} has crashed for project ${projectName} on step ${HEADER}" ${mailTo}
 		touch ${LOGDIR}/${projectName}.pipeline.failed.mailed
 	fi
 done

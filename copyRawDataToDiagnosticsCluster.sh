@@ -9,10 +9,12 @@ gattacaAddress="${GAT}.gcc.rug.nl"
 echo $gattacaAddress
 MYINSTALLATIONDIR=$( cd -P "$( dirname "$0" )" && pwd )
 
-##source config file (zinc-finger.gcc.rug.nl.cfg, leucine-zipper.gcc.rug.nl OR gattaca.cfg)
-myhost=$(hostname)
+#
+# Source config files.
+#
+HOSTNAME_SHORT=$(hostname -s)
 . ${MYINSTALLATIONDIR}/${groupname}.cfg
-. ${MYINSTALLATIONDIR}/${myhost}.cfg
+. ${MYINSTALLATIONDIR}/${HOSTNAME_SHORT}.cfg
 . ${MYINSTALLATIONDIR}/sharedConfig.cfg
 
 ### VERVANG DOOR UMCG-ATEAMBOT USER

@@ -1,11 +1,11 @@
 #!/bin/bash
 
 module load NGS_DNA/VERSIONFROMSTARTPIPELINESCRIPT
-module list 
-HOST=$(hostname)
+module list
+HOSTNAME_SHORT=$(hostname -s)
 thisDir=$(pwd)
 
-ENVIRONMENT_PARAMETERS="parameters_${HOST%%.*}.csv"
+ENVIRONMENT_PARAMETERS="parameters_${HOSTNAME_SHORT}.csv"
 TMPDIRECTORY=$(basename $(cd ../../ && pwd ))
 GROUP=$(basename $(cd ../../../ && pwd ))
 
@@ -18,15 +18,13 @@ RUNID=run01
 BATCH="$2"
 
 ##Some error handling
-function errorExitandCleanUp()
-{
-        echo "${PROJECT} TRAPPED"
-        if [ ! -f /groups/${GROUP}/${TMPDIRECTORY}/logs/${PROJECT}.generating.failed.mailed ]
-        then
-            	mailTo="helpdesk.gcc.groningen@gmail.com"
-                tail -50 ${WORKDIR}/generatedscripts/${PROJECT}/generate.logger | mail -s "The generate script has crashed for run/project ${PROJECT}" ${mailTo}
-                touch /groups/${GROUP}/${TMPDIRECTORY}/logs/${PROJECT}.generating.failed.mailed
-        fi
+function errorExitandCleanUp() {
+    echo "${PROJECT} TRAPPED"
+    if [ ! -f /groups/${GROUP}/${TMPDIRECTORY}/logs/${PROJECT}.generating.failed.mailed ]; then
+        mailTo="helpdesk.gcc.groningen@gmail.com"
+        tail -50 ${WORKDIR}/generatedscripts/${PROJECT}/generate.logger | mail -s "The generate script has crashed for run/project ${PROJECT}" ${mailTo}
+        touch /groups/${GROUP}/${TMPDIRECTORY}/logs/${PROJECT}.generating.failed.mailed
+    fi
 }
 trap "errorExitandCleanUp" HUP INT QUIT TERM EXIT ERR
 
@@ -39,28 +37,24 @@ SAMPLESIZE=$(cat externalSampleIDs.txt | uniq | wc -l)
 python ${EBROOTNGS_DNA}/gender.py $samplesheet
 var=$(cat ${samplesheet}.tmp | wc -l)
 
-if [ $var != 0 ]
-then
-    	mv ${samplesheet}.tmp ${samplesheet}
-        echo "samplesheet updated with Gender column"
+if [ $var != 0 ]; then
+    mv ${samplesheet}.tmp ${samplesheet}
+    echo "samplesheet updated with Gender column"
 fi
 echo "Samplesize is $SAMPLESIZE"
 
-if [ $SAMPLESIZE -gt 199 ]
-then
-    	WORKFLOW=${EBROOTNGS_DNA}/workflow_samplesize_bigger_than_200.csv
+if [ $SAMPLESIZE -gt 199 ]; then
+    WORKFLOW=${EBROOTNGS_DNA}/workflow_samplesize_bigger_than_200.csv
 else
-        WORKFLOW=${EBROOTNGS_DNA}/workflow.csv
+    WORKFLOW=${EBROOTNGS_DNA}/workflow.csv
 fi
 
-if [ -f .compute.properties ];
-then
-     rm .compute.properties
+if [ -f .compute.properties ]; then
+    rm .compute.properties
 fi
 
-if [ -f ${WORKDIR}/generatedscripts/${PROJECT}/out.csv  ];
-then
-    	rm -rf ${WORKDIR}/generatedscripts/${PROJECT}/out.csv
+if [ -f ${WORKDIR}/generatedscripts/${PROJECT}/out.csv  ]; then
+    rm -rf ${WORKDIR}/generatedscripts/${PROJECT}/out.csv
 fi
 
 echo "tmpName,${TMPDIRECTORY}" > ${WORKDIR}/generatedscripts/${PROJECT}/tmpdir_parameters.csv 
