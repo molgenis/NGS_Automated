@@ -7,14 +7,12 @@ MYINSTALLATIONDIR=$( cd -P "$( dirname "$0" )" && pwd )
 
 groupname=$1
 
-#
-# Source config files.
-#
+##source config file (zinc-finger.gcc.rug.nl.cfg, leucine-zipper.gcc.rug.nl OR gattaca.cfg)
 HOSTNAME_SHORT=$(hostname -s)
 . ${MYINSTALLATIONDIR}/${groupname}.cfg
 . ${MYINSTALLATIONDIR}/${HOSTNAME_SHORT}.cfg
 . ${MYINSTALLATIONDIR}/sharedConfig.cfg
-
+. /home/${groupname}-dm/molgenis.cfg
 ### VERVANG DOOR UMCG-ATEAMBOT USER
 ls ${SAMPLESHEETSDIR}/*.csv > ${SAMPLESHEETSDIR}/allSampleSheets_DiagnosticsCluster.txt
 pipeline="dna"
@@ -77,14 +75,38 @@ do
 
         done<${LOGDIR}/TMP/${filePrefix}.unique.projects
 
-	function finish {
-	echo "${filePrefix} TRAPPED"
-		rm -f ${LOGDIR}/copyDataToPrm.sh.locked
-	}
+function join_by { local IFS="$1"; shift; echo "$*"; }
+        allProjects=$(join_by , $PROJECTARRAY)
 
-	
-	copyRawDiagnosticsClusterToPrm=""
+         ## create project entity
+        for PROJECT in ${PROJECTARRAY[@]}
+        do
+                echo "project,run_id,pipeline,url,copy_results_prm,date" >  ${LOGDIR}/${PROJECT}/project.csv
+                myUrl="https://${MOLGENISSERVER}/menu/main/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${PROJECT}"
+                echo "${PROJECT},${filePrefix},DNA,${myUrl},," >>  ${LOGDIR}/${PROJECT}/project.csv
+
+                CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
+                TOKEN=${CURLRESPONSE:10:32}
+                curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${LOGDIR}/${PROJECT}/project.csv" -FentityName='status_projects' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
+                echo "curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${LOGDIR}/${PROJECT}/project.csv" -FentityName='status_projects' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile"
+        done
+
+        function finish {
+        echo "${filePrefix} TRAPPED"
+                rm -f ${LOGDIR}/copyDataToPrm.sh.locked
+        }
+
+
+        copyRawDiagnosticsClusterToPrm=""
         makeRawDataDir=""
+
+
+        printf "run_id\tgroup\tdemultiplexing\tcopy_raw\tprojects\tcopy_raw_prm\tdate\n" > $LOGDIR/${filePrefix}/${filePrefix}.ToPrm.uploading.tsv
+  	printf "${filePrefix}\t${groupname}\tfinished\tfinished\t${allProjects}\trunning\t" >> $LOGDIR/${filePrefix}/${filePrefix}.ToPrm.uploading.tsv
+        CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
+        TOKEN=${CURLRESPONSE:10:32}
+        echo "curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@$LOGDIR/${filePrefix}/${filePrefix}.ToPrm.uploading.tsv" -FentityName='status_overview' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile"
+        curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@$LOGDIR/${filePrefix}/${filePrefix}.ToPrm.uploading.tsv" -FentityName='status_overview' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
 
 	if [ ${HOSTNAME_SHORT} == "calculon" ]
 	then
@@ -101,7 +123,15 @@ do
 		if [ "${makeRawDataDir}" == "f" ]
 		then
 			echo "copying data from DiagnosticsCluster to prm" >> ${LOGGER}
-                        rsync -r -av ${copyRawDiagnosticsClusterToPrm} >> $LOGGER
+			printf "run_id,group,demultiplexing,copy_raw,projects,date\n" > $LOGDIR/${filePrefix}/${filePrefix}.ToPrm.uploading
+                	printf "${filePrefix}\t${group}\tfinished\tfinished\trunning\t${allProjects}," >> $LOGDIR/${filePrefix}/${filePrefix}.ToPrm.uploading
+		
+                	CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
+                	TOKEN=${CURLRESPONSE:10:32}
+
+	                curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@$LOGDIR/${filePrefix}/${filePrefix}.ToPrm.uploading" -FentityName='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
+                	
+		        rsync -r -av ${copyRawDiagnosticsClusterToPrm} >> $LOGGER
 			makeRawDataDir="t"
 		fi
 		if [ "${makeRawDataDir}" == "t" ]
@@ -151,9 +181,14 @@ do
 							echo -e "Demultiplex statistics ${filePrefix}: \n\n ${logFileStatistics}" | mail -s "Demultiplex statistics ${filePrefix}" ${GAFmail}
 						fi
 						echo -e "De data voor project ${filePrefix} is gekopieerd naar ${RAWDATADIRPRM}" | mail -s "${filePrefix} copied to permanent storage" ${ONTVANGER}
-						touch $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToPrm
 					fi
-						rm -f $LOGDIR/${filePrefix}/${filePrefix}.failed
+
+					touch $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToPrm
+
+					printf "run_id,group,demultiplexing,copy_raw,projects,date\n" > $LOGDIR/${filePrefix}/${filePrefix}.ToPrm.uploading
+			                printf "${filePrefix}\t${group}\tfinished\tfinished\tfinished\t${allProjects}," >> $LOGDIR/${filePrefix}/${filePrefix}.ToPrm.uploading
+		
+					rm -f $LOGDIR/${filePrefix}/${filePrefix}.failed
                                 fi
                         else
 				echo "$filePrefix: $countFilesRawDataDirTmp | $countFilesRawDataDirPrm"
@@ -168,8 +203,7 @@ do
 		COUNT=$(cat $LOGDIR/${filePrefix}/${filePrefix}.failed | wc -l)
 		if [ $COUNT == 10  ]
 		then
-			HOSTNA=$(hostname)
-			echo -e "De md5sum checks voor project ${filePrefix} op ${RAWDATADIRPRM} zijn mislukt.De originele data staat op ${HOSTNA}:${RAWDATADIR}\n\nDeze mail is verstuurd omdat er al 10 pogingen zijn gedaan om de data te kopieren/md5summen" | mail -s "${filePrefix} failing to copy to permanent storage" ${ONTVANGER}
+			echo -e "De md5sum checks voor project ${filePrefix} op ${RAWDATADIRPRM} zijn mislukt.De originele data staat op ${HOSTNAME_SHORT}:${RAWDATADIR}\n\nDeze mail is verstuurd omdat er al 10 pogingen zijn gedaan om de data te kopieren/md5summen" | mail -s "${filePrefix} failing to copy to permanent storage" ${ONTVANGER}
 		fi
 	fi
 	rm -f ${LOGDIR}/copyDataToPrm.sh.locked
