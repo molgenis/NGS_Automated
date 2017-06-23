@@ -1,126 +1,318 @@
 #!/bin/bash
 
-set -e
-set -u
+#
+##
+### Environment and Bash sanity.
+##
+#
+if [[ "${BASH_VERSINFO}" -lt 4 || "${BASH_VERSINFO[0]}" -lt 4 ]]; then
+    echo "Sorry, you need at least bash 4.x to use ${0}." >&2
+    exit 1
+fi
 
-MYINSTALLATIONDIR=$( cd -P "$( dirname "$0" )" && pwd )
+set -e # Exit if any subcommand or pipeline returns a non-zero exit status.
+set -u # Raise exception if variable is unbound. Combined with set -e will halt execution when an unbound variable is encountered.
+set -o pipefail # Fail when any command in series of piped commands failed as opposed to only when the last command failed.
 
-groupname=$1
+umask 0027
+
+# Env vars.
+export TMPDIR="${TMPDIR:-/tmp}" # Default to /tmp if $TMPDIR was not defined.
+SCRIPT_NAME="$(basename $0 .bash)"
+INSTALLATION_DIR=$( cd -P "$( dirname "$0" )" && pwd )
+HOSTNAME_SHORT=$(hostname -s)
+
+#
+##
+### Functions.
+##
+#
+if [[ -f "${INSTALLATION_DIR}/sharedFunctions.bash" && -r "${INSTALLATION_DIR}/sharedFunctions.bash" ]]; then
+    . "${INSTALLATION_DIR}/sharedFunctions.bash"
+else
+    printf '%s\n' "FATAL: cannot find or cannot access sharedFunctions.bash"
+    trap - EXIT
+    exit 1
+fi
+
+function showHelp() {
+    #
+    # Display commandline help on STDOUT.
+    #
+    cat <<EOH
+===============================================================================================================
+Script to copy (sync) data from a succesfully finished analysis project from tmp to prm storage.
+
+Usage:
+
+    $(basename $0) OPTIONS
+
+Options:
+
+    -h   Show this help.
+    -g   Group.
+    -l   Log level.
+         Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
+
+Config and dependencies:
+
+    This script needs 3 config files, which must be located in same location as this script 
+    and have the same basename, but suffixed with *.cfg instead of *.sh.
+     * <group>.cfg
+     * "${HOSTNAME_SHORT}.cfg"
+     * sharedConfig.cfg
+    In addition the library sharedFunctions.bash is required and this one must be located in the same dir too.
+===============================================================================================================
+
+
+EOH
+
+function rsyncProject() {
+    local _project="${1}"
+    log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${_project}..."
+    
+    cd "${PROJECTSDIR}/${_project}/" || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Cannot access ${PROJECTSDIR}/${_project}/."
+    
+    #
+    # Get a list of analysis ("run") sub dirs for this project 
+    # and loop over them to see if there are any we need to rsync.
+    #
+    local -a _runs=($(ls -1 "${PROJECTSDIR}/${_project}/"))
+    for local _run in ${_runs[@]}; do
+        
+        log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run}..."
+        local _log_file="${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.log"
+        
+        #
+        # Determine whether an rsync is required for this run, which is the case when
+        #  1. either the pipeline has finished and this copy script has not
+        #  2. or when a pipeline has updated the results after previous execution of this copy script. 
+        #
+        # Temporarily check for "${LOGDIR}/${_project}/${_project}.pipeline.finished"
+        #        in addition to "${LOGDIR}/${_project}/${_run}.pipeline.finished"
+        # for backwards compatibility with old NGS_Automated 1.x.
+        #
+        local _rsyncRequired='false'
+        if [[ -f "${LOGDIR}/${_project}/${_run}.pipeline.finished" || -f "${LOGDIR}/${_project}/${_project}.pipeline.finished" ]]; then
+            if [[ -f "${LOGDIR}/${_project}/${_run}.pipeline.finished" ]]; then
+                local _pipelineFinished="${LOGDIR}/${_project}/${_run}.pipeline.finished"
+            else
+                local _pipelineFinished="${LOGDIR}/${_project}/${_project}.pipeline.finished"
+            fi
+            log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_pipelineFinished}..."
+            if [[ ! -f "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
+                log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.finished present."
+                _rsyncRequired='true'
+            elif [[ ${_pipelineFinished} -nt "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
+                log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "*.pipeline.finished newer than *.${SCRIPT_NAME}.finished."
+                _rsyncRequired='true'
+            fi
+        fi
+        log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsync required = ${_rsyncRequired}."
+        if [[ "${_rsyncRequired}" == 'false' ]]; then
+            log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_project}/${_run}."
+            continue
+        fi
+        
+        #
+        # Count the number of all files produced in this analysis run.
+        #
+        _countFilesProjectRunDirTmp=$(find "${PROJECTSDIR}/${_project}/${_run}/" -type f | wc -l)
+        
+        #
+        # Recursively create a list of MD5 checksums unless it is 
+        #  1. already present, 
+        #  2. and complete,
+        #  3. and up-to-date.
+        #
+        local _checksumsAvailable='false'
+        if [ -f "${_run}.md5" ]; then
+            if [[ ${_pipelineFinished} -ot "${_run}.md5" ]]; then
+                local _countFilesProjectRunChecksumFileTmp=$(wc -l "${_run}.md5")
+                if [[ "${_countFilesProjectRunChecksumFileTmp}" -eq "${_countFilesProjectRunDirTmp}" ]]; then
+                    _checksumsAvailable='true'
+                fi
+            fi
+        fi
+        log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "md5deep checksums already present = ${_checksumsAvailable}."
+        if [[ "${_checksumsAvailable}" == 'false' ]]; then
+            log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Computing MD5 checksums with md5deep for ${_project}/${_run}/..."
+            md5deep -r -j0 -o f -l */ > "${_run}.md5"
+        fi
+        
+        #
+        # Perform rsync.
+        #  1. For ${_run} dir: recursively with "default" archive (-a),
+        #     which checks for differences based on file size and modification times.
+        #     No need to use checksums here as we will verify checksums later anyway.
+        #  2. For ${_run}.md5 list of checksums with archive (-a) and -c to determine 
+        #     differences based on checksum instead of file size and modification time.
+        #     It is vitally important (and computationally cheap) to make sure 
+        #     the list of checksums is complete and up-to-date!
+        #
+        # ToDo: Do we need to add --delete to get rid of files that should no longer be there 
+        #       if an analysis run got updated?
+        # ToDo: Use tee and redirection to write rsync's STDERR+STDOUT both to the log file
+        #       and only capture STDERR in a variable for reporting with log4Bash in case 
+        #       an error got trapped.
+        #
+        log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run} dir..."
+        rsync -av  "${PROJECTSDIR}/${_project}/${_run}" \
+                   "${group}-dm@calculon.hpc.rug.nl:${PROJECTSDIRPRM}/${_project}/" \
+                >> "${_log_file}"
+        
+        log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run}.md5 checksums..."
+        rsync -acv "${PROJECTSDIR}/${_project}/${_run}.md5" \
+                   "${group}-dm@calculon.hpc.rug.nl:${PROJECTSDIRPRM}/${_project}/ \
+                >> "${_log_file}"
+
+
+        #
+        # Sanity check.
+        #
+        #  1. Firstly do a quick count of the amount of files to make sure we are complete.
+        #     (No need to waist a lot of time on computing checksums for a partially failed transfer).
+        #  2. Secondly verify checksums.
+        #
+        local _countFilesProjectDataDirPrm=$(ssh ${group}-dm@calculon.hpc.rug.nl "find ${PROJECTSDIRPRM}/${_project}/${_run}/ -type f | wc -l")
+        if [[ ${_countFilesProjectDataDirTmp} -eq ${_countFilesProjectDataDirPrm} ]]; then
+            log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Amount of files on tmp and prm is the same for ${_project}/${_run}: ${_countFilesProjectDataDirPrm}."
+
+            # ToDo: update check.sh.
+            local _checksumVerification=$(ssh ${group}-dm@calculon.hpc.rug.nl "sh ${PROJECTSDIRPRM}/check.sh ${PROJECTSDIRPRM} ${_project}")
+            
+            if [[ "${_checksumVerification}" == *"FAILED"* ]]; then
+                echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_log_file} for details." \
+                     >> "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed"
+
+            elif [[ "${_checksumVerification}" == *"PASS"* ]]; then
+                echo "Yes! $(date '+%Y-%m-%d-T%H%M'): rsync succeeded. See ${_log_file} for details." \
+                     >> "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed" \
+                     && mv "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.{failed,finished}
+            else
+                log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Got unexpected result from checksum verification:'
+                log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected FAILED or PASS, but got: ${_checksumVerification}."
+            fi
+        else
+            log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
+                     "Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectDataDirTmp}) and prm (${_countFilesProjectDataDirPrm}) is NOT the same!"
+        fi
+        
+        #
+        # Send e-mail notification.
+        #
+        if [[ -f "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed" \
+              &&  $(wc -l "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed") -ge 10 ]]; then
+            #
+            # ToDo: mail only once!
+            #
+            printf '%s\n%s\n' \
+                   "Verificatie van de MD5 checksums checks voor project ${_project}/${_run} op ${PROJECTSDIRPRM} is mislukt:" \
+                   "De data is corrupt of incompleet. (De originele data staat op ${HOSTNAME_SHORT}:${PROJECTSDIR}.)" \
+             | mail -s "Failed to copy project ${_project}/${_run} to permanent storage." "${ONTVANGER}"
+        elif [[ -f "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
+            printf '%s\n' \
+                   "De data voor project ${_project}/${_run} is klaar en beschikbaar op ${PROJECTSDIRPRM}." \
+             | mail -s "Project ${_project}/${_run} was successfully copied to permanent storage." "${ONTVANGER}"
+        else
+            log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Ended up in unexpected state:'
+            log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected either ${SCRIPT_NAME}.finished or ${SCRIPT_NAME}.failed, but both files are absent."
+        fi
+    done
+}
+
+#
+##
+### Main.
+##
+#
+
+#
+# Get commandline arguments.
+#
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments..."
+declare group=''
+while getopts "g:l:h" opt; do
+    case $opt in
+        h)
+            showHelp
+            ;;
+        g)
+            group="${OPTARG}"
+            ;;
+        l)
+            l4b_log_level=${OPTARG^^}
+            l4b_log_level_prio=${l4b_log_levels[${l4b_log_level}]}
+            ;;
+        \?)
+            log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Invalid option -${OPTARG}. Try $(basename $0) -h for help."
+            ;;
+        :)
+            log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Option -${OPTARG} requires an argument. Try $(basename $0) -h for help."
+            ;;
+        esac
+done
 
 #
 # Source config files.
 #
-HOSTNAME_SHORT=$(hostname -s)
-. ${MYINSTALLATIONDIR}/${groupname}.cfg
-. ${MYINSTALLATIONDIR}/${HOSTNAME_SHORT}.cfg
-. ${MYINSTALLATIONDIR}/sharedConfig.cfg
-
-
-ls -1 ${PROJECTSDIR} > ${LOGDIR}/allProjects.txt
-
-pipeline="dna"
-
-trap finish HUP INT QUIT TERM EXIT ERR
-
-ARR=()
-while read i
-do
-ARR+=($i)
-done<${LOGDIR}/allProjects.txt
-
-echo "Logfiles will be written to $LOGDIR"
-
-function finish {
-echo "${line} TRAPPED"
-if [ -f ${LOGDIR}/copyProjectDataToPrm.sh.locked ]
-then
-	rm ${LOGDIR}/copyProjectDataToPrm.sh.locked
-fi
-}
-module load hashdeep/4.4-foss-2015b
-
-
-for line in ${ARR[@]}
-do
-        projectName=${line}
-
-        LOGGER=${LOGDIR}/${projectName}/${projectName}.copyProjectDataToPrm.logger
-	
-        FINISHED="no"
-
-        if [ -f ${LOGDIR}/copyProjectDataToPrm.sh.locked ]
-        then
-            	continue
-	else
-		touch ${LOGDIR}/copyProjectDataToPrm.sh.locked
-        fi
-	##command to check if projectfolder exists
-	makeProjectDataDir=$(ssh ${groupname}-dm@calculon.hpc.rug.nl "sh ${PROJECTSDIRPRM}/checkProjectData.sh ${PROJECTSDIRPRM} ${projectName}")	
-	copyProjectDataDiagnosticsClusterToPrm="${PROJECTSDIR}/${projectName}/* ${groupname}-dm@calculon.hpc.rug.nl:${PROJECTSDIRPRM}/${projectName}"
-
-	if [[ -f $LOGDIR/${projectName}/${projectName}.pipeline.finished && ! -f $LOGDIR/${projectName}/${projectName}.projectDataCopiedToPrm ]]
-	then
-		echo "working on ${projectName}"
-		countFilesProjectDataDirTmp=$(ls -R ${PROJECTSDIR}/${projectName}/*/results/ | wc -l)
-		cd ${PROJECTSDIR}/${projectName}/
-		if [ ! -f ${PROJECTSDIR}/${projectName}/${projectName}.allResultmd5sums ]
-		then
-			md5deep -r -j0 -o f -l */results/ > ${projectName}.allResultmd5sums
-		else
-			SIZE=$(cat ${projectName}.allResultmd5sums | wc -l)
-			if [ $SIZE -eq 0 ]
-			then
-				md5deep -r -j0 -o f -l */results/ > ${projectName}.allResultmd5sums
-			fi
-		fi
-		if [ "${makeProjectDataDir}" == "f" ]
-		then
-			echo "copying project data from DiagnosticsCluster to prm" >> ${LOGGER}
-                        rsync -r -av --exclude rawdata/ ${copyProjectDataDiagnosticsClusterToPrm} >> $LOGGER
-			rsync -r -av ${PROJECTSDIR}/${projectName}/${projectName}.allResultmd5sums ${groupname}-dm@calculon.hpc.rug.nl:${PROJECTSDIRPRM}/${projectName}/
-			makeProjectDataDir="t"
-		fi
-		if [ "${makeProjectDataDir}" == "t" ]
-                then
-                        countFilesProjectDataDirPrm=$(ssh ${groupname}-dm@calculon.hpc.rug.nl "ls -R ${PROJECTSDIRPRM}/${projectName}/*/results/ | wc -l")
-                        if [ ${countFilesProjectDataDirTmp} -eq ${countFilesProjectDataDirPrm} ]
-                        then
-  				echo "${countFilesProjectDataDirTmp} -eq ${countFilesProjectDataDirPrm}"
-                                COPIEDTOPRM=$(ssh ${groupname}-dm@calculon.hpc.rug.nl "sh ${PROJECTSDIRPRM}/check.sh ${PROJECTSDIRPRM} ${projectName}")
-				if [[ "${COPIEDTOPRM}" == *"FAILED"* ]]
-                                then
-                                        echo "md5sum check failed, the copying will start again" >> ${LOGGER}
-                                        rsync -r -av --exclude rawdata/ ${copyProjectDataDiagnosticsClusterToPrm} >> $LOGGER 2>&1
-					echo "copy failed" >> $LOGDIR/${projectName}/${projectName}.copyProjectDataToPrm.failed
-                                elif [[ "${COPIEDTOPRM}" == *"PASS"* ]]
-                                then
-                                        touch $LOGDIR/${projectName}/${projectName}.projectDataCopiedToPrm
-					echo "finished copying project data to calculon" >> ${LOGGER}
-					printf "De project data voor project ${projectName} is gekopieerd naar ${PROJECTSDIRPRM}" | mail -s "project data for project ${projectName} is copied to permanent storage" ${ONTVANGER}
-
-				  	if [ -f $LOGDIR/${projectName}/${projectName}.copyProjectDataToPrm.failed ] 
-                                        then
-						rm $LOGDIR/${projectName}/${projectName}.copyProjectDataToPrm.failed
-					fi
-                                fi
-                        else
-				echo "copying data..." >> $LOGGER
-                                rsync -r -av --exclude rawdata/ ${copyProjectDataDiagnosticsClusterToPrm} >> $LOGGER 2>&1
-                        fi
-                fi
-        fi
-
-	if [ -f $LOGDIR/${projectName}/${projectName}.copyProjectDataToPrm.failed ]
-	then
-		COUNT=$(cat $LOGDIR/${projectName}/${projectName}.copyProjectDataToPrm.failed | wc -l)
-		if [ $COUNT == 10  ]
-		then
-			HOSTNA=$(hostname)
-			printf "De md5sum checks voor project ${projectName} op ${PROJECTSDIRPRM} zijn mislukt.De originele data staat op ${HOSTNA}:${PROJECTSDIR}\n\nDeze mail is verstuurd omdat er al 10 pogingen zijn gedaan om de data te kopieren/md5summen" | mail -s "${projectName} failing to copy to permanent storage" ${ONTVANGER}
-		fi
-	fi
-	rm ${LOGDIR}/copyProjectDataToPrm.sh.locked
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files..."
+declare -a configFiles=(
+    "${INSTALLATIONDIR}/${group}.cfg"
+    "${INSTALLATIONDIR}/${HOSTNAME_SHORT}.cfg"
+    "${INSTALLATIONDIR}/sharedConfig.cfg"
+)
+for configFile in ${configFiles[@]}; do 
+    if [[ -f ${configFile} && -r ${configFile} ]]; then
+        log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config file ${configFile}..."
+        mixed_stdouterr=$( . ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Cannot source ${configFile}."
+    else
+        log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Config file ${configFile} missing or not accessible."
+    fi
 done
+
+#
+# Make sure only one copy of this script runs simultaneously 
+# per data collection we want to copy to prm -> one copy per group.
+# Therefore locking must be done after 
+# * sourcing the file containing the lock function,
+# * sourcing config files,
+# * and parsing commandline arguments,
+# but before doing the actual data trnasfers.
+#
+lockFile="${LOGDIR}/${SCRIPT_NAME}.lock"
+thereShallBeOnlyOne "${lockFile}"
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile}..."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${LOGDIR}..."
+
+#
+# Load hashdeep.
+#
+module load hashdeep/${HASHDEEP_VERSION} || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? 'Failed to load hashdeep module.'
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "$(module list)"
+
+#
+# ToDo: Use multiplexing to reduce the amount of SSH connections created.
+# 
+#  1. Add to ~/.ssh/config of the data manager account used to copy data to prm:
+#        ControlMaster auto
+#        ControlPath ~/.ssh/tmp/%h_%p_%r
+#        ControlPersist 1m
+#  2. Create ~/.ssh/tmp dir for the data manager account used to copy data to prm:
+#        mkdir -p -m 700 ~/.ssh/tmp
+#        chmod -R go-rwx ~/.ssh
+#  3. Open one SSH connection here before looping ove the projects.
+#
+
+#
+# Get a list of all projects for this group and process them.
+#
+declare -a projects=($(ls -1 "${PROJECTSDIR}"))
+for project in ${projects[@]}; do
+    rsyncProject "${project}"
+done
+
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished successfully!'
 
 trap - EXIT
 exit 0
