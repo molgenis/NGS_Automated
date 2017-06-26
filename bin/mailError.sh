@@ -38,9 +38,9 @@ do
                 mailTo="helpdesk.gcc.groningen@gmail.com"
         elif [ "${groupname}" == "umcg-gd" ]
         then
-                if [ -f /groups/umcg-gd/${tmpDirectory}/logs/mailinglistDiagnostiekCrash.txt ]
+                if [ -f /groups/umcg-gd/${TMP_FS}/logs/mailinglistDiagnostiekCrash.txt ]
                 then
-                       	mailTo=$(cat /groups/umcg-gd/${tmpDirectory}/logs/mailinglistDiagnostiekCrash.txt)
+                       	mailTo=$(cat /groups/umcg-gd/${TMP_FS}/logs/mailinglistDiagnostiekCrash.txt)
                 else
                       	echo "mailingListDiagnostiekCrash.txt bestaat niet!!"
                         exit 0

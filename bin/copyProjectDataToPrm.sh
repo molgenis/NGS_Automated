@@ -19,7 +19,9 @@ umask 0027
 # Env vars.
 export TMPDIR="${TMPDIR:-/tmp}" # Default to /tmp if $TMPDIR was not defined.
 SCRIPT_NAME="$(basename $0 .bash)"
-INSTALLATION_DIR=$( cd -P "$( dirname "$0" )" && pwd )
+INSTALLATION_DIR=$( cd -P "$( dirname "$0" )/.." && pwd )
+LIB_DIR="${INSTALLATION_DIR}/lib"
+CFG_DIR="${INSTALLATION_DIR}/etc"
 HOSTNAME_SHORT=$(hostname -s)
 
 #
@@ -27,8 +29,8 @@ HOSTNAME_SHORT=$(hostname -s)
 ### Functions.
 ##
 #
-if [[ -f "${INSTALLATION_DIR}/sharedFunctions.bash" && -r "${INSTALLATION_DIR}/sharedFunctions.bash" ]]; then
-    . "${INSTALLATION_DIR}/sharedFunctions.bash"
+if [[ -f "${LIB_DIR}/sharedFunctions.bash" && -r "${LIB_DIR}/sharedFunctions.bash" ]]; then
+    . "${LIB_DIR}/sharedFunctions.bash"
 else
     printf '%s\n' "FATAL: cannot find or cannot access sharedFunctions.bash"
     trap - EXIT
@@ -56,12 +58,11 @@ Options:
 
 Config and dependencies:
 
-    This script needs 3 config files, which must be located in same location as this script 
-    and have the same basename, but suffixed with *.cfg instead of *.sh.
+    This script needs 3 config files, which must be located in ${CFG_DIR}:
      * <group>.cfg
      * "${HOSTNAME_SHORT}.cfg"
      * sharedConfig.cfg
-    In addition the library sharedFunctions.bash is required and this one must be located in the same dir too.
+    In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
 ===============================================================================================================
 
 
@@ -292,9 +293,9 @@ done
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files..."
 declare -a configFiles=(
-    "${INSTALLATIONDIR}/${group}.cfg"
-    "${INSTALLATIONDIR}/${HOSTNAME_SHORT}.cfg"
-    "${INSTALLATIONDIR}/sharedConfig.cfg"
+    "${CFG_DIR}/${group}.cfg"
+    "${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
+    "${CFG_DIR}/sharedConfig.cfg"
 )
 for configFile in ${configFiles[@]}; do 
     if [[ -f ${configFile} && -r ${configFile} ]]; then
