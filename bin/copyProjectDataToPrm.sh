@@ -137,7 +137,8 @@ function rsyncProject() {
         log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "md5deep checksums already present = ${_checksumsAvailable}."
         if [[ "${_checksumsAvailable}" == 'false' ]]; then
             log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Computing MD5 checksums with md5deep for ${_project}/${_run}/..."
-            md5deep -r -j0 -o f -l */ > "${_run}.md5"
+            md5deep -r -j0 -o f -l */ > "${_run}.md5" 2>> "${_log_file}" \
+              || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Cannot compute checksums with md5deep. See ${_log_file} for details."
         fi
         
         #
@@ -152,68 +153,101 @@ function rsyncProject() {
         #
         # ToDo: Do we need to add --delete to get rid of files that should no longer be there 
         #       if an analysis run got updated?
-        # ToDo: Use tee and redirection to write rsync's STDERR+STDOUT both to the log file
-        #       and only capture STDERR in a variable for reporting with log4Bash in case 
-        #       an error got trapped.
         #
+        local _transferSoFarSoGood='true'
         log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run} dir..."
         rsync -av  "${PROJECTSDIR}/${_project}/${_run}" \
-                   "${group}-dm@calculon.hpc.rug.nl:${PROJECTSDIRPRM}/${_project}/" \
-                >> "${_log_file}"
+                   "${DATA_MANAGER}@${HOSTNAME_PRM}:${PROJECTSDIRPRM}/${_project}/" \
+                >> "${_log_file}" 2>&1 \
+         || {
+             log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" $? "Failed to rsync ${PROJECTSDIR}/${_project}/${_run} dir. See ${_log_file} for details."
+             echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_log_file} for details." \
+               >> "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed"
+             _transferSoFarSoGood='false'
+            }
         
         log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run}.md5 checksums..."
         rsync -acv "${PROJECTSDIR}/${_project}/${_run}.md5" \
-                   "${group}-dm@calculon.hpc.rug.nl:${PROJECTSDIRPRM}/${_project}/ \
-                >> "${_log_file}"
-
-
+                   "${DATA_MANAGER}@${HOSTNAME_PRM}:${PROJECTSDIRPRM}/${_project}/" \
+                >> "${_log_file}" 2>&1 \
+         || {
+              log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" $? "Failed to rsync ${PROJECTSDIR}/${_project}/${_run}.md5. See ${_log_file} for details."
+              echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_log_file} for details." \
+                >> "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed"
+             _transferSoFarSoGood='false'
+            }
+        
         #
         # Sanity check.
         #
         #  1. Firstly do a quick count of the amount of files to make sure we are complete.
         #     (No need to waist a lot of time on computing checksums for a partially failed transfer).
-        #  2. Secondly verify checksums.
+        #  2. Secondly verify checksums on the destination.
         #
-        local _countFilesProjectDataDirPrm=$(ssh ${group}-dm@calculon.hpc.rug.nl "find ${PROJECTSDIRPRM}/${_project}/${_run}/ -type f | wc -l")
-        if [[ ${_countFilesProjectDataDirTmp} -eq ${_countFilesProjectDataDirPrm} ]]; then
-            log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Amount of files on tmp and prm is the same for ${_project}/${_run}: ${_countFilesProjectDataDirPrm}."
-
-            # ToDo: update check.sh.
-            local _checksumVerification=$(ssh ${group}-dm@calculon.hpc.rug.nl "sh ${PROJECTSDIRPRM}/check.sh ${PROJECTSDIRPRM} ${_project}")
-            
-            if [[ "${_checksumVerification}" == *"FAILED"* ]]; then
-                echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_log_file} for details." \
-                     >> "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed"
-
-            elif [[ "${_checksumVerification}" == *"PASS"* ]]; then
-                echo "Yes! $(date '+%Y-%m-%d-T%H%M'): rsync succeeded. See ${_log_file} for details." \
-                     >> "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed" \
-                     && mv "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.{failed,finished}
+        if [[ ${_transferSoFarSoGood} == 'true' ]]; then
+            local _countFilesProjectDataDirPrm=$(ssh ${DATA_MANAGER}@${HOSTNAME_PRM} "find ${PROJECTSDIRPRM}/${_project}/${_run}/ -type f | wc -l")
+            if [[ ${_countFilesProjectDataDirTmp} -ne ${_countFilesProjectDataDirPrm} ]]; then
+                echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectDataDirTmp}) and prm (${_countFilesProjectDataDirPrm}) is NOT the same!" \
+                      >> "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed"
+                log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
+                         "Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectDataDirTmp}) and prm (${_countFilesProjectDataDirPrm}) is NOT the same!"
             else
-                log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Got unexpected result from checksum verification:'
-                log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected FAILED or PASS, but got: ${_checksumVerification}."
+                log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
+                         "Amount of files on tmp and prm is the same for ${_project}/${_run}: ${_countFilesProjectDataDirPrm}."
+                
+                # ToDo: update check.sh.
+                #
+                # PROJECTDATADIRPRM=$1
+                #projectName=$2
+                #cd ${PROJECTDATADIRPRM}/${projectName}
+                #if md5sum -c ${projectName}.allResultmd5sums
+                #then
+                #        echo "PASS"
+                #else
+                #        echo "FAILED"
+                #fi
+                #local _checksumVerification=$(ssh ${DATA_MANAGER}@${HOSTNAME_PRM} "sh ${PROJECTSDIRPRM}/check.sh ${PROJECTSDIRPRM} ${_project}")
+                #
+                local _checksumVerification=$(ssh ${DATA_MANAGER}@${HOSTNAME_PRM} "\
+                        cd ${PROJECTSDIRPRM}/${_project}; \
+                        if [ md5sum -c ${_run}.md5 ]; then \
+                            echo 'PASS' \
+                        else \
+                            echo 'FAILED' \
+                        fi \
+                    ")
+                if [[ "${_checksumVerification}" == 'FAILED' ]]; then
+                    echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${_log_file} for details." \
+                      >> "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed"
+                    log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Checksum verification failed. See ${_log_file} for details."
+                elif [[ "${_checksumVerification}" == 'PASS' ]]; then
+                    echo "Yes! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${_log_file} for details." \
+                      >> "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed" \
+                      && mv "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.{failed,finished}
+                    log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
+                else
+                    log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Got unexpected result from checksum verification:'
+                    log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected FAILED or PASS, but got: ${_checksumVerification}."
+                fi
             fi
-        else
-            log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
-                     "Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectDataDirTmp}) and prm (${_countFilesProjectDataDirPrm}) is NOT the same!"
         fi
         
         #
         # Send e-mail notification.
         #
         if [[ -f "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed" \
-              &&  $(wc -l "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed") -ge 10 ]]; then
-            #
-            # ToDo: mail only once!
-            #
+              &&  $(wc -l "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed") -ge 10 \
+              && ! -f "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed" ]]; then
             printf '%s\n%s\n' \
                    "Verificatie van de MD5 checksums checks voor project ${_project}/${_run} op ${PROJECTSDIRPRM} is mislukt:" \
                    "De data is corrupt of incompleet. (De originele data staat op ${HOSTNAME_SHORT}:${PROJECTSDIR}.)" \
-             | mail -s "Failed to copy project ${_project}/${_run} to permanent storage." "${ONTVANGER}"
+             | mail -s "Failed to copy project ${_project}/${_run} to permanent storage." "${EMAIL_TO}"
         elif [[ -f "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
             printf '%s\n' \
                    "De data voor project ${_project}/${_run} is klaar en beschikbaar op ${PROJECTSDIRPRM}." \
-             | mail -s "Project ${_project}/${_run} was successfully copied to permanent storage." "${ONTVANGER}"
+             | mail -s "Project ${_project}/${_run} was successfully copied to permanent storage." "${EMAIL_TO}"
+            touch   "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed"
+              && mv "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.{failed,finished}.mailed"
         else
             log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Ended up in unexpected state:'
             log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected either ${SCRIPT_NAME}.finished or ${SCRIPT_NAME}.failed, but both files are absent."
@@ -292,16 +326,16 @@ module load hashdeep/${HASHDEEP_VERSION} || log4Bash 'FATAL' ${LINENO} "${FUNCNA
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "$(module list)"
 
 #
-# ToDo: Use multiplexing to reduce the amount of SSH connections created.
+# Use multiplexing to reduce the amount of SSH connections created.
 # 
 #  1. Add to ~/.ssh/config of the data manager account used to copy data to prm:
 #        ControlMaster auto
 #        ControlPath ~/.ssh/tmp/%h_%p_%r
-#        ControlPersist 1m
+#        ControlPersist 5m
 #  2. Create ~/.ssh/tmp dir for the data manager account used to copy data to prm:
 #        mkdir -p -m 700 ~/.ssh/tmp
 #        chmod -R go-rwx ~/.ssh
-#  3. Open one SSH connection here before looping ove the projects.
+#  3. Open one SSH connection here before looping over the projects.
 #
 
 #
