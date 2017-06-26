@@ -19,12 +19,12 @@ NGS_DNA="3.3.3"
 NGS_RNA="3.2.4"
 
 count=0 
-if ls ${SAMPLESHEETSDIR}/*.csv 1> /dev/null 2>&1
+if ls ${TMP_ROOT_DIR}/Samplesheets/*.csv 1> /dev/null 2>&1
 then
-	counting=$(ls ${SAMPLESHEETSDIR}/*.csv | wc -l)
+	counting=$(ls ${TMP_ROOT_DIR}/Samplesheets/*.csv | wc -l)
 	echo "Checking $counting files "
 
-	for i in $(ls ${SAMPLESHEETSDIR}/*.csv) 
+	for i in $(ls ${TMP_ROOT_DIR}/Samplesheets/*.csv) 
 	do
   		csvFile=$(basename $i)
         	filePrefix="${csvFile%.*}"
@@ -33,7 +33,7 @@ then
 		HEADER=$(head -1 ${i})
 	
 		##Remove header, only want to keep samples
-		sed '1d' $i > ${LOGDIR}/TMP/${filePrefix}.tmp
+		sed '1d' $i > ${TMP_ROOT_DIR}/logs/TMP/${filePrefix}.tmp
 		OLDIFS=$IFS
 		IFS=','
 		array=($HEADER)
@@ -46,35 +46,35 @@ then
 		do
   			if [ "${j}" == "project" ]
   	     		then
-				awk -F"," '{print $'$count'}' ${LOGDIR}/TMP/${filePrefix}.tmp > ${LOGDIR}/TMP/${filePrefix}.tmp2
+				awk -F"," '{print $'$count'}' ${TMP_ROOT_DIR}/logs/TMP/${filePrefix}.tmp > ${TMP_ROOT_DIR}/logs/TMP/${filePrefix}.tmp2
 			elif [[ "${j}" == *"SampleType"* ]]
 			then
-				awk -F"," '{print $'$count'}' ${LOGDIR}/TMP/${filePrefix}.tmp > ${LOGDIR}/TMP/${filePrefix}.whichPipeline
-				pipeline=$(head -1 ${LOGDIR}/TMP/${filePrefix}.whichPipeline)
+				awk -F"," '{print $'$count'}' ${TMP_ROOT_DIR}/logs/TMP/${filePrefix}.tmp > ${TMP_ROOT_DIR}/logs/TMP/${filePrefix}.whichPipeline
+				pipeline=$(head -1 ${TMP_ROOT_DIR}/logs/TMP/${filePrefix}.whichPipeline)
 	
 			elif [[ "${j}" == "specie" ]]
 			then
-				awk -F"," '{print $'$count'}' ${LOGDIR}/TMP/${filePrefix}.tmp > ${LOGDIR}/TMP/${filePrefix}.specie		
-				specie=$(head -1 ${LOGDIR}/TMP/${filePrefix}.specie)
+				awk -F"," '{print $'$count'}' ${TMP_ROOT_DIR}/logs/TMP/${filePrefix}.tmp > ${TMP_ROOT_DIR}/logs/TMP/${filePrefix}.specie		
+				specie=$(head -1 ${TMP_ROOT_DIR}/logs/TMP/${filePrefix}.specie)
   			elif [ "${j}" == "capturingKit" ]
   	     		then
-				awk -F"," '{print $'$count'}' ${LOGDIR}/TMP/${filePrefix}.tmp > ${LOGDIR}/TMP/${filePrefix}.capturingKit
+				awk -F"," '{print $'$count'}' ${TMP_ROOT_DIR}/logs/TMP/${filePrefix}.tmp > ${TMP_ROOT_DIR}/logs/TMP/${filePrefix}.capturingKit
 	
 			fi
 			count=$((count + 1))
 		done
 	
-		cat ${LOGDIR}/TMP/${filePrefix}.tmp2 | sort -V | uniq > ${LOGDIR}/TMP/${filePrefix}.uniq.projects
+		cat ${TMP_ROOT_DIR}/logs/TMP/${filePrefix}.tmp2 | sort -V | uniq > ${TMP_ROOT_DIR}/logs/TMP/${filePrefix}.uniq.projects
 	
         	PROJECTARRAY=()
         	while read line
         	do
           		PROJECTARRAY+="${line} "
 	
-        	done<${LOGDIR}/TMP/${filePrefix}.uniq.projects
+        	done<${TMP_ROOT_DIR}/logs/TMP/${filePrefix}.uniq.projects
 		count=1
 	
-		cat ${LOGDIR}/TMP/${filePrefix}.capturingKit | sort -V | uniq > ${LOGDIR}/TMP/${filePrefix}.uniq.capturingKits	
+		cat ${TMP_ROOT_DIR}/logs/TMP/${filePrefix}.capturingKit | sort -V | uniq > ${TMP_ROOT_DIR}/logs/TMP/${filePrefix}.uniq.capturingKits	
 		miSeqRun="no"
 		while read line
         	do
@@ -83,7 +83,7 @@ then
 				miSeqRun="yes"
 				break
 			fi
-        	done<${LOGDIR}/TMP/${filePrefix}.uniq.capturingKits
+        	done<${TMP_ROOT_DIR}/logs/TMP/${filePrefix}.uniq.capturingKits
 	
         	OLDIFS=$IFS
         	IFS=_
@@ -91,22 +91,22 @@ then
         	sequencer=$2
         	run=$3
 		IFS=$OLDIFS
-        	LOGGER=${LOGDIR}/${filePrefix}/${filePrefix}.pipeline.logger
+        	LOGGER=${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.pipeline.logger
 	
 		####
 		### Decide if the scripts should be created (per Samplesheet)
 		##
 		#
 		function finish {
-        	if [ -f ${LOGDIR}/${filePrefix}/${filePrefix}.pipeline.locked ]
+        	if [ -f ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.pipeline.locked ]
         	then
 	       		echo "${filePrefix} TRAPPED"
-	        	rm ${LOGDIR}/${filePrefix}/${filePrefix}.pipeline.locked
+	        	rm ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.pipeline.locked
 	        	fi
         	}
         	trap finish HUP INT QUIT TERM EXIT ERR
 	
-		if [[ -f $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToDiagnosticsCluster || -f $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToCalculonCluster ]] && [ ! -f $LOGDIR/${filePrefix}/${filePrefix}.scriptsGenerated ]
+		if [[ -f ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.dataCopiedToDiagnosticsCluster || -f ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.dataCopiedToCalculonCluster ]] && [ ! -f ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.scriptsGenerated ]
         	then
                		### Step 4: Does the pipeline need to run?
                		if [ "${pipeline}" == "RNA-Lexogen-reverse" ]
@@ -151,31 +151,31 @@ then
 					build="b38"
 				fi
 				
-				mkdir -p ${GENERATEDSCRIPTS}/${filePrefix}/
-				echo "copying $EBROOTNGS_AUTOMATED/automated_RNA_generate_template.sh to ${GENERATEDSCRIPTS}/${filePrefix}/generate.sh" >> $LOGGER		
+				mkdir -p ${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/
+				echo "copying $EBROOTNGS_AUTOMATED/automated_RNA_generate_template.sh to ${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/generate.sh" >> $LOGGER		
 	
-				cp  $EBROOTNGS_AUTOMATED/automated_RNA_generate_template.sh ${GENERATEDSCRIPTS}/${filePrefix}/generate.sh
+				cp  $EBROOTNGS_AUTOMATED/automated_RNA_generate_template.sh ${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/generate.sh
 	
-			 	perl -pi -e "s|VERSIONFROMSTARTPIPELINESCRIPT|${NGS_RNA}|" ${GENERATEDSCRIPTS}/${filePrefix}/generate.sh
+			 	perl -pi -e "s|VERSIONFROMSTARTPIPELINESCRIPT|${NGS_RNA}|" ${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/generate.sh
 	
-				if [ -f ${GENERATEDSCRIPTS}/${filePrefix}/${filePrefix}.csv ]
+				if [ -f ${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/${filePrefix}.csv ]
                         	then
-                            		echo "${GENERATEDSCRIPTS}/${filePrefix}/${filePrefix}.csv already existed, will now be removed and will be replaced by a fresh copy" >> $LOGGER
-                                	rm ${GENERATEDSCRIPTS}/${filePrefix}/${filePrefix}.csv
+                            		echo "${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/${filePrefix}.csv already existed, will now be removed and will be replaced by a fresh copy" >> $LOGGER
+                                	rm ${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/${filePrefix}.csv
                         	fi
 	
-                        	cp ${SAMPLESHEETSDIR}/${csvFile} ${GENERATEDSCRIPTS}/${filePrefix}/${filePrefix}.csv
+                        	cp ${TMP_ROOT_DIR}/Samplesheets/${csvFile} ${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/${filePrefix}.csv
 	
-                        	cd ${GENERATEDSCRIPTS}/${filePrefix}/
+                        	cd ${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/
 	
-                        	echo "sh ${GENERATEDSCRIPTS}/${filePrefix}/generate.sh "${filePrefix}" ${build} ${specie} ${workflowRNA}"
-				echo "sh ${GENERATEDSCRIPTS}/${filePrefix}/generate.sh "${filePrefix}" ${build} ${specie} ${workflowRNA}" > ${GENERATEDSCRIPTS}/${filePrefix}/generate.logger
-                        	sh ${GENERATEDSCRIPTS}/${filePrefix}/generate.sh "${filePrefix}" ${build} ${specie} ${workflowRNA} > ${GENERATEDSCRIPTS}/${filePrefix}/generate.logger 2>&1
+                        	echo "sh ${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/generate.sh "${filePrefix}" ${build} ${specie} ${workflowRNA}"
+				echo "sh ${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/generate.sh "${filePrefix}" ${build} ${specie} ${workflowRNA}" > ${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/generate.logger
+                        	sh ${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/generate.sh "${filePrefix}" ${build} ${specie} ${workflowRNA} > ${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/generate.logger 2>&1
                         	cd scripts
-				touch ${LOGDIR}/${filePrefix}/${filePrefix}.pipeline.locked
+				touch ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.pipeline.locked
                         	sh submit.sh
-				rm ${LOGDIR}/${filePrefix}/${filePrefix}.pipeline.locked
-                       		touch $LOGDIR/${filePrefix}/${filePrefix}.scriptsGenerated
+				rm ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.pipeline.locked
+                       		touch ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.scriptsGenerated
 	
                		elif [ "${pipeline}" == "DNA" ]
                		then
@@ -193,7 +193,7 @@ then
 					pipelineVersion=$(module list | grep -o -P 'NGS_DNA(.+)')
 					printf "The version which is now loaded is $pipelineVersion${normal}\n\n"
 				fi
-                       		mkdir -p ${GENERATEDSCRIPTS}/${filePrefix}/
+                       		mkdir -p ${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/
 	
 				batching="_chr"
 	
@@ -202,28 +202,28 @@ then
 					batching="_small"
 				fi
 	
-				echo "copying $EBROOTNGS_AUTOMATED/automated_generate_template.sh to ${GENERATEDSCRIPTS}/${filePrefix}/generate.sh" >> $LOGGER
-                       		cp ${EBROOTNGS_AUTOMATED}/automated_generate_template.sh ${GENERATEDSCRIPTS}/${filePrefix}/generate.sh
+				echo "copying $EBROOTNGS_AUTOMATED/automated_generate_template.sh to ${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/generate.sh" >> $LOGGER
+                       		cp ${EBROOTNGS_AUTOMATED}/automated_generate_template.sh ${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/generate.sh
 	
-				perl -pi -e "s|VERSIONFROMSTARTPIPELINESCRIPT|${NGS_DNA}|" ${GENERATEDSCRIPTS}/${filePrefix}/generate.sh
+				perl -pi -e "s|VERSIONFROMSTARTPIPELINESCRIPT|${NGS_DNA}|" ${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/generate.sh
 	
-				if [ -f ${GENERATEDSCRIPTS}/${filePrefix}/${filePrefix}.csv ]
+				if [ -f ${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/${filePrefix}.csv ]
 				then
-					echo "${GENERATEDSCRIPTS}/${filePrefix}/${filePrefix}.csv already existed, will now be removed and will be replaced by a fresh copy" >> $LOGGER
-					rm ${GENERATEDSCRIPTS}/${filePrefix}/${filePrefix}.csv
+					echo "${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/${filePrefix}.csv already existed, will now be removed and will be replaced by a fresh copy" >> $LOGGER
+					rm ${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/${filePrefix}.csv
 				fi
 	
-				cp ${SAMPLESHEETSDIR}/${csvFile} ${GENERATEDSCRIPTS}/${filePrefix}/${filePrefix}.csv
+				cp ${TMP_ROOT_DIR}/Samplesheets/${csvFile} ${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/${filePrefix}.csv
 	
-				cd ${GENERATEDSCRIPTS}/${filePrefix}/
+				cd ${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/
 	
-				sh ${GENERATEDSCRIPTS}/${filePrefix}/generate.sh "${filePrefix}" ${batching} > ${GENERATEDSCRIPTS}/${filePrefix}/generate.logger 2>&1 
+				sh ${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/generate.sh "${filePrefix}" ${batching} > ${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/generate.logger 2>&1 
 	
 				cd scripts
-                        	touch ${LOGDIR}/${filePrefix}/${filePrefix}.pipeline.locked
+                        	touch ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.pipeline.locked
                         	sh submit.sh
-                        	rm ${LOGDIR}/${filePrefix}/${filePrefix}.pipeline.locked
-                        	touch $LOGDIR/${filePrefix}/${filePrefix}.scriptsGenerated
+                        	rm ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.pipeline.locked
+                        	touch ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.scriptsGenerated
 			fi
 		fi
 	
@@ -231,62 +231,62 @@ then
 		### If generatedscripts is already done, step in this part to submit the jobs (per project)
 		##
 		#
-		if [ -f $LOGDIR/${filePrefix}/${filePrefix}.scriptsGenerated ] 
+		if [ -f ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.scriptsGenerated ] 
 		then
 			for PROJECT in ${PROJECTARRAY[@]}
 			do
-				if [ ! -d ${LOGDIR}/${PROJECT} ]
+				if [ ! -d ${TMP_ROOT_DIR}/logs/${PROJECT} ]
 				then
-					mkdir ${LOGDIR}/${PROJECT}
+					mkdir ${TMP_ROOT_DIR}/logs/${PROJECT}
 				fi
  	
 				function finishProject {
-                                	if [ -f ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.locked ]
+                                	if [ -f ${TMP_ROOT_DIR}/logs/${PROJECT}/${PROJECT}.pipeline.locked ]
                                 	then
                                         	echo "${PROJECT} TRAPPED"
-                                        	rm ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.locked      
+                                        	rm ${TMP_ROOT_DIR}/logs/${PROJECT}/${PROJECT}.pipeline.locked      
                                 	fi
                         	}
 				trap finishProject HUP INT QUIT TERM EXIT ERR
 				
 				WHOAMI=$(whoami)
 				HOSTN=$(hostname)
-		        	LOGGER=${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.logger
-				if [[ ! -f ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.started  && ! -f ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.locked && ! -f ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.finished ]]
+		        	LOGGER=${TMP_ROOT_DIR}/logs/${PROJECT}/${PROJECT}.pipeline.logger
+				if [[ ! -f ${TMP_ROOT_DIR}/logs/${PROJECT}/${PROJECT}.pipeline.started  && ! -f ${TMP_ROOT_DIR}/logs/${PROJECT}/${PROJECT}.pipeline.locked && ! -f ${TMP_ROOT_DIR}/logs/${PROJECT}/${PROJECT}.pipeline.finished ]]
 				then
 
                                         echo "${PROJECT}"
 
-                                        touch ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.locked
-                                        cd ${PROJECTSDIR}/${PROJECT}/run01/jobs/
+                                        touch ${TMP_ROOT_DIR}/logs/${PROJECT}/${PROJECT}.pipeline.locked
+                                        cd ${TMP_ROOT_DIR}/projects/${PROJECT}/run01/jobs/
 
                                         ## creating jobs entity
-                                        echo -e "job\tproject_job\tproject\tstarted_date\tfinished_date\tstatus" >  ${LOGDIR}/${PROJECT}/jobsPerProject.tsv
-                                        grep '^processJob' submit.sh | tr '"' ' ' | awk -v pro=$PROJECT '{OFS="\t"} {print $2,pro"_"$2,pro,"","",""}' >>  ${LOGDIR}/${PROJECT}/jobsPerProject.tsv
+                                        echo -e "job\tproject_job\tproject\tstarted_date\tfinished_date\tstatus" >  ${TMP_ROOT_DIR}/logs/${PROJECT}/jobsPerProject.tsv
+                                        grep '^processJob' submit.sh | tr '"' ' ' | awk -v pro=$PROJECT '{OFS="\t"} {print $2,pro"_"$2,pro,"","",""}' >>  ${TMP_ROOT_DIR}/logs/${PROJECT}/jobsPerProject.tsv
 
                                         CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
                                         TOKEN=${CURLRESPONSE:10:32}
-                                        curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${LOGDIR}/${PROJECT}/jobsPerProject.tsv" -FentityName='status_jobs' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
-                                        echo "curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${LOGDIR}/${PROJECT}/jobsPerProject.tsv" -FentityName='status_jobs' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile"
+                                        curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${PROJECT}/jobsPerProject.tsv" -FentityName='status_jobs' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
+                                        echo "curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${PROJECT}/jobsPerProject.tsv" -FentityName='status_jobs' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile"
                                 
 				        ## create project entity
-                                        echo "project,run_id,pipeline,copy_results_prm,date" >  ${LOGDIR}/${PROJECT}/project.csv
-                                        echo "${PROJECT},${filePrefix},"DNA",," >>  ${LOGDIR}/${PROJECT}/project.csv
+                                        echo "project,run_id,pipeline,copy_results_prm,date" >  ${TMP_ROOT_DIR}/logs/${PROJECT}/project.csv
+                                        echo "${PROJECT},${filePrefix},"DNA",," >>  ${TMP_ROOT_DIR}/logs/${PROJECT}/project.csv
 
                                         CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
                                         TOKEN=${CURLRESPONSE:10:32}
-                                        curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${LOGDIR}/${PROJECT}/project.csv" -FentityName='status_projects' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
-                                  	echo "curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${LOGDIR}/${PROJECT}/project.csv" -FentityName='status_projects' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile"
+                                        curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${PROJECT}/project.csv" -FentityName='status_projects' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
+                                  	echo "curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${PROJECT}/project.csv" -FentityName='status_projects' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile"
                                         sleep 10
 					
 					sh submit.sh
 	
-					touch ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.started
+					touch ${TMP_ROOT_DIR}/logs/${PROJECT}/${PROJECT}.pipeline.started
 					echo "${PROJECT} started" >> $LOGGER
 					echo "${PROJECT} started"	
 					printf "Pipeline: ${pipeline}\nStarttime:`date +%d/%m/%Y` `date +%H:%M`\nProject: $PROJECT\nStarted by: $WHOAMI\nHost: ${HOSTN}\n\nProgress can be followed via the command squeue -u $WHOAMI on $HOSTN.\nYou will receive an email when the pipeline is finished!\n\nCheers from the GCC :)" | mail -s "NGS_DNA pipeline is started for project $PROJECT on `date +%d/%m/%Y` `date +%H:%M`" ${EMAIL_TO}
 					sleep 40
-					rm -f ${LOGDIR}/${PROJECT}/${PROJECT}.pipeline.locked
+					rm -f ${TMP_ROOT_DIR}/logs/${PROJECT}/${PROJECT}.pipeline.locked
 				fi
 			done
 		fi

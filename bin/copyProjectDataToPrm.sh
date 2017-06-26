@@ -72,39 +72,39 @@ function rsyncProject() {
     local _project="${1}"
     log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${_project}..."
     
-    cd "${PROJECTSDIR}/${_project}/" || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Cannot access ${PROJECTSDIR}/${_project}/."
+    cd "${TMP_ROOT_DIR}/projects/${_project}/" || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Cannot access ${TMP_ROOT_DIR}/projects/${_project}/."
     
     #
     # Get a list of analysis ("run") sub dirs for this project 
     # and loop over them to see if there are any we need to rsync.
     #
-    local -a _runs=($(ls -1 "${PROJECTSDIR}/${_project}/"))
+    local -a _runs=($(ls -1 "${TMP_ROOT_DIR}/projects/${_project}/"))
     for local _run in ${_runs[@]}; do
         
         log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run}..."
-        local _log_file="${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.log"
+        local _log_file="${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.log"
         
         #
         # Determine whether an rsync is required for this run, which is the case when
         #  1. either the pipeline has finished and this copy script has not
         #  2. or when a pipeline has updated the results after previous execution of this copy script. 
         #
-        # Temporarily check for "${LOGDIR}/${_project}/${_project}.pipeline.finished"
-        #        in addition to "${LOGDIR}/${_project}/${_run}.pipeline.finished"
+        # Temporarily check for "${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.finished"
+        #        in addition to "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished"
         # for backwards compatibility with old NGS_Automated 1.x.
         #
         local _rsyncRequired='false'
-        if [[ -f "${LOGDIR}/${_project}/${_run}.pipeline.finished" || -f "${LOGDIR}/${_project}/${_project}.pipeline.finished" ]]; then
-            if [[ -f "${LOGDIR}/${_project}/${_run}.pipeline.finished" ]]; then
-                local _pipelineFinished="${LOGDIR}/${_project}/${_run}.pipeline.finished"
+        if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished" || -f "${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.finished" ]]; then
+            if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished" ]]; then
+                local _pipelineFinished="${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished"
             else
-                local _pipelineFinished="${LOGDIR}/${_project}/${_project}.pipeline.finished"
+                local _pipelineFinished="${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.finished"
             fi
             log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_pipelineFinished}..."
-            if [[ ! -f "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
-                log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.finished present."
+            if [[ ! -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
+                log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished present."
                 _rsyncRequired='true'
-            elif [[ ${_pipelineFinished} -nt "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
+            elif [[ ${_pipelineFinished} -nt "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
                 log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "*.pipeline.finished newer than *.${SCRIPT_NAME}.finished."
                 _rsyncRequired='true'
             fi
@@ -118,7 +118,7 @@ function rsyncProject() {
         #
         # Count the number of all files produced in this analysis run.
         #
-        _countFilesProjectRunDirTmp=$(find "${PROJECTSDIR}/${_project}/${_run}/" -type f | wc -l)
+        _countFilesProjectRunDirTmp=$(find "${TMP_ROOT_DIR}/projects/${_project}/${_run}/" -type f | wc -l)
         
         #
         # Recursively create a list of MD5 checksums unless it is 
@@ -157,24 +157,24 @@ function rsyncProject() {
         #
         local _transferSoFarSoGood='true'
         log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run} dir..."
-        rsync -av  "${PROJECTSDIR}/${_project}/${_run}" \
-                   "${DATA_MANAGER}@${HOSTNAME_PRM}:${PROJECTSDIRPRM}/${_project}/" \
+        rsync -av  "${TMP_ROOT_DIR}/projects/${_project}/${_run}" \
+                   "${DATA_MANAGER}@${HOSTNAME_PRM}:${PRM_ROOT_DIR}/projects/${_project}/" \
                 >> "${_log_file}" 2>&1 \
          || {
-             log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" $? "Failed to rsync ${PROJECTSDIR}/${_project}/${_run} dir. See ${_log_file} for details."
+             log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" $? "Failed to rsync ${TMP_ROOT_DIR}/projects/${_project}/${_run} dir. See ${_log_file} for details."
              echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_log_file} for details." \
-               >> "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed"
+               >> "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed"
              _transferSoFarSoGood='false'
             }
         
         log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run}.md5 checksums..."
-        rsync -acv "${PROJECTSDIR}/${_project}/${_run}.md5" \
-                   "${DATA_MANAGER}@${HOSTNAME_PRM}:${PROJECTSDIRPRM}/${_project}/" \
+        rsync -acv "${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5" \
+                   "${DATA_MANAGER}@${HOSTNAME_PRM}:${PRM_ROOT_DIR}/projects/${_project}/" \
                 >> "${_log_file}" 2>&1 \
          || {
-              log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" $? "Failed to rsync ${PROJECTSDIR}/${_project}/${_run}.md5. See ${_log_file} for details."
+              log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" $? "Failed to rsync ${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5. See ${_log_file} for details."
               echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_log_file} for details." \
-                >> "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed"
+                >> "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed"
              _transferSoFarSoGood='false'
             }
         
@@ -186,45 +186,36 @@ function rsyncProject() {
         #  2. Secondly verify checksums on the destination.
         #
         if [[ ${_transferSoFarSoGood} == 'true' ]]; then
-            local _countFilesProjectDataDirPrm=$(ssh ${DATA_MANAGER}@${HOSTNAME_PRM} "find ${PROJECTSDIRPRM}/${_project}/${_run}/ -type f | wc -l")
+            local _countFilesProjectDataDirPrm=$(ssh ${DATA_MANAGER}@${HOSTNAME_PRM} "find ${PRM_ROOT_DIR}/projects/${_project}/${_run}/ -type f | wc -l")
             if [[ ${_countFilesProjectDataDirTmp} -ne ${_countFilesProjectDataDirPrm} ]]; then
                 echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectDataDirTmp}) and prm (${_countFilesProjectDataDirPrm}) is NOT the same!" \
-                      >> "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed"
+                      >> "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed"
                 log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
                          "Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectDataDirTmp}) and prm (${_countFilesProjectDataDirPrm}) is NOT the same!"
             else
                 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
                          "Amount of files on tmp and prm is the same for ${_project}/${_run}: ${_countFilesProjectDataDirPrm}."
-                
-                # ToDo: update check.sh.
                 #
-                # PROJECTDATADIRPRM=$1
-                #projectName=$2
-                #cd ${PROJECTDATADIRPRM}/${projectName}
-                #if md5sum -c ${projectName}.allResultmd5sums
-                #then
-                #        echo "PASS"
-                #else
-                #        echo "FAILED"
-                #fi
-                #local _checksumVerification=$(ssh ${DATA_MANAGER}@${HOSTNAME_PRM} "sh ${PROJECTSDIRPRM}/check.sh ${PROJECTSDIRPRM} ${_project}")
+                # Verify checksums on prm storage.
                 #
+                log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
+                         "Started verification of checksums by ${DATA_MANAGER}@${HOSTNAME_PRM} using checksums from ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5."
                 local _checksumVerification=$(ssh ${DATA_MANAGER}@${HOSTNAME_PRM} "\
-                        cd ${PROJECTSDIRPRM}/${_project}; \
-                        if [ md5sum -c ${_run}.md5 ]; then \
+                        cd ${PRM_ROOT_DIR}/projects/${_project}; \
+                        if [ md5sum -c ${_run}.md5 > ${_run}.md5.log 2>&1 ]; then \
                             echo 'PASS' \
                         else \
                             echo 'FAILED' \
                         fi \
                     ")
                 if [[ "${_checksumVerification}" == 'FAILED' ]]; then
-                    echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${_log_file} for details." \
-                      >> "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed"
-                    log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Checksum verification failed. See ${_log_file} for details."
+                    echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details." \
+                      >> "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed"
+                    log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Checksum verification failed. See ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details."
                 elif [[ "${_checksumVerification}" == 'PASS' ]]; then
-                    echo "Yes! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${_log_file} for details." \
-                      >> "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed" \
-                      && mv "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.{failed,finished}
+                    echo "Yes! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details." \
+                      >> "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed" \
+                      && mv "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.{failed,finished}
                     log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
                 else
                     log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Got unexpected result from checksum verification:'
@@ -236,19 +227,19 @@ function rsyncProject() {
         #
         # Send e-mail notification.
         #
-        if [[ -f "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed" \
-              &&  $(wc -l "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed") -ge 10 \
-              && ! -f "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed" ]]; then
+        if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed" \
+              &&  $(wc -l "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed") -ge 10 \
+              && ! -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed" ]]; then
             printf '%s\n%s\n' \
-                   "Verificatie van de MD5 checksums checks voor project ${_project}/${_run} op ${PROJECTSDIRPRM} is mislukt:" \
-                   "De data is corrupt of incompleet. (De originele data staat op ${HOSTNAME_SHORT}:${PROJECTSDIR}.)" \
+                   "Verificatie van de MD5 checksums checks voor project ${_project}/${_run} op ${PRM_ROOT_DIR}/projects is mislukt:" \
+                   "De data is corrupt of incompleet. (De originele data staat op ${HOSTNAME_SHORT}:${TMP_ROOT_DIR}/projects.)" \
              | mail -s "Failed to copy project ${_project}/${_run} to permanent storage." "${EMAIL_TO}"
-        elif [[ -f "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
+        elif [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
             printf '%s\n' \
-                   "De data voor project ${_project}/${_run} is klaar en beschikbaar op ${PROJECTSDIRPRM}." \
+                   "De data voor project ${_project}/${_run} is klaar en beschikbaar op ${PRM_ROOT_DIR}/projects." \
              | mail -s "Project ${_project}/${_run} was successfully copied to permanent storage." "${EMAIL_TO}"
-            touch   "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed"
-              && mv "${LOGDIR}/${_project}/${_run}.${SCRIPT_NAME}.{failed,finished}.mailed"
+            touch   "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed"
+              && mv "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.{failed,finished}.mailed"
         else
             log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Ended up in unexpected state:'
             log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected either ${SCRIPT_NAME}.finished or ${SCRIPT_NAME}.failed, but both files are absent."
@@ -315,10 +306,10 @@ done
 # * and parsing commandline arguments,
 # but before doing the actual data trnasfers.
 #
-lockFile="${LOGDIR}/${SCRIPT_NAME}.lock"
+lockFile="${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
 thereShallBeOnlyOne "${lockFile}"
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile}..."
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${LOGDIR}..."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${TMP_ROOT_DIR}/logs..."
 
 #
 # Load hashdeep.
@@ -342,7 +333,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "$(module list)"
 #
 # Get a list of all projects for this group and process them.
 #
-declare -a projects=($(ls -1 "${PROJECTSDIR}"))
+declare -a projects=($(ls -1 "${TMP_ROOT_DIR}/projects"))
 for project in ${projects[@]}; do
     rsyncProject "${project}"
 done

@@ -16,7 +16,7 @@ HOSTNAME_SHORT=$(hostname -s)
 . ${MYINSTALLATIONDIR}/sharedConfig.cfg
 
 ### VERVANG DOOR UMCG-ATEAMBOT USER
-ls ${SAMPLESHEETSDIR}/*.csv > ${SAMPLESHEETSDIR}/allSampleSheets_DiagnosticsCluster.txt
+ls ${TMP_ROOT_DIR}/Samplesheets/*.csv > ${TMP_ROOT_DIR}/Samplesheets/allSampleSheets_DiagnosticsCluster.txt
 pipeline="dna"
 
 trap finish HUP INT QUIT TERM EXIT ERR
@@ -25,14 +25,14 @@ ARR=()
 while read i
 do
 ARR+=($i)
-done<${SAMPLESHEETSDIR}/allSampleSheets_DiagnosticsCluster.txt
+done<${TMP_ROOT_DIR}/Samplesheets/allSampleSheets_DiagnosticsCluster.txt
 
-echo "Logfiles will be written to $LOGDIR"
+echo "Logfiles will be written to ${TMP_ROOT_DIR}/logs"
 for line in ${ARR[@]}
 do
         csvFile=$(basename $line)
         filePrefix="${csvFile%.*}"
-        LOGGER=${LOGDIR}/${filePrefix}/${filePrefix}.copyToPrm.logger
+        LOGGER=${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.copyToPrm.logger
 
         FINISHED="no"
         OLDIFS=$IFS
@@ -42,19 +42,19 @@ do
         run=$3
         IFS=$OLDIFS
 
-        if [ -f ${LOGDIR}/copyDataToPrm.sh.locked ]
+        if [ -f ${TMP_ROOT_DIR}/logs/copyDataToPrm.sh.locked ]
         then
 		echo "copyToPrm is locked"
             	exit 0
 	else
-		touch ${LOGDIR}/copyDataToPrm.sh.locked
+		touch ${TMP_ROOT_DIR}/logs/copyDataToPrm.sh.locked
         fi
 
 	##get header to decide later which column is project
         HEADER=$(head -1 ${line})
 
 	##Remove header, only want to keep samples
-        sed '1d' $line > ${LOGDIR}/TMP/${filePrefix}.utmp
+        sed '1d' $line > ${TMP_ROOT_DIR}/logs/TMP/${filePrefix}.utmp
         OLDIFS=$IFS
         IFS=','
         array=($HEADER)
@@ -64,22 +64,22 @@ do
         do
           	if [ "${j}" == "project" ]
                 then
-                    	awk -F"," '{print $'$count'}' ${LOGDIR}/TMP/${filePrefix}.utmp > ${LOGDIR}/TMP/${filePrefix}.utmp2
+                    	awk -F"," '{print $'$count'}' ${TMP_ROOT_DIR}/logs/TMP/${filePrefix}.utmp > ${TMP_ROOT_DIR}/logs/TMP/${filePrefix}.utmp2
                 fi
                 count=$((count + 1))
         done
-	cat ${LOGDIR}/TMP/${filePrefix}.utmp2 | sort -V | uniq > ${LOGDIR}/TMP/${filePrefix}.unique.projects
+	cat ${TMP_ROOT_DIR}/logs/TMP/${filePrefix}.utmp2 | sort -V | uniq > ${TMP_ROOT_DIR}/logs/TMP/${filePrefix}.unique.projects
 
         PROJECTARRAY=()
         while read line
         do
           	PROJECTARRAY+="${line} "
 
-        done<${LOGDIR}/TMP/${filePrefix}.unique.projects
+        done<${TMP_ROOT_DIR}/logs/TMP/${filePrefix}.unique.projects
 
 	function finish {
 	echo "${filePrefix} TRAPPED"
-		rm -f ${LOGDIR}/copyDataToPrm.sh.locked
+		rm -f ${TMP_ROOT_DIR}/logs/copyDataToPrm.sh.locked
 	}
 
 	
@@ -88,16 +88,16 @@ do
 
 	if [ ${HOSTNAME_SHORT} == "calculon" ]
 	then
-		copyRawDiagnosticsClusterToPrm="${RAWDATADIR}/${filePrefix}/* ${RAWDATADIRPRM}/${filePrefix}"
-		makeRawDataDir=$(sh ${RAWDATADIRPRM}/../checkRawData.sh ${RAWDATADIRPRM} ${filePrefix})
+		copyRawDiagnosticsClusterToPrm="${TMP_ROOT_DIR}/rawdata/ngs/${filePrefix}/* ${PRM_ROOT_DIR}/rawdata/ngs/${filePrefix}"
+		makeRawDataDir=$(sh ${PRM_ROOT_DIR}/rawdata/ngs/../checkRawData.sh ${PRM_ROOT_DIR}/rawdata/ngs ${filePrefix})
 	else
-		copyRawDiagnosticsClusterToPrm="${RAWDATADIR}/${filePrefix}/* ${groupname}-dm@calculon.hpc.rug.nl:${RAWDATADIRPRM}/${filePrefix}"
-	        makeRawDataDir=$(ssh ${groupname}-dm@calculon.hpc.rug.nl "sh ${RAWDATADIRPRM}/../checkRawData.sh ${RAWDATADIRPRM} ${filePrefix}")
+		copyRawDiagnosticsClusterToPrm="${TMP_ROOT_DIR}/rawdata/ngs/${filePrefix}/* ${groupname}-dm@calculon.hpc.rug.nl:${PRM_ROOT_DIR}/rawdata/ngs/${filePrefix}"
+	        makeRawDataDir=$(ssh ${groupname}-dm@calculon.hpc.rug.nl "sh ${PRM_ROOT_DIR}/rawdata/ngs/../checkRawData.sh ${PRM_ROOT_DIR}/rawdata/ngs ${filePrefix}")
 	fi
-	if [[ -f $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToCluster || -f $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToDiagnosticsCluster ]] && [ ! -f $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToPrm ]
+	if [[ -f ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.dataCopiedToCluster || -f ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.dataCopiedToDiagnosticsCluster ]] && [ ! -f ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.dataCopiedToPrm ]
 	then
 		echo "working on ${filePrefix}"
-		countFilesRawDataDirTmp=$(ls ${RAWDATADIR}/${filePrefix}/${filePrefix}* | wc -l)
+		countFilesRawDataDirTmp=$(ls ${TMP_ROOT_DIR}/rawdata/ngs/${filePrefix}/${filePrefix}* | wc -l)
 		if [ "${makeRawDataDir}" == "f" ]
 		then
 			echo "copying data from DiagnosticsCluster to prm" >> ${LOGGER}
@@ -109,52 +109,52 @@ do
 			countFilesRawDataDirPrm=""
 			if [ ${HOSTNAME_SHORT} == "calculon" ]
         		then
-				countFilesRawDataDirPrm=$(ls ${RAWDATADIRPRM}/${filePrefix}/${filePrefix}* | wc -l)                    
+				countFilesRawDataDirPrm=$(ls ${PRM_ROOT_DIR}/rawdata/ngs/${filePrefix}/${filePrefix}* | wc -l)                    
 			else			
-				countFilesRawDataDirPrm=$(ssh ${groupname}-dm@calculon.hpc.rug.nl "ls ${RAWDATADIRPRM}/${filePrefix}/${filePrefix}* | wc -l")                    
+				countFilesRawDataDirPrm=$(ssh ${groupname}-dm@calculon.hpc.rug.nl "ls ${PRM_ROOT_DIR}/rawdata/ngs/${filePrefix}/${filePrefix}* | wc -l")                    
 			fi
                         if [ ${countFilesRawDataDirTmp} -eq ${countFilesRawDataDirPrm} ]
                         then
 				COPIEDTOPRM=""
 				if [ ${HOSTNAME_SHORT} == "calculon" ]
                 	        then
-                        	        COPIEDTOPRM=$(sh ${RAWDATADIRPRM}/../check.sh ${RAWDATADIRPRM} ${filePrefix})
+                        	        COPIEDTOPRM=$(sh ${PRM_ROOT_DIR}/rawdata/ngs/../check.sh ${PRM_ROOT_DIR}/rawdata/ngs ${filePrefix})
 				else
-					COPIEDTOPRM=$(ssh ${groupname}-dm@calculon.hpc.rug.nl "sh ${RAWDATADIRPRM}/../check.sh ${RAWDATADIRPRM} ${filePrefix}")
+					COPIEDTOPRM=$(ssh ${groupname}-dm@calculon.hpc.rug.nl "sh ${PRM_ROOT_DIR}/rawdata/ngs/../check.sh ${PRM_ROOT_DIR}/rawdata/ngs ${filePrefix}")
 				fi	
 				
 				if [[ "${COPIEDTOPRM}" == *"FAILED"* ]]
                                 then
                                         echo "md5sum check failed, the copying will start again" >> ${LOGGER}
                                         rsync -r -av ${copyRawDiagnosticsClusterToPrm} >> $LOGGER 2>&1
-					echo "copy failed" >> $LOGDIR/${filePrefix}/${filePrefix}.failed
+					echo "copy failed" >> ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.failed
                                 elif [[ "${COPIEDTOPRM}" == *"PASS"* ]]
                                 then
 					if [ ${HOSTNAME_SHORT} == "calculon" ]
 					then	
-						scp ${SAMPLESHEETSDIR}/${csvFile} ${groupname}-dm@localhost:${RAWDATADIRPRM}/${filePrefix}/
-						scp ${SAMPLESHEETSDIR}/${csvFile} ${groupname}-dm@localhost:${SAMPLESHEETSPRMDIR}
+						scp ${TMP_ROOT_DIR}/Samplesheets/${csvFile} ${groupname}-dm@localhost:${PRM_ROOT_DIR}/rawdata/ngs/${filePrefix}/
+						scp ${TMP_ROOT_DIR}/Samplesheets/${csvFile} ${groupname}-dm@localhost:${PRM_ROOT_DIR}/rawdata/Samplesheets
 					else
-						scp ${SAMPLESHEETSDIR}/${csvFile} ${groupname}-dm@calculon.hpc.rug.nl:${RAWDATADIRPRM}/${filePrefix}/
-						scp ${SAMPLESHEETSDIR}/${csvFile} ${groupname}-dm@calculon.hpc.rug.nl:${SAMPLESHEETSPRMDIR}
+						scp ${TMP_ROOT_DIR}/Samplesheets/${csvFile} ${groupname}-dm@calculon.hpc.rug.nl:${PRM_ROOT_DIR}/rawdata/ngs/${filePrefix}/
+						scp ${TMP_ROOT_DIR}/Samplesheets/${csvFile} ${groupname}-dm@calculon.hpc.rug.nl:${PRM_ROOT_DIR}/rawdata/Samplesheets
 					
 					fi
 					echo "finished copying data to calculon" >> ${LOGGER}
 					
-					echo "finished with rawdata" >> ${LOGDIR}/${filePrefix}/${filePrefix}.copyToPrm.logger
+					echo "finished with rawdata" >> ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.copyToPrm.logger
 
-					if ls ${RAWDATADIR}/${filePrefix}/${filePrefix}*.log 1> /dev/null 2>&1
+					if ls ${TMP_ROOT_DIR}/rawdata/ngs/${filePrefix}/${filePrefix}*.log 1> /dev/null 2>&1
 					then
-						logFileStatistics=$(cat ${RAWDATADIR}/${filePrefix}/${filePrefix}*.log)
+						logFileStatistics=$(cat ${TMP_ROOT_DIR}/rawdata/ngs/${filePrefix}/${filePrefix}*.log)
 						if [ ${groupname} == "umcg-gaf" ]
 						then
 							echo -e "Demultiplex statistics ${filePrefix}: \n\n ${logFileStatistics}" | mail -s "Demultiplex statistics ${filePrefix}" ${EMAIL_TO}
 						else
-						    echo -e "De data voor project ${filePrefix} is gekopieerd naar ${RAWDATADIRPRM}" | mail -s "${filePrefix} copied to permanent storage" ${EMAIL_TO}
+						    echo -e "De data voor project ${filePrefix} is gekopieerd naar ${PRM_ROOT_DIR}/rawdata/ngs" | mail -s "${filePrefix} copied to permanent storage" ${EMAIL_TO}
 						fi
-						touch $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToPrm
+						touch ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.dataCopiedToPrm
 					fi
-						rm -f $LOGDIR/${filePrefix}/${filePrefix}.failed
+						rm -f ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.failed
                                 fi
                         else
 				echo "$filePrefix: $countFilesRawDataDirTmp | $countFilesRawDataDirPrm"
@@ -164,17 +164,17 @@ do
                 fi
         fi
 
-	if [ -f $LOGDIR/${filePrefix}/${filePrefix}.failed ]
+	if [ -f ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.failed ]
 	then
-		COUNT=$(cat $LOGDIR/${filePrefix}/${filePrefix}.failed | wc -l)
+		COUNT=$(cat ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.failed | wc -l)
 		if [ $COUNT == 10  ]
 		then
 			HOSTNA=$(hostname)
-			echo -e "De md5sum checks voor project ${filePrefix} op ${RAWDATADIRPRM} zijn mislukt.De originele data staat op ${HOSTNA}:${RAWDATADIR}\n\nDeze mail is verstuurd omdat er al 10 pogingen zijn gedaan om de data te kopieren/md5summen" | mail -s "${filePrefix} failing to copy to permanent storage" ${EMAIL_TO}
+			echo -e "De md5sum checks voor project ${filePrefix} op ${PRM_ROOT_DIR}/rawdata/ngs zijn mislukt.De originele data staat op ${HOSTNA}:${TMP_ROOT_DIR}/rawdata/ngs\n\nDeze mail is verstuurd omdat er al 10 pogingen zijn gedaan om de data te kopieren/md5summen" | mail -s "${filePrefix} failing to copy to permanent storage" ${EMAIL_TO}
 		fi
 	fi
-	rm -f ${LOGDIR}/copyDataToPrm.sh.locked
-done<${SAMPLESHEETSDIR}/allSampleSheets_DiagnosticsCluster.txt
+	rm -f ${TMP_ROOT_DIR}/logs/copyDataToPrm.sh.locked
+done<${TMP_ROOT_DIR}/Samplesheets/allSampleSheets_DiagnosticsCluster.txt
 
 trap - EXIT
 exit 0

@@ -18,16 +18,16 @@ HOSTNAME_SHORT=$(hostname -s)
 . ${MYINSTALLATIONDIR}/sharedConfig.cfg
 
 ### VERVANG DOOR UMCG-ATEAMBOT USER
-ssh umcg-ateambot@${gattacaAddress} "ls ${GATTACA}/Samplesheets/*.csv" > ${SAMPLESHEETSDIR}/allSampleSheets_${GAT}.txt
+ssh umcg-ateambot@${gattacaAddress} "ls ${SCR_ROOT_DIR}/Samplesheets/*.csv" > ${TMP_ROOT_DIR}/Samplesheets/allSampleSheets_${GAT}.txt
 
 gattacaSamplesheets=()
 
 while read line 
 do
 	gattacaSamplesheets+=("${line} ")
-done<${SAMPLESHEETSDIR}/allSampleSheets_${GAT}.txt
+done<${TMP_ROOT_DIR}/Samplesheets/allSampleSheets_${GAT}.txt
 
-echo "Logfiles will be written to $LOGDIR"
+echo "Logfiles will be written to ${TMP_ROOT_DIR}/logs"
 
 for line in ${gattacaSamplesheets[@]}
 do
@@ -38,7 +38,7 @@ do
 		continue
 	fi
 	filePrefix="${csvFile%.*}"
-	LOGGER=${LOGDIR}/${filePrefix}/${filePrefix}.copyToDiagnosticsCluster.logger
+	LOGGER=${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.copyToDiagnosticsCluster.logger
 
 	trap finish HUP INT QUIT TERM EXIT ERR
 
@@ -50,12 +50,12 @@ do
 	run=$3
 	IFS=$OLDIFS
 
-	if ssh umcg-ateambot@${gattacaAddress} ls ${GATTACA}/logs/${filePrefix}_Demultiplexing.finished 1> /dev/null 2>&1 
+	if ssh umcg-ateambot@${gattacaAddress} ls ${SCR_ROOT_DIR}/logs/${filePrefix}_Demultiplexing.finished 1> /dev/null 2>&1 
 	then
 		### Demultiplexing is finished
-		if [ ! -d ${LOGDIR}/${filePrefix}/ ]
+		if [ ! -d ${TMP_ROOT_DIR}/logs/${filePrefix}/ ]
 		then
-			mkdir ${LOGDIR}/${filePrefix}/
+			mkdir ${TMP_ROOT_DIR}/logs/${filePrefix}/
 		fi
  
 		printf ""
@@ -64,64 +64,64 @@ do
 	fi
 
 	function finish {
-        	if [ -f ${LOGDIR}/${filePrefix}/${filePrefix}.copyToDiagnosticsCluster.locked ]
+        	if [ -f ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.copyToDiagnosticsCluster.locked ]
                 then
                 	echo "${filePrefix} TRAPPED"
-                        rm ${LOGDIR}/${filePrefix}/${filePrefix}.copyToDiagnosticsCluster.locked
+                        rm ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.copyToDiagnosticsCluster.locked
                 	exit 1
 		fi
 			
                 }
 
-	if [ -f $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToDiagnosticsCluster ]
+	if [ -f ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.dataCopiedToDiagnosticsCluster ]
 	then
 		continue;
 	fi
 
-	if [ -f ${LOGDIR}/${filePrefix}/${filePrefix}.copyToDiagnosticsCluster.locked ]
+	if [ -f ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.copyToDiagnosticsCluster.locked ]
 	then
 		exit 0
 	fi
-	touch ${LOGDIR}/${filePrefix}/${filePrefix}.copyToDiagnosticsCluster.locked
+	touch ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.copyToDiagnosticsCluster.locked
 
 	## Check if samplesheet is copied
-	copyRawGatToDiagnosticsCluster="umcg-ateambot@${gattacaAddress}:${GATTACA}/runs/run_${run}_${sequencer}/results/${filePrefix}* ${RAWDATADIR}/$filePrefix"
+	copyRawGatToDiagnosticsCluster="umcg-ateambot@${gattacaAddress}:${SCR_ROOT_DIR}/runs/run_${run}_${sequencer}/results/${filePrefix}* ${TMP_ROOT_DIR}/rawdata/ngs/$filePrefix"
 
-	if [[ ! -f ${SAMPLESHEETSDIR}/$csvFile || ! -f $LOGDIR/${filePrefix}/${filePrefix}.SampleSheetCopied ]]
+	if [[ ! -f ${TMP_ROOT_DIR}/Samplesheets/$csvFile || ! -f ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.SampleSheetCopied ]]
         then
-                scp umcg-ateambot@${gattacaAddress}:${GATTACA}/Samplesheets/${csvFile} ${SAMPLESHEETSDIR}
-                touch $LOGDIR/${filePrefix}/${filePrefix}.SampleSheetCopied
+                scp umcg-ateambot@${gattacaAddress}:${SCR_ROOT_DIR}/Samplesheets/${csvFile} ${TMP_ROOT_DIR}/Samplesheets
+                touch ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.SampleSheetCopied
         fi
 	## Check if data is already copied to DiagnosticsCluster
 
-	if [ ! -d ${RAWDATADIR}/$filePrefix ]
+	if [ ! -d ${TMP_ROOT_DIR}/rawdata/ngs/$filePrefix ]
 	then
-		mkdir -p ${RAWDATADIR}/${filePrefix}/Info
+		mkdir -p ${TMP_ROOT_DIR}/rawdata/ngs/${filePrefix}/Info
 		echo "Copying data to DiagnosticsCluster.." >> $LOGGER
-		printf "run_id,group,demultiplexing,copy_raw,projects,date\n" > $LOGDIR/${filePrefix}/${filePrefix}.uploading
-                printf "${filePrefix},${group},finished,started,," >> $LOGDIR/${filePrefix}/${filePrefix}.uploading
+		printf "run_id,group,demultiplexing,copy_raw,projects,date\n" > ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploading
+                printf "${filePrefix},${group},finished,started,," >> ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploading
 
                 CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
                 TOKEN=${CURLRESPONSE:10:32}
 
-                curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@$LOGDIR/${filePrefix}/${filePrefix}.uploading" -FentityName='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
+                curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploading" -FentityName='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
 		rsync -r -a ${copyRawGatToDiagnosticsCluster}
 	fi
 
 
-	if [[ -d ${RAWDATADIR}/$filePrefix  && ! -f $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToDiagnosticsCluster ]]
+	if [[ -d ${TMP_ROOT_DIR}/rawdata/ngs/$filePrefix  && ! -f ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.dataCopiedToDiagnosticsCluster ]]
 	then
 		##Compare how many files are on both the servers in the directory
-		countFilesRawDataDirTmp=$(ls ${RAWDATADIR}/${filePrefix}/${filePrefix}* | wc -l)
-		countFilesRawDataDirGattaca=$(ssh umcg-ateambot@${gattacaAddress} "ls ${GATTACA}/runs/run_${run}_${sequencer}/results/${filePrefix}* | wc -l ")
+		countFilesRawDataDirTmp=$(ls ${TMP_ROOT_DIR}/rawdata/ngs/${filePrefix}/${filePrefix}* | wc -l)
+		countFilesRawDataDirGattaca=$(ssh umcg-ateambot@${gattacaAddress} "ls ${SCR_ROOT_DIR}/runs/run_${run}_${sequencer}/results/${filePrefix}* | wc -l ")
 
-		rsync -r umcg-ateambot@${gattacaAddress}:/groups/umcg-lab/scr01/sequencers/${filePrefix}/InterOp ${RAWDATADIR}/${filePrefix}/Info/
-		rsync umcg-ateambot@${gattacaAddress}:/groups/umcg-lab/scr01/sequencers/${filePrefix}/RunInfo.xml ${RAWDATADIR}/${filePrefix}/Info/
-		rsync umcg-ateambot@${gattacaAddress}:/groups/umcg-lab/scr01/sequencers/${filePrefix}/*unParameters.xml ${RAWDATADIR}/${filePrefix}/Info/
+		rsync -r umcg-ateambot@${gattacaAddress}:/groups/umcg-lab/scr01/sequencers/${filePrefix}/InterOp ${TMP_ROOT_DIR}/rawdata/ngs/${filePrefix}/Info/
+		rsync umcg-ateambot@${gattacaAddress}:/groups/umcg-lab/scr01/sequencers/${filePrefix}/RunInfo.xml ${TMP_ROOT_DIR}/rawdata/ngs/${filePrefix}/Info/
+		rsync umcg-ateambot@${gattacaAddress}:/groups/umcg-lab/scr01/sequencers/${filePrefix}/*unParameters.xml ${TMP_ROOT_DIR}/rawdata/ngs/${filePrefix}/Info/
 
 		if [ ${countFilesRawDataDirTmp} -eq ${countFilesRawDataDirGattaca} ]
 		then
-			cd ${RAWDATADIR}/${filePrefix}/
+			cd ${TMP_ROOT_DIR}/rawdata/ngs/${filePrefix}/
 			for i in $(ls *.fq.gz.md5 )
 			do
 				if md5sum -c $i
@@ -135,14 +135,14 @@ do
 		
 				fi
 			done
-			touch $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToDiagnosticsCluster
-			printf "run_id,group,demultiplexing,copy_raw,projects,date\n" > $LOGDIR/${filePrefix}/${filePrefix}.uploading
-			printf "${filePrefix},${group},finished,finished,," >> $LOGDIR/${filePrefix}/${filePrefix}.uploading
+			touch ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.dataCopiedToDiagnosticsCluster
+			printf "run_id,group,demultiplexing,copy_raw,projects,date\n" > ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploading
+			printf "${filePrefix},${group},finished,finished,," >> ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploading
 
 			CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
 			TOKEN=${CURLRESPONSE:10:32}
 
-			curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@$LOGDIR/${filePrefix}/${filePrefix}.uploading" -FentityName='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
+			curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploading" -FentityName='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
 
 		else
 			echo "Retry: Copying data to DiagnosticsCluster" >> $LOGGER
@@ -150,7 +150,7 @@ do
 			echo "data copied to DiagnosticsCluster" >> $LOGGER
 		fi
 	fi
-rm ${LOGDIR}/${filePrefix}/${filePrefix}.copyToDiagnosticsCluster.locked
+rm ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.copyToDiagnosticsCluster.locked
 done
 
 trap - EXIT

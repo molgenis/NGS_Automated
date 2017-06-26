@@ -18,18 +18,18 @@ HOSTNAME_SHORT=$(hostname -s)
 . ${MYINSTALLATIONDIR}/sharedConfig.cfg
 
 ### VERVANG DOOR UMCG-ATEAMBOT USER
-if ls ${SAMPLESHEETSDIR}/*.csv 1> /dev/null 2>&1
+if ls ${TMP_ROOT_DIR}/Samplesheets/*.csv 1> /dev/null 2>&1
 then
-ssh ${groupname}-ateambot@${gattacaAddress} "ls ${GATTACA}/Samplesheets/*.csv" > ${SAMPLESHEETSDIR}/allSampleSheets_${GAT}.txt
+ssh ${groupname}-ateambot@${gattacaAddress} "ls ${SCR_ROOT_DIR}/Samplesheets/*.csv" > ${TMP_ROOT_DIR}/Samplesheets/allSampleSheets_${GAT}.txt
 
 gattacaSamplesheets=()
 
 while read line 
 do
 	gattacaSamplesheets+=("${line} ")
-done<${SAMPLESHEETSDIR}/allSampleSheets_${GAT}.txt
+done<${TMP_ROOT_DIR}/Samplesheets/allSampleSheets_${GAT}.txt
 
-echo "Logfiles will be written to $LOGDIR"
+echo "Logfiles will be written to ${TMP_ROOT_DIR}/logs"
 
 for line in ${gattacaSamplesheets[@]}
 do
@@ -40,7 +40,7 @@ echo "working on $line"
                 continue
         fi
 	filePrefix="${csvFile%.*}"
-	LOGGER=${LOGDIR}/${filePrefix}/${filePrefix}.copyToCluster.logger
+	LOGGER=${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.copyToCluster.logger
 
 	trap finish HUP INT QUIT TERM EXIT ERR
 
@@ -52,12 +52,12 @@ echo "working on $line"
 	run=$3
 	IFS=$OLDIFS
 
-	if ssh ${groupname}-ateambot@${gattacaAddress} ls ${GATTACA}/logs/${filePrefix}_Demultiplexing.finished 1> /dev/null 2>&1 
+	if ssh ${groupname}-ateambot@${gattacaAddress} ls ${SCR_ROOT_DIR}/logs/${filePrefix}_Demultiplexing.finished 1> /dev/null 2>&1 
 	then
 		### Demultiplexing is finished
-		if [ ! -d ${LOGDIR}/${filePrefix}/ ]
+		if [ ! -d ${TMP_ROOT_DIR}/logs/${filePrefix}/ ]
 		then
-			mkdir ${LOGDIR}/${filePrefix}/
+			mkdir ${TMP_ROOT_DIR}/logs/${filePrefix}/
 		fi
  
 		printf ""
@@ -66,57 +66,57 @@ echo "working on $line"
 	fi
 
 	function finish {
-        	if [ -f ${LOGDIR}/${filePrefix}/${filePrefix}.copyToCluster.locked ]
+        	if [ -f ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.copyToCluster.locked ]
                 then
                 	echo "${filePrefix} TRAPPED"
-                        rm ${LOGDIR}/${filePrefix}/${filePrefix}.copyToCluster.locked
+                        rm ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.copyToCluster.locked
                 	exit 1
 		fi
 			
                 }
 
-	if [ -f $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToCluster ]
+	if [ -f ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.dataCopiedToCluster ]
 	then
 		continue;
 	fi
 
-	if [ -f ${LOGDIR}/${filePrefix}/${filePrefix}.copyToCluster.locked ]
+	if [ -f ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.copyToCluster.locked ]
 	then
 		exit 0
 	fi
-	touch ${LOGDIR}/${filePrefix}/${filePrefix}.copyToCluster.locked
+	touch ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.copyToCluster.locked
 
 	## Check if samplesheet is copied
-	copyRawGatToCluster="${groupname}-ateambot@${gattacaAddress}:${GATTACA}/runs/run_${run}_${sequencer}/results/${filePrefix}* ${RAWDATADIR}/$filePrefix"
+	copyRawGatToCluster="${groupname}-ateambot@${gattacaAddress}:${SCR_ROOT_DIR}/runs/run_${run}_${sequencer}/results/${filePrefix}* ${TMP_ROOT_DIR}/rawdata/ngs/$filePrefix"
 
-	if [[ ! -f ${SAMPLESHEETSDIR}/$csvFile || ! -f $LOGDIR/${filePrefix}/${filePrefix}.SampleSheetCopied ]]
+	if [[ ! -f ${TMP_ROOT_DIR}/Samplesheets/$csvFile || ! -f ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.SampleSheetCopied ]]
         then
-                scp ${groupname}-ateambot@${gattacaAddress}:${GATTACA}/Samplesheets/${csvFile} ${SAMPLESHEETSDIR}
-                touch $LOGDIR/${filePrefix}/${filePrefix}.SampleSheetCopied
+                scp ${groupname}-ateambot@${gattacaAddress}:${SCR_ROOT_DIR}/Samplesheets/${csvFile} ${TMP_ROOT_DIR}/Samplesheets
+                touch ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.SampleSheetCopied
         fi
 	## Check if data is already copied to Cluster
 
-	if [ ! -d ${RAWDATADIR}/$filePrefix ]
+	if [ ! -d ${TMP_ROOT_DIR}/rawdata/ngs/$filePrefix ]
 	then
-		mkdir -p ${RAWDATADIR}/${filePrefix}/Info
+		mkdir -p ${TMP_ROOT_DIR}/rawdata/ngs/${filePrefix}/Info
 		echo "Copying data to Cluster.." >> $LOGGER
 		rsync -r -a ${copyRawGatToCluster}
 	fi
 
 
-	if [[ -d ${RAWDATADIR}/$filePrefix  && ! -f $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToCluster ]]
+	if [[ -d ${TMP_ROOT_DIR}/rawdata/ngs/$filePrefix  && ! -f ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.dataCopiedToCluster ]]
 	then
 		##Compare how many files are on both the servers in the directory
-		countFilesRawDataDirTmp=$(ls ${RAWDATADIR}/${filePrefix}/${filePrefix}* | wc -l)
-		countFilesRawDataDirGattaca=$(ssh ${groupname}-ateambot@${gattacaAddress} "ls ${GATTACA}/runs/run_${run}_${sequencer}/results/${filePrefix}* | wc -l ")
+		countFilesRawDataDirTmp=$(ls ${TMP_ROOT_DIR}/rawdata/ngs/${filePrefix}/${filePrefix}* | wc -l)
+		countFilesRawDataDirGattaca=$(ssh ${groupname}-ateambot@${gattacaAddress} "ls ${SCR_ROOT_DIR}/runs/run_${run}_${sequencer}/results/${filePrefix}* | wc -l ")
 
-		rsync -r ${groupname}-ateambot@${gattacaAddress}:/groups/umcg-lab/scr01/sequencers/${filePrefix}/InterOp ${RAWDATADIR}/${filePrefix}/Info/
-		rsync ${groupname}-ateambot@${gattacaAddress}:/groups/umcg-lab/scr01/sequencers/${filePrefix}/RunInfo.xml ${RAWDATADIR}/${filePrefix}/Info/
-		rsync ${groupname}-ateambot@${gattacaAddress}:/groups/umcg-lab/scr01/sequencers/${filePrefix}/*unParameters.xml ${RAWDATADIR}/${filePrefix}/Info/
+		rsync -r ${groupname}-ateambot@${gattacaAddress}:/groups/umcg-lab/scr01/sequencers/${filePrefix}/InterOp ${TMP_ROOT_DIR}/rawdata/ngs/${filePrefix}/Info/
+		rsync ${groupname}-ateambot@${gattacaAddress}:/groups/umcg-lab/scr01/sequencers/${filePrefix}/RunInfo.xml ${TMP_ROOT_DIR}/rawdata/ngs/${filePrefix}/Info/
+		rsync ${groupname}-ateambot@${gattacaAddress}:/groups/umcg-lab/scr01/sequencers/${filePrefix}/*unParameters.xml ${TMP_ROOT_DIR}/rawdata/ngs/${filePrefix}/Info/
 
 		if [ ${countFilesRawDataDirTmp} -eq ${countFilesRawDataDirGattaca} ]
 		then
-			cd ${RAWDATADIR}/${filePrefix}/
+			cd ${TMP_ROOT_DIR}/rawdata/ngs/${filePrefix}/
 			for i in $(ls *.fq.gz.md5 )
 			do
 				if md5sum -c $i
@@ -130,7 +130,7 @@ echo "working on $line"
 		
 				fi
 			done
-			touch $LOGDIR/${filePrefix}/${filePrefix}.dataCopiedToCluster
+			touch ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.dataCopiedToCluster
 
 		else
 			echo "Retry: Copying data to Cluster" >> $LOGGER
@@ -138,7 +138,7 @@ echo "working on $line"
 			echo "data copied to Cluster" >> $LOGGER
 		fi
 	fi
-rm ${LOGDIR}/${filePrefix}/${filePrefix}.copyToCluster.locked
+rm ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.copyToCluster.locked
 done
 
 trap - EXIT
