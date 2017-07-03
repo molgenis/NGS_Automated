@@ -53,6 +53,7 @@ Options:
 
     -h   Show this help.
     -g   Group.
+    -e   Enable email notification. (Disabled by default.)
     -l   Log level.
          Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
@@ -230,16 +231,26 @@ function rsyncProject() {
         if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed" \
               &&  $(wc -l "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed") -ge 10 \
               && ! -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed" ]]; then
-            printf '%s\n%s\n' \
-                   "Verificatie van de MD5 checksums checks voor project ${_project}/${_run} op ${PRM_ROOT_DIR}/projects is mislukt:" \
-                   "De data is corrupt of incompleet. (De originele data staat op ${HOSTNAME_SHORT}:${TMP_ROOT_DIR}/projects.)" \
-             | mail -s "Failed to copy project ${_project}/${_run} to permanent storage." "${EMAIL_TO}"
+            if [[ ${email} == 'true' ]; then
+                printf '%s\n%s\n' \
+                       "Verificatie van de MD5 checksums checks voor project ${_project}/${_run} op ${PRM_ROOT_DIR}/projects is mislukt:" \
+                       "De data is corrupt of incompleet. (De originele data staat op ${HOSTNAME_SHORT}:${TMP_ROOT_DIR}/projects.)" \
+                 | mail -s "Failed to copy project ${_project}/${_run} to permanent storage." "${EMAIL_TO}"
+                touch   "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed"
+            else
+                log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Verificatie van de MD5 checksums checks voor project ${_project}/${_run} op ${PRM_ROOT_DIR}/projects is mislukt:"
+                log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    De data is corrupt of incompleet. (De originele data staat op ${HOSTNAME_SHORT}:${TMP_ROOT_DIR}/projects.)"
+            fi
         elif [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
-            printf '%s\n' \
-                   "De data voor project ${_project}/${_run} is klaar en beschikbaar op ${PRM_ROOT_DIR}/projects." \
-             | mail -s "Project ${_project}/${_run} was successfully copied to permanent storage." "${EMAIL_TO}"
-            touch   "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed"
-              && mv "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.{failed,finished}.mailed"
+            if [[ ${email} == 'true' ]; then
+                printf '%s\n' \
+                       "De data voor project ${_project}/${_run} is klaar en beschikbaar op ${PRM_ROOT_DIR}/projects." \
+                 | mail -s "Project ${_project}/${_run} was successfully copied to permanent storage." "${EMAIL_TO}"
+                touch   "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed"
+                 && mv "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.{failed,finished}.mailed"
+             else
+                 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "De data voor project ${_project}/${_run} is klaar en beschikbaar in ${PRM_ROOT_DIR}/projects/."
+             fi
         else
             log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Ended up in unexpected state:'
             log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected either ${SCRIPT_NAME}.finished or ${SCRIPT_NAME}.failed, but both files are absent."
@@ -258,13 +269,17 @@ function rsyncProject() {
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments..."
 declare group=''
-while getopts "g:l:h" opt; do
+declare email='false'
+while getopts "g:l:he" opt; do
     case $opt in
         h)
             showHelp
             ;;
         g)
             group="${OPTARG}"
+            ;;
+        e)
+            email='true'
             ;;
         l)
             l4b_log_level=${OPTARG^^}
