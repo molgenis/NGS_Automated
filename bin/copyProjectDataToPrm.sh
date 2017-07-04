@@ -134,7 +134,7 @@ function rsyncProject() {
         local _checksumsAvailable='false'
         if [ -f "${_run}.md5" ]; then
             if [[ ${_pipelineFinished} -ot "${_run}.md5" ]]; then
-                local _countFilesProjectRunChecksumFileTmp=$(wc -l "${_run}.md5")
+                local _countFilesProjectRunChecksumFileTmp=$(wc -l "${_run}.md5" | awk '{print $1}')
                 log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checksum file contains ${_countFilesProjectRunChecksumFileTmp} files and run dir contains ${_countFilesProjectRunDirTmp} files."
                 if [[ "${_countFilesProjectRunChecksumFileTmp}" -eq "${_countFilesProjectRunDirTmp}" ]]; then
                     _checksumsAvailable='true'
