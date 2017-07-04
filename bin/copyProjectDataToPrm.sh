@@ -80,7 +80,8 @@ function rsyncProject() {
     # and loop over them to see if there are any we need to rsync.
     #
     local -a _runs=($(ls -1 "${TMP_ROOT_DIR}/projects/${_project}/"))
-    for local _run in ${_runs[@]}; do
+    local run
+    for _run in ${_runs[@]}; do
         
         log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run}..."
         local _log_file="${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.log"
