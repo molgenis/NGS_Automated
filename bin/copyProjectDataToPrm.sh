@@ -60,14 +60,14 @@ Options:
 Config and dependencies:
 
     This script needs 3 config files, which must be located in ${CFG_DIR}:
-     * <group>.cfg
-     * "${HOSTNAME_SHORT}.cfg"
-     * sharedConfig.cfg
+     1. <group>.cfg
+     2. "${HOSTNAME_SHORT}.cfg"
+     3. sharedConfig.cfg
     In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
 ===============================================================================================================
 
-
 EOH
+}
 
 function rsyncProject() {
     local _project="${1}"
@@ -232,7 +232,7 @@ function rsyncProject() {
         if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed" \
               &&  $(wc -l "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed") -ge 10 \
               && ! -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed" ]]; then
-        if [[ ${email} == 'true' ]]; then
+            if [[ ${email} == 'true' ]]; then
                 printf '%s\n%s\n' \
                        "Verificatie van de MD5 checksums checks voor project ${_project}/${_run} in ${PRM_ROOT_DIR}/projects/ is mislukt:" \
                        "De data is corrupt of incompleet. De originele data staat in ${HOSTNAME_SHORT}:${TMP_ROOT_DIR}/projects/." \
@@ -243,7 +243,7 @@ function rsyncProject() {
                 log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    De data is corrupt of incompleet. De originele data staat in ${HOSTNAME_SHORT}:${TMP_ROOT_DIR}/projects/."
             fi
         elif [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
-        if [[ ${email} == 'true' ]]; then
+            if [[ ${email} == 'true' ]]; then
                 printf '%s\n' \
                        "De data voor project ${_project}/${_run} is klaar en beschikbaar in ${PRM_ROOT_DIR}/projects/." \
                  | mail -s "Project ${_project}/${_run} was successfully copied to permanent storage." "${EMAIL_TO}"
@@ -292,7 +292,7 @@ while getopts "g:l:he" opt; do
         :)
             log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Option -${OPTARG} requires an argument. Try $(basename $0) -h for help."
             ;;
-        esac
+    esac
 done
 
 #
