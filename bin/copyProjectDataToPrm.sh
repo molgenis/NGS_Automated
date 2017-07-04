@@ -123,7 +123,7 @@ function rsyncProject() {
         #
         # Count the number of all files produced in this analysis run.
         #
-        _countFilesProjectRunDirTmp=$(find "./${_run}/" -type f | wc -l)
+        local _countFilesProjectRunDirTmp=$(find "./${_run}/" -type f | wc -l)
         
         #
         # Recursively create a list of MD5 checksums unless it is 
@@ -135,6 +135,7 @@ function rsyncProject() {
         if [ -f "${_run}.md5" ]; then
             if [[ ${_pipelineFinished} -ot "${_run}.md5" ]]; then
                 local _countFilesProjectRunChecksumFileTmp=$(wc -l "${_run}.md5")
+                log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checksum file contains ${_countFilesProjectRunChecksumFileTmp} files and run dir contains ${_countFilesProjectRunDirTmp} files."
                 if [[ "${_countFilesProjectRunChecksumFileTmp}" -eq "${_countFilesProjectRunDirTmp}" ]]; then
                     _checksumsAvailable='true'
                 fi
