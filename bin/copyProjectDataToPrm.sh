@@ -144,7 +144,7 @@ function rsyncProject() {
         log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "md5deep checksums already present = ${_checksumsAvailable}."
         if [[ "${_checksumsAvailable}" == 'false' ]]; then
             log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Computing MD5 checksums with md5deep for ${_project}/${_run}/..."
-            md5deep -r -j0 -o f -l */ > "${_run}.md5" 2>> "${_log_file}" \
+            md5deep -r -j0 -o f -l "${_run}/" > "${_run}.md5" 2>> "${_log_file}" \
               || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Cannot compute checksums with md5deep. See ${_log_file} for details."
         fi
         
