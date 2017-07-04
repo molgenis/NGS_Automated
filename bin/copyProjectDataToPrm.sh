@@ -295,6 +295,13 @@ while getopts "g:l:he" opt; do
 done
 
 #
+# Check for mandatory options.
+#
+if [[ -z ${group} ]]; then
+    log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
+fi
+
+#
 # Source config files.
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files..."
