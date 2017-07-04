@@ -298,7 +298,7 @@ done
 #
 # Check for mandatory options.
 #
-if [[ -z ${group:-} ]]; then
+if [[ -z "${group:-}" ]]; then
     log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
 fi
 
