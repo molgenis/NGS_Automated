@@ -235,7 +235,7 @@ function rsyncProject() {
             if [[ ${email} == 'true' ]; then
                 printf '%s\n%s\n' \
                        "Verificatie van de MD5 checksums checks voor project ${_project}/${_run} op ${PRM_ROOT_DIR}/projects is mislukt:" \
-                       "De data is corrupt of incompleet. (De originele data staat op ${HOSTNAME_SHORT}:${TMP_ROOT_DIR}/projects.)" \
+                       "De data is corrupt of incompleet. De originele data staat op ${HOSTNAME_SHORT}:${TMP_ROOT_DIR}/projects." \
                  | mail -s "Failed to copy project ${_project}/${_run} to permanent storage." "${EMAIL_TO}"
                 touch   "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed"
             else
