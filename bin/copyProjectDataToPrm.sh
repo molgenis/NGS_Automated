@@ -18,11 +18,11 @@ umask 0027
 
 # Env vars.
 export TMPDIR="${TMPDIR:-/tmp}" # Default to /tmp if $TMPDIR was not defined.
-SCRIPT_NAME="$(basename $0 .bash)"
-INSTALLATION_DIR=$( cd -P "$( dirname "$0" )/.." && pwd )
+SCRIPT_NAME="$(basename ${0} .bash)"
+INSTALLATION_DIR="$(cd -P "$(dirname "${0}")/.." && pwd)"
 LIB_DIR="${INSTALLATION_DIR}/lib"
 CFG_DIR="${INSTALLATION_DIR}/etc"
-HOSTNAME_SHORT=$(hostname -s)
+HOSTNAME_SHORT="$(hostname -s)"
 
 #
 ##
@@ -106,7 +106,7 @@ function rsyncProject() {
             if [[ ! -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
                 log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished present."
                 _rsyncRequired='true'
-            elif [[ ${_pipelineFinished} -nt "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
+            elif [[ "${_pipelineFinished}" -nt "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
                 log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "*.pipeline.finished newer than *.${SCRIPT_NAME}.finished."
                 _rsyncRequired='true'
             fi
@@ -215,9 +215,9 @@ function rsyncProject() {
                       >> "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed"
                     log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Checksum verification failed. See ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details."
                 elif [[ "${_checksumVerification}" == 'PASS' ]]; then
-                    echo "Yes! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details." \
+                    echo "OK! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details." \
                       >> "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed" \
-                      && mv "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.{failed,finished}
+                      && mv "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.{failed,finished}"
                     log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
                 else
                     log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Got unexpected result from checksum verification:'
