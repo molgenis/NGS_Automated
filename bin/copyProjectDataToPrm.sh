@@ -60,9 +60,9 @@ Options:
 Config and dependencies:
 
     This script needs 3 config files, which must be located in ${CFG_DIR}:
-     1. <group>.cfg
-     2. "${HOSTNAME_SHORT}.cfg"
-     3. sharedConfig.cfg
+     1. <group>.cfg       for the group specified with -g
+     2. <host>.cfg        for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
+     3. sharedConfig.cfg  for all groups and all servers.
     In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
 ===============================================================================================================
 
