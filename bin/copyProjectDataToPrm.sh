@@ -81,7 +81,7 @@ function rsyncProject() {
     # Get a list of analysis ("run") sub dirs for this project 
     # and loop over them to see if there are any we need to rsync.
     #
-    local -a _runs=($(ls -1 "${TMP_ROOT_DIR}/projects/${_project}/"))
+    local -a _runs=($(find "${TMP_ROOT_DIR}/projects/${_project}/" -maxdepth 1 -mindepth 1 -type d))
     local run
     for _run in "${_runs[@]}"; do
         

@@ -144,7 +144,7 @@ mixed_stdouterr='' # global variable to capture output from commands for reporti
 function thereShallBeOnlyOne() {
     local _lock_file="${1}"
     exec 200>"${_lock_file}" || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Failed to create FD 200>${_lock_file} for locking."
-    if [ ! flock -n 200 ]; then
+    if ! flock -n 200; then
         log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Lockfile ${_lock_file} already claimed by another instance of $(basename ${0})."
         log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Another instance is already running and there shall be only one.'
         # No need for explicit exit here: log4Bash with log level FATAL will make sure we exit.
