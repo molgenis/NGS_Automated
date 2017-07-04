@@ -234,18 +234,18 @@ function rsyncProject() {
               && ! -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed" ]]; then
             if [[ ${email} == 'true' ]; then
                 printf '%s\n%s\n' \
-                       "Verificatie van de MD5 checksums checks voor project ${_project}/${_run} op ${PRM_ROOT_DIR}/projects is mislukt:" \
-                       "De data is corrupt of incompleet. De originele data staat op ${HOSTNAME_SHORT}:${TMP_ROOT_DIR}/projects." \
+                       "Verificatie van de MD5 checksums checks voor project ${_project}/${_run} in ${PRM_ROOT_DIR}/projects/ is mislukt:" \
+                       "De data is corrupt of incompleet. De originele data staat in ${HOSTNAME_SHORT}:${TMP_ROOT_DIR}/projects/." \
                  | mail -s "Failed to copy project ${_project}/${_run} to permanent storage." "${EMAIL_TO}"
                 touch   "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed"
             else
-                log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Verificatie van de MD5 checksums checks voor project ${_project}/${_run} op ${PRM_ROOT_DIR}/projects is mislukt:"
-                log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    De data is corrupt of incompleet. (De originele data staat op ${HOSTNAME_SHORT}:${TMP_ROOT_DIR}/projects.)"
+                log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Verificatie van de MD5 checksums checks voor project ${_project}/${_run} in ${PRM_ROOT_DIR}/projects/ is mislukt:"
+                log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    De data is corrupt of incompleet. De originele data staat in ${HOSTNAME_SHORT}:${TMP_ROOT_DIR}/projects/."
             fi
         elif [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
             if [[ ${email} == 'true' ]; then
                 printf '%s\n' \
-                       "De data voor project ${_project}/${_run} is klaar en beschikbaar op ${PRM_ROOT_DIR}/projects." \
+                       "De data voor project ${_project}/${_run} is klaar en beschikbaar in ${PRM_ROOT_DIR}/projects/." \
                  | mail -s "Project ${_project}/${_run} was successfully copied to permanent storage." "${EMAIL_TO}"
                 touch   "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed"
                  && mv "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.{failed,finished}.mailed"
