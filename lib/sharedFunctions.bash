@@ -56,7 +56,7 @@ function log4Bash() {
     #
     # Validate params.
     #
-    if [ ! ${#} -eq 5 ] ;then
+    if [ ! ${#} -eq 5 ]; then
         echo "WARN: should have passed 5 arguments to ${FUNCNAME}: log_level, LINENO, FUNCNAME, (Exit) STATUS and log_message."
     fi
     
@@ -64,7 +64,7 @@ function log4Bash() {
     # Determine prio.
     #
     local _log_level="${1}"
-    local _log_level_prio=${l4b_log_levels[$_log_level]}
+    local _log_level_prio="${l4b_log_levels[$_log_level]}"
     local _status="${4:-$?}"
     
     #

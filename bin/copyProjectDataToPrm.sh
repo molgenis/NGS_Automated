@@ -30,7 +30,7 @@ HOSTNAME_SHORT="$(hostname -s)"
 ##
 #
 if [[ -f "${LIB_DIR}/sharedFunctions.bash" && -r "${LIB_DIR}/sharedFunctions.bash" ]]; then
-    . "${LIB_DIR}/sharedFunctions.bash"
+    source "${LIB_DIR}/sharedFunctions.bash"
 else
     printf '%s\n' "FATAL: cannot find or cannot access sharedFunctions.bash"
     trap - EXIT
@@ -316,12 +316,13 @@ declare -a configFiles=(
 for configFile in "${configFiles[@]}"; do 
     if [[ -f "${configFile}" && -r "${configFile}" ]]; then
         log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config file ${configFile}..."
-        #mixed_stdouterr=$( . ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Cannot source ${configFile}."
-        if . ${configFile} 2>/dev/null; then
-            log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully sourced config file ${configFile}."
-        else
-            mixed_stdouterr=$( . ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Cannot source ${configFile}."
-        fi
+        #
+        # In some Bash versions the source command does not work properly with process substitution.
+        # Therefore we source a first time with process substitution for proper error handling
+        # and a second time without just to make sure we can use the content from the sourced files.
+        #
+        mixed_stdouterr=$( source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Cannot source ${configFile}."
+        source ${configFile}  # May seem redundant, but is a mandatory workaround for some Bash versions.
     else
         log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Config file ${configFile} missing or not accessible."
     fi
