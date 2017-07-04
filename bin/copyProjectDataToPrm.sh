@@ -315,8 +315,13 @@ declare -a configFiles=(
 )
 for configFile in "${configFiles[@]}"; do 
     if [[ -f "${configFile}" && -r "${configFile}" ]]; then
-        log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config file ${configFile}..."
-        mixed_stdouterr=$( . ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Cannot source ${configFile}."
+        log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config file ${configFile}..."
+        #mixed_stdouterr=$( . ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Cannot source ${configFile}."
+        if [[ . ${configFile} 2>/dev/null ]]; then
+            log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully sourced config file ${configFile}."
+        else
+            mixed_stdouterr=$( . ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Cannot source ${configFile}."
+        fi
     else
         log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Config file ${configFile} missing or not accessible."
     fi
