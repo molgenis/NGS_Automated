@@ -81,7 +81,7 @@ function rsyncProject() {
     # Get a list of analysis ("run") sub dirs for this project 
     # and loop over them to see if there are any we need to rsync.
     #
-    local -a _runs=($(find "${TMP_ROOT_DIR}/projects/${_project}/" -maxdepth 1 -mindepth 1 -type d))
+    local -a _runs=($(find "./" -maxdepth 1 -mindepth 1 -type d))
     local run
     for _run in "${_runs[@]}"; do
         
@@ -122,7 +122,7 @@ function rsyncProject() {
         #
         # Count the number of all files produced in this analysis run.
         #
-        _countFilesProjectRunDirTmp=$(find "${TMP_ROOT_DIR}/projects/${_project}/${_run}/" -type f | wc -l)
+        _countFilesProjectRunDirTmp=$(find "./${_run}/" -type f | wc -l)
         
         #
         # Recursively create a list of MD5 checksums unless it is 
