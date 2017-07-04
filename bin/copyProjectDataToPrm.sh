@@ -54,6 +54,7 @@ Options:
     -h   Show this help.
     -g   Group.
     -e   Enable email notification. (Disabled by default.)
+    -n   Dry-run: Do not perform actual sync, but only list changes instead.
     -l   Log level.
          Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
@@ -161,7 +162,8 @@ function rsyncProject() {
         #
         local _transferSoFarSoGood='true'
         log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run} dir..."
-        rsync -av  "${TMP_ROOT_DIR}/projects/${_project}/${_run}" \
+        rsync -av ${dryrun:-} \
+                   "${TMP_ROOT_DIR}/projects/${_project}/${_run}" \
                    "${DATA_MANAGER}@${HOSTNAME_PRM}:${PRM_ROOT_DIR}/projects/${_project}/" \
                 >> "${_log_file}" 2>&1 \
          || {
@@ -172,7 +174,8 @@ function rsyncProject() {
             }
         
         log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run}.md5 checksums..."
-        rsync -acv "${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5" \
+        rsync -acv ${dryrun:-} \
+                   "${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5" \
                    "${DATA_MANAGER}@${HOSTNAME_PRM}:${PRM_ROOT_DIR}/projects/${_project}/" \
                 >> "${_log_file}" 2>&1 \
          || {
@@ -273,7 +276,8 @@ function rsyncProject() {
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments..."
 declare group=''
 declare email='false'
-while getopts "g:l:he" opt; do
+declare dryrun=''
+while getopts "g:l:hen" opt; do
     case $opt in
         h)
             showHelp
@@ -283,6 +287,9 @@ while getopts "g:l:he" opt; do
             ;;
         e)
             email='true'
+            ;;
+        e)
+            dryrun='-n'
             ;;
         l)
             l4b_log_level=${OPTARG^^}
