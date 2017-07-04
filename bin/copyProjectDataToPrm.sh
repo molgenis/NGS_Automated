@@ -82,7 +82,7 @@ function rsyncProject() {
     # Get a list of analysis ("run") sub dirs for this project 
     # and loop over them to see if there are any we need to rsync.
     #
-    local -a _runs=($(find "./" -maxdepth 1 -mindepth 1 -type d))
+    local -a _runs=($(find "./" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e 's|^\./||'))
     local run
     for _run in "${_runs[@]}"; do
         
