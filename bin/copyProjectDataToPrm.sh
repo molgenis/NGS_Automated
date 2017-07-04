@@ -81,7 +81,7 @@ function rsyncProject() {
     #
     local -a _runs=($(ls -1 "${TMP_ROOT_DIR}/projects/${_project}/"))
     local run
-    for _run in ${_runs[@]}; do
+    for _run in "${_runs[@]}"; do
         
         log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run}..."
         local _log_file="${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.log"
@@ -298,7 +298,7 @@ done
 #
 # Check for mandatory options.
 #
-if [[ -z ${group} ]]; then
+if [[ -z ${group:-} ]]; then
     log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
 fi
 
@@ -311,8 +311,8 @@ declare -a configFiles=(
     "${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
     "${CFG_DIR}/sharedConfig.cfg"
 )
-for configFile in ${configFiles[@]}; do 
-    if [[ -f ${configFile} && -r ${configFile} ]]; then
+for configFile in "${configFiles[@]}"; do 
+    if [[ -f "${configFile}" && -r "${configFile}" ]]; then
         log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config file ${configFile}..."
         mixed_stdouterr=$( . ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Cannot source ${configFile}."
     else
@@ -357,7 +357,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "$(module list)"
 # Get a list of all projects for this group and process them.
 #
 declare -a projects=($(ls -1 "${TMP_ROOT_DIR}/projects"))
-for project in ${projects[@]}; do
+for project in "${projects[@]}"; do
     rsyncProject "${project}"
 done
 
