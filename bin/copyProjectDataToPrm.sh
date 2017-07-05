@@ -210,14 +210,14 @@ function rsyncProject() {
                 #
                 log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
                          "Started verification of checksums by ${DATA_MANAGER}@${HOSTNAME_PRM} using checksums from ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5."
-                local _checksumVerification=$(ssh ${DATA_MANAGER}@${HOSTNAME_PRM} "\
-                        cd ${PRM_ROOT_DIR}/projects/${_project}; \
-                        if [ md5sum -c ${_run}.md5 > ${_run}.md5.log 2>&1 ]; then \
-                            echo 'PASS' \
-                        else \
-                            echo 'FAILED' \
-                        fi \
-                    ")
+                local _checksumVerification=$(ssh ${DATA_MANAGER}@${HOSTNAME_PRM} "
+                            cd ${PRM_ROOT_DIR}/projects/${_project}
+                            if md5sum -c ${_run}.md5 > ${_run}.md5.log 2>&1; then
+                                echo 'PASS'
+                            else
+                                echo 'FAILED'
+                            fi
+                        ")
                 if [[ "${_checksumVerification}" == 'FAILED' ]]; then
                     echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details." \
                       >> "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed"
