@@ -100,7 +100,7 @@ function log4Bash() {
         # Log to STDOUT (low prio <= 'WARN') or STDERR (high prio >= 'ERROR').
         #
         if [[ ${_log_level_prio} -ge ${l4b_log_levels['ERROR']} || ${_status} -ne 0 ]]; then
-            printf '%s\n' "${_log_line}" > /dev/stderr
+            printf '%s\n' "${_log_line}" 1>&2
         else
             printf '%s\n' "${_log_line}"
         fi
