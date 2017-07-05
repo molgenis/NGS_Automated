@@ -196,15 +196,15 @@ function rsyncProject() {
         #  2. Secondly verify checksums on the destination.
         #
         if [[ ${_transferSoFarSoGood} == 'true' ]]; then
-            local _countFilesProjectDataDirPrm=$(ssh ${DATA_MANAGER}@${HOSTNAME_PRM} "find ${PRM_ROOT_DIR}/projects/${_project}/${_run}/ -type f | wc -l")
-            if [[ ${_countFilesProjectDataDirTmp} -ne ${_countFilesProjectDataDirPrm} ]]; then
-                echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectDataDirTmp}) and prm (${_countFilesProjectDataDirPrm}) is NOT the same!" \
+            local _countFilesProjectRunDirPrm=$(ssh ${DATA_MANAGER}@${HOSTNAME_PRM} "find ${PRM_ROOT_DIR}/projects/${_project}/${_run}/ -type f | wc -l")
+            if [[ ${_countFilesProjectRunDirTmp} -ne ${_countFilesProjectRunDirPrm} ]]; then
+                echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectRunDirTmp}) and prm (${_countFilesProjectRunDirPrm}) is NOT the same!" \
                       >> "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed"
                 log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
-                         "Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectDataDirTmp}) and prm (${_countFilesProjectDataDirPrm}) is NOT the same!"
+                         "Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectRunDirTmp}) and prm (${_countFilesProjectRunDirPrm}) is NOT the same!"
             else
                 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
-                         "Amount of files on tmp and prm is the same for ${_project}/${_run}: ${_countFilesProjectDataDirPrm}."
+                         "Amount of files on tmp and prm is the same for ${_project}/${_run}: ${_countFilesProjectRunDirPrm}."
                 #
                 # Verify checksums on prm storage.
                 #
