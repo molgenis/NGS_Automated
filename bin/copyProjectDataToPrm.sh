@@ -23,6 +23,8 @@ INSTALLATION_DIR="$(cd -P "$(dirname "${0}")/.." && pwd)"
 LIB_DIR="${INSTALLATION_DIR}/lib"
 CFG_DIR="${INSTALLATION_DIR}/etc"
 HOSTNAME_SHORT="$(hostname -s)"
+ROLE_USER="$(whoami)"
+REAL_USER="$(logname)"
 
 #
 ##
@@ -335,6 +337,13 @@ for configFile in "${configFiles[@]}"; do
         log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Config file ${configFile} missing or not accessible."
     fi
 done
+
+#
+# Write access to prm storage requires data manager account.
+#
+if [[ ${ROLE_USER} != ${DATA_MANAGER} ]]; then
+    log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${DATA_MANAGER}, but you are ${ROLE_USER} (${REAL_USER})."
+fi
 
 #
 # Make sure only one copy of this script runs simultaneously 
