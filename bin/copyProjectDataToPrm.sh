@@ -225,7 +225,7 @@ function rsyncProject() {
                 elif [[ "${_checksumVerification}" == 'PASS' ]]; then
                     echo "OK! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details." \
                       >> "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed" \
-                      && mv "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.{failed,finished}"
+                      && mv "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}."{failed,finished}
                     log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
                 else
                     log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Got unexpected result from checksum verification:'
@@ -256,7 +256,7 @@ function rsyncProject() {
                        "De data voor project ${_project}/${_run} is klaar en beschikbaar in ${PRM_ROOT_DIR}/projects/." \
                  | mail -s "Project ${_project}/${_run} was successfully copied to permanent storage." "${EMAIL_TO}"
                 touch   "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed" \
-                 && mv "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.{failed,finished}.mailed"
+                 && mv "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}."{failed,finished}.mailed
              else
                  log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "De data voor project ${_project}/${_run} is klaar en beschikbaar in ${PRM_ROOT_DIR}/projects/."
              fi
