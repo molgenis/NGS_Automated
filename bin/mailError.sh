@@ -15,9 +15,9 @@ HOSTNAME_SHORT=$(hostname -s)
 . ${MYINSTALLATIONDIR}/sharedConfig.cfg
 
 ALLFINISHED=()
-if ls ${LOGDIR}/*.pipeline.failed 1> /dev/null 2>&1 
+if ls ${TMP_ROOT_DIR}/logs/*.pipeline.failed 1> /dev/null 2>&1 
 then
-	ls ${LOGDIR}/*.pipeline.failed > ${LOGDIR}/pipeline.failed.csv
+	ls ${TMP_ROOT_DIR}/logs/*.pipeline.failed > ${TMP_ROOT_DIR}/logs/pipeline.failed.csv
 else
 	exit 0
 fi
@@ -25,7 +25,7 @@ fi
 while read line 
 do
 	ALLFAILED+=("${line} ")
-done<${LOGDIR}/pipeline.failed.csv
+done<${TMP_ROOT_DIR}/logs/pipeline.failed.csv
 
 for i in ${ALLFAILED[@]}
 do
@@ -38,20 +38,20 @@ do
                 mailTo="helpdesk.gcc.groningen@gmail.com"
         elif [ "${groupname}" == "umcg-gd" ]
         then
-                if [ -f /groups/umcg-gd/${tmpDirectory}/logs/mailinglistDiagnostiekCrash.txt ]
+                if [ -f /groups/umcg-gd/${TMP_FS}/logs/mailinglistDiagnostiekCrash.txt ]
                 then
-                       	mailTo=$(cat /groups/umcg-gd/${tmpDirectory}/logs/mailinglistDiagnostiekCrash.txt)
+                       	mailTo=$(cat /groups/umcg-gd/${TMP_FS}/logs/mailinglistDiagnostiekCrash.txt)
                 else
                       	echo "mailingListDiagnostiekCrash.txt bestaat niet!!"
                         exit 0
                 fi
         fi
 	
-	if [ ! -f ${LOGDIR}/${projectName}.pipeline.failed.mailed ]
+	if [ ! -f ${TMP_ROOT_DIR}/logs/${projectName}.pipeline.failed.mailed ]
 	then
-		HEADER=$(head -1 ${LOGDIR}/${projectName}.pipeline.failed)
+		HEADER=$(head -1 ${TMP_ROOT_DIR}/logs/${projectName}.pipeline.failed)
 		echo "mailed error to ${mailTo}"
-		cat ${LOGDIR}/${projectName}.pipeline.failed | mail -s "The NGS_DNA pipeline on ${HOSTNAME_SHORT} has crashed for project ${projectName} on step ${HEADER}" ${mailTo}
-		touch ${LOGDIR}/${projectName}.pipeline.failed.mailed
+		cat ${TMP_ROOT_DIR}/logs/${projectName}.pipeline.failed | mail -s "The NGS_DNA pipeline on ${HOSTNAME_SHORT} has crashed for project ${projectName} on step ${HEADER}" ${mailTo}
+		touch ${TMP_ROOT_DIR}/logs/${projectName}.pipeline.failed.mailed
 	fi
 done

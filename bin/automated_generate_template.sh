@@ -10,7 +10,7 @@ TMPDIRECTORY=$(basename $(cd ../../ && pwd ))
 GROUP=$(basename $(cd ../../../ && pwd ))
 
 PROJECT=$1
-WORKDIR="/groups/${GROUP}/${TMPDIRECTORY}"
+TMP_ROOT_DIR="/groups/${GROUP}/${TMPDIRECTORY}"
 RUNID=run01
 
 ## Normal user, please leave BATCH at _chr
@@ -22,13 +22,13 @@ function errorExitandCleanUp() {
     echo "${PROJECT} TRAPPED"
     if [ ! -f /groups/${GROUP}/${TMPDIRECTORY}/logs/${PROJECT}.generating.failed.mailed ]; then
         mailTo="helpdesk.gcc.groningen@gmail.com"
-        tail -50 ${WORKDIR}/generatedscripts/${PROJECT}/generate.logger | mail -s "The generate script has crashed for run/project ${PROJECT}" ${mailTo}
+        tail -50 ${TMP_ROOT_DIR}/generatedscripts/${PROJECT}/generate.logger | mail -s "The generate script has crashed for run/project ${PROJECT}" ${mailTo}
         touch /groups/${GROUP}/${TMPDIRECTORY}/logs/${PROJECT}.generating.failed.mailed
     fi
 }
 trap "errorExitandCleanUp" HUP INT QUIT TERM EXIT ERR
 
-samplesheet=${WORKDIR}/generatedscripts/${PROJECT}/${PROJECT}.csv
+samplesheet=${TMP_ROOT_DIR}/generatedscripts/${PROJECT}/${PROJECT}.csv
 mac2unix $samplesheet
 
 python ${EBROOTNGS_DNA}/samplesize.py ${samplesheet} $thisDir
@@ -53,43 +53,43 @@ if [ -f .compute.properties ]; then
     rm .compute.properties
 fi
 
-if [ -f ${WORKDIR}/generatedscripts/${PROJECT}/out.csv  ]; then
-    rm -rf ${WORKDIR}/generatedscripts/${PROJECT}/out.csv
+if [ -f ${TMP_ROOT_DIR}/generatedscripts/${PROJECT}/out.csv  ]; then
+    rm -rf ${TMP_ROOT_DIR}/generatedscripts/${PROJECT}/out.csv
 fi
 
-echo "tmpName,${TMPDIRECTORY}" > ${WORKDIR}/generatedscripts/${PROJECT}/tmpdir_parameters.csv 
+echo "tmpName,${TMPDIRECTORY}" > ${TMP_ROOT_DIR}/generatedscripts/${PROJECT}/tmpdir_parameters.csv 
 
-perl ${EBROOTNGS_DNA}/convertParametersGitToMolgenis.pl ${WORKDIR}/generatedscripts/${PROJECT}/tmpdir_parameters.csv > \
-${WORKDIR}/generatedscripts/${PROJECT}/tmpdir_parameters_converted.csv
+perl ${EBROOTNGS_DNA}/convertParametersGitToMolgenis.pl ${TMP_ROOT_DIR}/generatedscripts/${PROJECT}/tmpdir_parameters.csv > \
+${TMP_ROOT_DIR}/generatedscripts/${PROJECT}/tmpdir_parameters_converted.csv
 
 perl ${EBROOTNGS_DNA}/convertParametersGitToMolgenis.pl ${EBROOTNGS_DNA}/parameters.csv > \
-${WORKDIR}/generatedscripts/${PROJECT}/out.csv
+${TMP_ROOT_DIR}/generatedscripts/${PROJECT}/out.csv
 
 perl ${EBROOTNGS_DNA}/convertParametersGitToMolgenis.pl ${EBROOTNGS_DNA}/parameters_${GROUP}.csv > \
-${WORKDIR}/generatedscripts/${PROJECT}/group_parameters.csv
+${TMP_ROOT_DIR}/generatedscripts/${PROJECT}/group_parameters.csv
 
 perl ${EBROOTNGS_DNA}/convertParametersGitToMolgenis.pl ${EBROOTNGS_DNA}/${ENVIRONMENT_PARAMETERS} > \
-${WORKDIR}/generatedscripts/${PROJECT}/environment_parameters.csv
+${TMP_ROOT_DIR}/generatedscripts/${PROJECT}/environment_parameters.csv
 
 sh $EBROOTMOLGENISMINCOMPUTE/molgenis_compute.sh \
--p ${WORKDIR}/generatedscripts/${PROJECT}/out.csv \
--p ${WORKDIR}/generatedscripts/${PROJECT}/group_parameters.csv \
--p ${WORKDIR}/generatedscripts/${PROJECT}/environment_parameters.csv \
--p ${WORKDIR}/generatedscripts/${PROJECT}/tmpdir_parameters_converted.csv \
+-p ${TMP_ROOT_DIR}/generatedscripts/${PROJECT}/out.csv \
+-p ${TMP_ROOT_DIR}/generatedscripts/${PROJECT}/group_parameters.csv \
+-p ${TMP_ROOT_DIR}/generatedscripts/${PROJECT}/environment_parameters.csv \
+-p ${TMP_ROOT_DIR}/generatedscripts/${PROJECT}/tmpdir_parameters_converted.csv \
 -p ${EBROOTNGS_DNA}/batchIDList${BATCH}.csv \
--p ${WORKDIR}/generatedscripts/${PROJECT}/${PROJECT}.csv \
+-p ${TMP_ROOT_DIR}/generatedscripts/${PROJECT}/${PROJECT}.csv \
 -w ${EBROOTNGS_DNA}/create_in-house_ngs_projects_workflow.csv \
--rundir ${WORKDIR}/generatedscripts/${PROJECT}/scripts \
+-rundir ${TMP_ROOT_DIR}/generatedscripts/${PROJECT}/scripts \
 --runid ${RUNID} \
 -o "workflowpath=${WORKFLOW};\
-outputdir=scripts/jobs;mainParameters=${WORKDIR}/generatedscripts/${PROJECT}/out.csv;\
-group_parameters=${WORKDIR}/generatedscripts/${PROJECT}/group_parameters.csv;\
+outputdir=scripts/jobs;mainParameters=${TMP_ROOT_DIR}/generatedscripts/${PROJECT}/out.csv;\
+group_parameters=${TMP_ROOT_DIR}/generatedscripts/${PROJECT}/group_parameters.csv;\
 groupname=${GROUP};\
 ngsversion=$(module list | grep -o -P 'NGS_DNA(.+)');\
-environment_parameters=${WORKDIR}/generatedscripts/${PROJECT}/environment_parameters.csv;\
-tmpdir_parameters=${WORKDIR}/generatedscripts/${PROJECT}/tmpdir_parameters_converted.csv;\
+environment_parameters=${TMP_ROOT_DIR}/generatedscripts/${PROJECT}/environment_parameters.csv;\
+tmpdir_parameters=${TMP_ROOT_DIR}/generatedscripts/${PROJECT}/tmpdir_parameters_converted.csv;\
 batchIDList=${EBROOTNGS_DNA}/batchIDList${BATCH}.csv;\
-worksheet=${WORKDIR}/generatedscripts/${PROJECT}/${PROJECT}.csv" \
+worksheet=${TMP_ROOT_DIR}/generatedscripts/${PROJECT}/${PROJECT}.csv" \
 -weave \
 --generate
 

@@ -38,7 +38,7 @@ trapSig 'trapHandler' '${LINENO}' '${FUNCNAME:-main}' '$?' HUP INT QUIT TERM EXI
 #  1. log_level     Defined explicitly by programmer.
 #  2. ${LINENO}     Bash env var indicating the active line number in the excuting script.
 #  3. ${FUNCNAME}   Bash env var indicating the active function in the excuting script.
-#  4. (Exit) STATUS Either defined explicitly by programmer or use Bash env var $? for the exit status of the last command.
+#  4. (Exit) STATUS Either defined explicitly by programmer or use Bash env var ${?} for the exit status of the last command.
 #  5  log_message   Defined explicitly by programmer.
 #
 # When log_level == FATAL the script will be terminated.
@@ -47,16 +47,16 @@ trapSig 'trapHandler' '${LINENO}' '${FUNCNAME:-main}' '$?' HUP INT QUIT TERM EXI
 #    log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'We managed to get this far.'
 #
 # Example of FATAL error with explicit exit status 1 defined by the script: 
-#    log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" 1 'We cannot continue because of ....'
+#    log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" '1' 'We cannot continue because of ....'
 #
-# Example of executing a command and logging failure with the EXIT_STATUS of that command (= $?):
-#    someCommand || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? 'Failed to execute someCommand.'
+# Example of executing a command and logging failure with the EXIT_STATUS of that command (= ${?}):
+#    someCommand || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} 'Failed to execute someCommand.'
 #
 function log4Bash() {
     #
     # Validate params.
     #
-    if [ ! ${#} -eq 5 ] ;then
+    if [ ! ${#} -eq 5 ]; then
         echo "WARN: should have passed 5 arguments to ${FUNCNAME}: log_level, LINENO, FUNCNAME, (Exit) STATUS and log_message."
     fi
     
@@ -64,7 +64,7 @@ function log4Bash() {
     # Determine prio.
     #
     local _log_level="${1}"
-    local _log_level_prio=${l4b_log_levels[$_log_level]}
+    local _log_level_prio="${l4b_log_levels[$_log_level]}"
     local _status="${4:-$?}"
     
     #
@@ -100,7 +100,7 @@ function log4Bash() {
         # Log to STDOUT (low prio <= 'WARN') or STDERR (high prio >= 'ERROR').
         #
         if [[ ${_log_level_prio} -ge ${l4b_log_levels['ERROR']} || ${_status} -ne 0 ]]; then
-            printf '%s\n' "${_log_line}" > /dev/stderr
+            printf '%s\n' "${_log_line}" 1>&2
         else
             printf '%s\n' "${_log_line}"
         fi
@@ -143,8 +143,8 @@ mixed_stdouterr='' # global variable to capture output from commands for reporti
 #
 function thereShallBeOnlyOne() {
     local _lock_file="${1}"
-    exec 200>"${_lock_file}" || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Failed to create FD 200>${_lock_file} for locking."
-    if [ ! flock -n 200 ]; then
+    exec 200>"${_lock_file}" || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to create FD 200>${_lock_file} for locking."
+    if ! flock -n 200; then
         log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Lockfile ${_lock_file} already claimed by another instance of $(basename ${0})."
         log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Another instance is already running and there shall be only one.'
         # No need for explicit exit here: log4Bash with log level FATAL will make sure we exit.
