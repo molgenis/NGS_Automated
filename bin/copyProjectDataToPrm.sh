@@ -389,7 +389,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "$(module list)"
 #
 # Get a list of all projects for this group and process them.
 #
-declare -a projects=($(find "${TMP_ROOT_DIR}/projects" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e 's|^${TMP_ROOT_DIR}/projects/||'))
+declare -a projects=($(find "${TMP_ROOT_DIR}/projects" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${TMP_ROOT_DIR}/projects/||"))
 for project in "${projects[@]}"; do
     rsyncProject "${project}"
 done
