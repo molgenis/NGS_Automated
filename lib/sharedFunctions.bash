@@ -38,7 +38,7 @@ trapSig 'trapHandler' '${LINENO}' '${FUNCNAME:-main}' '$?' HUP INT QUIT TERM EXI
 #  1. log_level     Defined explicitly by programmer.
 #  2. ${LINENO}     Bash env var indicating the active line number in the excuting script.
 #  3. ${FUNCNAME}   Bash env var indicating the active function in the excuting script.
-#  4. (Exit) STATUS Either defined explicitly by programmer or use Bash env var $? for the exit status of the last command.
+#  4. (Exit) STATUS Either defined explicitly by programmer or use Bash env var ${?} for the exit status of the last command.
 #  5  log_message   Defined explicitly by programmer.
 #
 # When log_level == FATAL the script will be terminated.
@@ -47,10 +47,10 @@ trapSig 'trapHandler' '${LINENO}' '${FUNCNAME:-main}' '$?' HUP INT QUIT TERM EXI
 #    log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'We managed to get this far.'
 #
 # Example of FATAL error with explicit exit status 1 defined by the script: 
-#    log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" 1 'We cannot continue because of ....'
+#    log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" '1' 'We cannot continue because of ....'
 #
-# Example of executing a command and logging failure with the EXIT_STATUS of that command (= $?):
-#    someCommand || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? 'Failed to execute someCommand.'
+# Example of executing a command and logging failure with the EXIT_STATUS of that command (= ${?}):
+#    someCommand || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} 'Failed to execute someCommand.'
 #
 function log4Bash() {
     #
@@ -143,7 +143,7 @@ mixed_stdouterr='' # global variable to capture output from commands for reporti
 #
 function thereShallBeOnlyOne() {
     local _lock_file="${1}"
-    exec 200>"${_lock_file}" || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Failed to create FD 200>${_lock_file} for locking."
+    exec 200>"${_lock_file}" || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to create FD 200>${_lock_file} for locking."
     if ! flock -n 200; then
         log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Lockfile ${_lock_file} already claimed by another instance of $(basename ${0})."
         log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Another instance is already running and there shall be only one.'

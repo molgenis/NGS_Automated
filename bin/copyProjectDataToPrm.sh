@@ -78,7 +78,7 @@ function rsyncProject() {
     local _project="${1}"
     log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${_project}..."
     
-    cd "${TMP_ROOT_DIR}/projects/${_project}/" || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Cannot access ${TMP_ROOT_DIR}/projects/${_project}/."
+    cd "${TMP_ROOT_DIR}/projects/${_project}/" || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot access ${TMP_ROOT_DIR}/projects/${_project}/."
     
     #
     # Get a list of analysis ("run") sub dirs for this project 
@@ -147,7 +147,7 @@ function rsyncProject() {
         if [[ "${_checksumsAvailable}" == 'false' ]]; then
             log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Computing MD5 checksums with md5deep for ${_project}/${_run}/..."
             md5deep -r -j0 -o f -l "${_run}/" > "${_run}.md5" 2>> "${_log_file}" \
-              || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Cannot compute checksums with md5deep. See ${_log_file} for details."
+              || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot compute checksums with md5deep. See ${_log_file} for details."
         fi
         
         #
@@ -170,7 +170,7 @@ function rsyncProject() {
                    "${DATA_MANAGER}@${HOSTNAME_PRM}:${PRM_ROOT_DIR}/projects/${_project}/" \
                 >> "${_log_file}" 2>&1 \
          || {
-             log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" $? "Failed to rsync ${TMP_ROOT_DIR}/projects/${_project}/${_run} dir. See ${_log_file} for details."
+             log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${TMP_ROOT_DIR}/projects/${_project}/${_run} dir. See ${_log_file} for details."
              echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_log_file} for details." \
                >> "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed"
              _transferSoFarSoGood='false'
@@ -182,7 +182,7 @@ function rsyncProject() {
                    "${DATA_MANAGER}@${HOSTNAME_PRM}:${PRM_ROOT_DIR}/projects/${_project}/" \
                 >> "${_log_file}" 2>&1 \
          || {
-              log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" $? "Failed to rsync ${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5. See ${_log_file} for details."
+              log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5. See ${_log_file} for details."
               echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_log_file} for details." \
                 >> "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed"
              _transferSoFarSoGood='false'
@@ -240,25 +240,33 @@ function rsyncProject() {
         if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed" \
               &&  $(wc -l "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed") -ge 10 \
               && ! -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed" ]]; then
-            if [[ ${email} == 'true' ]]; then
+            local _message1="MD5 checksum verification failed for ${PRM_ROOT_DIR}/projects/${_project}/${_run}:"
+            local _message2="The data is corrupt or incomplete. The original data is located at ${HOSTNAME_SHORT}:${TMP_ROOT_DIR}/projects/."
+            if [[ "${email}" == 'true' ]]; then
+                #printf '%s\n%s\n' \
+                #       "MD5 checksum verification failed for ${PRM_ROOT_DIR}/projects/${_project}/${_run}:" \
+                #       "    The data is corrupt or incomplete. The original data is located at ${HOSTNAME_SHORT}:${TMP_ROOT_DIR}/projects/." \
                 printf '%s\n%s\n' \
-                       "Verificatie van de MD5 checksums checks voor project ${_project}/${_run} in ${PRM_ROOT_DIR}/projects/ is mislukt:" \
-                       "De data is corrupt of incompleet. De originele data staat in ${HOSTNAME_SHORT}:${TMP_ROOT_DIR}/projects/." \
+                       "${_message1}" \
+                       "${_message2}" \
                  | mail -s "Failed to copy project ${_project}/${_run} to permanent storage." "${EMAIL_TO}"
                 touch   "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed"
             else
-                log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Verificatie van de MD5 checksums checks voor project ${_project}/${_run} in ${PRM_ROOT_DIR}/projects/ is mislukt:"
-                log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    De data is corrupt of incompleet. De originele data staat in ${HOSTNAME_SHORT}:${TMP_ROOT_DIR}/projects/."
+                log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message1}"
+                log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message2}"
             fi
         elif [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
-            if [[ ${email} == 'true' ]]; then
+            local _message1="Project/run ${_project}/${_run} is ready. The data is available at ${PRM_ROOT_DIR}/projects/."
+            if [[ "${email}" == 'true' ]]; then
+                #printf '%s\n' \
+                #       "De data voor project ${_project}/${_run} is klaar en beschikbaar in ${PRM_ROOT_DIR}/projects/." \
                 printf '%s\n' \
-                       "De data voor project ${_project}/${_run} is klaar en beschikbaar in ${PRM_ROOT_DIR}/projects/." \
+                       "${_message1}" \
                  | mail -s "Project ${_project}/${_run} was successfully copied to permanent storage." "${EMAIL_TO}"
                 touch   "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed" \
                  && mv "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}."{failed,finished}.mailed
              else
-                 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "De data voor project ${_project}/${_run} is klaar en beschikbaar in ${PRM_ROOT_DIR}/projects/."
+                 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message1}"
              fi
         else
             log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Ended up in unexpected state:'
@@ -331,7 +339,7 @@ for configFile in "${configFiles[@]}"; do
         # Therefore we source a first time with process substitution for proper error handling
         # and a second time without just to make sure we can use the content from the sourced files.
         #
-        mixed_stdouterr=$( source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Cannot source ${configFile}."
+        mixed_stdouterr=$(source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot source ${configFile}."
         source ${configFile}  # May seem redundant, but is a mandatory workaround for some Bash versions.
     else
         log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Config file ${configFile} missing or not accessible."
@@ -341,7 +349,7 @@ done
 #
 # Write access to prm storage requires data manager account.
 #
-if [[ ${ROLE_USER} != ${DATA_MANAGER} ]]; then
+if [[ "${ROLE_USER}" != "${DATA_MANAGER}" ]]; then
     log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${DATA_MANAGER}, but you are ${ROLE_USER} (${REAL_USER})."
 fi
 
@@ -362,7 +370,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 # Load hashdeep.
 #
-module load hashdeep/${HASHDEEP_VERSION} || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? 'Failed to load hashdeep module.'
+module load hashdeep/${HASHDEEP_VERSION} || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} 'Failed to load hashdeep module.'
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "$(module list)"
 
 #
