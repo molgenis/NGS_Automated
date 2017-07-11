@@ -110,6 +110,8 @@ function rsyncProject() {
             # Deprecated old NGS_Automated 1.x *.pipeline.finished per project.
             local _pipelineFinished="${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.finished"
             _pipelineFinished='true'
+        else
+            log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No *.pipeline.finished present."
         fi
         if [[ "${_pipelineFinished}" == 'true' ]]; then
             log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_pipelineFinished}..."
