@@ -237,15 +237,14 @@ function rsyncProject() {
         #
         # Send e-mail notification.
         #
+        log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed exists."
+        log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed exists."
         if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed" \
-              &&  $(wc -l "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed") -ge 10 \
+              &&  $(cat "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed" | wc -l) -ge 10 \
               && ! -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed" ]]; then
             local _message1="MD5 checksum verification failed for ${PRM_ROOT_DIR}/projects/${_project}/${_run}:"
             local _message2="The data is corrupt or incomplete. The original data is located at ${HOSTNAME_SHORT}:${TMP_ROOT_DIR}/projects/."
             if [[ "${email}" == 'true' ]]; then
-                #printf '%s\n%s\n' \
-                #       "MD5 checksum verification failed for ${PRM_ROOT_DIR}/projects/${_project}/${_run}:" \
-                #       "    The data is corrupt or incomplete. The original data is located at ${HOSTNAME_SHORT}:${TMP_ROOT_DIR}/projects/." \
                 printf '%s\n%s\n' \
                        "${_message1}" \
                        "${_message2}" \
@@ -258,8 +257,6 @@ function rsyncProject() {
         elif [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
             local _message1="Project/run ${_project}/${_run} is ready. The data is available at ${PRM_ROOT_DIR}/projects/."
             if [[ "${email}" == 'true' ]]; then
-                #printf '%s\n' \
-                #       "De data voor project ${_project}/${_run} is klaar en beschikbaar in ${PRM_ROOT_DIR}/projects/." \
                 printf '%s\n' \
                        "${_message1}" \
                  | mail -s "Project ${_project}/${_run} was successfully copied to permanent storage." "${EMAIL_TO}"
