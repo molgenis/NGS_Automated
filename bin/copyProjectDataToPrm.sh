@@ -239,31 +239,29 @@ function rsyncProject() {
         #
         log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed exists."
         log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed exists."
-        if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed" \
-              &&  $(cat "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed" | wc -l) -ge 10 \
-              && ! -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed" ]]; then
+        if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed" ]]; then
             local _message1="MD5 checksum verification failed for ${PRM_ROOT_DIR}/projects/${_project}/${_run}:"
             local _message2="The data is corrupt or incomplete. The original data is located at ${HOSTNAME_SHORT}:${TMP_ROOT_DIR}/projects/."
-            if [[ "${email}" == 'true' ]]; then
+            log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message1}"
+            log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message2}"
+            if [[ "${email}" == 'true' \
+              &&  $(cat "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed" | wc -l) -ge 10 \
+              && ! -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed" ]]; then
                 printf '%s\n%s\n' \
                        "${_message1}" \
                        "${_message2}" \
                  | mail -s "Failed to copy project ${_project}/${_run} to permanent storage." "${EMAIL_TO}"
                 touch   "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed"
-            else
-                log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message1}"
-                log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message2}"
             fi
         elif [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
             local _message1="Project/run ${_project}/${_run} is ready. The data is available at ${PRM_ROOT_DIR}/projects/."
+            log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message1}"
             if [[ "${email}" == 'true' ]]; then
                 printf '%s\n' \
                        "${_message1}" \
                  | mail -s "Project ${_project}/${_run} was successfully copied to permanent storage." "${EMAIL_TO}"
                 touch   "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed" \
                  && mv "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}."{failed,finished}.mailed
-             else
-                 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message1}"
              fi
         else
             log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Ended up in unexpected state:'
