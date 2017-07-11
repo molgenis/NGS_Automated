@@ -94,25 +94,35 @@ function rsyncProject() {
         #
         # Determine whether an rsync is required for this run, which is the case when
         #  1. either the pipeline has finished and this copy script has not
-        #  2. or when a pipeline has updated the results after previous execution of this copy script. 
+        #  2. or when a pipeline has updated the results after a previous execution of this script. 
         #
         # Temporarily check for "${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.finished"
         #        in addition to "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished"
         # for backwards compatibility with old NGS_Automated 1.x.
         #
+        local _pipelineFinished='false'
         local _rsyncRequired='false'
-        if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished" || -f "${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.finished" ]]; then
-            if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished" ]]; then
-                local _pipelineFinished="${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished"
-            else
-                local _pipelineFinished="${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.finished"
-            fi
+        if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished" ]]; then
+            # New NGS_Automated 2.x *.pipeline.finished per project per run sub dir.
+            local _pipelineFinishedFile="${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished"
+            _pipelineFinished='true'
+        elif [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.finished" ]]; then
+            # Deprecated old NGS_Automated 1.x *.pipeline.finished per project.
+            local _pipelineFinished="${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.finished"
+            _pipelineFinished='true'
+        fi
+        if [[ "${_pipelineFinished}" == 'true' ]]; then
             log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_pipelineFinished}..."
-            if [[ ! -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
+            if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
+                log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished."
+                if [[ "${_pipelineFinished}" -nt "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
+                    log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "*.pipeline.finished newer than *.${SCRIPT_NAME}.finished."
+                    _rsyncRequired='true'
+                else
+                    log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "*.pipeline.finished older than *.${SCRIPT_NAME}.finished."
+                fi
+            else
                 log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished present."
-                _rsyncRequired='true'
-            elif [[ "${_pipelineFinished}" -nt "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
-                log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "*.pipeline.finished newer than *.${SCRIPT_NAME}.finished."
                 _rsyncRequired='true'
             fi
         fi
