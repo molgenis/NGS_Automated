@@ -108,16 +108,16 @@ function rsyncProject() {
             _pipelineFinished='true'
         elif [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.finished" ]]; then
             # Deprecated old NGS_Automated 1.x *.pipeline.finished per project.
-            local _pipelineFinished="${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.finished"
+            local _pipelineFinishedFile="${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.finished"
             _pipelineFinished='true'
         else
             log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No *.pipeline.finished present."
         fi
         if [[ "${_pipelineFinished}" == 'true' ]]; then
-            log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_pipelineFinished}..."
+            log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_pipelineFinishedFile}..."
             if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
                 log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished."
-                if [[ "${_pipelineFinished}" -nt "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
+                if [[ "${_pipelineFinishedFile}" -nt "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
                     log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "*.pipeline.finished newer than *.${SCRIPT_NAME}.finished."
                     _rsyncRequired='true'
                 else
@@ -147,7 +147,7 @@ function rsyncProject() {
         #
         local _checksumsAvailable='false'
         if [ -f "${_run}.md5" ]; then
-            if [[ ${_pipelineFinished} -ot "${_run}.md5" ]]; then
+            if [[ ${_pipelineFinishedFile} -ot "${_run}.md5" ]]; then
                 local _countFilesProjectRunChecksumFileTmp=$(wc -l "${_run}.md5" | awk '{print $1}')
                 log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checksum file contains ${_countFilesProjectRunChecksumFileTmp} files and run dir contains ${_countFilesProjectRunDirTmp} files."
                 if [[ "${_countFilesProjectRunChecksumFileTmp}" -eq "${_countFilesProjectRunDirTmp}" ]]; then
