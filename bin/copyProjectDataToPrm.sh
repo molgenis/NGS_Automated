@@ -94,25 +94,37 @@ function rsyncProject() {
         #
         # Determine whether an rsync is required for this run, which is the case when
         #  1. either the pipeline has finished and this copy script has not
-        #  2. or when a pipeline has updated the results after previous execution of this copy script. 
+        #  2. or when a pipeline has updated the results after a previous execution of this script. 
         #
         # Temporarily check for "${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.finished"
         #        in addition to "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished"
         # for backwards compatibility with old NGS_Automated 1.x.
         #
+        local _pipelineFinished='false'
         local _rsyncRequired='false'
-        if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished" || -f "${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.finished" ]]; then
-            if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished" ]]; then
-                local _pipelineFinished="${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished"
+        if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished" ]]; then
+            # New NGS_Automated 2.x *.pipeline.finished per project per run sub dir.
+            local _pipelineFinishedFile="${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished"
+            _pipelineFinished='true'
+        elif [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.finished" ]]; then
+            # Deprecated old NGS_Automated 1.x *.pipeline.finished per project.
+            local _pipelineFinishedFile="${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.finished"
+            _pipelineFinished='true'
+        else
+            log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No *.pipeline.finished present."
+        fi
+        if [[ "${_pipelineFinished}" == 'true' ]]; then
+            log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_pipelineFinishedFile}..."
+            if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
+                log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished."
+                if [[ "${_pipelineFinishedFile}" -nt "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
+                    log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "*.pipeline.finished newer than *.${SCRIPT_NAME}.finished."
+                    _rsyncRequired='true'
+                else
+                    log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "*.pipeline.finished older than *.${SCRIPT_NAME}.finished."
+                fi
             else
-                local _pipelineFinished="${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.finished"
-            fi
-            log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_pipelineFinished}..."
-            if [[ ! -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
                 log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished present."
-                _rsyncRequired='true'
-            elif [[ "${_pipelineFinished}" -nt "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
-                log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "*.pipeline.finished newer than *.${SCRIPT_NAME}.finished."
                 _rsyncRequired='true'
             fi
         fi
@@ -135,7 +147,7 @@ function rsyncProject() {
         #
         local _checksumsAvailable='false'
         if [ -f "${_run}.md5" ]; then
-            if [[ ${_pipelineFinished} -ot "${_run}.md5" ]]; then
+            if [[ ${_pipelineFinishedFile} -ot "${_run}.md5" ]]; then
                 local _countFilesProjectRunChecksumFileTmp=$(wc -l "${_run}.md5" | awk '{print $1}')
                 log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checksum file contains ${_countFilesProjectRunChecksumFileTmp} files and run dir contains ${_countFilesProjectRunDirTmp} files."
                 if [[ "${_countFilesProjectRunChecksumFileTmp}" -eq "${_countFilesProjectRunDirTmp}" ]]; then
@@ -237,36 +249,31 @@ function rsyncProject() {
         #
         # Send e-mail notification.
         #
-        if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed" \
-              &&  $(wc -l "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed") -ge 10 \
-              && ! -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed" ]]; then
+        log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed exists."
+        log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed exists."
+        if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed" ]]; then
             local _message1="MD5 checksum verification failed for ${PRM_ROOT_DIR}/projects/${_project}/${_run}:"
             local _message2="The data is corrupt or incomplete. The original data is located at ${HOSTNAME_SHORT}:${TMP_ROOT_DIR}/projects/."
-            if [[ "${email}" == 'true' ]]; then
-                #printf '%s\n%s\n' \
-                #       "MD5 checksum verification failed for ${PRM_ROOT_DIR}/projects/${_project}/${_run}:" \
-                #       "    The data is corrupt or incomplete. The original data is located at ${HOSTNAME_SHORT}:${TMP_ROOT_DIR}/projects/." \
+            log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message1}"
+            log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message2}"
+            if [[ "${email}" == 'true' \
+              &&  $(cat "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed" | wc -l) -ge 10 \
+              && ! -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed" ]]; then
                 printf '%s\n%s\n' \
                        "${_message1}" \
                        "${_message2}" \
                  | mail -s "Failed to copy project ${_project}/${_run} to permanent storage." "${EMAIL_TO}"
                 touch   "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed"
-            else
-                log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message1}"
-                log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message2}"
             fi
         elif [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]; then
             local _message1="Project/run ${_project}/${_run} is ready. The data is available at ${PRM_ROOT_DIR}/projects/."
+            log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message1}"
             if [[ "${email}" == 'true' ]]; then
-                #printf '%s\n' \
-                #       "De data voor project ${_project}/${_run} is klaar en beschikbaar in ${PRM_ROOT_DIR}/projects/." \
                 printf '%s\n' \
                        "${_message1}" \
                  | mail -s "Project ${_project}/${_run} was successfully copied to permanent storage." "${EMAIL_TO}"
                 touch   "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed.mailed" \
                  && mv "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}."{failed,finished}.mailed
-             else
-                 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message1}"
              fi
         else
             log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Ended up in unexpected state:'
