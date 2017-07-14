@@ -329,7 +329,7 @@ if [[ -z "${group:-}" ]]; then
     log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
 fi
 if [[ -n "${dryrun:-}" ]]; then
-    log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '1' 'Enabled dryrun option for rsync.'
+    log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Enabled dryrun option for rsync.'
 fi
 
 #
