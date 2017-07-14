@@ -197,7 +197,7 @@ function rsyncProject() {
               log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5. See ${_log_file} for details."
               echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_log_file} for details." \
                 >> "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed"
-             _transferSoFarSoGood='false'
+              _transferSoFarSoGood='false'
             }
         
         #
@@ -306,7 +306,7 @@ while getopts "g:l:hen" opt; do
         e)
             email='true'
             ;;
-        e)
+        n)
             dryrun='-n'
             ;;
         l)
@@ -323,10 +323,13 @@ while getopts "g:l:hen" opt; do
 done
 
 #
-# Check for mandatory options.
+# Check commandline options.
 #
 if [[ -z "${group:-}" ]]; then
     log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
+fi
+if [[ -n "${dryrun:-}" ]]; then
+    log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '1' 'Enabled dryrun option for rsync.'
 fi
 
 #
