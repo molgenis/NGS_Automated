@@ -407,6 +407,7 @@ else
 			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found for project ${project}."
 		else
 			for run in "${runs[@]:-}"; do
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/${run}..."
 				rsyncProjectRun "${project}" "${run}"
 			done
 		fi
