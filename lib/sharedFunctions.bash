@@ -143,6 +143,8 @@ mixed_stdouterr='' # global variable to capture output from commands for reporti
 #
 function thereShallBeOnlyOne() {
 	local _lock_file="${1}"
+	local _lock_dir="$(dirname "${_lock_file}")"
+	mkdir -p "${_lock_dir}"  || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to create dir for lock file @ ${_lock_dir}."
 	exec 200>"${_lock_file}" || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to create FD 200>${_lock_file} for locking."
 	if ! flock -n 200; then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Lockfile ${_lock_file} already claimed by another instance of $(basename ${0})."
