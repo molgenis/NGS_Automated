@@ -400,13 +400,13 @@ declare -a projects=($(find "${TMP_ROOT_DIR}/projects/" -maxdepth 1 -mindepth 1 
 if [[ "${#projects[@]:-0}" -eq '0' ]]; then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${TMP_ROOT_DIR}/projects."
 else
-	for project in "${projects[@]:-}"; do
+	for project in "${projects[@]}"; do
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project}..."
 		declare -a runs=($(find "${TMP_ROOT_DIR}/projects/${project}/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e 's|^${TMP_ROOT_DIR}/projects/${project}/||'))
 		if [[ "${#runs[@]:-0}" -eq '0' ]]; then
 			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found for project ${project}."
 		else
-			for run in "${runs[@]:-}"; do
+			for run in "${runs[@]}"; do
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/${run}..."
 				rsyncProjectRun "${project}" "${run}"
 			done
