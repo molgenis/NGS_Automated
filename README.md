@@ -3,20 +3,19 @@
 Automation using Bash scripts and Cron jobs for Molgenis Compute pipelines from:
  - NGS_DNA
  - NGS_RNA
- 
-#### Repo layout
-```
 
-|-- bin/......................... Bash scripts for managing data staging, data analysis and monitoring / error handling.
-|-- etc/......................... Config files in bash syntax. Config files are sourced by the scripts in bin/.
-|   |-- <group>.cfg.............. Group specific variables.
-|   |-- <site>.cfg............... Site / server specific variables.
-|   `-- sharedConfig.cfg......... Generic variables, which are the same for all group and all sites / servers.
-`-- lib/
-    `-- sharedFunctions.bash..... Generic functions for error handling, logging, etc.
-```
+#### Code style
 
-## 1. Data flow 1.x
+- Indentation: <TABS>
+- environment variables: ALL\_UPPERCASE\_WITH\_UNDERSCORES
+- global script variables: camelCase
+- local function variables: _camelCasePrefixedWithUnderscore
+- `if ...; then`, `while ...; do` and `for ...; do` on one line as opposed to the then or do on the next line
+
+## Version 1.x
+
+#### Data flow
+
 ```
    ⎛¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯⎞
    ⎜ LFS  ⎜ Dedicated pre processing server to create FastQ files                        ⎜
@@ -41,7 +40,25 @@ Automation using Bash scripts and Cron jobs for Molgenis Compute pipelines from:
                                                                                          mailError
 ```
 
-## 2. Data flow 2.x
+#### Location of job control and log files
+
+?
+
+## Version 2.x
+
+#### Repo layout
+```
+
+|-- bin/......................... Bash scripts for managing data staging, data analysis and monitoring / error handling.
+|-- etc/......................... Config files in bash syntax. Config files are sourced by the scripts in bin/.
+|   |-- <group>.cfg.............. Group specific variables.
+|   |-- <site>.cfg............... Site / server specific variables.
+|   `-- sharedConfig.cfg......... Generic variables, which are the same for all group and all sites / servers.
+`-- lib/
+    `-- sharedFunctions.bash..... Generic functions for error handling, logging, etc.
+```
+
+#### Data flow
 
 Changes:
  - Make _copyRawDataToPrm_ the first step
@@ -75,3 +92,32 @@ Changes:
  v
  `>>> 4: monitorProjects (previously pipelineFinished + mailError)
 ```
+
+#### Location of job control and log files
+
+ - LFS = logical file system; one of arc*, scr*, tmp* or prm*.
+ - NGS_DNA and NGS_RNA pipelines produce data per project in a run sub dir for each (re)analysis of the data.
+   These pipelines do not generate data outside the projects folder.
+ - NGS_Autmotated has it's own dirs and does NOT touch/modify/create any data in the projects dir.
+
+```
+/groups/${group}/${LFS}/
+                 |-- generatedscripts/
+                 |-- logs/................ Logs from NGS_Automated.
+                 |   `-- ${project}/
+                 |       |-- ${run}.${SCRIPT_NAME}.log
+                 |       |-- ${run}.${SCRIPT_NAME}.[failed|finished]
+                 |       |-- ${run}.${SCRIPT_NAME}.[failed|finished].mailed
+                 |-- projects/
+                 |   |-- ${run}.md5....... MD5 checksums for all files of the corresponding ${run} dir.
+                 |   `-- ${run}/
+                 |       |-- jobs/........ Generated Bash scripts for this pipeline/analysis run.
+                 |       |-- logs/........ Only logs for this pipeline/analysis run, so no logs from NGS_Automated.
+                 |       |-- qc/.......... Quality Control files.
+                 |       |-- rawdata/..... Relative symlinks to the rawdata and corresponding checksums.
+                 |       |   |-- array/... Symlinks point to actual data in ../../../../../rawdata/array/
+                 |       |   `-- ngs/..... Symlinks point to actual data in ../../../../../rawdata/ngs/
+                 |       `-- results/..... Result files for this pipeline/analysis run.
+                 `-- rawdata/
+```
+
