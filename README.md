@@ -93,6 +93,14 @@ Changes:
  `>>> 4: monitorProjects (previously pipelineFinished + mailError)
 ```
 
+|Script                  |User              |Running on site/server|
+|------------------------|------------------|----------------------|
+|1. copyRawDataToPrm     |${group}-dm       |HPC Cluster           |
+|2. startPipeline        |${group}-ateambot |HPC Cluster           |
+|3. copyProjectDataToPrm |${group}-dm       |HPC Cluster           |
+|4. monitorProjects      |${group}-ateambot |HPC Cluster           |
+
+
 #### Location of job control and log files
 
  - LFS = logical file system; one of arc*, scr*, tmp* or prm*.
