@@ -402,7 +402,7 @@ if [[ "${#projects[@]:-0}" -eq '0' ]]; then
 else
 	for project in "${projects[@]}"; do
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project}..."
-		declare -a runs=($(find "${TMP_ROOT_DIR}/projects/${project}/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e 's|^${TMP_ROOT_DIR}/projects/${project}/||'))
+		declare -a runs=($(find "${TMP_ROOT_DIR}/projects/${project}/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${TMP_ROOT_DIR}/projects/${project}/||"))
 		if [[ "${#runs[@]:-0}" -eq '0' ]]; then
 			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found for project ${project}."
 		else
