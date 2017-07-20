@@ -154,9 +154,7 @@ function generateScripts () {
         cd scripts
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
 		"navigated to $(pwd), should be the same as ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/scripts"
-        touch "${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.pipeline.locked"
         sh submit.sh
-        rm "${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.pipeline.locked"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
 		"scripts generated, this file has been created: ${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.scriptsGenerated"
 
@@ -180,12 +178,11 @@ function submitPipeline () {
 	fi
 
 	_logger="${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.logger"
-	if [[ ! -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.started"  && ! -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.locked" && ! -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished" ]]
+	if [[ ! -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.started"  && ! -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished" ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
 			"working on ${_project}"
 
-#                touch "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.locked"
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
 			"navigated to: ${TMP_ROOT_DIR}/projects/${_project}/run01/jobs/"
                 cd "${TMP_ROOT_DIR}/projects/${_project}/run01/jobs/"
