@@ -284,7 +284,7 @@ done
 # Write access to prm storage requires data manager account.
 #
 if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]; then
-	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${DATA_MANAGER}, but you are ${ROLE_USER} (${REAL_USER})."
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
 fi
 
 #
@@ -398,8 +398,8 @@ then
 		##
 		#
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
-			"${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.copyRawDataToDiagnosticsCluster.finished ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.scriptsGenerated"
-		if [[ -f "${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.copyRawDataToDiagnosticsCluster.finished" || -f "${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.copyRawDataToCluster.finished" ]] && [ ! -f "${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.scriptsGenerated" ]
+			"${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.stagePrmDataToTmp.finished ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.scriptsGenerated"
+		if [[ -f "${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.stagePrmDataToTmp.finished" ]] && [ ! -f "${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.scriptsGenerated" ]
 		then
 			for project in "${PROJECTARRAY[@]}"
 			do
