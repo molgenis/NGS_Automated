@@ -222,15 +222,11 @@ function generateScripts () {
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
 		"copying ${TMP_ROOT_DIR}/Samplesheets/${_filePrefix}.csv to ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/"
 	cp "${TMP_ROOT_DIR}/Samplesheets/${_filePrefix}.csv" "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/"
-	
+
 	cd "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
 		"navigated to $(pwd), should be the same as ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/"
 
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
-		"\nsh ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.sh ${_filePrefix} ${_build} ${_species} ${_workflowOrPanel} > ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.logger"
-	echo "sh ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.sh "${_filePrefix}" ${_build} ${_species} ${_workflowOrPanel}" > "${TMP_ROOT_DIR}"/generatedscripts/"${_filePrefix}"/generate.logger
-	
 	if [ "${_sampleType}" == "DNA" ]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
