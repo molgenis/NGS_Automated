@@ -84,11 +84,6 @@ EOH
 function stagePrmDataToTmp () {
 	local _filePrefix="${1}"
 
-	if [ ! -d "${TMP_ROOT_DIR}/logs/${_filePrefix}" ]
-	then
-			mkdir -m 2770 "${TMP_ROOT_DIR}/logs/${_filePrefix}/"
-	fi
-
 	LOGGER="${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.stagePrmDataToTmp.logger"
 
 
@@ -121,7 +116,6 @@ function stagePrmDataToTmp () {
 			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${LOGGER} for details." >> "${TMP_ROOT_DIR}/logs/${_filePrefix}/${SCRIPT_NAME}.failed"
 			_transferSoFarSoGood='false'
 			}
-	
 
 		##Compare how many files are on both prm and tmp
 		countFilesRawDataDirTmp=$(ls "${TMP_ROOT_DIR}/rawdata/ngs/${_filePrefix}/${_filePrefix}"* | wc -l)
@@ -155,16 +149,16 @@ function stagePrmDataToTmp () {
 				#       touch ${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.dataCopiedToDiagnosticsCluster
 				#       printf "run_id,group,demultiplexing,copy_raw,projects,date\n" > ${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.uploading
 				#       printf "${_filePrefix},${group},finished,finished,," >> ${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.uploading
-				
+
 				#       CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
 				#       TOKEN=${CURLRESPONSE:10:32}
-				
-				#       curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.uploading" -FentityName='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
+
+			#       curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.uploading" -FentityName='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
 			else
 				log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "the counts are not the same, new rsync"
 			fi
 		fi
-		
+
 		if [ "${_checksumVerification}" == 'PASS' ]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
@@ -260,7 +254,7 @@ function submitPipeline () {
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
 		"starting to work on the submitPipeline part on project: ${_project} and run: ${_run}"
 
-	if [ ! -d "${TMP_ROOT_DIR}/logs/${_project}" ]
+	if [ ! -e "${TMP_ROOT_DIR}/logs/${_project}" ]
 	then
 		mkdir "${TMP_ROOT_DIR}/logs/${_project}"
 	fi
@@ -423,7 +417,7 @@ then
 		filePrefix="${csvFile%.*}"
 
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run: ${filePrefix}..."
-		if [ ! -d "${TMP_ROOT_DIR}/logs/${filePrefix}" ]
+		if [ ! -e "${TMP_ROOT_DIR}/logs/${filePrefix}" ]
 		then
 			mkdir "${TMP_ROOT_DIR}/logs/${filePrefix}"
 		fi
