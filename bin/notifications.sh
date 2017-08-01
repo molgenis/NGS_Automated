@@ -77,7 +77,21 @@ function notification(){
 
 	local _status="${1}"
 
+	if [[ "${NGS_DNA_VERSION}" ]]
+	then
+		local pipeline="NGS_DNA"
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Pipeline is ${pipeline}"
+
+	elif [[ "${NGS_RNA_VERSION}" ]]
+	then
+		pipeline="NGS_RNA"
+                log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Pipeline is ${pipeline}"
+	else
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "No pipeline found!"
+	fi
+
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Notification status is: ${_status}"
+
 
 	if $(ls "${TMP_ROOT_DIR}/logs/"*"/"*".pipeline.${_status}" 1> /dev/null 2>&1)
 	then
@@ -99,11 +113,11 @@ function notification(){
 
 			if [ "${_status}" == "failed" ]
 			then
-				local _subject="The NGS_DNA pipeline on ${HOSTNAME_SHORT} has ${_status} for project ${_project} on step ${_header}"
+				local _subject="The ${pipeline} pipeline on ${HOSTNAME_SHORT} has ${_status} for project ${_project} on step ${_header}"
 				local _body=$(cat "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.${_status}")
 			else
-				_subject="NGS_DNA pipeline is finished for project ${_project} on `date +%d/%m/%Y` `date +%H:%M`"
-				_body="The results can be found in: ${TMP_ROOT_DIR}/projects/${_run}/ \n\nCheers from the GCC :)"
+				_subject="${pipeline} pipeline is finished for project ${_project} on `date +%d/%m/%Y` `date +%H:%M`"
+				_body="The results can be found in: ${PRM_ROOT_DIR}/projects/${_run}/ \n\nCheers from the GCC :)"
 			fi
 
 			if [[ "${email}" == 'true' ]]
