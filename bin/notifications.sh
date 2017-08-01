@@ -79,6 +79,7 @@ function notification(){
 
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Notification status is: ${_status}"
 
+
 	if $(ls "${TMP_ROOT_DIR}/logs/"*"/"*".pipeline.${_status}" 1> /dev/null 2>&1)
 	then
 		$(ls "${TMP_ROOT_DIR}/logs/"*"/"*".pipeline.${_status}" > "${TMP_ROOT_DIR}/logs/pipeline.${_status}.csv")
@@ -99,11 +100,11 @@ function notification(){
 
 			if [ "${_status}" == "failed" ]
 			then
-				local _subject="The NGS_DNA pipeline on ${HOSTNAME_SHORT} has ${_status} for project ${_project} on step ${_header}"
+				local _subject="The pipeline on ${HOSTNAME_SHORT} has ${_status} for project ${_project} on step ${_header}"
 				local _body=$(cat "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.${_status}")
 			else
-				_subject="NGS_DNA pipeline is finished for project ${_project} on `date +%d/%m/%Y` `date +%H:%M`"
-				_body="The results can be found in: ${TMP_ROOT_DIR}/projects/${_run}/ \n\nCheers from the GCC :)"
+				_subject="The pipeline has finished for project ${_project} on `date +%d/%m/%Y` `date +%H:%M`"
+				_body="The results can be found in: ${PRM_ROOT_DIR}/projects/${_run}/ \n\nCheers from the GCC :)"
 			fi
 
 			if [[ "${email}" == 'true' ]]
