@@ -81,13 +81,101 @@ EOH
 # Source config files.
 #
 
+function stagePrmDataToTmp () {
+	local _filePrefix="${1}"
+
+	LOGGER="${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.stagePrmDataToTmp.logger"
+
+
+        ## Check if samplesheet is copied
+		if [[ ! -f "${TMP_ROOT_DIR}/Samplesheets/${csvFile}" || ! -f "${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.stagePrmDataToTmp.SampleSheetCopied" ]]
+        then
+			rsync "${PRM_ROOT_DIR}/Samplesheets/${csvFile}" "${TMP_ROOT_DIR}/Samplesheets/"
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "rsync ${PRM_ROOT_DIR}/Samplesheets/${csvFile} ${TMP_ROOT_DIR}/Samplesheets/"
+
+			touch "${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.stagePrmDataToTmp.SampleSheetCopied"
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.stagePrmDataToTmp.SampleSheetCopied created"
+
+        fi
+        ## Check if data is already copied to tmp
+
+
+	if [[ ! -f "${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.stagePrmDataToTmp.finished" ]]
+    then
+		##printf "run_id,group,demultiplexing,copy_raw,projects,date\n" > ${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.uploading
+                ##printf "${_filePrefix},${group},finished,started,," >> ${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.uploading
+
+                ##CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
+                ##TOKEN=${CURLRESPONSE:10:32}
+                ##curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.uploading" -FentityName='status_overview' -Faction=update -Fnotify=false 	https://${MOLGENISSERVER}/plugin/importwizard/importFile
+
+		local _transferSoFarSoGood='true'
+		rsync -a "${PRM_ROOT_DIR}/rawdata/ngs/${_filePrefix}" "${TMP_ROOT_DIR}/rawdata/ngs/" \
+		|| {
+			log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync "${PRM_ROOT_DIR}/rawdata/ngs/${_filePrefix}" dir. See ${LOGGER} for details."
+			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${LOGGER} for details." >> "${TMP_ROOT_DIR}/logs/${_filePrefix}/${SCRIPT_NAME}.failed"
+			_transferSoFarSoGood='false'
+			}
+
+		##Compare how many files are on both prm and tmp
+		countFilesRawDataDirTmp=$(ls "${TMP_ROOT_DIR}/rawdata/ngs/${_filePrefix}/${_filePrefix}"* | wc -l)
+		countFilesRawDataDirPrm=$(ls "${PRM_ROOT_DIR}/rawdata/ngs/${_filePrefix}/${_filePrefix}"* | wc -l)
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Counting ${PRM_ROOT_DIR}/rawdata/ngs/${_filePrefix}/${_filePrefix}* : ${countFilesRawDataDirPrm}"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Counting ${TMP_ROOT_DIR}/rawdata/ngs/${_filePrefix}/${_filePrefix}* : ${countFilesRawDataDirTmp}"
+
+		local _checksumVerification='unknown'
+		if [[ "${_transferSoFarSoGood}" == 'true' ]]
+		then
+			if [[ "${countFilesRawDataDirTmp}" -eq "${countFilesRawDataDirPrm}" ]]
+			then
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
+					"tmp and prm counts are the same"
+				cd "${TMP_ROOT_DIR}/rawdata/ngs/${_filePrefix}/"
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
+					"navigated to ${TMP_ROOT_DIR}/rawdata/ngs/${_filePrefix}/"
+				if md5sum -c *.fq.gz.md5
+				then
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
+						"md5sum is checked"
+					local _checksumVerification='PASS'
+
+				else
+					echo 'md5sum check failed' >> "${LOGGER}"
+					log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' \
+						"md5sum check failed for ${_filePrefix}"
+					local _checksumVerification='FAILED'
+				fi
+
+				#       touch ${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.dataCopiedToDiagnosticsCluster
+				#       printf "run_id,group,demultiplexing,copy_raw,projects,date\n" > ${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.uploading
+				#       printf "${_filePrefix},${group},finished,finished,," >> ${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.uploading
+
+				#       CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
+				#       TOKEN=${CURLRESPONSE:10:32}
+
+			#       curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.uploading" -FentityName='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
+			else
+				log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "the counts are not the same, new rsync"
+			fi
+		fi
+
+		if [ "${_checksumVerification}" == 'PASS' ]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
+				"data copied to tmp"
+			echo 'data copied to DiagnosticsCluster' >> "${LOGGER}"
+			touch "${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.stagePrmDataToTmp.finished"
+		fi
+	fi
+}
 function generateScripts () {
 	local _sampleType="${1}" ## DNA or RNA
 	local _filePrefix="${2}" ## name of the run sequencingStartDate_Sequencer_run_flowcell
 	local _species="${3}" ##
-	local _workflowOrPanel="${4}"
-	local _build="${5}"
-	local _run="${6}"
+	local _build="${4}"
+	local _run="${5}"
+	local _workflowOrPanel="${6}"
+
 	local _loadPipeline="NGS_${_sampleType}"
 
 
@@ -104,75 +192,69 @@ function generateScripts () {
 
 	fi
 
-
 	local _generateShScript="${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.sh"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
 		"generatescript is ${_generateShScript}"
-        mkdir -p "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/"
+	mkdir -p "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
-                "created directory: ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/"
+		"created directory: ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
 		"copying ${_pathToPipeline}/generate_template.sh to ${_generateShScript}"
 
-        echo "copying ${_pathToPipeline}/generate_template.sh to ${_generateShScript}" >> $LOGGER
+	echo "copying ${_pathToPipeline}/generate_template.sh to ${_generateShScript}" >> "${LOGGER}"
 	cp "${_pathToPipeline}/generate_template.sh" "${_generateShScript}"
 
-        perl -pi -e "s|PROJECT=projectXX|PROJECT=\"${_filePrefix}\"|" "${_generateShScript}"
-        perl -pi -e "s|RUNID=runXX|RUNID=\"${_run}\"|" "${_generateShScript}"
-        perl -pi -e "s|SPECIES=\"homo_sapiens\"|SPECIES=\"${_species}\"|" "${_generateShScript}"
-        perl -pi -e "s|BUILD=\"b37\"|BUILD=\"${_build}\"|" "${_generateShScript}"
 
-	if [ "${_sampleType}" == "DNA" ]
-        then
-		perl -pi -e "s|BATCH=\"_chr\"|BATCH=\"${_workflowOrPanel}\"|" "${_generateShScript}"
-        elif [ "${_sampleType}" == "RNA" ]
+	if [ -f "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/${_filePrefix}.csv" ]
 	then
-		perl -pi -e "s|PIPELINE=\"hisat\"|PIPELINE=\"${_workflowOrPanel}\"|" "${_generateShScript}"
-        fi
-
-        if [ -f "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/${_filePrefix}.csv" ]
-        then
-                log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
-		"${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/${_filePrefix}.csv already existed, will now be removed and will be replaced by a fresh copy"
-                echo "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/${_filePrefix}.csv already existed, will now be removed and will be replaced by a fresh copy" >> $LOGGER
-                rm "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/${_filePrefix}.csv"
-        fi
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
+			"${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/${_filePrefix}.csv already existed, will now be removed and will be replaced by a fresh copy"
+		echo "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/${_filePrefix}.csv already existed, will now be removed and will be replaced by a fresh copy" >> "${LOGGER}"
+		rm "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/${_filePrefix}.csv"
+    fi
 
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
 		"copying ${TMP_ROOT_DIR}/Samplesheets/${_filePrefix}.csv to ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/"
-        cp "${TMP_ROOT_DIR}/Samplesheets/${_filePrefix}.csv" "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/"
+	cp "${TMP_ROOT_DIR}/Samplesheets/${_filePrefix}.csv" "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/"
 
-        cd "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/"
+	cd "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
 		"navigated to $(pwd), should be the same as ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/"
 
-        log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
-		"\nsh ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.sh ${_filePrefix} ${_build} ${_species} ${_workflowOrPanel} > ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.logger"
-        echo "sh ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.sh "${_filePrefix}" ${_build} ${_species} ${_workflowOrPanel}" > "${TMP_ROOT_DIR}"/generatedscripts/"${_filePrefix}"/generate.logger
-        sh "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.sh" "${_filePrefix}" "${_build}" "${_species}" "${_workflowOrPanel}" > "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.logger" 2>&1
+	if [ "${_sampleType}" == "DNA" ]
+	then
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
+		"\nsh ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.sh -p ${_filePrefix} -c ${_workflowOrPanel} > ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.logger"
+		echo "\nsh ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.sh -p ${_filePrefix} -c ${_workflowOrPanel} > ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.logger"
+		sh "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.sh" -p "${_filePrefix}" -c "${_workflowOrPanel}" > "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.logger" 2>&1
+	elif [ "${_sampleType}" == "RNA" ]
+	then
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
+		"\nsh ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.sh ${_filePrefix} -b ${_build} $-s {_species} -f ${_workflowOrPanel} > ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.logger"
+		echo "\nsh ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.sh ${_filePrefix} -b ${_build} $-s {_species} -f ${_workflowOrPanel} > ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.logger"
 
-        cd scripts
+		sh "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.sh" -p "${_filePrefix}" -b "${_build}" -s "${_species}" -f "${_workflowOrPanel}" > "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.logger" 2>&1
+	fi
+	
+	cd scripts
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
 		"navigated to $(pwd), should be the same as ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/scripts"
         sh submit.sh
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
 		"scripts generated, this file has been created: ${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.scriptsGenerated"
 
-        touch "${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.scriptsGenerated"
-
+	touch "${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.scriptsGenerated"
 
 }
-
-function submitPipeline () { 
+function submitPipeline () {
 
 	local _project="${1}"
 	local _run="${2}"
 
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
-                        "starting to work on the submitPipeline part on project: ${_project} and run: ${_run}"
+		"starting to work on the submitPipeline part on project: ${_project} and run: ${_run}"
 
-
-	if [ ! -d "${TMP_ROOT_DIR}/logs/${_project}" ]
+	if [ ! -e "${TMP_ROOT_DIR}/logs/${_project}" ]
 	then
 		mkdir "${TMP_ROOT_DIR}/logs/${_project}"
 	fi
@@ -203,7 +285,12 @@ function submitPipeline () {
 
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
 			"starting to submit jobs"
-		sh submit.sh
+		if [ ${group} == "umcg-atd" ]
+                then
+                        sh submit.sh --qos=dev
+                else
+                        sh submit.sh
+                fi
 
 		touch "${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.started"
 		echo "${_project} started" >> ${_logger}
@@ -252,10 +339,12 @@ done
 #
 # Check commandline options.
 #
-if [[ -z "${group:-}" ]]; then
+if [[ -z "${group:-}" ]]
+then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
 fi
-if [[ -n "${dryrun:-}" ]]; then
+if [[ -n "${dryrun:-}" ]]
+then
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Enabled dryrun option for rsync.'
 fi
 
@@ -266,7 +355,8 @@ declare -a configFiles=(
 	"${CFG_DIR}/sharedConfig.cfg"
 )
 for configFile in "${configFiles[@]}"; do 
-	if [[ -f "${configFile}" && -r "${configFile}" ]]; then
+	if [[ -f "${configFile}" && -r "${configFile}" ]]
+	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config file ${configFile}..."
 		#
 		# In some Bash versions the source command does not work properly with process substitution.
@@ -283,8 +373,9 @@ done
 #
 # Write access to prm storage requires data manager account.
 #
-if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]; then
-	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${DATA_MANAGER}, but you are ${ROLE_USER} (${REAL_USER})."
+if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]
+then
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
 fi
 
 #
@@ -314,16 +405,26 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 ################################################
 count=0 
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
-                "path of Samplesheets dir: ${TMP_ROOT_DIR}/Samplesheets/*.csv"
-if ls "${TMP_ROOT_DIR}/Samplesheets/"*.csv 1> /dev/null 2>&1
-then
-	counting=$(ls "${TMP_ROOT_DIR}/Samplesheets/"*.csv | wc -l)
+	"path of Samplesheets dir: ${PRM_ROOT_DIR}/Samplesheets/*.csv"
 
-	for i in $(ls "${TMP_ROOT_DIR}/Samplesheets/"*.csv) 
+if ls "${PRM_ROOT_DIR}/Samplesheets/"*.csv 1> /dev/null 2>&1
+then
+
+	for i in $(ls "${PRM_ROOT_DIR}/Samplesheets/"*.csv) 
 	do
+
 		csvFile=$(basename "${i}")
 		filePrefix="${csvFile%.*}"
+
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run: ${filePrefix}..."
+		if [ ! -e "${TMP_ROOT_DIR}/logs/${filePrefix}" ]
+		then
+			mkdir "${TMP_ROOT_DIR}/logs/${filePrefix}"
+		fi
+
+
+		stagePrmDataToTmp "${filePrefix}"
+
 
 		##get header to decide later which column is project
 		HEADER=$(head -1 "${i}")
@@ -344,6 +445,10 @@ then
 			then
 				awk -F"," '{print $'$count'}' "${TMP_ROOT_DIR}/tmp/NGS_Automated/${filePrefix}.tmp" > "${TMP_ROOT_DIR}/tmp/NGS_Automated/${filePrefix}.whichPipeline"
 				pipeline=$(head -1 "${TMP_ROOT_DIR}/tmp/NGS_Automated/${filePrefix}.whichPipeline")
+			elif [[ "${j}" == *"build"* ]]
+			then
+				awk -F"," '{print $'$count'}' "${TMP_ROOT_DIR}/tmp/NGS_Automated/${filePrefix}.tmp" > "${TMP_ROOT_DIR}/tmp/NGS_Automated/${filePrefix}.build"
+				build=$(head -1 "${TMP_ROOT_DIR}/tmp/NGS_Automated/${filePrefix}.build")
 
 			elif [[ "${j}" == "species" ]]
 			then
@@ -368,7 +473,8 @@ then
 
 		done<"${TMP_ROOT_DIR}/tmp/NGS_Automated/${filePrefix}.uniq.projects"
 		count=1
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "The projects in this run is/are: ${PROJECTARRAY}"
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
+			"The projects in this run is/are: ${PROJECTARRAY}"
 
 		cat "${TMP_ROOT_DIR}/tmp/NGS_Automated/${filePrefix}.capturingKit" | sort -V | uniq > "${TMP_ROOT_DIR}/tmp/NGS_Automated/${filePrefix}.uniq.capturingKits"
 
@@ -387,20 +493,20 @@ then
 			fi
 		done<"${TMP_ROOT_DIR}/tmp/NGS_Automated/${filePrefix}.uniq.capturingKits"
 		LOGGER="${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.pipeline.logger"
+
 		species="homo_sapiens"
 		build="b37"
 		run="run01"
-		batching="_chr"
-
 
 		####
 		### Decide if the scripts should be created (per Samplesheet)
 		##
 		#
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
-			"${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.copyRawDataToDiagnosticsCluster.finished ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.scriptsGenerated"
-		if [[ -f "${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.copyRawDataToDiagnosticsCluster.finished" || -f "${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.copyRawDataToCluster.finished" ]] && [ ! -f "${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.scriptsGenerated" ]
+			"${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.stagePrmDataToTmp.finished ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.scriptsGenerated"
+		if [[ -f "${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.stagePrmDataToTmp.finished" ]] && [ ! -f "${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.scriptsGenerated" ]
 		then
+			batching="_chr"
 			for project in "${PROJECTARRAY[@]}"
 			do
 				projectName=${project}
@@ -412,7 +518,7 @@ then
 				then
 					batching="_small"
 				fi
-				generateScripts "${pipeline}" "${filePrefix}" "${species}" "${batching}" "${build}" "${run}"
+				generateScripts "${pipeline}" "${filePrefix}" "${species}" "${build}" "${run}" "${batching}"
 			elif [ "${pipeline}" == "RNA" ]
 			then
 				workflow="hisat"
@@ -428,7 +534,7 @@ then
 					workflow="lexogen"
 				fi
 
-				generateScripts "${pipeline}" "${filePrefix}" "${specie}" "${workflow}" "${build}" "${run}"
+				generateScripts "${pipeline}" "${filePrefix}" "${species}" "${build}" "${run}" "${workflow}" 
 			fi
 		fi
 		####
