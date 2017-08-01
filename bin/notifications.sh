@@ -77,6 +77,19 @@ function notification(){
 
 	local _status="${1}"
 
+	if [[ "${NGS_DNA_VERSION}" ]]
+	then
+		local pipeline="NGS_DNA"
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Pipeline is ${pipeline}"
+
+	elif [[ "${NGS_RNA_VERSION}" ]]
+	then
+		pipeline="NGS_RNA"
+                log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Pipeline is ${pipeline}"
+	else
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "No pipeline found!"
+	fi
+
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Notification status is: ${_status}"
 
 
