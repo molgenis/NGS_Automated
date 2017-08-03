@@ -129,7 +129,7 @@ function rsyncProjectRun() {
 	if [[ "${_rsyncRequired}" == 'false' ]]
 	then
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_project}/${_run}."
-		continue
+		return
 	fi
 	
 	#
