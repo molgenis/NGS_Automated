@@ -86,7 +86,7 @@ function notification(){
 	local    _body
 	local    _email_to
 	
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Will notify about projects with phase ${_phase} in state: ${_state}."
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing projects with phase ${_phase} in state: ${_state}."
 	
 	if $(ls "${TMP_ROOT_DIR}/logs/"*"/"*".${_phase}.${_state}" 1> /dev/null 2>&1)
 	then
@@ -131,7 +131,7 @@ function notification(){
 		fi
 		
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Email subject: ${_subject}"
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Email subject: ${_body}"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Email body   : ${_body}"
 		
 		if [[ "${email}" == 'true' ]]
 		then
@@ -139,6 +139,8 @@ function notification(){
 				| mail -s "${_subject}" "${_email_to}"
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating file: ${_project_state_file}.mailed"
 			touch "${_project_state_file}.mailed"
+		else
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Email disabled and not creating file: ${_project_state_file}.mailed"
 		fi
 	done
 }
