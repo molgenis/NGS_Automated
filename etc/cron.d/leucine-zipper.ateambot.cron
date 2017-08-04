@@ -1,0 +1,5 @@
+*/7  * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/1.1.2; copyRawDataToDiagnosticsCluster.sh gattaca01 umcg-gd"
+*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/1.1.3; startPipeline.sh umcg-gd"
+*/5  * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/1.1.2; pipelineFinished.sh umcg-gd"
+*/5  * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/1.1.2; mailError.sh umcg-gd"
+*/30 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; sh /groups/umcg-gd/tmp06/GavinStandAlone/tools/runGavin.sh"
