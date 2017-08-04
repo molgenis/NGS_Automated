@@ -95,12 +95,10 @@ Changes:
  v ⎝____________________________________________________________________________________⎠
  v    ^ v                                                                           ^ v
  v    ^ `>>>>>>>>>>>>>>>>>>>>>>>>> 2: startPipeline >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>^ v
- v    ^                                  |_automated_DNA_generate_template.sh         v
- v    ^                                  |_automated_RNA_generate_template.sh         v
  v    ^                                                                               v
  v     `<<<<<<<<<<<<<<<<<<<<<<<<<< 3: copyProjectDataToPrm <<<<<<<<<<<<<<<<<<<<<<<<<<<
  v
- `>>> 4: monitorProjects (previously pipelineFinished + mailError)
+ `>>> 4: notifications
 ```
 
 |Script                  |User              |Running on site/server|
@@ -121,7 +119,10 @@ Changes:
 ```
 /groups/${group}/${LFS}/
                  |-- generatedscripts/
-                 |-- logs/................ Logs from NGS_Automated.
+                 |-- logs/............................ Logs from NGS_Automated.
+                 |   |-- ${SCRIPT_NAME}.mailinglist... List of email addresses used by the notifications script 
+                 |   |                                 to report on state [failed|finished] of script ${SCRIPT_NAME}.
+                 |   |                                 Use one email address per line or space separated addresses.
                  |   `-- ${project}/
                  |       |-- ${run}.${SCRIPT_NAME}.log
                  |       |-- ${run}.${SCRIPT_NAME}.[failed|finished]
