@@ -97,13 +97,13 @@ function notification(){
 		return
 	fi
 	
-	if [[ -f "${TMP_ROOT_DIR}/logs/mailinglist.txt" ]]
+	if [[ -f "${TMP_ROOT_DIR}/logs/${_phase}.mailinglist" ]]
 	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${TMP_ROOT_DIR}/logs/mailinglist.txt."
-		_email_to="$(cat "${TMP_ROOT_DIR}/logs/mailinglist.txt" | tr '\n' ' ')"
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsed mailinglist and will send mail to: ${_email_to}."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${TMP_ROOT_DIR}/logs/${_phase}.mailinglist."
+		_email_to="$(cat "${TMP_ROOT_DIR}/logs/${_phase}.mailinglist" | tr '\n' ' ')"
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsed ${_phase}.mailinglist and will send mail to: ${_email_to}."
 	else
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Missing ${TMP_ROOT_DIR}/logs/mailinglist.txt."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Missing ${TMP_ROOT_DIR}/logs/${_phase}.mailinglist"
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '0' "Cannot send notifications by mail. I'm giving up, bye bye."
 	fi
 	
@@ -227,12 +227,17 @@ if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]; then
 fi
 
 #
-# Notify for specific combinations of "script:state".
+# Notify for specific colon separated combinations of "phase:state".
 #
-for script_state in 'copyRawDataToPrm:failed' 'pipeline:failed' 'copyProjectDataToPrm:failed' 'copyProjectDataToPrm:finished'
-do
-	notification "${script_state}"
-done
+if [ ${#NOTIFY_FOR_PHASE_WITH_STATE[@]:-0} -ge 1 ]; then
+	for phase_with_state in ${NOTIFY_FOR_PHASE_WITH_STATE[@]}
+	do
+		notification "${phase_with_state}"
+	done
+else
+	log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Missing NOTIFY_FOR_PHASE_WITH_STATE[@] in ${CFG_DIR}/${group}.cfg"
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "No 'phase:state' combinations for which notifications must be sent specified."
+fi
 
 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished successfully!'
