@@ -91,9 +91,9 @@ function notification(){
 	if $(ls "${TMP_ROOT_DIR}/logs/"*"/"*".${_phase}.${_state}" 1> /dev/null 2>&1)
 	then
 		read -r -a _project_state_files < <(ls -1 "${TMP_ROOT_DIR}/logs/"*"/"*".${_phase}.${_state}") \
-			|| log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Failed to create a list of *.pipeline.${_state} files."
+			|| log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Failed to create a list of *.${_phase}.${_state} files."
 	else
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No *.pipeline.${_state} present."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No *.${_phase}.${_state} present."
 		return
 	fi
 	
