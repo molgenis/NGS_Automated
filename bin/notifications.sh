@@ -109,18 +109,18 @@ function notification(){
 	
 	for _project_state_file in ${_project_state_files[@]}
 	do
-		_file=$(basename "${project_state_file}")
-		_project=$(basename $(dirname "${project_state_file}"))
+		_file=$(basename "${_project_state_file}")
+		_project=$(basename $(dirname "${_project_state_file}"))
 		_run="${_file%%.*}"
 		
-		if [[ -f "${project_state_file}.mailed" ]]
+		if [[ -f "${_project_state_file}.mailed" ]]
 		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${project_state_file}.mailed"
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_project_state_file}.mailed"
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping: ${_project}/${_run}. Email was already sent for state ${_state}."
 			continue
 		fi
 		
-		_timestamp="$(date --date="$(LC_DATE=C stat --printf='%y' "${project_state_file}" | cut -d ' ' -f1,2)" "+%Y-%m-%dT%H:%M:%S")"
+		_timestamp="$(date --date="$(LC_DATE=C stat --printf='%y' "${_project_state_file}" | cut -d ' ' -f1,2)" "+%Y-%m-%dT%H:%M:%S")"
 		_subject="Project ${_project}/${_run} has ${_state} for phase ${_phase} on ${HOSTNAME_SHORT} at ${_timestamp}."
 		
 		if [[ "${_state}" == 'failed' ]]
@@ -137,8 +137,8 @@ function notification(){
 		then
 			printf '%s\n' "${_body}" \
 				| mail -s "${_subject}" "${_email_to}"
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating file: ${project_state_file}.mailed"
-			touch "${project_state_file}.mailed"
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating file: ${_project_state_file}.mailed"
+			touch "${_project_state_file}.mailed"
 		fi
 	done
 }
