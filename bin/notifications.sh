@@ -229,7 +229,7 @@ fi
 #
 # Notify for specific colon separated combinations of "phase:state".
 #
-if [ ${#NOTIFY_FOR_PHASE_WITH_STATE[@]:-0} -ge 1 ]; then
+if [[ ! -z "${NOTIFY_FOR_PHASE_WITH_STATE[0]:-}" && "${#NOTIFY_FOR_PHASE_WITH_STATE[@]:-0}" -ge 1 ]]; then
 	for phase_with_state in ${NOTIFY_FOR_PHASE_WITH_STATE[@]}
 	do
 		notification "${phase_with_state}"
