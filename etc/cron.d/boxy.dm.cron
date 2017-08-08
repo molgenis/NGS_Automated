@@ -1,0 +1,2 @@
+*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.1; copyRawDataToPrm.sh     -g umcg-atd -s gattaca01"
+*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.1; copyProjectDataToPrm.sh -g umcg-atd"

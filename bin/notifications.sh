@@ -52,7 +52,6 @@ Options:
 	-h   Show this help.
 	-g   Group.
 	-e   Enable email notification. (Disabled by default.)
-	-n   Dry-run: Do not perform actual sync, but only list changes instead.
 	-l   Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
@@ -74,50 +73,76 @@ EOH
 # Check for status and email notification
 #
 function notification(){
-
-	local _status="${1}"
-
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Notification status is: ${_status}"
-
-
-	if $(ls "${TMP_ROOT_DIR}/logs/"*"/"*".pipeline.${_status}" 1> /dev/null 2>&1)
+	
+	local    _phase="${1%:*}"
+	local    _state="${1#*:}"
+	local -a _project_state_files=()
+	local    _file
+	local    _timestamp
+	local    _project
+	local    _run
+	local    _header
+	local    _subject
+	local    _body
+	local    _email_to
+	
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing projects with phase ${_phase} in state: ${_state} ..."
+	
+	if $(ls "${TMP_ROOT_DIR}/logs/"*"/"*".${_phase}.${_state}" 1> /dev/null 2>&1)
 	then
-		$(ls "${TMP_ROOT_DIR}/logs/"*"/"*".pipeline.${_status}" > "${TMP_ROOT_DIR}/logs/pipeline.${_status}.csv")
+		read -r -a _project_state_files < <(ls -1 "${TMP_ROOT_DIR}/logs/"*"/"*".${_phase}.${_state}") \
+			|| log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Failed to create a list of *.${_phase}.${_state} files."
 	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No *.pipeline.${_status} present."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No *.${_phase}.${_state} present."
+		return
 	fi
-
-	while read line
+	
+	if [[ -f "${TMP_ROOT_DIR}/logs/${_phase}.mailinglist" ]]
+	then
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${TMP_ROOT_DIR}/logs/${_phase}.mailinglist."
+		_email_to="$(cat "${TMP_ROOT_DIR}/logs/${_phase}.mailinglist" | tr '\n' ' ')"
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsed ${_phase}.mailinglist and will send mail to: ${_email_to}."
+	else
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Missing ${TMP_ROOT_DIR}/logs/${_phase}.mailinglist"
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '0' "Cannot send notifications by mail. I'm giving up, bye bye."
+	fi
+	
+	for _project_state_file in ${_project_state_files[@]}
 	do
-		local _file=$(basename "${line}")
-		local _project=$(basename $(dirname "${line}"))
-		local _run="${_file%%.*}"
-
-		if [ ! -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.${_status}.mailed" ]
+		_file=$(basename "${_project_state_file}")
+		_project=$(basename $(dirname "${_project_state_file}"))
+		_run="${_file%%.*}"
+		
+		if [[ -f "${_project_state_file}.mailed" ]]
 		then
-			local _header=$(head -1 "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.${_status}")
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Email notification ${_status} to ${EMAIL_TO}"
-
-			if [ "${_status}" == "failed" ]
-			then
-				local _subject="The pipeline on ${HOSTNAME_SHORT} has ${_status} for project ${_project} on step ${_header}"
-				local _body=$(cat "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.${_status}")
-			else
-				_subject="The pipeline has finished for project ${_project} on `date +%d/%m/%Y` `date +%H:%M`"
-				_body="The results can be found in: ${PRM_ROOT_DIR}/projects/${_run}/ \n\nCheers from the GCC :)"
-			fi
-
-			if [[ "${email}" == 'true' ]]
-			then
-				echo -e "${_body}" | mail -s "${_subject}" "${EMAIL_TO}"
-                                log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating file: ${_run}.pipeline.${_status}.mailed"
-                                mv "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.${_status}"{,.mailed}
-			fi
-		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Nothing to email..."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_project_state_file}.mailed"
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping: ${_project}/${_run}. Email was already sent for state ${_state}."
+			continue
 		fi
-
-	done<"${TMP_ROOT_DIR}/logs/pipeline.${_status}.csv"
+		
+		_timestamp="$(date --date="$(LC_DATE=C stat --printf='%y' "${_project_state_file}" | cut -d ' ' -f1,2)" "+%Y-%m-%dT%H:%M:%S")"
+		_subject="Project ${_project}/${_run} has ${_state} for phase ${_phase} on ${HOSTNAME_SHORT} at ${_timestamp}."
+		
+		if [[ "${_state}" == 'failed' ]]
+		then
+			_body=$(cat "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.${_state}")
+		else
+			_body="The results can be found in: ${PRM_ROOT_DIR}/projects/${_project}/${_run}/."
+		fi
+		
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Email subject: ${_subject}"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Email body   : ${_body}"
+		
+		if [[ "${email}" == 'true' ]]
+		then
+			printf '%s\n' "${_body}" \
+				| mail -s "${_subject}" "${_email_to}"
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating file: ${_project_state_file}.mailed"
+			touch "${_project_state_file}.mailed"
+		else
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Email disabled and not creating file: ${_project_state_file}.mailed"
+		fi
+	done
 }
 
 #
@@ -134,7 +159,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline argume
 declare group=''
 declare email='false'
 declare dryrun=''
-while getopts "g:l:hen" opt; do
+while getopts "g:l:he" opt; do
 	case $opt in
 		h)
 			showHelp
@@ -144,9 +169,6 @@ while getopts "g:l:hen" opt; do
 			;;
 		e)
 			email='true'
-			;;
-		n)
-			dryrun='-n'
 			;;
 		l)
 			l4b_log_level=${OPTARG^^}
@@ -204,11 +226,18 @@ if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]; then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
 fi
 
-
-for i in "failed" "finished"
-do
-	notification "${i}"
-done
+#
+# Notify for specific colon separated combinations of "phase:state".
+#
+if [[ ! -z "${NOTIFY_FOR_PHASE_WITH_STATE[0]:-}" && "${#NOTIFY_FOR_PHASE_WITH_STATE[@]:-0}" -ge 1 ]]; then
+	for phase_with_state in ${NOTIFY_FOR_PHASE_WITH_STATE[@]}
+	do
+		notification "${phase_with_state}"
+	done
+else
+	log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Missing NOTIFY_FOR_PHASE_WITH_STATE[@] in ${CFG_DIR}/${group}.cfg"
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "No 'phase:state' combinations for which notifications must be sent specified."
+fi
 
 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished successfully!'

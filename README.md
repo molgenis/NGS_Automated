@@ -10,7 +10,17 @@ Automation using Bash scripts and Cron jobs for Molgenis Compute pipelines from:
 - environment variables: ALL\_UPPERCASE\_WITH\_UNDERSCORES
 - global script variables: camelCase
 - local function variables: _camelCasePrefixedWithUnderscore
-- `if ...; then`, `while ...; do` and `for ...; do` on one line as opposed to the then or do on the next line
+- `if ... then`, `while ... do` and `for ... do` not on a single line, but on two lines with the `then` or `do` on the next line. E.g.
+  ```
+  if ...
+  then
+      ...
+  elif ...
+  then
+      ...
+  fi
+  ```
+
 
 ## Version 1.x
 
@@ -85,13 +95,19 @@ Changes:
  v ⎝____________________________________________________________________________________⎠
  v    ^ v                                                                           ^ v
  v    ^ `>>>>>>>>>>>>>>>>>>>>>>>>> 2: startPipeline >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>^ v
- v    ^                                  |_automated_DNA_generate_template.sh         v
- v    ^                                  |_automated_RNA_generate_template.sh         v
  v    ^                                                                               v
  v     `<<<<<<<<<<<<<<<<<<<<<<<<<< 3: copyProjectDataToPrm <<<<<<<<<<<<<<<<<<<<<<<<<<<
  v
- `>>> 4: monitorProjects (previously pipelineFinished + mailError)
+ `>>> 4: notifications
 ```
+
+|Script                  |User              |Running on site/server|
+|------------------------|------------------|----------------------|
+|1. copyRawDataToPrm     |${group}-dm       |HPC Cluster           |
+|2. startPipeline        |${group}-ateambot |HPC Cluster           |
+|3. copyProjectDataToPrm |${group}-dm       |HPC Cluster           |
+|4. notifications        |${group}-ateambot |HPC Cluster           |
+
 
 #### Location of job control and log files
 
@@ -103,7 +119,10 @@ Changes:
 ```
 /groups/${group}/${LFS}/
                  |-- generatedscripts/
-                 |-- logs/................ Logs from NGS_Automated.
+                 |-- logs/............................ Logs from NGS_Automated.
+                 |   |-- ${SCRIPT_NAME}.mailinglist... List of email addresses used by the notifications script 
+                 |   |                                 to report on state [failed|finished] of script ${SCRIPT_NAME}.
+                 |   |                                 Use one email address per line or space separated addresses.
                  |   `-- ${project}/
                  |       |-- ${run}.${SCRIPT_NAME}.log
                  |       |-- ${run}.${SCRIPT_NAME}.[failed|finished]
