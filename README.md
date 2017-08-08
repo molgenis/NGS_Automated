@@ -106,7 +106,7 @@ Changes:
 |1. copyRawDataToPrm     |${group}-dm       |HPC Cluster           |
 |2. startPipeline        |${group}-ateambot |HPC Cluster           |
 |3. copyProjectDataToPrm |${group}-dm       |HPC Cluster           |
-|4. monitorProjects      |${group}-ateambot |HPC Cluster           |
+|4. notifications        |${group}-ateambot |HPC Cluster           |
 
 
 #### Location of job control and log files
