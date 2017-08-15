@@ -106,18 +106,18 @@ function generateScripts () {
 	echo "${_message}" >> "${_logger}"
 	cp "${_pathToPipeline}/generate_template.sh" "${_generateShScript}"
 	
-	if [ -f "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/${_filePrefix}.csv" ]
+	if [ -f "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/${_filePrefix}.${SAMPLESHEET_EXT}" ]
 	then
-		_message="${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/${_filePrefix}.csv already exists and will be removed ..."
+		_message="${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/${_filePrefix}.${SAMPLESHEET_EXT} already exists and will be removed ..."
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
 		echo "${_message}" >> "${_logger}"
-		rm "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/${_filePrefix}.csv"
+		rm "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/${_filePrefix}.${SAMPLESHEET_EXT}"
 	fi
 	
-	_message="Copying ${TMP_ROOT_DIR}/Samplesheets/${_filePrefix}.csv to ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/ ..."
+	_message="Copying ${TMP_ROOT_DIR}/Samplesheets/${_filePrefix}.${SAMPLESHEET_EXT} to ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/ ..."
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
 	echo "${_message}" >> "${_logger}"
-	cp "${TMP_ROOT_DIR}/Samplesheets/${_filePrefix}.csv" "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/"
+	cp "${TMP_ROOT_DIR}/Samplesheets/${_filePrefix}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/"
 	
 	cd "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigated to $(pwd)."
@@ -256,14 +256,14 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 # Get list of sample sheets from prm.
 #
-declare -a sampleSheets=($(ls -1 "${PRM_ROOT_DIR}/Samplesheets/"*".${SAMPLE_SHEET_EXT}"))
+declare -a sampleSheets=($(ls -1 "${PRM_ROOT_DIR}/Samplesheets/"*".${SAMPLESHEET_EXT}"))
 if [[ "${#sampleSheets[@]:-0}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found @ ${PRM_ROOT_DIR}/Samplesheets/: There is nothing to do."
 	trap - EXIT
 	exit 0
 else
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${#sampleSheets[@]} sample sheets from ${PRM_ROOT_DIR}/Samplesheets/*.${sampleSheetExt} ..."
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${#sampleSheets[@]} sample sheets from ${PRM_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT} ..."
 fi
 
 #
@@ -273,7 +273,7 @@ for sampleSheet in "${sampleSheets[@]}"
 do
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing sample sheet: ${sampleSheet} ..."
 	
-	filePrefix="$(basename "${sampleSheet}" ".${SAMPLE_SHEET_EXT}")"
+	filePrefix="$(basename "${sampleSheet}" ".${SAMPLESHEET_EXT}")"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run: ${filePrefix} ..."
 	if [ ! -e "${TMP_ROOT_DIR}/logs/${filePrefix}" ]
 	then
