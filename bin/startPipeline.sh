@@ -141,7 +141,7 @@ function submitPipeline () {
 	local _run='run01'
 	local _logger="${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.log"
 	
-	if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.started ]]
+	if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.started" ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping  ${_project}/${_run}, because jobs were already submitted."
 	elif [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished" ]]
@@ -150,7 +150,7 @@ function submitPipeline () {
 	else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Starting submitPipeline part for project: ${_project}/${_run} ..."
 		
-		if [ ! -e "${TMP_ROOT_DIR}/logs/${_project}" ]
+		if [[ ! -e "${TMP_ROOT_DIR}/logs/${_project}" ]]
 		then
 			mkdir -p "${TMP_ROOT_DIR}/logs/${_project}"
 		fi
