@@ -147,11 +147,11 @@ function rsyncDemultiplexedRuns() {
 	# rsync samplesheet to prm samplesheets folder
 	#
 	rsync -av ${dryrun:-} \
-		"${DATA_MANAGER}@${gattacaAddress}:${SCR_ROOT_DIR}/Samplesheets/${_run}.csv" \
+		"${DATA_MANAGER}@${gattacaAddress}:${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}" \
 			"${PRM_ROOT_DIR}/Samplesheets/" \
 				>> "${_log_file}" 2>&1 \
 	 || {
-	log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${SCR_ROOT_DIR}/Samplesheets/${_run}.csv dir. See ${_log_file} for details."
+	log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT} dir. See ${_log_file} for details."
 	echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_log_file} for details." \
 		>> "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed"
 	_transferSoFarSoGood='false'
@@ -414,7 +414,7 @@ gattacaAddress="${GAT}.gcc.rug.nl"
 
 
 ### VERVANG DOOR UMCG-ATEAMBOT USER
-ssh ${DATA_MANAGER}@${gattacaAddress} "ls ${SCR_ROOT_DIR}/Samplesheets/*.csv" > ${TMP_ROOT_DIR}/Samplesheets/allSampleSheets_${HOSTNAME_SHORT}.txt
+ssh ${DATA_MANAGER}@${gattacaAddress} "ls ${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}" > ${TMP_ROOT_DIR}/Samplesheets/allSampleSheets_${HOSTNAME_SHORT}.txt
 
 trap finish HUP INT QUIT TERM EXIT ERR
 
