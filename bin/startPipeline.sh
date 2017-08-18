@@ -273,13 +273,17 @@ for sampleSheet in "${sampleSheets[@]}"
 do
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing sample sheet: ${sampleSheet} ..."
 	
-	filePrefix="$(basename "${sampleSheet}" ".${SAMPLESHEET_EXT}")"
+	fileP=$(basename "${sampleSheet}")
+	filePrefix=${fileP%.*}
+
+	cp ${PRM_ROOT_DIR}/Samplesheets/${filePrefix}.${SAMPLESHEET_EXT} ${TMP_ROOT_DIR}/Samplesheets/
+
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run: ${filePrefix} ..."
 	if [ ! -e "${TMP_ROOT_DIR}/logs/${filePrefix}" ]
 	then
-		mkdir "${TMP_ROOT_DIR}/logs/${filePrefix}"
+		mkdir -m 2770 "${TMP_ROOT_DIR}/logs/${filePrefix}"
 	fi
-	
+
 	#
 	# Generate scripts (per sample sheet).
 	#

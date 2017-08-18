@@ -48,8 +48,9 @@ function rsyncDemultiplexedRuns() {
 
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_run}..."
 	local _log_file="${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.log"
-	mkdir -p "${PRM_ROOT_DIR}/logs/${_run}/"
 
+	mkdir -p "${PRM_ROOT_DIR}/logs/${_run}/"
+	mkdir -p "${PRM_ROOT_DIR}/rawdata/ngs/${_run}"
 
 	#
 	# Determine whether an rsync is required for this run, which is the case when
@@ -57,11 +58,11 @@ function rsyncDemultiplexedRuns() {
 	#  2. or when a pipeline has updated the results after a previous execution of this script. 
 	#
 	# Temporarily check for "${TMP_ROOT_DIR}/logs/${_run}/${_run}.pipeline.finished"
-	
+
 	local _runFinished='false'
 	local _rsyncRequired='false'
 	local _demultiplexingFinishedFile="${PRM_ROOT_DIR}/logs/${_run}/${_run}.copyRawDataToPrm.sh.finished"
-    
+
 	# check if demultiplexing was finished
 		
 	#log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${gattacaAddress}" "test -e ${SCR_ROOT_DIR}/logs/${_run}_Demultiplexing.finished"
@@ -108,12 +109,12 @@ function rsyncDemultiplexedRuns() {
 		_rsyncRequired='true'
 	fi
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsync required = ${_rsyncRequired}."
- 
+
 	# skip if nothing needs to be done.
 	if [[ "${_rsyncRequired}" == 'false' ]]; then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}."
 		continue
-	fi 
+	fi
 
 
 
@@ -122,27 +123,27 @@ function rsyncDemultiplexedRuns() {
 	#  1. For ${_run} dir: recursively with "default" archive (-a),
 	#     which checks for differences based on file size and modification times.
 	#     No need to use checksums here as we will verify checksums later anyway.
-	#  2. For *.md5 list of checksums with archive (-a) and -c to determine 
+	#  2. For *.md5 list of checksums with archive (-a) and -c to determine
 	#     differences based on checksum instead of file size and modification time.
-	#     It is vitally important (and computationally cheap) to make sure 
+	#     It is vitally important (and computationally cheap) to make sure
 	#     the list of checksums is complete and up-to-date!
 	#
-	# ToDo: Do we need to add --delete to get rid of files that should no longer be there 
+	# ToDo: Do we need to add --delete to get rid of files that should no longer be there
 	#       if an analysis run got updated?
 	#
 	local _transferSoFarSoGood='true'
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_run} dir..."
 	rsync -av --chmod=Dg-w,g+rsX,o-rwx,Fg-wsx,g+r,o-rwx ${dryrun:-} \
-		"${DATA_MANAGER}@${gattacaAddress}:${SCR_ROOT_DIR}/runs/${_run}" \
-			"${PRM_ROOT_DIR}/rawdata/ngs/" \
+		"${DATA_MANAGER}@${gattacaAddress}:${SCR_ROOT_DIR}/runs/${_run}/results/*" \
+			"${PRM_ROOT_DIR}/rawdata/ngs/${_run}/" \
 				>> "${_log_file}" 2>&1 \
-	 || {
+	|| {
 	log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync {gattacaAddress}:${SCR_ROOT_DIR}/runs/${_run} dir. See ${_log_file} for details."
 	echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_log_file} for details." \
 		>> "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed"
 	_transferSoFarSoGood='false'
 	}
-	
+
 	#
 	# rsync samplesheet to prm samplesheets folder
 	#
@@ -150,19 +151,19 @@ function rsyncDemultiplexedRuns() {
 		"${DATA_MANAGER}@${gattacaAddress}:${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}" \
 			"${PRM_ROOT_DIR}/Samplesheets/" \
 				>> "${_log_file}" 2>&1 \
-	 || {
+	|| {
 	log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT} dir. See ${_log_file} for details."
 	echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_log_file} for details." \
 		>> "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed"
 	_transferSoFarSoGood='false'
 	}
-	
+
 	#
 	#fix permissions
 	#
 	#chmod -R g-w,g+r,o-rwx,g+r,o-rwx "${PRM_ROOT_DIR}/rawdata/ngs/${_run}"
-	#chmod g-w,g+r,o-rwx,g+r,o-rwx,u-x,u-x "${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}*"	
-	
+	#chmod g-w,g+r,o-rwx,g+r,o-rwx,u-x,u-x "${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}*"
+
 	#
 	# Sanity check.
 	#
@@ -429,11 +430,11 @@ if [[ "${#runs[@]:-0}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found @ ${TMP_ROOT_DIR}/runs."
 else
-	for run in "${runs[@]}"
+	for csvFile  in "${runs[@]}"
 	do
-		_csvFile=$(basename ${run%.*} )
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${_csvFile}..."
-		rsyncDemultiplexedRuns "${_csvFile}"
+		run=$(basename ${csvFile%.*})
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${run}..."
+		rsyncDemultiplexedRuns "${run}"
 	done
 fi
 
