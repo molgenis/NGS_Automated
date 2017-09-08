@@ -101,10 +101,10 @@ function generateScripts () {
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
 	mkdir -p "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/"
 	
-	_message="Copying ${_pathToPipeline}/generate_template.sh to ${_generateShScript} ..."
+	_message="Copying ${_pathToPipeline}/templates/generate_template.sh to ${_generateShScript} ..."
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
 	echo "${_message}" >> "${_logger}"
-	cp "${_pathToPipeline}/generate_template.sh" "${_generateShScript}"
+	cp "${_pathToPipeline}/templatesgenerate_template.sh" "${_generateShScript}"
 	
 	if [ -f "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/${_filePrefix}.${SAMPLESHEET_EXT}" ]
 	then
