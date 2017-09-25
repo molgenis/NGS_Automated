@@ -150,6 +150,7 @@ HOMEDIRGAVIN="${TMP_ROOT_DIR}/GavinStandAlone/"
 
 if [ -d "${HOMEDIRGAVIN}" ]
 then
+	find "${HOMEDIRGAVIN}/input/" -name *.cleaned -type f -mtime +7 -exec rm {} \;
 	if ls ${HOMEDIRGAVIN}/input/*.vcf.finished 1> /dev/null 2>&1
 	then
 		for i in $(ls ${HOMEDIRGAVIN}/input/*.vcf.finished)
