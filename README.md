@@ -101,12 +101,23 @@ Changes:
  `>>> 4: notifications
 ```
 
+```
+cleanup.sh
+
+The cleanup script runs once a day, it will clean up old data:
+- Remove all the GavinStandAlone project/generatedscripts/tmp data once the GavinStandAlone has a ${project}.vcf.finished in ${TMP_ROOT_DIR}/GavinStandAlone/input
+- Clean up all the raw data that is older than 30 days, it first checks if the data is copied to prm (check in the logs if ${filePrefix}.copyRawDataToPrm.sh.finished 
+is there + count *.fq.gz on tmp and prm and compare for an extra check)
+- All the project + tmp data older than 30 days will also deleted (when ${project}.projectDataCopiedToPrm.sh.finished)
+```
+
 |Script                  |User              |Running on site/server|
 |------------------------|------------------|----------------------|
 |1. copyRawDataToPrm     |${group}-dm       |HPC Cluster           |
 |2. startPipeline        |${group}-ateambot |HPC Cluster           |
 |3. copyProjectDataToPrm |${group}-dm       |HPC Cluster           |
 |4. notifications        |${group}-ateambot |HPC Cluster           |
+|5. cleanup	         |${group}-ateambot |HPC Cluster           |
 
 
 #### Location of job control and log files
@@ -114,7 +125,7 @@ Changes:
  - LFS = logical file system; one of arc*, scr*, tmp* or prm*.
  - NGS_DNA and NGS_RNA pipelines produce data per project in a run sub dir for each (re)analysis of the data.
    These pipelines do not generate data outside the projects folder.
- - NGS_Autmotated has it's own dirs and does NOT touch/modify/create any data in the projects dir.
+ - NGS_Automated has it's own dirs and does NOT touch/modify/create any data in the projects dir.
 
 ```
 /groups/${group}/${LFS}/
