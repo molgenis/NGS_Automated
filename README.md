@@ -103,10 +103,12 @@ Changes:
 
 ```
 cleanup.sh
-The cleanup script runs once a day, it will clean up all the raw data that is older than
-30 days, it first checks if the data is copied to prm (check in the logs if ${filePrefix}.copyRawDataToPrm.sh.finished is there + count *.fq.gz on tmp 
-and prm and compare for an extra check)
-All the project + tmp data older than 30 days will also deleted (when ${project}.projectDataCopiedToPrm.sh.finished)
+
+The cleanup script runs once a day, it will clean up old data:
+- Remove all the GavinStandAlone project/generatedscripts/tmp data once the GavinStandAlone has a ${project}.vcf.finished in ${TMP_ROOT_DIR}/GavinStandAlone/input
+- Clean up all the raw data that is older than 30 days, it first checks if the data is copied to prm (check in the logs if ${filePrefix}.copyRawDataToPrm.sh.finished 
+is there + count *.fq.gz on tmp and prm and compare for an extra check)
+- All the project + tmp data older than 30 days will also deleted (when ${project}.projectDataCopiedToPrm.sh.finished)
 ```
 
 |Script                  |User              |Running on site/server|

@@ -51,6 +51,7 @@ Usage:
 Options:
 	-h   Show this help.
 	-g   Group.
+	-n   Dry-run: Do not perform actual removal, but only print the remove commands instead.
 	-e   Enable email notification. (Disabled by default.)
 	-l   Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
@@ -78,9 +79,8 @@ EOH
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments..."
 declare group=''
-declare email='false'
 declare dryrun=''
-while getopts "g:l:he" opt; do
+while getopts "g:l:nh" opt; do
 	case $opt in
 		h)
 			showHelp
@@ -88,8 +88,8 @@ while getopts "g:l:he" opt; do
 		g)
 			group="${OPTARG}"
 			;;
-		e)
-			email='true'
+		n)
+			dryrun='-n'
 			;;
 		l)
 			l4b_log_level=${OPTARG^^}
@@ -111,10 +111,15 @@ done
 if [[ -z "${group:-}" ]]; then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
 fi
-if [[ -n "${dryrun:-}" ]]; then
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Enabled dryrun option for rsync.'
-fi
+if [[ -n "${dryrun:-}"  ]]; then
+	echo -e "\n\t\t #### Enabled dryrun option for cleanup ##### \n"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' '\nEnabled dryrun option for cleanup.\n'
+	l4b_log_level="DEBUG"
+	l4b_log_level_prio=${l4b_log_levels[${l4b_log_level}]}
 
+else
+	dryrun="no"
+fi
 
 #
 # Source config files.
@@ -154,16 +159,18 @@ then
 
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
 			"rm -rf ${TMP_ROOT_DIR}/tmp/Gavin_${name}/ \nrm -rf ${TMP_ROOT_DIR}/generatedscripts/Gavin_${name}\nrm -rf ${TMP_ROOT_DIR}/projects/Gavin_${name}/"
+			if [ "${dryrun}" == "no" ]
+			then
+				rm -rf "${TMP_ROOT_DIR}/tmp/Gavin_${name}/"
+				rm -rf "${TMP_ROOT_DIR}/generatedscripts/Gavin_${name}/"
+				rm -rf "${TMP_ROOT_DIR}/projects/Gavin_${name}/"
 
-			rm -rf "${TMP_ROOT_DIR}/tmp/Gavin_${name}/"
-			rm -rf "${TMP_ROOT_DIR}/generatedscripts/Gavin_${name}/"
-			rm -rf "${TMP_ROOT_DIR}/projects/Gavin_${name}/"
-
-			touch "${i}.cleaned"
+				touch "${i}.cleaned"
+			fi
 		done
 	fi
 else
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
 	"no GavinStandAlone found, skipped"
 fi
 
@@ -172,16 +179,19 @@ fi
 for i in $(find "${TMP_ROOT_DIR}/projects/" -maxdepth 1 -type d -mtime +30 -exec ls -d {} \;)
 do
 	project=$(basename $i)
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
 	"check ${project}"
 	if [ -f "${TMP_ROOT_DIR}/logs/${project}/${project}.projectDataCopiedToPrm" ]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
 			"rm -rf ${GROUP_HOME}/projects/${project}/ \nrm -rf ${GROUP_HOME}/tmp/${project}/"
 
+		if [ "${dryrun}" == "no" ]
+		then
+			rm -rf "${GROUP_HOME}/projects/${project}"
+			rm -rf "${GROUP_HOME}/tmp/${project}"
+		fi
 
-		rm -rf "${GROUP_HOME}/projects/${project}"
-		rm -rf "${GROUP_HOME}/tmp/${project}"
 	fi
 done
 ##cleaning up files older than 30 days in RAWDATA when files are copied
@@ -189,7 +199,7 @@ for i in $(find "${TMP_ROOT_DIR}/rawdata/ngs/" -maxdepth 1 -type d -mtime +30 -e
 do
 	run=$(basename $i)
 
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
 	"check ${run}"
 
 	if [ -f "${TMP_ROOT_DIR}/logs/${run}/${run}.dataCopiedToPrm" ]
@@ -201,7 +211,10 @@ do
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
 				"rm -rf ${TMP_ROOT_DIR}/rawdata/ngs/${run}"
 
-			rm -rf "${TMP_ROOT_DIR}/rawdata/ngs/${run}"
+			if [ "${dryrun}" == "no" ]
+                        then
+				rm -rf "${TMP_ROOT_DIR}/rawdata/ngs/${run}"
+			fi
 		fi
         fi
 done
