@@ -198,7 +198,7 @@ function rsyncDemultiplexedRuns() {
 			fi
 			)
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "_checksumVerification = ${_checksumVerification}"
-			 	
+
 			if [[ "${_checksumVerification}" == 'FAILED' ]]; then
 				echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}.md5.log for details." \
 					>> "${TMP_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed"
@@ -208,6 +208,17 @@ function rsyncDemultiplexedRuns() {
 					>>    "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed" \
 					&& mv "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}."{failed,finished}
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
+
+				printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n" > ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrmFinished
+				printf "${filePrefix},${group},finished,finished,," >> ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrmFinished
+
+				CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
+				TOKEN=${CURLRESPONSE:10:32}
+
+				curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrmFinished" -FentityName='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
+
+
+
 			else
 				log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Got unexpected result from checksum verification:'
 				log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected FAILED or PASS, but got: ${_checksumVerification}."
@@ -434,6 +445,15 @@ else
 	do
 		run=$(basename ${csvFile%.*})
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${run}..."
+
+		printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n" > ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm
+                printf "${filePrefix},${group},finished,started,," >> ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm
+
+                CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
+                TOKEN=${CURLRESPONSE:10:32}
+
+                curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm" -FentityName='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
+
 		rsyncDemultiplexedRuns "${run}"
 	done
 fi
