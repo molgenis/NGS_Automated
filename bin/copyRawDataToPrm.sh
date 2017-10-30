@@ -375,6 +375,7 @@ declare -a configFiles=(
 	"${CFG_DIR}/${group}.cfg"
 	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
 	"${CFG_DIR}/sharedConfig.cfg"
+	"${CFG_DIR}/${sourceServer}.cfg"
 )
 for configFile in "${configFiles[@]}"; do 
 	if [[ -f "${configFile}" && -r "${configFile}" ]]; then
