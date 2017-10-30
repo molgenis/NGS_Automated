@@ -57,7 +57,7 @@ function rsyncDemultiplexedRuns() {
 	#  1. either the runs has finished and this copy script has not
 	#  2. or when a pipeline has updated the results after a previous execution of this script. 
 	#
-	# Temporarily check for "${TMP_ROOT_DIR}/logs/${_run}/${_run}.pipeline.finished"
+	# Temporarily check for "${PRM_ROOT_DIR}/logs/${_run}/${_run}.pipeline.finished"
 
 	local _runFinished='false'
 	local _rsyncRequired='false'
@@ -201,7 +201,7 @@ function rsyncDemultiplexedRuns() {
 
 			if [[ "${_checksumVerification}" == 'FAILED' ]]; then
 				echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}.md5.log for details." \
-					>> "${TMP_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed"
+					>> "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed"
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Checksum verification failed. See ${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}.md5.log for details."
 			elif [[ "${_checksumVerification}" == 'PASS' ]]; then
 				echo "OK! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}.md5.log for details." \
@@ -209,13 +209,13 @@ function rsyncDemultiplexedRuns() {
 					&& mv "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}."{failed,finished}
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
 
-				printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n" > ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrmFinished
-				printf "${filePrefix},${group},finished,finished,," >> ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrmFinished
+				printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n" > ${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrmFinished
+				printf "${filePrefix},${group},finished,finished,," >> ${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrmFinished
 
 				CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
 				TOKEN=${CURLRESPONSE:10:32}
 
-				curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrmFinished" -FentityName='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
+				curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrmFinished" -FentityName='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
 
 
 
@@ -374,8 +374,9 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files..."
 declare -a configFiles=(
 	"${CFG_DIR}/${group}.cfg"
 	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
-	"${CFG_DIR}/sharedConfig.cfg"
 	"${CFG_DIR}/${sourceServer}.cfg"
+	"${CFG_DIR}/sharedConfig.cfg"
+	"${HOME}/molgenis.cfg"
 )
 for configFile in "${configFiles[@]}"; do 
 	if [[ -f "${configFile}" && -r "${configFile}" ]]; then
@@ -409,10 +410,10 @@ fi
 # * and parsing commandline arguments,
 # but before doing the actual data transfers.
 #
-lockFile="${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
+lockFile="${PRM_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
 thereShallBeOnlyOne "${lockFile}"
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile}..."
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${TMP_ROOT_DIR}/logs..."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${PRM_ROOT_DIR}/logs..."
 
 
 
@@ -427,7 +428,7 @@ gattacaAddress="${GAT}.gcc.rug.nl"
 
 
 ### VERVANG DOOR UMCG-ATEAMBOT USER
-ssh ${DATA_MANAGER}@${gattacaAddress} "ls ${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}" > ${TMP_ROOT_DIR}/Samplesheets/allSampleSheets_${HOSTNAME_SHORT}.txt
+ssh ${DATA_MANAGER}@${gattacaAddress} "ls ${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}" > ${PRM_ROOT_DIR}/Samplesheets/allSampleSheets_${HOSTNAME_SHORT}.txt
 
 trap finish HUP INT QUIT TERM EXIT ERR
 
@@ -435,27 +436,27 @@ declare -a runs=()
 while read i
 do
 runs+=($i)
-done<${TMP_ROOT_DIR}/Samplesheets/allSampleSheets_${HOSTNAME_SHORT}.txt
+done<${PRM_ROOT_DIR}/Samplesheets/allSampleSheets_${HOSTNAME_SHORT}.txt
 
 
 if [[ "${#runs[@]:-0}" -eq '0' ]] 
 then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found @ ${TMP_ROOT_DIR}/runs."
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found @ ${PRM_ROOT_DIR}/runs."
 else
 	for csvFile  in "${runs[@]}"
 	do
-		run=$(basename ${csvFile%.*})
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${run}..."
+		filePrefix=$(basename ${csvFile%.*})
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${filePrefix}..."
 
-		printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n" > ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm
-                printf "${filePrefix},${group},finished,started,," >> ${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm
+		printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n" > ${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm
+                printf "${filePrefix},${group},finished,started,," >> ${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm
 
                 CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
                 TOKEN=${CURLRESPONSE:10:32}
 
-                curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm" -FentityName='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
+                curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm" -FentityName='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
 
-		rsyncDemultiplexedRuns "${run}"
+		rsyncDemultiplexedRuns "${filePrefix}"
 	done
 fi
 
