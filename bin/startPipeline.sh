@@ -104,7 +104,7 @@ function generateScripts () {
 	_message="Copying ${_pathToPipeline}/templates/generate_template.sh to ${_generateShScript} ..."
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
 	echo "${_message}" >> "${_logger}"
-	cp "${_pathToPipeline}/templatesgenerate_template.sh" "${_generateShScript}"
+	cp "${_pathToPipeline}/templates/generate_template.sh" "${_generateShScript}"
 	
 	if [ -f "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/${_filePrefix}.${SAMPLESHEET_EXT}" ]
 	then
@@ -160,7 +160,7 @@ function submitPipeline () {
 		log4Bash 'INFO'  "${LINENO}" "${FUNCNAME:-main}" '0' "Submitting jobs for ${_project}/${_run} ..."
 		if [ ${group} == "umcg-atd" ]
 		then
-			sh submit.sh --qos=dev
+			sh submit.sh
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Using submit options: --qos=dev."
 		else
 			sh submit.sh
@@ -256,7 +256,8 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 # Get list of sample sheets from prm.
 #
-declare -a sampleSheets=($(ls -1 "${PRM_ROOT_DIR}/Samplesheets/"*".${SAMPLESHEET_EXT}"))
+
+declare -a sampleSheets=($(ssh ${HOSTNAME_PRM} "ls -1 ${PRM_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}"))
 if [[ "${#sampleSheets[@]:-0}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found @ ${PRM_ROOT_DIR}/Samplesheets/: There is nothing to do."
@@ -269,15 +270,15 @@ fi
 #
 # Parse sample sheets.
 #
-for sampleSheet in "${sampleSheets[@]}"
+for ss in "${sampleSheets[@]}"
 do
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing sample sheet: ${sampleSheet} ..."
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing sample sheet: ${ss} ..."
 	
-	fileP=$(basename "${sampleSheet}")
+	fileP=$(basename "${ss}")
 	filePrefix=${fileP%.*}
 
-	cp ${PRM_ROOT_DIR}/Samplesheets/${filePrefix}.${SAMPLESHEET_EXT} ${TMP_ROOT_DIR}/Samplesheets/
-
+	scp "${HOSTNAME_PRM}:/${PRM_ROOT_DIR}/Samplesheets/${filePrefix}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/Samplesheets/"
+	sampleSheet="${TMP_ROOT_DIR}/Samplesheets/${fileP}"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run: ${filePrefix} ..."
 	if [ ! -e "${TMP_ROOT_DIR}/logs/${filePrefix}" ]
 	then
@@ -321,10 +322,10 @@ do
 		PROJECTARRAY=()
 		while read line
 		do
-			PROJECTARRAY+="${line}"
+			PROJECTARRAY+=("${line}")
 		done<"${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/project.txt"
 		
-		for project in "${PROJECTARRAY[@]}"
+		for project in ${PROJECTARRAY[@]}
 		do
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project}..."
 			submitPipeline "${project}"
