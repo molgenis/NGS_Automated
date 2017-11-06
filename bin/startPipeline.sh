@@ -295,7 +295,7 @@ do
 	else
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.scriptsGenerated does not exist."
 		log4Bash 'INFO'  "${LINENO}" "${FUNCNAME:-main}" '0' "Generating scripts for ${filePrefix} ..."
-		
+		mkdir -p ${TMP_ROOT_DIR}/tmp/NGS_Automated/
 		HEADER=$(head -1 "${sampleSheet}") ; sed '1d' "${sampleSheet}" > "${TMP_ROOT_DIR}/tmp/NGS_Automated/${filePrefix}.tmp" ; IFS=','  array=(${HEADER})
 		count=1
 		
