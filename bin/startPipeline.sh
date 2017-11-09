@@ -277,7 +277,7 @@ do
 	fileP=$(basename "${ss}")
 	filePrefix=${fileP%.*}
 
-	scp "${HOSTNAME_PRM}:/${PRM_ROOT_DIR}/Samplesheets/${filePrefix}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/Samplesheets/"
+	rsync -rltD "${HOSTNAME_PRM}:/${PRM_ROOT_DIR}/Samplesheets/${filePrefix}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/Samplesheets/"
 	sampleSheet="${TMP_ROOT_DIR}/Samplesheets/${fileP}"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run: ${filePrefix} ..."
 	if [ ! -e "${TMP_ROOT_DIR}/logs/${filePrefix}" ]
