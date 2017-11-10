@@ -214,6 +214,7 @@ declare -a configFiles=(
 	"${CFG_DIR}/${group}.cfg"
 	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
 	"${CFG_DIR}/sharedConfig.cfg"
+	"${HOME}/molgenis.cfg"
 )
 for configFile in "${configFiles[@]}"; do 
 	if [[ -f "${configFile}" && -r "${configFile}" ]]
@@ -319,17 +320,47 @@ do
 	#
 	if [ -f "${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.scriptsGenerated" ]
 	then
-		PROJECTARRAY=()
-		while read line
-		do
+PROJECTARRAY=()
+                while read line
+                do
 			PROJECTARRAY+=("${line}")
-		done<"${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/project.txt"
-		
-		for project in ${PROJECTARRAY[@]}
-		do
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project}..."
-			submitPipeline "${project}"
-		done
+                done<"${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/project.txt"
+
+                for project in "${PROJECTARRAY[@]}"
+                do
+			echo "project,run_id,pipeline,url,copy_results_prm,date" >  ${TMP_ROOT_DIR}/logs/${project}/project.csv
+                        myUrl="https://${MOLGENISSERVER}/menu/main/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${project}"
+
+                        echo "${project},${filePrefix},DNA,${myUrl},," >>  ${TMP_ROOT_DIR}/logs/${project}/project.csv
+                        CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
+                        TOKEN=${CURLRESPONSE:10:32}
+                        curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${project}/project.csv" -FentityTypeId='status_projects' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
+                        echo "curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${project}/project.csv" -FentityTypeId='status_projects' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile"
+                done
+
+                for project in ${PROJECTARRAY[@]}
+                do
+                        echo -e "project_job,job,project,started_date,finished_date,status,url,step" >  ${TMP_ROOT_DIR}/logs/${project}/jobsPerProject.csv
+                        mySamplesheetUrl="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_samples&hideselect=true&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${project}"
+
+                        cd ${TMP_ROOT_DIR}/projects/${project}/run01/jobs/
+                        grep '^processJob' submit.sh | tr '"' ' ' | awk -v pro=$project -v url=$mySamplesheetUrl '{OFS=","} {print pro"_"$2,$2,pro,"","","",url}' >> ${TMP_ROOT_DIR}/logs/${project}/jobsPerProject.csv
+
+                        awk '{FS=","}{if (NR==1){print $0}else{split($2,a,"_"); print $0","a[1]"_"a[2]}}' ${TMP_ROOT_DIR}/logs/${project}/jobsPerProject.csv > ${TMP_ROOT_DIR}/logs/${project}/jobsPerProject.csv.tmp
+
+                        mv ${TMP_ROOT_DIR}/logs/${project}/jobsPerProject.csv.tmp ${TMP_ROOT_DIR}/logs/${project}/jobsPerProject.csv
+                        CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
+                        TOKEN=${CURLRESPONSE:10:32}
+
+                        curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${project}/jobsPerProject.csv" -FentityTypeId='status_jobs' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
+
+                        echo "curl -H \"x-molgenis-token:${TOKEN}\" -X POST -F\"file=@${TMP_ROOT_DIR}/logs/${project}/jobsPerProject.csv\" -FentityTypeId='status_jobs' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile"
+                        log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project}..."
+                        exit 1
+                        submitPipeline "${project}"
+                done
+
+
 	fi
 done
 
