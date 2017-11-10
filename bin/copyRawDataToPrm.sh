@@ -172,8 +172,8 @@ function rsyncDemultiplexedRuns() {
 	#  2. Secondly verify checksums on the destination.
 	#
 	if [[ "${_transferSoFarSoGood}" == 'true' ]];then
-		local _countFilesDemultiplexRunDirScr=$(ssh ${DATA_MANAGER}@${gattacaAddress} "find ${SCR_ROOT_DIR}/runs/${_run}/ -type f | wc -l")
-		local _countFilesDemultiplexRunDirPrm=$(find "${PRM_ROOT_DIR}/rawdata/ngs/${_run}/" -type f | wc -l)
+		local _countFilesDemultiplexRunDirScr=$(ssh ${DATA_MANAGER}@${gattacaAddress} "find ${SCR_ROOT_DIR}/runs/${_run}/results/${_run}* -type f | wc -l")
+		local _countFilesDemultiplexRunDirPrm=$(find "${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}*" -type f | wc -l)
 		if [[ ${_countFilesDemultiplexRunDirScr} -ne ${_countFilesDemultiplexRunDirPrm} ]]; then
 			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_run} on scr (${_countFilesDemultiplexRunDirScr}) and prm (${_countFilesDemultiplexRunDirPrm}) is NOT the same!" \
 				>> "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed"
@@ -209,13 +209,13 @@ function rsyncDemultiplexedRuns() {
 					&& mv "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}."{failed,finished}
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
 
-				printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n" > ${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrmFinished
-				printf "${filePrefix},${group},finished,finished,," >> ${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrmFinished
+				printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n" > ${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrmFinished.csv
+				printf "${filePrefix},${group},finished,finished,," >> ${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrmFinished.csv
 
 				CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
 				TOKEN=${CURLRESPONSE:10:32}
 
-				curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrmFinished" -FentityTypeId='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
+				curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrmFinished.csv" -FentityTypeId='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
 
 
 
@@ -448,13 +448,13 @@ else
 		filePrefix=$(basename ${csvFile%.*})
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${filePrefix}..."
 
-		printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n" > ${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm
-                printf "${filePrefix},${group},finished,started,," >> ${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm
+		printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n" > ${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm.csv
+                printf "${filePrefix},${group},finished,started,," >> ${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm.csv
 
                 CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
                 TOKEN=${CURLRESPONSE:10:32}
 
-                curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm" -FentityTypeId='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
+                curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm.csv" -FentityTypeId='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
 
 		rsyncDemultiplexedRuns "${filePrefix}"
 	done
