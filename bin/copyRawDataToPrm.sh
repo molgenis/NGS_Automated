@@ -49,8 +49,6 @@ function rsyncDemultiplexedRuns() {
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_run}..."
 	local _log_file="${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.log"
 
-	mkdir -p "${PRM_ROOT_DIR}/logs/${_run}/"
-	mkdir -p "${PRM_ROOT_DIR}/rawdata/ngs/${_run}"
 
 	#
 	# Determine whether an rsync is required for this run, which is the case when
@@ -447,6 +445,8 @@ else
 	do
 		filePrefix=$(basename ${csvFile%.*})
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${filePrefix}..."
+		mkdir -p "${PRM_ROOT_DIR}/logs/${_run}/"
+		mkdir -p "${PRM_ROOT_DIR}/rawdata/ngs/${_run}"
 
 		printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n" > ${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm.csv
                 printf "${filePrefix},${group},finished,started,," >> ${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm.csv
