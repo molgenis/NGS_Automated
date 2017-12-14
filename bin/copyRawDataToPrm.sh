@@ -62,11 +62,8 @@ function rsyncDemultiplexedRuns() {
 	local _demultiplexingFinishedFile="${PRM_ROOT_DIR}/logs/${_run}/${_run}.copyRawDataToPrm.sh.finished"
 
 	# check if demultiplexing was finished
-		
 	#log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${gattacaAddress}" "test -e ${SCR_ROOT_DIR}/logs/${_run}_Demultiplexing.finished"
-	
 	#ssh "${DATA_MANAGER}@${gattacaAddress}" test -f "${SCR_ROOT_DIR}/logs/${_run}_Demultiplexing.finished" \
-		
 	if ssh ${DATA_MANAGER}@${gattacaAddress} test -e "${SCR_ROOT_DIR}/logs/${_run}_Demultiplexing.finished"
 	then
 		_runFinished='true'
@@ -74,11 +71,9 @@ function rsyncDemultiplexedRuns() {
 	else
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " ${DATA_MANAGER}@${gattacaAddress} ${SCR_ROOT_DIR}/logs/${_run}_Demultiplexing.finished not present."
 		_runFinished='false'
-		continue	
+		continue
 	fi
-	
-	
-	
+
 	if [[ -f "${PRM_ROOT_DIR}/logs/${_run}/${_run}.copyRawDataToPrm.sh.finished" ]] 
 	then
 		_runFinished='true'
@@ -86,14 +81,13 @@ function rsyncDemultiplexedRuns() {
 	else
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " ${_run}.copyRawDataToPrm.sh.finished not present."
 	fi
-	
+
 	if [[ "${_runFinished}" == 'true' ]]
 	then
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing finished = ${_runFinished}."
-		
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "check if ${_run}_Demultiplexing.finished is newer than ${_demultiplexingFinishedFile}"
 		rsync -a ${DATA_MANAGER}@${gattacaAddress}:${SCR_ROOT_DIR}/logs/${_run}_Demultiplexing.finished ${_demultiplexingFinishedFile}.${GAT}
-				
+
 		# check if ${_run}_Demultiplexing.finished is newer than ${_demultiplexingFinishedFile}
 		if [[ "${_demultiplexingFinishedFile}" -nt "${_demultiplexingFinishedFile}.${GAT}" ]]
 		then
@@ -171,7 +165,7 @@ function rsyncDemultiplexedRuns() {
 	#
 	if [[ "${_transferSoFarSoGood}" == 'true' ]];then
 		local _countFilesDemultiplexRunDirScr=$(ssh ${DATA_MANAGER}@${gattacaAddress} "find ${SCR_ROOT_DIR}/runs/${_run}/results/${_run}* -type f | wc -l")
-		local _countFilesDemultiplexRunDirPrm=$(find "${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}*" -type f | wc -l)
+		local _countFilesDemultiplexRunDirPrm=$(find "${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}"* -type f | wc -l)
 		if [[ ${_countFilesDemultiplexRunDirScr} -ne ${_countFilesDemultiplexRunDirPrm} ]]; then
 			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_run} on scr (${_countFilesDemultiplexRunDirScr}) and prm (${_countFilesDemultiplexRunDirPrm}) is NOT the same!" \
 				>> "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed"
@@ -445,8 +439,8 @@ else
 	do
 		filePrefix=$(basename ${csvFile%.*})
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${filePrefix}..."
-		mkdir -p "${PRM_ROOT_DIR}/logs/${_run}/"
-		mkdir -p "${PRM_ROOT_DIR}/rawdata/ngs/${_run}"
+		mkdir -p "${PRM_ROOT_DIR}/logs/${filePrefix}/"
+		mkdir -p "${PRM_ROOT_DIR}/rawdata/ngs/${filePrefix}"
 
 		printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n" > ${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm.csv
                 printf "${filePrefix},${group},finished,started,," >> ${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm.csv
