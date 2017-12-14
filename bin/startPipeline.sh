@@ -356,7 +356,6 @@ PROJECTARRAY=()
 
                         echo "curl -H \"x-molgenis-token:${TOKEN}\" -X POST -F\"file=@${TMP_ROOT_DIR}/logs/${project}/jobsPerProject.csv\" -FentityTypeId='status_jobs' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile"
                         log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project}..."
-                        exit 1
                         submitPipeline "${project}"
                 done
 
