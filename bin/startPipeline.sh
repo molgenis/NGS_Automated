@@ -74,11 +74,11 @@ EOH
 }
 
 function generateScripts () {
-	local _filePrefix="${1}" ## name of the run: sequencingStartDate_Sequencer_run_flowcell
+	local _project="${1}" 
 	local _sampleType="${2}" ## DNA or RNA
 	local _loadPipeline="NGS_${_sampleType}"
-	local _generateShScript="${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.sh"
-	local _logger="${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.${SCRIPT_NAME}.log"
+	local _generateShScript="${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh"
+	local _logger="${TMP_ROOT_DIR}/logs/${_project}/${_project}.${SCRIPT_NAME}.log"
 	local _message
 	
 	if [ "${_sampleType}" == "DNA" ]
@@ -96,42 +96,42 @@ function generateScripts () {
 	fi
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "_pathToPipeline is ${_pathToPipeline}"
 	
-	_message="Creating directory: ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/ ..."
+	_message="Creating directory: ${TMP_ROOT_DIR}/generatedscripts/${_project}/ ..."
 	echo "${_message}" > "${_logger}"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
-	mkdir -p "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/"
+	mkdir -p "${TMP_ROOT_DIR}/generatedscripts/${_project}/"
 	
 	_message="Copying ${_pathToPipeline}/templates/generate_template.sh to ${_generateShScript} ..."
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
 	echo "${_message}" >> "${_logger}"
 	cp "${_pathToPipeline}/templates/generate_template.sh" "${_generateShScript}"
 	
-	if [ -f "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/${_filePrefix}.${SAMPLESHEET_EXT}" ]
+	if [ -f "${TMP_ROOT_DIR}/generatedscripts/${_project}/${_project}.${SAMPLESHEET_EXT}" ]
 	then
-		_message="${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/${_filePrefix}.${SAMPLESHEET_EXT} already exists and will be removed ..."
+		_message="${TMP_ROOT_DIR}/generatedscripts/${_project}/${_project}.${SAMPLESHEET_EXT} already exists and will be removed ..."
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
 		echo "${_message}" >> "${_logger}"
-		rm "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/${_filePrefix}.${SAMPLESHEET_EXT}"
+		rm "${TMP_ROOT_DIR}/generatedscripts/${_project}/${_project}.${SAMPLESHEET_EXT}"
 	fi
 	
-	_message="Copying ${TMP_ROOT_DIR}/Samplesheets/${_filePrefix}.${SAMPLESHEET_EXT} to ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/ ..."
+	_message="Copying ${TMP_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT} to ${TMP_ROOT_DIR}/generatedscripts/${_project}/ ..."
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
 	echo "${_message}" >> "${_logger}"
-	cp "${TMP_ROOT_DIR}/Samplesheets/${_filePrefix}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/"
+	cp "${TMP_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/generatedscripts/${_project}/"
 	
-	cd "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/"
+	cd "${TMP_ROOT_DIR}/generatedscripts/${_project}/"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigated to $(pwd)."
 	
-	_message="Running: sh ${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.sh -p ${_filePrefix} >> ${_logger}"
+	_message="Running: sh ${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh -p ${_project} >> ${_logger}"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
-	sh "${TMP_ROOT_DIR}/generatedscripts/${_filePrefix}/generate.sh" -p "${_filePrefix}" >> "${_logger}" 2>&1
+	sh "${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh" -p "${_project}" >> "${_logger}" 2>&1
 	
 	cd scripts
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigated to $(pwd)."
 	
 	sh submit.sh
-	touch "${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.scriptsGenerated"
-	_message="Scripts generated and created: ${TMP_ROOT_DIR}/logs/${_filePrefix}/${_filePrefix}.scriptsGenerated."
+	touch "${TMP_ROOT_DIR}/logs/${_project}/${_project}.scriptsGenerated"
+	_message="Scripts generated and created: ${TMP_ROOT_DIR}/logs/${_project}/${_project}.scriptsGenerated."
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
 	echo "${_message}" >> "${_logger}"
 }
@@ -258,14 +258,14 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 # Get list of sample sheets from prm.
 #
 
-declare -a sampleSheets=($(ssh ${HOSTNAME_PRM} "ls -1 ${PRM_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}"))
+declare -a sampleSheets=($(ssh ${HOSTNAME_PRM} "ls -1 ${PRM_ROOT_DIR}/Samplesheets/project_${HOST_ABBREVATION}/*.${SAMPLESHEET_EXT}"))
 if [[ "${#sampleSheets[@]:-0}" -eq '0' ]]
 then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found @ ${PRM_ROOT_DIR}/Samplesheets/: There is nothing to do."
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found @ ${PRM_ROOT_DIR}/Samplesheets/project_${HOST_ABBREVATION}: There is nothing to do."
 	trap - EXIT
 	exit 0
 else
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${#sampleSheets[@]} sample sheets from ${PRM_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT} ..."
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${#sampleSheets[@]} sample sheets from ${PRM_ROOT_DIR}/Samplesheets/project_${HOST_ABBREVATION}/*.${SAMPLESHEET_EXT} ..."
 fi
 
 #
@@ -274,30 +274,30 @@ fi
 for ss in "${sampleSheets[@]}"
 do
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing sample sheet: ${ss} ..."
-	
-	fileP=$(basename "${ss}")
-	filePrefix=${fileP%.*}
 
-	rsync -rltD "${HOSTNAME_PRM}:/${PRM_ROOT_DIR}/Samplesheets/${filePrefix}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/Samplesheets/"
+	fileP=$(basename "${ss}")
+	projectName=${fileP%.*}
+
+	rsync -rltD "${HOSTNAME_PRM}:/${PRM_ROOT_DIR}/Samplesheets/project_${HOST_ABBREVATION}/${projectName}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/Samplesheets/"
 	sampleSheet="${TMP_ROOT_DIR}/Samplesheets/${fileP}"
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run: ${filePrefix} ..."
-	if [ ! -e "${TMP_ROOT_DIR}/logs/${filePrefix}" ]
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run: ${projectName} ..."
+	if [ ! -e "${TMP_ROOT_DIR}/logs/${projectName}" ]
 	then
-		mkdir -m 2770 "${TMP_ROOT_DIR}/logs/${filePrefix}"
+		mkdir -m 2770 "${TMP_ROOT_DIR}/logs/${projectName}"
 	fi
 
 	#
 	# Generate scripts (per sample sheet).
 	#
-	if [ -f "${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.scriptsGenerated" ]
+	if [ -f "${TMP_ROOT_DIR}/logs/${projectName}/${projectName}.scriptsGenerated" ]
 	then
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.scriptsGenerated exists."
-		log4Bash 'INFO'  "${LINENO}" "${FUNCNAME:-main}" '0' "Will use existing scripts for ${filePrefix}."
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${projectName}/${projectName}.scriptsGenerated exists."
+		log4Bash 'INFO'  "${LINENO}" "${FUNCNAME:-main}" '0' "Will use existing scripts for ${projectName}."
 	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.scriptsGenerated does not exist."
-		log4Bash 'INFO'  "${LINENO}" "${FUNCNAME:-main}" '0' "Generating scripts for ${filePrefix} ..."
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${projectName}/${projectName}.scriptsGenerated does not exist."
+		log4Bash 'INFO'  "${LINENO}" "${FUNCNAME:-main}" '0' "Generating scripts for ${projectName} ..."
 		mkdir -p ${TMP_ROOT_DIR}/tmp/NGS_Automated/
-		HEADER=$(head -1 "${sampleSheet}") ; sed '1d' "${sampleSheet}" > "${TMP_ROOT_DIR}/tmp/NGS_Automated/${filePrefix}.tmp" ; IFS=','  array=(${HEADER})
+		HEADER=$(head -1 "${sampleSheet}") ; sed '1d' "${sampleSheet}" > "${TMP_ROOT_DIR}/tmp/NGS_Automated/${projectName}.tmp" ; IFS=','  array=(${HEADER})
 		count=1
 		
 		pipeline="DNA" # Default when not specified in sample sheet.
@@ -305,59 +305,47 @@ do
 		do
 			if [[ "${j}" == *"Sample Type"* ]]
 			then
-				awk -F"," '{print $'$count'}' "${TMP_ROOT_DIR}/tmp/NGS_Automated/${filePrefix}.tmp" > "${TMP_ROOT_DIR}/tmp/NGS_Automated/${filePrefix}.whichPipeline"
-				pipeline=$(head -1 "${TMP_ROOT_DIR}/tmp/NGS_Automated/${filePrefix}.whichPipeline")
+				awk -F"," '{print $'$count'}' "${TMP_ROOT_DIR}/tmp/NGS_Automated/${projectName}.tmp" > "${TMP_ROOT_DIR}/tmp/NGS_Automated/${projectName}.whichPipeline"
+				pipeline=$(head -1 "${TMP_ROOT_DIR}/tmp/NGS_Automated/${projectName}.whichPipeline")
 				break
 			fi
 		done
 		
-		generateScripts "${filePrefix}" "${pipeline}"
+		generateScripts "${projectName}" "${pipeline}"
 		
 	fi
 	
 	#
 	# Submit generated job scripts (per project).
 	#
-	if [ -f "${TMP_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.scriptsGenerated" ]
+	if [ -f "${TMP_ROOT_DIR}/logs/${projectName}/${projectName}.scriptsGenerated" ]
 	then
-PROJECTARRAY=()
-                while read line
-                do
-			PROJECTARRAY+=("${line}")
-                done<"${TMP_ROOT_DIR}/generatedscripts/${filePrefix}/project.txt"
+		echo "project,run_id,pipeline,url,copy_results_prm,date" >  ${TMP_ROOT_DIR}/logs/${projectName}/project.csv
+                myUrl="https://${MOLGENISSERVER}/menu/main/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${projectName}"
 
-                for project in "${PROJECTARRAY[@]}"
-                do
-			echo "project,run_id,pipeline,url,copy_results_prm,date" >  ${TMP_ROOT_DIR}/logs/${project}/project.csv
-                        myUrl="https://${MOLGENISSERVER}/menu/main/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${project}"
+                echo "${projectName},${projectName},DNA,${myUrl},," >>  ${TMP_ROOT_DIR}/logs/${projectName}/project.csv
+                CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
+                TOKEN=${CURLRESPONSE:10:32}
+                curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${projectName}/project.csv" -FentityTypeId='status_projects' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
+                echo "curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${projectName}/project.csv" -FentityTypeId='status_projects' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile"
 
-                        echo "${project},${filePrefix},DNA,${myUrl},," >>  ${TMP_ROOT_DIR}/logs/${project}/project.csv
-                        CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
-                        TOKEN=${CURLRESPONSE:10:32}
-                        curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${project}/project.csv" -FentityTypeId='status_projects' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
-                        echo "curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${project}/project.csv" -FentityTypeId='status_projects' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile"
-                done
+                echo -e "project_job,job,project,started_date,finished_date,status,url,step" >  ${TMP_ROOT_DIR}/logs/${projectName}/jobsPerProject.csv
+                mySamplesheetUrl="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_samples&hideselect=true&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${projectName}"
 
-                for project in ${PROJECTARRAY[@]}
-                do
-                        echo -e "project_job,job,project,started_date,finished_date,status,url,step" >  ${TMP_ROOT_DIR}/logs/${project}/jobsPerProject.csv
-                        mySamplesheetUrl="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_samples&hideselect=true&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${project}"
+                cd ${TMP_ROOT_DIR}/projects/${projectName}/run01/jobs/
+                grep '^processJob' submit.sh | tr '"' ' ' | awk -v pro=$projectName -v url=$mySamplesheetUrl '{OFS=","} {print pro"_"$2,$2,pro,"","","",url}' >> ${TMP_ROOT_DIR}/logs/${projectName}/jobsPerProject.csv
 
-                        cd ${TMP_ROOT_DIR}/projects/${project}/run01/jobs/
-                        grep '^processJob' submit.sh | tr '"' ' ' | awk -v pro=$project -v url=$mySamplesheetUrl '{OFS=","} {print pro"_"$2,$2,pro,"","","",url}' >> ${TMP_ROOT_DIR}/logs/${project}/jobsPerProject.csv
+                awk '{FS=","}{if (NR==1){print $0}else{split($2,a,"_"); print $0","a[1]"_"a[2]}}' ${TMP_ROOT_DIR}/logs/${projectName}/jobsPerProject.csv > ${TMP_ROOT_DIR}/logs/${projectName}/jobsPerProject.csv.tmp
 
-                        awk '{FS=","}{if (NR==1){print $0}else{split($2,a,"_"); print $0","a[1]"_"a[2]}}' ${TMP_ROOT_DIR}/logs/${project}/jobsPerProject.csv > ${TMP_ROOT_DIR}/logs/${project}/jobsPerProject.csv.tmp
+                mv ${TMP_ROOT_DIR}/logs/${projectName}/jobsPerProject.csv.tmp ${TMP_ROOT_DIR}/logs/${projectName}/jobsPerProject.csv
+                CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
+                TOKEN=${CURLRESPONSE:10:32}
 
-                        mv ${TMP_ROOT_DIR}/logs/${project}/jobsPerProject.csv.tmp ${TMP_ROOT_DIR}/logs/${project}/jobsPerProject.csv
-                        CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
-                        TOKEN=${CURLRESPONSE:10:32}
+                curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${projectName}/jobsPerProject.csv" -FentityTypeId='status_jobs' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
 
-                        curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${project}/jobsPerProject.csv" -FentityTypeId='status_jobs' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
-
-                        echo "curl -H \"x-molgenis-token:${TOKEN}\" -X POST -F\"file=@${TMP_ROOT_DIR}/logs/${project}/jobsPerProject.csv\" -FentityTypeId='status_jobs' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile"
-                        log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project}..."
-                        submitPipeline "${project}"
-                done
+                echo "curl -H \"x-molgenis-token:${TOKEN}\" -X POST -F\"file=@${TMP_ROOT_DIR}/logs/${projectName}/jobsPerProject.csv\" -FentityTypeId='status_jobs' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile"
+                log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${projectName}..."
+                submitPipeline "${projectName}"
 
 
 	fi

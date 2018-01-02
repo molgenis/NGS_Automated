@@ -265,9 +265,72 @@ function rsyncDemultiplexedRuns() {
 	fi
 }
 
+function splitSamplesheetPerProject() {
 
+        local _run="${1}"
 
+        log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_run}..."
+        local _log_file="${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.log"
+	module load ngs-utils
+	mkdir "${PRM_ROOT_DIR}/logs/${_run}/tmp"
+	python samplesheetChecker.py "${PRM_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}" "${PRM_ROOT_DIR}/logs/${_run}/tmp/project.txt.tmp"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
+		"samplesheet splitted, now sorting"
+	sort "${PRM_ROOT_DIR}/logs/${_run}/tmp/project.txt.tmp" | uniq > "${PRM_ROOT_DIR}/logs/${_run}/tmp/project.txt"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
+		"sorting done"
 
+	CLUSTERS=()
+
+	#
+	## Check which servers are up
+	#
+	for i in zinc-finger leucine-zipper
+	do
+
+	configFile="${CFG_DIR}/${i}.cfg"
+	mixed_stdouterr=$(source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot source ${configFile}."
+	source ${configFile}
+
+	if ssh -q ${HOSTNAME_TMP} "ls /groups/${GROUP}/${TMP_LFS}/logs/production.ready"
+	then
+		CLUSTERS+=("${HOST_ABBREVATION}")
+		mkdir -p "${PRM_ROOT_DIR}/Samplesheets/project_${HOST_ABBREVATION}"
+	fi
+
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
+	"The available clusters are: ${CLUSTERS[@]}"
+
+	## reloading original hostname configfile
+	source "${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
+
+	cluster=""
+	count=1
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
+		"splitting samplesheet per project"
+
+	for project in $(awk '$1' "${PRM_ROOT_DIR}/logs/${_run}/tmp/project.txt")
+	do
+		if [[ $((count % 2)) == 0 ]]
+		then
+			if [[ ${#CLUSTERS[@]} == 2 ]]
+			then
+				cluster=${CLUSTERS[1]}
+			else
+				cluster=${CLUSTERS[0]}
+			fi
+		else
+			cluster=${CLUSTERS[0]}
+		fi
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
+			"${project} will be running on ${cluster}"
+
+		extract_samples_from_GAF_list.pl --i "${PRM_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}" --o "${PRM_ROOT_DIR}/Samplesheets/project_${cluster}/${project}.csv" --c project --q "${project}"
+		perl -pi -e 's/\r(?!\n)//g' "${PRM_ROOT_DIR}/Samplesheets/project_${cluster}/${project}.csv"
+
+		count=$((count+1))
+	done
+}
 
 function showHelp() {
 	#
@@ -451,6 +514,7 @@ else
                 curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm.csv" -FentityTypeId='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
 
 		rsyncDemultiplexedRuns "${filePrefix}"
+		splitSamplesheetPerProject "${filePrefix}"
 	done
 fi
 
