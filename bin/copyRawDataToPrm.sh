@@ -283,7 +283,7 @@ function splitSamplesheetPerProject() {
 	sort "${PRM_ROOT_DIR}/logs/${_run}/tmp/project.txt.tmp" | uniq > "${PRM_ROOT_DIR}/logs/${_run}/tmp/project.txt"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sorting done"
 
-	declare -A CLUSTERS=()
+	CLUSTERS=()
 
 	#
 	## Check which servers are up
