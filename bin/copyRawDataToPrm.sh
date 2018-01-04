@@ -109,7 +109,6 @@ function rsyncDemultiplexedRuns() {
 	fi
 
 
-
 	#
 	# Perform rsync.
 	#  1. For ${_run} dir: recursively with "default" archive (-a),
@@ -174,7 +173,7 @@ function rsyncDemultiplexedRuns() {
 		else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
 				"Amount of files on tmp and prm is the same for ${_run}: ${_countFilesDemultiplexRunDirPrm}."
-			
+
 			#
 			# Verify checksums on prm storage.
 			#
@@ -222,7 +221,7 @@ function rsyncDemultiplexedRuns() {
 	#
 	# Send e-mail notification.
 	#
-		
+
 	if [[ -f "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed" ]]; then
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed exists."
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed.mailed exists."
@@ -242,11 +241,10 @@ function rsyncDemultiplexedRuns() {
 	elif [[ -f "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.finished" ]]; then
 		local _message1="run ${_run} is ready. The data is available at ${PRM_ROOT_DIR}/rawdata/ngs/${_run}/."
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message1}"
-		
-				
+
 		if [[ "${email}" == 'true' ]]; then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Try to mail to ${EMAIL_TO}"
-			
+
 			if ls ${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}*.log 1> /dev/null 2>&1
 			then
 				local _logFileStatistics=$(cat ${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}*.log)
@@ -265,9 +263,90 @@ function rsyncDemultiplexedRuns() {
 	fi
 }
 
+function splitSamplesheetPerProject() {
 
+        local _run="${1}"
 
+        log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_run}..."
+        local _log_file="${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.log"
 
+	if [ -f "${PRM_ROOT_DIR}/logs/${_run}.samplesheetSplittedPerProject" ]
+	then
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run} already splitted per project"
+		continue
+	fi
+
+	module load ngs-utils
+	mkdir -p "${PRM_ROOT_DIR}/logs/${_run}/tmp"
+	python samplesheetChecker.py "${PRM_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}" "${PRM_ROOT_DIR}/logs/${_run}/tmp/project.txt.tmp"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "samplesheet splitted, now sorting"
+	sort "${PRM_ROOT_DIR}/logs/${_run}/tmp/project.txt.tmp" | uniq > "${PRM_ROOT_DIR}/logs/${_run}/tmp/project.txt"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sorting done"
+
+	CLUSTERS=()
+
+	#
+	## Check which servers are up
+	#
+	for i in zinc-finger leucine-zipper
+	do
+
+		configFile="${CFG_DIR}/${i}.cfg"
+		mixed_stdouterr=$(source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot source ${configFile}."
+		source ${configFile}
+		#log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "ssh -q ${HOSTNAME_TMP} ls /groups/${GROUP}/${TMP_LFS}/logs/production.ready"
+		#if ssh -q ${HOSTNAME_TMP} "ls /groups/${GROUP}/${TMP_LFS}/logs/production.ready"
+		#then
+		#	CLUSTERS+=("${HOST_ABBREVATION}")
+		#	mkdir -p "${PRM_ROOT_DIR}/Samplesheets/project_${HOST_ABBREVATION}"
+		#fi
+		#log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "ls /groups/${GROUP}/${PRM_LFS}/logs/${i}.production.ready"
+		if [ -f /groups/${GROUP}/${PRM_LFS}/logs/${i}.production.ready ]
+		then
+			CLUSTERS+=("${HOST_ABBREVATION}")
+			mkdir -p "${PRM_ROOT_DIR}/Samplesheets/project_${HOST_ABBREVATION}"
+		else
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${i} is not available for submitting jobs"
+		fi
+	done
+	if [ -z "${CLUSTERS:-}" ]
+	then
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '1' "there are no clusters available, exiting"
+		break
+	else
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "The available clusters are: ${CLUSTERS[@]}"
+	fi
+	## reloading original hostname configfile
+	source "${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
+
+	cluster=""
+	count=1
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
+		"splitting samplesheet per project"
+
+	for project in $(awk '$1' "${PRM_ROOT_DIR}/logs/${_run}/tmp/project.txt")
+	do
+		if [[ $((count % 2)) == 0 ]]
+		then
+			if [[ ${#CLUSTERS[@]} == 2 ]]
+			then
+				cluster=${CLUSTERS[1]}
+			else
+				cluster=${CLUSTERS[0]}
+			fi
+		else
+			cluster=${CLUSTERS[0]}
+		fi
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
+			"${project} will be running on ${cluster}"
+
+		extract_samples_from_GAF_list.pl --i "${PRM_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}" --o "${PRM_ROOT_DIR}/Samplesheets/project_${cluster}/${project}.csv" --c project --q "${project}"
+		perl -pi -e 's/\r(?!\n)//g' "${PRM_ROOT_DIR}/Samplesheets/project_${cluster}/${project}.csv"
+
+		count=$((count+1))
+	done
+	touch "${PRM_ROOT_DIR}/logs/${_run}.samplesheetSplittedPerProject"
+}
 
 function showHelp() {
 	#
@@ -284,14 +363,14 @@ Options:
 	-e   Enable email notification. (Disabled by default.)
 	-n   Dry-run: Do not perform actual sync, but only list changes instead.
 	-l   Log level.
-	     Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
+		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 	-s   Source of the tmpData, must be gattaca01 or gattaca02
-	
+
 Config and dependencies:
 	This script needs 3 config files, which must be located in ${CFG_DIR}:
-	 1. <group>.cfg       for the group specified with -g
-	 2. <host>.cfg        for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
-	 3. sharedConfig.cfg  for all groups and all servers.
+	1. <group>.cfg       for the group specified with -g
+	2. <host>.cfg        for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
+	3. sharedConfig.cfg  for all groups and all servers.
 	In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
 ===============================================================================================================
 EOH
@@ -370,7 +449,7 @@ declare -a configFiles=(
 	"${CFG_DIR}/sharedConfig.cfg"
 	"${HOME}/molgenis.cfg"
 )
-for configFile in "${configFiles[@]}"; do 
+for configFile in "${configFiles[@]}"; do
 	if [[ -f "${configFile}" && -r "${configFile}" ]]; then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config file ${configFile}..."
 		#
@@ -394,9 +473,9 @@ if [[ "${ROLE_USER}" != "${DATA_MANAGER}" ]]; then
 fi
 
 #
-# Make sure only one copy of this script runs simultaneously 
+# Make sure only one copy of this script runs simultaneously
 # per data collection we want to copy to prm -> one copy per group.
-# Therefore locking must be done after 
+# Therefore locking must be done after
 # * sourcing the file containing the lock function,
 # * sourcing config files,
 # * and parsing commandline arguments,
@@ -406,10 +485,6 @@ lockFile="${PRM_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
 thereShallBeOnlyOne "${lockFile}"
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile}..."
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${PRM_ROOT_DIR}/logs..."
-
-
-
-
 
 #
 # Get a list of all  for this group, loop over their run analysis ("run") sub dirs and check if there are any we need to rsync.
@@ -427,15 +502,14 @@ trap finish HUP INT QUIT TERM EXIT ERR
 declare -a runs=()
 while read i
 do
-runs+=($i)
+	runs+=($i)
 done<${PRM_ROOT_DIR}/Samplesheets/allSampleSheets_${HOSTNAME_SHORT}.txt
 
-
-if [[ "${#runs[@]:-0}" -eq '0' ]] 
+if [[ "${#runs[@]:-0}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found @ ${PRM_ROOT_DIR}/runs."
 else
-	for csvFile  in "${runs[@]}"
+	for csvFile in "${runs[@]}"
 	do
 		filePrefix=$(basename ${csvFile%.*})
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${filePrefix}..."
@@ -449,8 +523,9 @@ else
                 TOKEN=${CURLRESPONSE:10:32}
 
                 curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm.csv" -FentityTypeId='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
-
+		splitSamplesheetPerProject "${filePrefix}"
 		rsyncDemultiplexedRuns "${filePrefix}"
+
 	done
 fi
 
