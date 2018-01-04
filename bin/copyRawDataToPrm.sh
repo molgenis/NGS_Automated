@@ -272,13 +272,11 @@ function splitSamplesheetPerProject() {
         log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_run}..."
         local _log_file="${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.log"
 	module load ngs-utils
-	mkdir "${PRM_ROOT_DIR}/logs/${_run}/tmp"
+	mkdir -p "${PRM_ROOT_DIR}/logs/${_run}/tmp"
 	python samplesheetChecker.py "${PRM_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}" "${PRM_ROOT_DIR}/logs/${_run}/tmp/project.txt.tmp"
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
-		"samplesheet splitted, now sorting"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "samplesheet splitted, now sorting"
 	sort "${PRM_ROOT_DIR}/logs/${_run}/tmp/project.txt.tmp" | uniq > "${PRM_ROOT_DIR}/logs/${_run}/tmp/project.txt"
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
-		"sorting done"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sorting done"
 
 	CLUSTERS=()
 
@@ -287,17 +285,18 @@ function splitSamplesheetPerProject() {
 	#
 	for i in zinc-finger leucine-zipper
 	do
-
-	configFile="${CFG_DIR}/${i}.cfg"
-	mixed_stdouterr=$(source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot source ${configFile}."
-	source ${configFile}
-
-	if ssh -q ${HOSTNAME_TMP} "ls /groups/${GROUP}/${TMP_LFS}/logs/production.ready"
-	then
-		CLUSTERS+=("${HOST_ABBREVATION}")
-		mkdir -p "${PRM_ROOT_DIR}/Samplesheets/project_${HOST_ABBREVATION}"
-	fi
-
+	
+		configFile="${CFG_DIR}/${i}.cfg"
+		mixed_stdouterr=$(source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot source ${configFile}."
+		source ${configFile}
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "ssh -q ${HOSTNAME_TMP} ls /groups/${GROUP}/${TMP_LFS}/logs/production.ready"
+		#if ssh -q ${HOSTNAME_TMP} "ls /groups/${GROUP}/${TMP_LFS}/logs/production.ready"
+		#then
+			echo "${HOST_ABBREVATION}"			
+			CLUSTERS+=("${HOST_ABBREVATION}")
+			mkdir -p "${PRM_ROOT_DIR}/Samplesheets/project_${HOST_ABBREVATION}"
+		#fi
+	done
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
 	"The available clusters are: ${CLUSTERS[@]}"
 
@@ -500,6 +499,7 @@ then
 else
 	for csvFile  in "${runs[@]}"
 	do
+		echo "HEY"
 		filePrefix=$(basename ${csvFile%.*})
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${filePrefix}..."
 		mkdir -p "${PRM_ROOT_DIR}/logs/${filePrefix}/"
@@ -515,6 +515,7 @@ else
 
 		rsyncDemultiplexedRuns "${filePrefix}"
 		splitSamplesheetPerProject "${filePrefix}"
+
 	done
 fi
 
