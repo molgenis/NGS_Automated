@@ -291,14 +291,12 @@ function splitSamplesheetPerProject() {
 		#log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "ssh -q ${HOSTNAME_TMP} ls /groups/${GROUP}/${TMP_LFS}/logs/production.ready"
 		#if ssh -q ${HOSTNAME_TMP} "ls /groups/${GROUP}/${TMP_LFS}/logs/production.ready"
 		#then
-		#	echo "${HOST_ABBREVATION}"			
 		#	CLUSTERS+=("${HOST_ABBREVATION}")
 		#	mkdir -p "${PRM_ROOT_DIR}/Samplesheets/project_${HOST_ABBREVATION}"
 		#fi
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "ls /groups/${GROUP}/${PRM_LFS}/logs/${i}.production.ready"
 		if ls /groups/${GROUP}/${PRM_LFS}/logs/${i}.production.ready
 		then
-			echo "${HOST_ABBREVATION}"			
 			CLUSTERS+=("${HOST_ABBREVATION}")
 			mkdir -p "${PRM_ROOT_DIR}/Samplesheets/project_${HOST_ABBREVATION}"
 		fi
@@ -505,7 +503,6 @@ then
 else
 	for csvFile in "${runs[@]}"
 	do
-		echo "HEY"
 		filePrefix=$(basename ${csvFile%.*})
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${filePrefix}..."
 		mkdir -p "${PRM_ROOT_DIR}/logs/${filePrefix}/"
@@ -518,10 +515,8 @@ else
                 TOKEN=${CURLRESPONSE:10:32}
 
                 curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm.csv" -FentityTypeId='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
-		echo "SKIPPY"
 		splitSamplesheetPerProject "${filePrefix}"
 		rsyncDemultiplexedRuns "${filePrefix}"
-		echo "SKIPPY"
 
 	done
 fi
