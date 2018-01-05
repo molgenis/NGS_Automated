@@ -135,19 +135,6 @@ function rsyncDemultiplexedRuns() {
 	_transferSoFarSoGood='false'
 	}
 
-	#
-	# rsync samplesheet to prm samplesheets folder
-	#
-	rsync -av ${dryrun:-} \
-		"${DATA_MANAGER}@${gattacaAddress}:${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}" \
-			"${PRM_ROOT_DIR}/Samplesheets/" \
-				>> "${_log_file}" 2>&1 \
-	|| {
-	log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT} dir. See ${_log_file} for details."
-	echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_log_file} for details." \
-		>> "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed"
-	_transferSoFarSoGood='false'
-	}
 
 	#
 	#fix permissions
@@ -269,6 +256,7 @@ function splitSamplesheetPerProject() {
 
         log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_run}..."
         local _log_file="${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.log"
+	rsync -av "${DATA_MANAGER}@${gattacaAddress}:${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}" "${PRM_ROOT_DIR}/Samplesheets/" >> "${_log_file}" 2>&1 
 
 	if [ -f "${PRM_ROOT_DIR}/logs/${_run}.samplesheetSplittedPerProject" ]
 	then
@@ -511,6 +499,8 @@ then
 else
 	for csvFile in "${runs[@]}"
 	do
+
+
 		filePrefix=$(basename ${csvFile%.*})
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${filePrefix}..."
 		mkdir -p "${PRM_ROOT_DIR}/logs/${filePrefix}/"
@@ -523,6 +513,11 @@ else
                 TOKEN=${CURLRESPONSE:10:32}
 
                 curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm.csv" -FentityTypeId='status_overview' -Faction=update -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
+
+		#
+		# rsync samplesheet to prm samplesheets folder
+		#
+
 		splitSamplesheetPerProject "${filePrefix}"
 		rsyncDemultiplexedRuns "${filePrefix}"
 
