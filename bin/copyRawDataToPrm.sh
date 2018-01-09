@@ -19,7 +19,8 @@ umask 0027
 
 # Env vars.
 export TMPDIR="${TMPDIR:-/tmp}" # Default to /tmp if $TMPDIR was not defined.
-SCRIPT_NAME="$(basename ${0} .bash)"
+SCRIPT_NAME="$(basename ${0})"
+SCRIPT_NAME="${SCRIPT_NAME%.*sh}"
 INSTALLATION_DIR="$(cd -P "$(dirname "${0}")/.." && pwd)"
 LIB_DIR="${INSTALLATION_DIR}/lib"
 CFG_DIR="${INSTALLATION_DIR}/etc"
@@ -45,68 +46,64 @@ fi
 function rsyncDemultiplexedRuns() {
 	
 	local _run="${1}"
-	local _log_file="${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.log"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_run}..."
+	#
+	# ToDo: change location of job control files back to ${TMP_ROOT_DIR} once we have a 
+	#       proper prm mount on the GD clusters and this script can run a GD cluster
+	#       instead of on a research cluster.
+	#
+	#local _controlFileBase="${TMP_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}"
+	local _controlFileBase="${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}"
+	local _logFile="${_controlFileBase}.log"
 	
 	#
 	# Determine whether an rsync is required for this run, which is the case when
 	#  1. either the sequence run has finished successfully and this copy script has not
 	#  2. or when a pipeline has updated the results after a previous execution of this script.
 	#
-	# Temporarily check for "${PRM_ROOT_DIR}/logs/${_run}/${_run}.pipeline.finished"
-	local _runFinished='false'
-	local _rsyncRequired='false'
-	local _demultiplexingFinishedFile="${PRM_ROOT_DIR}/logs/${_run}/${_run}.copyRawDataToPrm.sh.finished"
 	
 	#
-	# check if demultiplexing was finished
-	#log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}" "test -e ${SCR_ROOT_DIR}/logs/${_run}_Demultiplexing.finished"
-	#ssh "${DATA_MANAGER}@${sourceServerFQDN}" test -f "${SCR_ROOT_DIR}/logs/${_run}_Demultiplexing.finished" \
+	# Check if production of raw data @ sourceServer has finished.
+	#
 	if ssh ${DATA_MANAGER}@${sourceServerFQDN} test -e "${SCR_ROOT_DIR}/logs/${_run}_Demultiplexing.finished"
 	then
-		_runFinished='true'
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " ${DATA_MANAGER}@${sourceServerFQDN} ${SCR_ROOT_DIR}/logs/${_run}_Demultiplexing.finished present."
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/logs/${_run}_Demultiplexing.finished present."
 	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " ${DATA_MANAGER}@${sourceServerFQDN} ${SCR_ROOT_DIR}/logs/${_run}_Demultiplexing.finished not present."
-		_runFinished='false'
-		return
-	fi
-
-	if [[ -f "${PRM_ROOT_DIR}/logs/${_run}/${_run}.copyRawDataToPrm.sh.finished" ]] 
-	then
-		_runFinished='true'
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " ${_run}.copyRawDataToPrm.sh.finished present."
-	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " ${_run}.copyRawDataToPrm.sh.finished not present."
-	fi
-
-	if [[ "${_runFinished}" == 'true' ]]
-	then
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing finished = ${_runFinished}."
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "check if ${_run}_Demultiplexing.finished is newer than ${_demultiplexingFinishedFile}"
-		# ToDo: remove/replace ${GAT}
-		rsync -a ${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/logs/${_run}_Demultiplexing.finished ${_demultiplexingFinishedFile}.${GAT}
-
-		# check if ${_run}_Demultiplexing.finished is newer than ${_demultiplexingFinishedFile}
-		# ToDo: remove/replace ${GAT}
-		if [[ "${_demultiplexingFinishedFile}" -nt "${_demultiplexingFinishedFile}.${GAT}" ]]
-		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "*.dataCopiedToPrm newer than *.${_run}_Demultiplexing.finished."
-		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "*.dataCopiedToPrm older than *.${SCRIPT_NAME}.finished."
-			_rsyncRequired='true'
-		fi
-	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No {PRM_ROOT_DIR}/logs/${_run}/${_run}.dataCopiedToPrm present."
-		_rsyncRequired='true'
-	fi
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsync required = ${_rsyncRequired}."
-
-	# skip if nothing needs to be done.
-	if [[ "${_rsyncRequired}" == 'false' ]]; then
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/logs/${_run}_Demultiplexing.finished absent."
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}."
 		return
 	fi
+	
+	if [[ -e "${_controlFileBase}.finished" ]]
+	then
+		#
+		# Get modification times as integers (seconds since epoch) 
+		# and check if *_Demultiplexing.finished is newer than *.dataCopiedToPrm,
+		# which indicates the run was re-demultiplexed and converted to FastQ files.
+		#
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${_run}_Demultiplexing.finished is newer than ${_controlFileBase}.finished"
+		local _demultiplexingFinishedModTime=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} stat --printf='%Y' "${SCR_ROOT_DIR}/logs/${_run}_Demultiplexing.finished")
+		local _myFinishedModTime=$(stat --printf='%Y' "${_controlFileBase}.finished")
+		
+		if [[ "${_demultiplexingFinishedModTime}" -gt "${_myFinishedModTime}" ]]
+		then
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "*_Demultiplexing.finished newer than ${_controlFileBase}.finished."
+		else
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "*_Demultiplexing.finished older than ${_controlFileBase}.finished."
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}."
+			return
+		fi
+	else
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${_controlFileBase}.finished present."
+	fi
+	
+	#
+	# Track and Trace: log that we will start rsyncing to prm.
+	#
+	touch "${_controlFileBase}.started"
+	printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n"  > "${_controlFileBase}.trackAndTrace.csv"
+	printf "${_run},${group},finished,started,,"                      >> "${_controlFileBase}.trackAndTrace.csv"
+	trackAndTracePostFromFile 'status_overview' 'update'                 "${_controlFileBase}.trackAndTrace.csv"
 	
 	#
 	# Perform rsync.
@@ -125,27 +122,37 @@ function rsyncDemultiplexedRuns() {
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_run} dir..."
 	rsync -av --chmod=Dg-w,g+rsX,o-rwx,Fg-wsx,g+r,o-rwx ${dryrun:-} \
 		"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/runs/${_run}/results/*" \
-			"${PRM_ROOT_DIR}/rawdata/ngs/${_run}/" \
-				>> "${_log_file}" 2>&1 \
+		"${PRM_ROOT_DIR}/rawdata/ngs/${_run}/" \
+		>> "${_logFile}" 2>&1 \
 	|| {
-	log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${sourceServerFQDN}:${SCR_ROOT_DIR}/runs/${_run} dir. See ${_log_file} for details."
-	echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_log_file} for details." \
-		>> "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed"
-	_transferSoFarSoGood='false'
+		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${sourceServerFQDN}:${SCR_ROOT_DIR}/runs/${_run} dir. See ${_logFile} for details."
+		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync of sequence run dir failed. See ${_logFile} for details." \
+			>> "${_controlFileBase}.failed"
+		_transferSoFarSoGood='false'
+	}
+	rsync -acv --chmod=Dg-w,g+rsX,o-rwx,Fg-wsx,g+r,o-rwx ${dryrun:-} \
+		"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/runs/${_run}/results/*.md5" \
+		"${PRM_ROOT_DIR}/rawdata/ngs/${_run}/" \
+		>> "${_logFile}" 2>&1 \
+	|| {
+		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${sourceServerFQDN}:${SCR_ROOT_DIR}/runs/${_run}/*.md5. See ${_logFile} for details."
+		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync of checksums failed. See ${_logFile} for details." \
+			>> "${_controlFileBase}.failed"
+		_transferSoFarSoGood='false'
 	}
 	
 	#
-	# rsync samplesheet to prm samplesheets folder
+	# Rsync samplesheet to prm samplesheets folder.
 	#
 	rsync -av ${dryrun:-} \
 		"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}" \
-			"${PRM_ROOT_DIR}/Samplesheets/" \
-				>> "${_log_file}" 2>&1 \
+		"${PRM_ROOT_DIR}/Samplesheets/" \
+		>> "${_logFile}" 2>&1 \
 	|| {
-	log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT} dir. See ${_log_file} for details."
-	echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_log_file} for details." \
-		>> "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed"
-	_transferSoFarSoGood='false'
+		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}. See ${_logFile} for details."
+		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync of sample sheet failed. See ${_logFile} for details." \
+			>> "${_controlFileBase}.failed"
+		_transferSoFarSoGood='false'
 	}
 	
 	#
@@ -160,13 +167,13 @@ function rsyncDemultiplexedRuns() {
 		local _countFilesDemultiplexRunDirPrm=$(find "${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}"* -type f | wc -l)
 		if [[ ${_countFilesDemultiplexRunDirScr} -ne ${_countFilesDemultiplexRunDirPrm} ]]; then
 			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_run} on scr (${_countFilesDemultiplexRunDirScr}) and prm (${_countFilesDemultiplexRunDirPrm}) is NOT the same!" \
-				>> "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed"
+				>> "${_controlFileBase}.failed"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
 				"Amount of files for ${_run} on tmp (${_countFilesDemultiplexRunDirScr}) and prm (${_countFilesDemultiplexRunDirPrm}) is NOT the same!"
+			_checksumVerification='FAILED'
 		else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
 				"Amount of files on tmp and prm is the same for ${_run}: ${_countFilesDemultiplexRunDirPrm}."
-			
 			#
 			# Verify checksums on prm storage.
 			#
@@ -174,171 +181,158 @@ function rsyncDemultiplexedRuns() {
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
 				"Started verification of checksums by ${DATA_MANAGER}@${sourceServerFQDN} using checksums from ${PRM_ROOT_DIR}/rawdata/ngs/${_run}/*.md5."
 			_checksumVerification=$(cd ${PRM_ROOT_DIR}/rawdata/ngs/${_run}
-			if md5sum -c *.md5 > ${PRM_ROOT_DIR}/logs/${_run}/${_run}.md5.log 2>&1
-			then
-				echo 'PASS'
-			else
-				echo 'FAILED'
-			fi
+				if md5sum -c *.md5 > ${_controlFileBase}.md5.log 2>&1
+				then
+					echo 'PASS'
+				else
+					echo 'FAILED'
+				fi
 			)
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "_checksumVerification = ${_checksumVerification}"
-			
-			if [[ "${_checksumVerification}" == 'FAILED' ]]; then
-				echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}.md5.log for details." \
-					>> "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed"
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Checksum verification failed. See ${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}.md5.log for details."
-			elif [[ "${_checksumVerification}" == 'PASS' ]]; then
-				echo "OK! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}.md5.log for details." \
-					>>    "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed" \
-					&& mv "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}."{failed,finished}
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
-				
-				printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n" > ${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrmFinished.csv
-				printf "${filePrefix},${group},finished,finished,," >> ${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrmFinished.csv
-				
-				local _curlResponse=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
-				local _token=${_curlResponse:10:32}
-				
-				curl -H "x-molgenis-token:${_token}" -X POST -F"file=@${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrmFinished.csv" \
-					-FentityTypeId='status_overview' \
-					-Faction=update \
-					-Fnotify=false \
-					https://${MOLGENISSERVER}/plugin/importwizard/importFile
-			else
-				log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Got unexpected result from checksum verification:'
-				log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected FAILED or PASS, but got: ${_checksumVerification}."
+		fi
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "_checksumVerification = ${_checksumVerification}"
+		if [[ "${_checksumVerification}" == 'FAILED' ]]; then
+			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${_controlFileBase}.md5.log for details." \
+				>> "${_controlFileBase}.failed"
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Checksum verification failed. See ${_controlFileBase}.md5.log for details."
+		elif [[ "${_checksumVerification}" == 'PASS' ]]; then
+			#
+			# Overwrite any previously created *.failed file if present,
+			# add new status info incl. demultiplex stats to *.failed file and
+			# then move the *.failed file to *.finished.
+			# (Note: the content of *.finished will get inserted in the body of email notification messages,
+			# when enabled in <group>.cfg for use by notifications.sh)
+			#
+			echo "The results can be found in: ${PRM_ROOT_DIR}." > "${_controlFileBase}.failed"
+			if ls "${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}"*.log 1>/dev/null 2>&1
+			then
+				cat "${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}"*.log >> "${_controlFileBase}.failed"
 			fi
+			echo "OK! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${_controlFileBase}.md5.log for details." \
+				>>    "${_controlFileBase}.failed" \
+				&& mv "${_controlFileBase}."{failed,finished}
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
 		fi
 	fi
-
-
+	
 	#
-	# Send e-mail notification.
+	# Sanity check and report status to track & trace.
 	#
-
-	if [[ -f "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed" ]]; then
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed exists."
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed.mailed exists."
-		local _message1="MD5 checksum verification failed for ${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}:"
-		local _message2="The data is corrupt or incomplete. The original data is located at ${sourceServerFQDN}:${SCR_ROOT_DIR}/runs/${_run}/."
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message1}"
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message2}"
-		if [[ "${email}" == 'true' \
-				&&  $(cat "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed" | wc -l) -ge 10 \
-				&& ! -f "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed.mailed" ]]; then
-			printf '%s\n%s\n' \
-				"${_message1}" \
-				"${_message2}" \
-				| mail -s "Failed to copy ${_run} to permanent storage." "${EMAIL_TO}"
-			touch "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed.mailed"
-		fi
-	elif [[ -f "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.finished" ]]; then
-		local _message1="run ${_run} is ready. The data is available at ${PRM_ROOT_DIR}/rawdata/ngs/${_run}/."
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message1}"
-
-		if [[ "${email}" == 'true' ]]; then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Try to mail to ${EMAIL_TO}"
-
-			if ls ${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}*.log 1> /dev/null 2>&1
-			then
-				local _logFileStatistics=$(cat ${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}*.log)
-			else
-				local _logFileStatistics="Not present."
-			fi
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "MAIL: Run ${_run} was successfully copied to permanent storage. Demultiplex statistics: ${_logFileStatistics}"
-			_message1="Run ${_run} was successfully copied to permanent storage.\nDemultiplex statistics:\n\n ${_logFileStatistics}"
-			echo -e "${_message1}" | mail -s "Run ${_run} was successfully copied to permanent storage" "${EMAIL_TO}"
-				touch "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.failed.mailed" \
-				&& mv "${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}."{failed,finished}.mailed
-		fi
+	if [[ -e "${_controlFileBase}.failed" ]]; then
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_controlFileBase}.failed. Setting track & trace state to failed :(."
+		printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n"  > "${_controlFileBase}.trackAndTrace.csv"
+		printf "${_run},${group},finished,failed,,"                       >> "${_controlFileBase}.trackAndTrace.csv"
+		trackAndTracePostFromFile 'status_overview' 'update'                 "${_controlFileBase}.trackAndTrace.csv"
+	elif [[ -e "${_controlFileBase}.finished" ]]; then
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_controlFileBase}.finished. Setting track & trace state to finished :)."
+		printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n"  > "${_controlFileBase}.trackAndTrace.csv"
+		printf "${_run},${group},finished,finished,,"                     >> "${_controlFileBase}.trackAndTrace.csv"
+		trackAndTracePostFromFile 'status_overview' 'update'                 "${_controlFileBase}.trackAndTrace.csv"
 	else
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Ended up in unexpected state:'
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected either ${SCRIPT_NAME}.finished or ${SCRIPT_NAME}.failed, but both files are absent."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' 'Ended up in unexpected state:'
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected either ${_controlFileBase}.finished or ${_controlFileBase}.failed, but both are absent."
 	fi
 }
 
 function splitSamplesheetPerProject() {
 	
 	local _run="${1}"
-	local _log_file="${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}.log"
+	#
+	# ToDo: change location of job control files back to ${TMP_ROOT_DIR} once we have a 
+	#       proper prm mount on the GD clusters and this script can run a GD cluster
+	#       instead of on a research cluster.
+	#
+	#local _controlFileBase="${TMP_ROOT_DIR}/logs/${_run}/${_run}.splitSamplesheetPerProject"
+	local _controlFileBase="${PRM_ROOT_DIR}/logs/${_run}/${_run}.splitSamplesheetPerProject"
+	local _logFile="${_controlFileBase}.log"
 	
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Splitting samplesheet per project for ${_run}..."
-	
-	if [ -f "${PRM_ROOT_DIR}/logs/${_run}.samplesheetSplittedPerProject" ]
+	if [ -e "${_controlFileBase}.finished" ]
 	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}, which was already split per project."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_controlFileBase}.finished -> Skipping ${_run}."
 		return
-	fi
-	
-	module load ngs-utils
-	mkdir -p "${PRM_ROOT_DIR}/logs/${_run}/tmp"
-	python samplesheetChecker.py "${PRM_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}" "${PRM_ROOT_DIR}/logs/${_run}/tmp/project.txt.tmp"
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "samplesheet splitted, now sorting"
-	sort "${PRM_ROOT_DIR}/logs/${_run}/tmp/project.txt.tmp" | uniq > "${PRM_ROOT_DIR}/logs/${_run}/tmp/project.txt"
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sorting done"
-	
-	CLUSTERS=()
-	
-	#
-	## Check which servers are up
-	#
-	for i in zinc-finger leucine-zipper
-	do
-		configFile="${CFG_DIR}/${i}.cfg"
-		mixed_stdouterr=$(source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot source ${configFile}."
-		source ${configFile}
-		#log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "ssh -q ${HOSTNAME_TMP} ls /groups/${GROUP}/${TMP_LFS}/logs/production.ready"
-		#if ssh -q ${HOSTNAME_TMP} "ls /groups/${GROUP}/${TMP_LFS}/logs/production.ready"
-		#then
-		#	CLUSTERS+=("${HOST_ABBREVATION}")
-		#	mkdir -p "${PRM_ROOT_DIR}/Samplesheets/project_${HOST_ABBREVATION}"
-		#fi
-		#log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "ls /groups/${GROUP}/${PRM_LFS}/logs/${i}.production.ready"
-		if [ -f /groups/${GROUP}/${PRM_LFS}/logs/${i}.production.ready ]
-		then
-			CLUSTERS+=("${HOST_ABBREVATION}")
-			mkdir -p "${PRM_ROOT_DIR}/Samplesheets/project_${HOST_ABBREVATION}"
-		else
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${i} is not available for submitting jobs"
-		fi
-	done
-	if [ -z "${CLUSTERS:-}" ]
-	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '1' "there are no clusters available, exiting"
-		break
 	else
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "The available clusters are: ${CLUSTERS[@]}"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${_controlFileBase}.finished present -> Splitting sample sheet per project for ${_run}..."
 	fi
-	## reloading original hostname configfile
-	source "${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
 	
-	cluster=""
-	count=1
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
-		"splitting samplesheet per project"
-	
-	for project in $(awk '$1' "${PRM_ROOT_DIR}/logs/${_run}/tmp/project.txt")
+	#
+	# ToDo: remove dependency on perl script from external module.
+	# ToDo: need to parse the 'run' sample sheet to get and define ${_projects[@]}.
+	#	
+	module load ngs-utils
+	declare -a _projects=()
+	for _project in "${_projects[@]}"
 	do
-		if [[ $((count % 2)) == 0 ]]
-		then
-			if [[ ${#CLUSTERS[@]} == 2 ]]
-			then
-				cluster=${CLUSTERS[1]}
-			else
-				cluster=${CLUSTERS[0]}
-			fi
-		else
-			cluster=${CLUSTERS[0]}
-		fi
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
-			"${project} will be running on ${cluster}"
-		
-		extract_samples_from_GAF_list.pl --i "${PRM_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}" --o "${PRM_ROOT_DIR}/Samplesheets/project_${cluster}/${project}.csv" --c project --q "${project}"
-		perl -pi -e 's/\r(?!\n)//g' "${PRM_ROOT_DIR}/Samplesheets/project_${cluster}/${project}.csv"
-		
-		count=$((count+1))
-	done
-	touch "${PRM_ROOT_DIR}/logs/${_run}.samplesheetSplittedPerProject"
+		extract_samples_from_GAF_list.pl --c project --q "${_project}" \
+			--i "${PRM_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}" \
+			--o "${TMP_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}"
+	
+	touch "${_controlFileBase}.finished"
+	
+#	mkdir -p "${PRM_ROOT_DIR}/logs/${_run}/tmp"
+#	python samplesheetChecker.py "${PRM_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}" "${PRM_ROOT_DIR}/logs/${_run}/tmp/project.txt.tmp"
+#	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "samplesheet splitted, now sorting"
+#	sort "${PRM_ROOT_DIR}/logs/${_run}/tmp/project.txt.tmp" | uniq > "${PRM_ROOT_DIR}/logs/${_run}/tmp/project.txt"
+#	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sorting done"
+#	
+#	CLUSTERS=()
+#	
+#	#
+#	## Check which servers are up
+#	#
+#	for i in zinc-finger leucine-zipper
+#	do
+#		configFile="${CFG_DIR}/${i}.cfg"
+#		mixed_stdouterr=$(source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot source ${configFile}."
+#		source ${configFile}
+#		#log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "ssh -q ${HOSTNAME_TMP} ls /groups/${GROUP}/${TMP_LFS}/logs/production.ready"
+#		#if ssh -q ${HOSTNAME_TMP} "ls /groups/${GROUP}/${TMP_LFS}/logs/production.ready"
+#		#then
+#		#	CLUSTERS+=("${HOST_ABBREVATION}")
+#		#	mkdir -p "${PRM_ROOT_DIR}/Samplesheets/project_${HOST_ABBREVATION}"
+#		#fi
+#		#log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "ls /groups/${GROUP}/${PRM_LFS}/logs/${i}.production.ready"
+#		if [ -f /groups/${GROUP}/${PRM_LFS}/logs/${i}.production.ready ]
+#		then
+#			CLUSTERS+=("${HOST_ABBREVATION}")
+#			mkdir -p "${PRM_ROOT_DIR}/Samplesheets/project_${HOST_ABBREVATION}"
+#		else
+#			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${i} is not available for submitting jobs"
+#		fi
+#	done
+#	if [ -z "${CLUSTERS:-}" ]
+#	then
+#		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '1' "there are no clusters available, exiting"
+#		break
+#	else
+#		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "The available clusters are: ${CLUSTERS[@]}"
+#	fi
+#	## reloading original hostname configfile
+#	source "${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
+#	
+#	cluster=""
+#	count=1
+#	
+#	for project in $(awk '$1' "${PRM_ROOT_DIR}/logs/${_run}/tmp/project.txt")
+#	do
+#		if [[ $((count % 2)) == 0 ]]
+#		then
+#			if [[ ${#CLUSTERS[@]} == 2 ]]
+#			then
+#				cluster=${CLUSTERS[1]}
+#			else
+#				cluster=${CLUSTERS[0]}
+#			fi
+#		else
+#			cluster=${CLUSTERS[0]}
+#		fi
+#		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
+#			"${project} will be running on ${cluster}"
+#		
+#		extract_samples_from_GAF_list.pl --i "${PRM_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}" --o "${PRM_ROOT_DIR}/Samplesheets/project_${cluster}/${project}.csv" --c project --q "${project}"
+#		perl -pi -e 's/\r(?!\n)//g' "${PRM_ROOT_DIR}/Samplesheets/project_${cluster}/${project}.csv"
+#		
+#		count=$((count+1))
+#	done
+#	touch "${PRM_ROOT_DIR}/logs/${_run}.samplesheetSplittedPerProject"
 }
 
 function showHelp() {
@@ -481,10 +475,10 @@ fi
 # * and parsing commandline arguments,
 # but before doing the actual data transfers.
 #
-lockFile="${PRM_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
+lockFile="${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
 thereShallBeOnlyOne "${lockFile}"
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile}..."
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${PRM_ROOT_DIR}/logs..."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${TMP_ROOT_DIR}/logs..."
 
 #
 # Use multiplexing to reduce the amount of SSH connections created
@@ -503,7 +497,9 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 
 #
 # Get a list of all sample sheets for this group on the specified sourceServer, where the raw data was generated,
-# then loop over their analysis ("run") sub dirs and check if there are any we need to rsync.
+# then
+#	1. loop over their analysis ("run") sub dirs and check if there are any we need to rsync.
+#	2. split the sample sheets per project and the data was rsynced.
 #
 declare -a sampleSheetsFromSourceServer=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} "ls -1 ${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}")
 
@@ -513,30 +509,15 @@ then
 else
 	for sampleSheet in "${sampleSheetsFromSourceServer[@]}"
 	do
+		#
+		# Process this sample sheet / run.
+		#
 		filePrefix=$(basename ${sampleSheet%.*})
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${filePrefix}..."
-		mkdir -p "${PRM_ROOT_DIR}/logs/${filePrefix}/"
+		mkdir -p "${TMP_ROOT_DIR}/logs/${filePrefix}/"
 		mkdir -p "${PRM_ROOT_DIR}/rawdata/ngs/${filePrefix}"
-		
-		#
-		# Track and Trace: log that we started rsyncing to prm.
-		#
-		printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n" > ${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm.csv
-		printf "${filePrefix},${group},finished,started,,"               >> ${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm.csv
-		
-		curlResponse=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
-		token=${curlResponse:10:32}
-		curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${PRM_ROOT_DIR}/logs/${filePrefix}/${filePrefix}.uploadingToPrm.csv" \
-			-FentityTypeId='status_overview' \
-			-Faction=update \
-			-Fnotify=false \
-			https://${MOLGENISSERVER}/plugin/importwizard/importFile
-		
-		#
-		# Process this sample sheet / run
-		#
-		splitSamplesheetPerProject "${filePrefix}"
 		rsyncDemultiplexedRuns "${filePrefix}"
+		splitSamplesheetPerProject "${filePrefix}"
 	done
 fi
 

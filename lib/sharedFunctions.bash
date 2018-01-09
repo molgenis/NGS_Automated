@@ -36,8 +36,8 @@ trapSig 'trapHandler' '${LINENO}' '${FUNCNAME:-main}' '$?' HUP INT QUIT TERM EXI
 #
 # Requires 5 ARGS:
 #  1. log_level     Defined explicitly by programmer.
-#  2. ${LINENO}     Bash env var indicating the active line number in the excuting script.
-#  3. ${FUNCNAME}   Bash env var indicating the active function in the excuting script.
+#  2. ${LINENO}     Bash env var indicating the active line number in the executing script.
+#  3. ${FUNCNAME}   Bash env var indicating the active function in the executing script.
 #  4. (Exit) STATUS Either defined explicitly by programmer or use Bash env var ${?} for the exit status of the last command.
 #  5  log_message   Defined explicitly by programmer.
 #
@@ -153,3 +153,42 @@ function thereShallBeOnlyOne() {
 	fi
 }
 
+function trackAndTracePostFromFile() {
+	local _entityTypeId="${1}"
+	local _action="${2}"
+	local _file="${3}"
+	
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Trying to get a token for REST API @ https://${MOLGENISSERVER}/api/v1/login..."
+	
+	local _curlResponse=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
+	local _token=${_curlResponse:10:32}
+	
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Trying to POST track&trace info using action ${_action} for entityTypeId=${_entityTypeId} from file=${_file} to https://${MOLGENISSERVER}/plugin/importwizard/importFile..."
+	
+	local _lastHttpResponseStatus=$(curl -i \
+			-H "x-molgenis-token:${_token}" \
+			-X POST \
+			-F "file=@${_file}" \
+			-F "entityTypeId=${_entityTypeId}" \
+			-F "action=${_action}" \
+			-F 'notify=false' \
+			https://${MOLGENISSERVER}/plugin/importwizard/importFile \
+		| grep -E '^HTTP/[0-9]+.[0-9]+ [0-9]{3}' \
+		| tail -n 1)
+	
+	local _regex='^HTTP/[0-9]+.[0-9]+ ([0-9]{3})'
+	if [[ "${_lastHttpResponseStatus}" =~ ${_regex} ]]
+	then
+		local _statusCode="${BASH_REMATCH[1]}"
+		if [[ ${_statusCode} -ge 400 ]]
+		then
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "HTTP response status was ${_lastHttpResponseStatus}."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to POST track&trace info using action ${_action} for entityTypeId=${_entityTypeId} from file=${_file} to https://${MOLGENISSERVER}/plugin/importwizard/importFile"
+		else
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully POSTed track&trace info. HTTP response status was ${_lastHttpResponseStatus}."
+		fi
+	else
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to parse status code number from HTTP response status ${_lastHttpResponseStatus}."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to POST track&trace info using action ${_action} for entityTypeId=${_entityTypeId} from file=${_file} to https://${MOLGENISSERVER}/plugin/importwizard/importFile"
+	fi
+}
