@@ -18,7 +18,8 @@ umask 0027
 
 # Env vars.
 export TMPDIR="${TMPDIR:-/tmp}" # Default to /tmp if $TMPDIR was not defined.
-SCRIPT_NAME="$(basename ${0} .bash)"
+SCRIPT_NAME="$(basename ${0})"
+SCRIPT_NAME="${SCRIPT_NAME%.*sh}"
 INSTALLATION_DIR="$(cd -P "$(dirname "${0}")/.." && pwd)"
 LIB_DIR="${INSTALLATION_DIR}/lib"
 CFG_DIR="${INSTALLATION_DIR}/etc"
@@ -88,60 +89,73 @@ function notification(){
 	
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing projects with phase ${_phase} in state: ${_state} ..."
 	
-	if $(ls "${TMP_ROOT_DIR}/logs/"*"/"*".${_phase}.${_state}" 1> /dev/null 2>&1)
-	then
-		read -r -a _project_state_files < <(ls -1 "${TMP_ROOT_DIR}/logs/"*"/"*".${_phase}.${_state}") \
-			|| log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Failed to create a list of *.${_phase}.${_state} files."
-	else
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No *.${_phase}.${_state} present."
-		return
-	fi
-	
-	if [[ -f "${TMP_ROOT_DIR}/logs/${_phase}.mailinglist" ]]
-	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${TMP_ROOT_DIR}/logs/${_phase}.mailinglist."
-		_email_to="$(cat "${TMP_ROOT_DIR}/logs/${_phase}.mailinglist" | tr '\n' ' ')"
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsed ${_phase}.mailinglist and will send mail to: ${_email_to}."
-	else
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Missing ${TMP_ROOT_DIR}/logs/${_phase}.mailinglist"
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '0' "Cannot send notifications by mail. I'm giving up, bye bye."
-	fi
-	
-	for _project_state_file in ${_project_state_files[@]}
+	#
+	# The path to phase state files must be:
+	#	"${TMP_ROOT_DIR}/logs/${project}/${run}.${_phase}.${_state}"
+	#	"${SCR_ROOT_DIR}/logs/${project}/${run}.${_phase}.${_state}"
+	#	"${PRM_ROOT_DIR}/logs/${project}/${run}.${_phase}.${_state}"
+	#
+	# For 'sequence projects':
+	#	${project} = the 'run' as determined by the sequencer.
+	#	${run}     = the 'run' as determined by the sequencer.
+	# Hence ${project} = {run} = [SequencingStartDate]_[Sequencer]_[RunNumber]_[Flowcell]
+	#
+	# For 'analysis projects':
+	#	${project} = the 'project' name as specified in the sample sheet.
+	#	${run}     = the incremental 'analysis run number'. Starts with run01 and incremented in case of re-analysis.
+	#
+	declare -a _LFS_ROOT_DIRS=("${TMP_ROOT_DIR:-}" "${SCR_ROOT_DIR:-}" "${PRM_ROOT_DIR:-}")
+	for _LFS_ROOT_DIR in ${_LFS_ROOT_DIRS[@]}
 	do
-		_file=$(basename "${_project_state_file}")
-		_project=$(basename $(dirname "${_project_state_file}"))
-		_run="${_file%%.*}"
-		
-		if [[ -f "${_project_state_file}.mailed" ]]
+		if $(ls "${_LFS_ROOT_DIR}/logs/"*"/"*".${_phase}.${_state}" 1> /dev/null 2>&1)
 		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_project_state_file}.mailed"
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping: ${_project}/${_run}. Email was already sent for state ${_state}."
-			continue
-		fi
-		
-		_timestamp="$(date --date="$(LC_DATE=C stat --printf='%y' "${_project_state_file}" | cut -d ' ' -f1,2)" "+%Y-%m-%dT%H:%M:%S")"
-		_subject="Project ${_project}/${_run} has ${_state} for phase ${_phase} on ${HOSTNAME_SHORT} at ${_timestamp}."
-		
-		if [[ "${_state}" == 'failed' ]]
-		then
-			_body=$(cat "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.${_state}")
+			read -r -a _project_state_files < <(ls -1 "${_LFS_ROOT_DIR}/logs/"*"/"*".${_phase}.${_state}") \
+				|| log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Failed to create a list of ${_LFS_ROOT_DIR}/logs/*/*.${_phase}.${_state} files."
 		else
-			_body="The results can be found in: ${PRM_ROOT_DIR}/projects/${_project}/${_run}/."
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No *.${_phase}.${_state} files present in ${_LFS_ROOT_DIR}/logs/*/."
+			return
 		fi
 		
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Email subject: ${_subject}"
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Email body   : ${_body}"
-		
-		if [[ "${email}" == 'true' ]]
+		if [[ -f "${_LFS_ROOT_DIR}/logs/${_phase}.mailinglist" ]]
 		then
-			printf '%s\n' "${_body}" \
-				| mail -s "${_subject}" "${_email_to}"
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating file: ${_project_state_file}.mailed"
-			touch "${_project_state_file}.mailed"
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_LFS_ROOT_DIR}/logs/${_phase}.mailinglist."
+			_email_to="$(cat "${_LFS_ROOT_DIR}/logs/${_phase}.mailinglist" | tr '\n' ' ')"
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsed ${_phase}.mailinglist and will send mail to: ${_email_to}."
 		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Email disabled and not creating file: ${_project_state_file}.mailed"
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Missing ${_LFS_ROOT_DIR}/logs/${_phase}.mailinglist"
+			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Cannot send notifications by mail. I'm giving up, bye bye."
 		fi
+		
+		for _project_state_file in ${_project_state_files[@]}
+		do
+			_file=$(basename "${_project_state_file}")
+			_project=$(basename $(dirname "${_project_state_file}"))
+			_run="${_file%%.*}"
+			
+			if [[ -f "${_project_state_file}.mailed" ]]
+			then
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_project_state_file}.mailed"
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping: ${_project}/${_run}. Email was already sent for state ${_state}."
+				continue
+			fi
+			
+			_timestamp="$(date --date="$(LC_DATE=C stat --printf='%y' "${_project_state_file}" | cut -d ' ' -f1,2)" "+%Y-%m-%dT%H:%M:%S")"
+			_subject="Project ${_project}/${_run} has ${_state} for phase ${_phase} on ${HOSTNAME_SHORT} at ${_timestamp}."
+			_body="$(cat "${_project_state_file}")"
+			
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Email subject: ${_subject}"
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Email body   : ${_body}"
+			
+			if [[ "${email}" == 'true' ]]
+			then
+				printf '%s\n' "${_body}" \
+					| mail -s "${_subject}" "${_email_to}"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating file: ${_project_state_file}.mailed"
+				touch "${_project_state_file}.mailed"
+			else
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Email disabled and not creating file: ${_project_state_file}.mailed"
+			fi
+		done
 	done
 }
 

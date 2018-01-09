@@ -19,7 +19,8 @@ umask 0027
 
 # Env vars.
 export TMPDIR="${TMPDIR:-/tmp}" # Default to /tmp if $TMPDIR was not defined.
-SCRIPT_NAME="$(basename ${0} .bash)"
+SCRIPT_NAME="$(basename ${0})"
+SCRIPT_NAME="${SCRIPT_NAME%.*sh}"
 INSTALLATION_DIR="$(cd -P "$(dirname "${0}")/.." && pwd)"
 LIB_DIR="${INSTALLATION_DIR}/lib"
 CFG_DIR="${INSTALLATION_DIR}/etc"
@@ -74,12 +75,24 @@ EOH
 }
 
 function generateScripts () {
-	local _project="${1}" 
-	local _sampleType="${2}" ## DNA or RNA
+	local _project="${1}"
+	local _run="${2}"
+	local _sampleType="${3}" ## DNA or RNA
 	local _loadPipeline="NGS_${_sampleType}"
 	local _generateShScript="${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh"
-	local _logger="${TMP_ROOT_DIR}/logs/${_project}/${_project}.${SCRIPT_NAME}.log"
+	local _controlFileBase="${TMP_ROOT_DIR}/logs/${_project}/${_run}.generateScripts"
+	local _logFile="${_controlFileBase}.log"
 	local _message
+	
+	if [[ -e "${_controlFileBase}.finished" ]]
+	then
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.finished exists."
+		log4Bash 'INFO'  "${LINENO}" "${FUNCNAME:-main}" '0' "Will use existing scripts for ${_project}."
+		return
+	else
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.finished does not exist."
+		log4Bash 'INFO'  "${LINENO}" "${FUNCNAME:-main}" '0' "Generating scripts for ${_project} ..."
+	fi
 	
 	if [ "${_sampleType}" == "DNA" ]
 	then
@@ -97,79 +110,103 @@ function generateScripts () {
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "_pathToPipeline is ${_pathToPipeline}"
 	
 	_message="Creating directory: ${TMP_ROOT_DIR}/generatedscripts/${_project}/ ..."
-	echo "${_message}" > "${_logger}"
+	echo "${_message}" > "${_logFile}"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
 	mkdir -p "${TMP_ROOT_DIR}/generatedscripts/${_project}/"
 	
 	_message="Copying ${_pathToPipeline}/templates/generate_template.sh to ${_generateShScript} ..."
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
-	echo "${_message}" >> "${_logger}"
+	echo "${_message}" >> "${_logFile}"
 	cp "${_pathToPipeline}/templates/generate_template.sh" "${_generateShScript}"
 	
 	if [ -f "${TMP_ROOT_DIR}/generatedscripts/${_project}/${_project}.${SAMPLESHEET_EXT}" ]
 	then
 		_message="${TMP_ROOT_DIR}/generatedscripts/${_project}/${_project}.${SAMPLESHEET_EXT} already exists and will be removed ..."
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
-		echo "${_message}" >> "${_logger}"
+		echo "${_message}" >> "${_logFile}"
 		rm "${TMP_ROOT_DIR}/generatedscripts/${_project}/${_project}.${SAMPLESHEET_EXT}"
 	fi
 	
 	_message="Copying ${TMP_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT} to ${TMP_ROOT_DIR}/generatedscripts/${_project}/ ..."
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
-	echo "${_message}" >> "${_logger}"
+	echo "${_message}" >> "${_logFile}"
 	cp "${TMP_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/generatedscripts/${_project}/"
 	
 	cd "${TMP_ROOT_DIR}/generatedscripts/${_project}/"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigated to $(pwd)."
 	
-	_message="Running: sh ${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh -p ${_project} >> ${_logger}"
+	_message="Running: sh ${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh -p ${_project} >> ${_logFile}"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
-	sh "${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh" -p "${_project}" >> "${_logger}" 2>&1
+	sh "${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh" -p "${_project}" >> "${_logFile}" 2>&1
 	
 	cd scripts
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigated to $(pwd)."
 	
 	sh submit.sh
-	touch "${TMP_ROOT_DIR}/logs/${_project}/${_project}.scriptsGenerated"
-	_message="Scripts generated and created: ${TMP_ROOT_DIR}/logs/${_project}/${_project}.scriptsGenerated."
+	touch "${_controlFileBase}.finished"
+	_message="Scripts generated and created: ${_controlFileBase}.finished."
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
-	echo "${_message}" >> "${_logger}"
+	echo "${_message}" >> "${_logFile}"
 }
 
 function submitPipeline () {
 	local _project="${1}"
-	local _run='run01'
-	local _logger="${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.log"
+	local _run="${2}"
+	local _controlFileBase="${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline"
+	local _logFile="${_controlFileBase}.log"
+	
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Starting submitPipeline part for project: ${_project}/${_run} ..."
 	
 	if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.started" ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping  ${_project}/${_run}, because jobs were already submitted."
+		return
 	elif [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished" ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping  ${_project}/${_run}, because jobs have already finished."
-	else
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Starting submitPipeline part for project: ${_project}/${_run} ..."
-		
-		if [[ ! -e "${TMP_ROOT_DIR}/logs/${_project}" ]]
-		then
-			mkdir -p "${TMP_ROOT_DIR}/logs/${_project}"
-		fi
-		
-		cd "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/"
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigated to: ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/"
-		log4Bash 'INFO'  "${LINENO}" "${FUNCNAME:-main}" '0' "Submitting jobs for ${_project}/${_run} ..."
-		if [ ${group} == "umcg-atd" ]
-		then
-			sh submit.sh
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Using submit options: --qos=dev."
-		else
-			sh submit.sh
-		fi
-		touch "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.started"
-		local _message="Jobs were submitted to the scheduler on ${HOSTNAME_SHORT} by ${ROLE_USER} for ${_project}/${_run} on $(date '+%Y-%m-%d-T%H%M')."
-		echo "${_message}" >> "${_logger}"
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
+		return
 	fi
+	
+	if [[ ! -e "${TMP_ROOT_DIR}/logs/${_project}" ]]
+	then
+		mkdir -p "${TMP_ROOT_DIR}/logs/${_project}"
+	fi
+	
+	cd "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigated to: ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/"
+	
+	#
+	# Track and Trace: log that we will start running jobs on the cluster.
+	#
+	local _url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
+	printf "project,run_id,pipeline,url,copy_results_prm,date\n"  > "${_controlFileBase}.trackAndTrace.csv"
+	printf "${_project},${_project},DNA,${_url},,\n"             >> "${_controlFileBase}.trackAndTrace.csv"
+	trackAndTracePostFromFile 'status_projects' 'add'               "${_controlFileBase}.trackAndTrace.csv"
+	
+	_url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_samples&hideselect=true&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
+	printf "project_job,job,project,started_date,finished_date,status,url,step\n"  > "${_controlFileBase}.trackAndTrace.csv"
+	grep '^processJob' submit.sh | tr '"' ' ' | awk -v pro=${_project} -v url=${_url} '{OFS=","} {print pro"_"$2,$2,pro,"","","",url}' \
+		>> "${_controlFileBase}.trackAndTrace.csv"
+	awk '{FS=","}{if (NR==1){print $0}else{split($2,a,"_"); print $0","a[1]"_"a[2]}}' "${_controlFileBase}.trackAndTrace.csv"\
+		> "${_controlFileBase}.trackAndTrace.csv.tmp"
+	mv "${_controlFileBase}.trackAndTrace.csv.tmp" "${_controlFileBase}.trackAndTrace.csv"
+	trackAndTracePostFromFile 'status_jobs' 'add' "${_controlFileBase}.trackAndTrace.csv"
+	
+	#
+	# Submit jobs to scheduler.
+	#
+	log4Bash 'INFO'  "${LINENO}" "${FUNCNAME:-main}" '0' "Submitting jobs for ${_project}/${_run} ..."
+	if [ ${group} == "umcg-atd" ]
+	then
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Using submit option: --qos=dev."
+		sh submit.sh --qos=dev
+	else
+		sh submit.sh
+	fi
+	touch "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.started"
+	local _message="Jobs were submitted to the scheduler on ${HOSTNAME_SHORT} by ${ROLE_USER} for ${_project}/${_run} on $(date '+%Y-%m-%d-T%H%M')."
+	echo "${_message}" >> "${_logFile}"
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
 }
 
 #
@@ -255,99 +292,89 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${TMP_ROOT_DIR}/logs..."
 
 #
-# Get list of sample sheets from prm.
+# Fetch (new) sample sheets from prm.
 #
-
-declare -a sampleSheets=($(ssh ${HOSTNAME_PRM} "ls -1 ${PRM_ROOT_DIR}/Samplesheets/project_${HOST_ABBREVATION}/*.${SAMPLESHEET_EXT}"))
+declare -a sampleSheets=($(ssh ${HOSTNAME_PRM} "ls -1 ${PRM_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}"))
 if [[ "${#sampleSheets[@]:-0}" -eq '0' ]]
 then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found @ ${PRM_ROOT_DIR}/Samplesheets/project_${HOST_ABBREVATION}: There is nothing to do."
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found @ ${PRM_ROOT_DIR}/Samplesheets/: There is nothing to do."
 	trap - EXIT
 	exit 0
 else
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${#sampleSheets[@]} sample sheets from ${PRM_ROOT_DIR}/Samplesheets/project_${HOST_ABBREVATION}/*.${SAMPLESHEET_EXT} ..."
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Fetching ${#sampleSheets[@]} sample sheets from ${PRM_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT} ..."
+	rsync -rltD \
+		"${HOSTNAME_PRM}:/${PRM_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}" \
+		"${TMP_ROOT_DIR}/Samplesheets/"
 fi
 
 #
 # Parse sample sheets.
 #
-for ss in "${sampleSheets[@]}"
+sampleSheets=($(ls -1 "${TMP_ROOT_DIR}/Samplesheets/"*".${SAMPLESHEET_EXT}"))
+for sampleSheet in "${sampleSheets[@]}"
 do
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing sample sheet: ${ss} ..."
-
-	fileP=$(basename "${ss}")
-	projectName=${fileP%.*}
-
-	rsync -rltD "${HOSTNAME_PRM}:/${PRM_ROOT_DIR}/Samplesheets/project_${HOST_ABBREVATION}/${projectName}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/Samplesheets/"
-	sampleSheet="${TMP_ROOT_DIR}/Samplesheets/${fileP}"
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run: ${projectName} ..."
-	if [ ! -e "${TMP_ROOT_DIR}/logs/${projectName}" ]
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing sample sheet: ${sampleSheet} ..."
+	
+	project=$(basename "${sampleSheet}" ".${SAMPLESHEET_EXT}")
+	run='run01'
+	
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing: ${project} ..."
+	if [[ ! -e "${TMP_ROOT_DIR}/logs/${project}" ]]
 	then
-		mkdir -m 2770 "${TMP_ROOT_DIR}/logs/${projectName}"
+		mkdir -m 2770 "${TMP_ROOT_DIR}/logs/${project}"
 	fi
-
+	
 	#
 	# Generate scripts (per sample sheet).
 	#
-	if [ -f "${TMP_ROOT_DIR}/logs/${projectName}/${projectName}.scriptsGenerated" ]
-	then
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${projectName}/${projectName}.scriptsGenerated exists."
-		log4Bash 'INFO'  "${LINENO}" "${FUNCNAME:-main}" '0' "Will use existing scripts for ${projectName}."
+	declare -a sampleSheetColumnNames=()
+	declare -A sampleSheetColumnOffsets=()
+	declare    sampleType='DNA' # Default when not specified in sample sheet.
+	declare    sampleTypeFieldIndex
+	IFS="${SAMPLESHEET_SEP}" sampleSheetColumnNames=($(head -1 "${sampleSheet}"))
+	for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]:-0} ; offset++ ))
+	do
+		#
+		# Backwards compatibility for "Sample Type" including - the horror - a space and optionally quotes :o.
+		#
+		regex='Sample Type'
+		if [[ "${sampleSheetColumnNames[${offset}]}" =~ ${regex} ]]
+		then
+			columnName='sampleType'
+		else
+			columnName="${sampleSheetColumnNames[${offset}]}"
+		fi
+		sampleSheetColumnOffsets["${columnName}"]="${offset}"
+	done
+	
+	if [[ -z "${sampleSheetColumnOffset['sampleType']}+isset}" ]]; then
+		#
+		# Get sampleType from sample sheet and check if all samples are of the same type.
+		#
+		sampleTypeFieldIndex=$((${sampleSheetColumnOffsets['sampleType']} + 1))
+		sampleTypesCount=$(tail -n +2 "${sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f ${sampleTypeFieldIndex} | sort | uniq | wc -l)
+		if [[ "${sampleTypesCount}" -eq '1' ]]
+		then
+			sampleType=$(tail -n 1 "${sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f ${sampleTypeFieldIndex})
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found sampleType: ${sampleType}."
+		else
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${sampleSheet} contains multiple different sampleType values."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${project} due to error in sample sheet."
+			continue
+		fi
 	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${projectName}/${projectName}.scriptsGenerated does not exist."
-		log4Bash 'INFO'  "${LINENO}" "${FUNCNAME:-main}" '0' "Generating scripts for ${projectName} ..."
-		mkdir -p ${TMP_ROOT_DIR}/tmp/NGS_Automated/
-		HEADER=$(head -1 "${sampleSheet}") ; sed '1d' "${sampleSheet}" > "${TMP_ROOT_DIR}/tmp/NGS_Automated/${projectName}.tmp" ; IFS=','  array=(${HEADER})
-		count=1
-		
-		pipeline="DNA" # Default when not specified in sample sheet.
-		for j in ${array[@]}
-		do
-			if [[ "${j}" == *"Sample Type"* ]]
-			then
-				awk -F"," '{print $'$count'}' "${TMP_ROOT_DIR}/tmp/NGS_Automated/${projectName}.tmp" > "${TMP_ROOT_DIR}/tmp/NGS_Automated/${projectName}.whichPipeline"
-				pipeline=$(head -1 "${TMP_ROOT_DIR}/tmp/NGS_Automated/${projectName}.whichPipeline")
-				break
-			fi
-		done
-		
-		generateScripts "${projectName}" "${pipeline}"
-		
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sampleType missing in sample sheet; will use default: ${sampleType}."
 	fi
+	
+	generateScripts "${project}" "${run}" "${sampleType}"
 	
 	#
 	# Submit generated job scripts (per project).
 	#
-	if [ -f "${TMP_ROOT_DIR}/logs/${projectName}/${projectName}.scriptsGenerated" ]
+	if [[ -e "${scriptsGeneratedFile}" ]]
 	then
-		echo "project,run_id,pipeline,url,copy_results_prm,date" >  ${TMP_ROOT_DIR}/logs/${projectName}/project.csv
-                myUrl="https://${MOLGENISSERVER}/menu/main/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${projectName}"
-
-                echo "${projectName},${projectName},DNA,${myUrl},," >>  ${TMP_ROOT_DIR}/logs/${projectName}/project.csv
-                CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
-                TOKEN=${CURLRESPONSE:10:32}
-                curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${projectName}/project.csv" -FentityTypeId='status_projects' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
-                echo "curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${projectName}/project.csv" -FentityTypeId='status_projects' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile"
-
-                echo -e "project_job,job,project,started_date,finished_date,status,url,step" >  ${TMP_ROOT_DIR}/logs/${projectName}/jobsPerProject.csv
-                mySamplesheetUrl="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_samples&hideselect=true&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${projectName}"
-
-                cd ${TMP_ROOT_DIR}/projects/${projectName}/run01/jobs/
-                grep '^processJob' submit.sh | tr '"' ' ' | awk -v pro=$projectName -v url=$mySamplesheetUrl '{OFS=","} {print pro"_"$2,$2,pro,"","","",url}' >> ${TMP_ROOT_DIR}/logs/${projectName}/jobsPerProject.csv
-
-                awk '{FS=","}{if (NR==1){print $0}else{split($2,a,"_"); print $0","a[1]"_"a[2]}}' ${TMP_ROOT_DIR}/logs/${projectName}/jobsPerProject.csv > ${TMP_ROOT_DIR}/logs/${projectName}/jobsPerProject.csv.tmp
-
-                mv ${TMP_ROOT_DIR}/logs/${projectName}/jobsPerProject.csv.tmp ${TMP_ROOT_DIR}/logs/${projectName}/jobsPerProject.csv
-                CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
-                TOKEN=${CURLRESPONSE:10:32}
-
-                curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${TMP_ROOT_DIR}/logs/${projectName}/jobsPerProject.csv" -FentityTypeId='status_jobs' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
-
-                echo "curl -H \"x-molgenis-token:${TOKEN}\" -X POST -F\"file=@${TMP_ROOT_DIR}/logs/${projectName}/jobsPerProject.csv\" -FentityTypeId='status_jobs' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile"
-                log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${projectName}..."
-                submitPipeline "${projectName}"
-
-
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project}..."
+		submitPipeline "${project}" ${run}"
 	fi
 done
 

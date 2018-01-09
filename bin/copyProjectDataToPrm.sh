@@ -19,7 +19,8 @@ umask 0027
 
 # Env vars.
 export TMPDIR="${TMPDIR:-/tmp}" # Default to /tmp if $TMPDIR was not defined.
-SCRIPT_NAME="$(basename ${0} .bash)"
+SCRIPT_NAME="$(basename ${0})"
+SCRIPT_NAME="${SCRIPT_NAME%.*sh}"
 INSTALLATION_DIR="$(cd -P "$(dirname "${0}")/.." && pwd)"
 LIB_DIR="${INSTALLATION_DIR}/lib"
 CFG_DIR="${INSTALLATION_DIR}/etc"
@@ -78,9 +79,10 @@ EOH
 function rsyncProjectRun() {
 	local _project="${1}"
 	local _run="${2}"
+	local _controlFileBase="${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}"
+	local _logFile="${_controlFileBase}.log"
 	
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run}..."
-	local _log_file="${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.log"
 	
 	#
 	# Determine whether an rsync is required for this run, which is the case when
@@ -109,10 +111,10 @@ function rsyncProjectRun() {
 	if [[ "${_pipelineFinished}" == 'true' ]]
 	then
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_pipelineFinishedFile}..."
-		if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]
+		if [[ -f "${_controlFileBase}.finished" ]]
 		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished."
-			if [[ "${_pipelineFinishedFile}" -nt "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_controlFileBase}.finished."
+			if [[ "${_pipelineFinishedFile}" -nt "${_controlFileBase}.finished" ]]
 			then
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "*.pipeline.finished newer than *.${SCRIPT_NAME}.finished."
 				_rsyncRequired='true'
@@ -120,16 +122,25 @@ function rsyncProjectRun() {
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "*.pipeline.finished older than *.${SCRIPT_NAME}.finished."
 			fi
 		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished present."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${_controlFileBase}.finished present."
 			_rsyncRequired='true'
 		fi
 	fi
+	
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsync required = ${_rsyncRequired}."
 	if [[ "${_rsyncRequired}" == 'false' ]]
 	then
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_project}/${_run}."
 		return
 	fi
+	
+	#
+	# Track and Trace: log that we will start rsyncing to prm.
+	#
+	local _url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
+	printf "project,run_id,pipeline,url,copy_results_prm,date\n"  > "${_controlFileBase}.trackAndTrace.csv"
+	printf "${_project},${_project},DNA,${_url},started,\n"      >> "${_controlFileBase}.trackAndTrace.csv"
+	trackAndTracePostFromFile 'status_projects' 'update'            "${_controlFileBase}.trackAndTrace.csv"
 	
 	#
 	# Count the number of all files produced in this analysis run.
@@ -190,7 +201,7 @@ function rsyncProjectRun() {
 	 || {
 		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${TMP_ROOT_DIR}/projects/${_project}/${_run} dir. See ${_log_file} for details."
 		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_log_file} for details." \
-			>> "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed"
+			>> "${_controlFileBase}.failed"
 		_transferSoFarSoGood='false'
 		}
 	
@@ -202,7 +213,7 @@ function rsyncProjectRun() {
 	 || {
 		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5. See ${_log_file} for details."
 		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_log_file} for details." \
-			>> "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed"
+			>> "${_controlFileBase}.failed"
 		_transferSoFarSoGood='false'
 		}
 	
@@ -219,9 +230,10 @@ function rsyncProjectRun() {
 		if [[ ${_countFilesProjectRunDirTmp} -ne ${_countFilesProjectRunDirPrm} ]]
 		then
 			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectRunDirTmp}) and prm (${_countFilesProjectRunDirPrm}) is NOT the same!" \
-				>> "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed"
+				>> "${_controlFileBase}.failed"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
 				"Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectRunDirTmp}) and prm (${_countFilesProjectRunDirPrm}) is NOT the same!"
+			_checksumVerification='FAILED'
 		else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
 				"Amount of files on tmp and prm is the same for ${_project}/${_run}: ${_countFilesProjectRunDirPrm}."
@@ -240,41 +252,52 @@ function rsyncProjectRun() {
 					echo 'FAILED'
 				fi
 			")
-			if [[ "${_checksumVerification}" == 'FAILED' ]]
-			then
-				echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details." \
-					>> "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed"
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Checksum verification failed. See ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details."
-			elif [[ "${_checksumVerification}" == 'PASS' ]]
-			then
-				echo "OK! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details." \
-					>>    "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed" \
-					&& mv "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}."{failed,finished}
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
-			else
-				log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Got unexpected result from checksum verification:'
-				log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected FAILED or PASS, but got: ${_checksumVerification}."
-			fi
+		fi
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "_checksumVerification = ${_checksumVerification}"
+		if [[ "${_checksumVerification}" == 'FAILED' ]]
+		then
+			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details." \
+				>> "${_controlFileBase}.failed"
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Checksum verification failed. See ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details."
+		elif [[ "${_checksumVerification}" == 'PASS' ]]
+		then
+			#
+			# Overwrite any previously created *.failed file if present,
+			# add new status info to *.failed file and
+			# then move the *.failed file to *.finished.
+			# (Note: the content of *.finished will get inserted in the body of email notification messages,
+			# when enabled in <group>.cfg for use by notifications.sh)
+			#
+			echo "The results can be found in: ${PRM_ROOT_DIR}." > "${_controlFileBase}.failed"
+			echo "OK! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details." \
+				>>    "${_controlFileBase}.failed" \
+				&& mv "${_controlFileBase}."{failed,finished}
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
 		fi
 	fi
 	
 	#
-	# Report status.
+	# Sanity check and report status to track & trace.
 	#
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed exists."
-	if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.failed" ]]
-	then
-		local _message1="MD5 checksum verification failed for ${PRM_ROOT_DIR}/projects/${_project}/${_run}:"
-		local _message2="The data is corrupt or incomplete. The original data is located at ${HOSTNAME_SHORT}:${TMP_ROOT_DIR}/projects/."
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message1}"
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message2}"
-	elif [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}.finished" ]]
-	then
-		local _message1="Project/run ${_project}/${_run} is ready. The data is available at ${PRM_ROOT_DIR}/projects/."
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message1}"
+	if [[ -e "${_controlFileBase}.failed" ]]; then
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_controlFileBase}.failed. Setting track & trace state to failed :(."
+		_url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
+		printf "project,run_id,pipeline,url,copy_results_prm,date\n"  > "${_controlFileBase}.trackAndTrace.csv"
+		printf "${_project},${_project},DNA,${_url},failed,\n"       >> "${_controlFileBase}.trackAndTrace.csv"
+		trackAndTracePostFromFile 'status_projects' 'update'            "${_controlFileBase}.trackAndTrace.csv"
+		
+		
+	elif [[ -e "${_controlFileBase}.finished" ]]; then
+		echo "Project/run ${_project}/${_run} is ready. The data is available at ${PRM_ROOT_DIR}/projects/." \
+			>> "${_controlFileBase}.finished"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_controlFileBase}.finished. Setting track & trace state to finished :)."
+		_url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
+		printf "project,run_id,pipeline,url,copy_results_prm,date\n"  > "${_controlFileBase}.trackAndTrace.csv"
+		printf "${_project},${_project},DNA,${_url},finished,\n"     >> "${_controlFileBase}.trackAndTrace.csv"
+		trackAndTracePostFromFile 'status_projects' 'update'            "${_controlFileBase}.trackAndTrace.csv"
 	else
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Ended up in unexpected state:'
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected either ${SCRIPT_NAME}.finished or ${SCRIPT_NAME}.failed, but both files are absent."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' 'Ended up in unexpected state:'
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected either ${_controlFileBase}.finished or ${_controlFileBase}.failed, but both are absent."
 	fi
 }
 
@@ -336,6 +359,7 @@ declare -a configFiles=(
 	"${CFG_DIR}/${group}.cfg"
 	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
 	"${CFG_DIR}/sharedConfig.cfg"
+	"${HOME}/molgenis.cfg"
 )
 for configFile in "${configFiles[@]}"
 do
@@ -393,7 +417,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "$(module list)"
 #		ControlPersist 5m
 #  3. Create ~/.ssh/tmp dir:
 #		mkdir -p -m 700 ~/.ssh/tmp
-#  3. Recursively restrict access to the ~/.ssh dir to allow only the owner/user:
+#  4. Recursively restrict access to the ~/.ssh dir to allow only the owner/user:
 #		chmod -R go-rwx ~/.ssh
 #
 
