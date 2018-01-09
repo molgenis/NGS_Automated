@@ -99,6 +99,38 @@ Changes:
  v     `<<<<<<<<<<<<<<<<<<<<<<<<<< 3: copyProjectDataToPrm <<<<<<<<<<<<<<<<<<<<<<<<<<<
  v
  `>>> 4: notifications
+
+```
+```
+FLOW
+
+(NGS_Demultiplexing) automate.sh => Demultiplexing.started
+
+## RUNNING ##
+
+touch Demultiplexing.finished
+	||
+	\/
+CopyRawDataToPrm.sh -g GROUP -s GATTACA => copyRawDataToPrm.lock 
+
+## COPYING ##
+
+touch ${run}.copyRawDataToPrm.sh.finished
+	||
+	\/
+startPipeline.sh -g GROUP => ${project}.scriptsGenerated => ${project}.pipeline.started 
+
+## RUNNING ##
+
+touch ${project}.pipeline.finished
+	||
+	\/
+copyProjectDataToPrm.sh -g GROUP => copyProjectDataToPrm.lock
+
+## COPYING ##
+
+touch ${project}.copyProjectDataToPrm.sh.finished
+
 ```
 
 ```
