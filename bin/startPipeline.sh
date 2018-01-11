@@ -179,12 +179,12 @@ function submitPipeline () {
 	# Track and Trace: log that we will start running jobs on the cluster.
 	#
 	local _url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
-	printf "project,run_id,pipeline,url,copy_results_prm,date\n"  > "${_controlFileBase}.trackAndTrace.csv"
-	printf %s "${_project},${_project},DNA,${_url},,\n"             >> "${_controlFileBase}.trackAndTrace.csv"
-	trackAndTracePostFromFile 'status_projects' 'add'               "${_controlFileBase}.trackAndTrace.csv"
+	printf '%s\n' "project,run_id,pipeline,url,copy_results_prm,date"  > "${_controlFileBase}.trackAndTrace.csv"
+	printf '%s\n' "${_project},${_project},DNA,${_url},,"             >> "${_controlFileBase}.trackAndTrace.csv"
+	trackAndTracePostFromFile 'status_projects' 'add'                    "${_controlFileBase}.trackAndTrace.csv"
 	
 	_url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_samples&hideselect=true&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
-	printf "project_job,job,project,started_date,finished_date,status,url,step\n"  > "${_controlFileBase}.trackAndTrace.csv"
+	printf '%s\n' "project_job,job,project,started_date,finished_date,status,url,step"  > "${_controlFileBase}.trackAndTrace.csv"
 	grep '^processJob' submit.sh | tr '"' ' ' | awk -v pro=${_project} -v url=${_url} '{OFS=","} {print pro"_"$2,$2,pro,"","","",url}' \
 		>> "${_controlFileBase}.trackAndTrace.csv"
 	awk '{FS=","}{if (NR==1){print $0}else{split($2,a,"_"); print $0","a[1]"_"a[2]}}' "${_controlFileBase}.trackAndTrace.csv"\

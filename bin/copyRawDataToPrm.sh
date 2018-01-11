@@ -101,9 +101,9 @@ function rsyncDemultiplexedRuns() {
 	# Track and Trace: log that we will start rsyncing to prm.
 	#
 	touch "${_controlFileBase}.started"
-	printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n"  > "${_controlFileBase}.trackAndTrace.csv"
-	printf "${_run},${group},finished,started,,"                      >> "${_controlFileBase}.trackAndTrace.csv"
-	trackAndTracePostFromFile 'status_overview' 'update'                 "${_controlFileBase}.trackAndTrace.csv"
+	printf '%s\n' "run_id,group,demultiplexing,copy_raw_prm,projects,date"  > "${_controlFileBase}.trackAndTrace.csv"
+	printf '%s\n' "${_run},${group},finished,started,,"                    >> "${_controlFileBase}.trackAndTrace.csv"
+	trackAndTracePostFromFile 'status_overview' 'update'                      "${_controlFileBase}.trackAndTrace.csv"
 	
 	#
 	# Perform rsync.
@@ -219,14 +219,14 @@ function rsyncDemultiplexedRuns() {
 	#
 	if [[ -e "${_controlFileBase}.failed" ]]; then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_controlFileBase}.failed. Setting track & trace state to failed :(."
-		printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n"  > "${_controlFileBase}.trackAndTrace.csv"
-		printf "${_run},${group},finished,failed,,"                       >> "${_controlFileBase}.trackAndTrace.csv"
-		trackAndTracePostFromFile 'status_overview' 'update'                 "${_controlFileBase}.trackAndTrace.csv"
+		printf '%s\n' "run_id,group,demultiplexing,copy_raw_prm,projects,date"  > "${_controlFileBase}.trackAndTrace.csv"
+		printf '%s\n' "${_run},${group},finished,failed,,"                     >> "${_controlFileBase}.trackAndTrace.csv"
+		trackAndTracePostFromFile 'status_overview' 'update'                      "${_controlFileBase}.trackAndTrace.csv"
 	elif [[ -e "${_controlFileBase}.finished" ]]; then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_controlFileBase}.finished. Setting track & trace state to finished :)."
-		printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n"  > "${_controlFileBase}.trackAndTrace.csv"
-		printf "${_run},${group},finished,finished,,"                     >> "${_controlFileBase}.trackAndTrace.csv"
-		trackAndTracePostFromFile 'status_overview' 'update'                 "${_controlFileBase}.trackAndTrace.csv"
+		printf '%s\n' "run_id,group,demultiplexing,copy_raw_prm,projects,date"  > "${_controlFileBase}.trackAndTrace.csv"
+		printf '%s\n' "${_run},${group},finished,finished,,"                   >> "${_controlFileBase}.trackAndTrace.csv"
+		trackAndTracePostFromFile 'status_overview' 'update'                      "${_controlFileBase}.trackAndTrace.csv"
 	else
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' 'Ended up in unexpected state:'
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected either ${_controlFileBase}.finished or ${_controlFileBase}.failed, but both are absent."
