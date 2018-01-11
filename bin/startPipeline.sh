@@ -345,9 +345,10 @@ do
 			columnName="${sampleSheetColumnNames[${offset}]}"
 		fi
 		sampleSheetColumnOffsets["${columnName}"]="${offset}"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${columnName} and sampleSheetColumnOffsets["${columnName}"] offset ${offset} "
 	done
 	
-	if [[ ! -z "${sampleSheetColumnOffsets['sampleType']}+isset}" ]]; then
+	if [[ ! -z ${sampleSheetColumnOffsets['sampleType']}+isset ]]; then
 		#
 		# Get sampleType from sample sheet and check if all samples are of the same type.
 		#
@@ -380,3 +381,4 @@ done
 
 trap - EXIT
 exit 0
+v
