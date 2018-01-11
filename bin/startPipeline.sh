@@ -294,6 +294,11 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 # Fetch (new) sample sheets from prm.
 #
+# ToDo: skip fetching sample sheets from prm once we have a 
+#       proper prm mount on the GD clusters and the previous script
+#       that created the sample sheet per project can run a GD cluster
+#       instead of on a research cluster to create them directly on tmp.
+#
 declare -a sampleSheets=($(ssh ${HOSTNAME_PRM} "ls -1 ${PRM_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}"))
 if [[ "${#sampleSheets[@]:-0}" -eq '0' ]]
 then
@@ -364,7 +369,7 @@ do
 			continue
 		fi
 	else
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sampleType missing in sample sheet; will use default: ${sampleType}."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sampleType column missing in sample sheet; will use default value: ${sampleType}."
 	fi
 	
 	generateScripts "${project}" "${run}" "${sampleType}"

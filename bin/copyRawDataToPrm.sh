@@ -146,7 +146,7 @@ function rsyncDemultiplexedRuns() {
 	#
 	rsync -av ${dryrun:-} \
 		"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}" \
-		"${PRM_ROOT_DIR}/Samplesheets/" \
+		"${PRM_ROOT_DIR}/Samplesheets/archive/" \
 		>> "${_logFile}" 2>&1 \
 	|| {
 		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}. See ${_logFile} for details."
@@ -236,6 +236,7 @@ function rsyncDemultiplexedRuns() {
 function splitSamplesheetPerProject() {
 	
 	local _run="${1}"
+	local _sampleSheet="${PRM_ROOT_DIR}/Samplesheets/archive/${_run}.${SAMPLESHEET_EXT}"
 	#
 	# ToDo: change location of job control files back to ${TMP_ROOT_DIR} once we have a 
 	#       proper prm mount on the GD clusters and this script can run a GD cluster
@@ -245,7 +246,7 @@ function splitSamplesheetPerProject() {
 	local _controlFileBase="${PRM_ROOT_DIR}/logs/${_run}/${_run}.splitSamplesheetPerProject"
 	local _logFile="${_controlFileBase}.log"
 	
-	if [ -e "${_controlFileBase}.finished" ]
+	if [[ -e "${_controlFileBase}.finished" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_controlFileBase}.finished -> Skipping ${_run}."
 		return
@@ -254,19 +255,59 @@ function splitSamplesheetPerProject() {
 	fi
 	
 	#
-	# ToDo: remove dependency on perl script from external module.
-	# ToDo: need to parse the 'run' sample sheet to get and define ${_projects[@]}.
-	#	
-	module load ngs-utils
+	# Parse sample sheet to get a list of project values.
+	#
+	declare -a _sampleSheetColumnNames=()
+	declare -A _sampleSheetColumnOffsets=()
+	local      _projectFieldIndex
 	declare -a _projects=()
+	
+	IFS="${SAMPLESHEET_SEP}" _sampleSheetColumnNames=($(head -1 "${_sampleSheet}"))
+	for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]:-0} ; _offset++ ))
+	do
+		_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${offset}]}"]="${_offset}"
+	done
+	
+	if [[ -z "${_sampleSheetColumnOffsets['project']+isset}" ]]; then
+		_projectFieldIndex=$((${_sampleSheetColumnOffsets['project']} + 1))
+		_projects=($(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f ${_projectFieldIndex} | sort | uniq ))
+		if [[ "${#_projects[@]:-0}" -lt '1' ]]
+		then
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} does not contain at least one project value."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in sample sheet."
+			touch "${_controlFileBase}.failed"
+			return
+		fi
+	else
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "project column missing in sample sheet."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in sample sheet."
+		touch "${_controlFileBase}.failed"
+		return
+	fi
+	
+	#
+	# Create sample sheet per project.
+	#
 	for _project in "${_projects[@]}"
 	do
-		extract_samples_from_GAF_list.pl --c project --q "${_project}" \
-			--i "${PRM_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}" \
-			--o "${TMP_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}"
+		#
+		# ToDo: change location of sample sheet per project back to ${TMP_ROOT_DIR} once we have a 
+		#       proper prm mount on the GD clusters and this script can run a GD cluster
+		#       instead of on a research cluster.
+		#
+		#local _projectSampleSheet="${TMP_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}"
+		local _projectSampleSheet="${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}"
+		head -1 "${_sampleSheet}" > "${_projectSampleSheet}.tmp"
+		awk -F "${SAMPLESHEET_SEP}" \
+			"{if (NR>1 && \$${_projectFieldIndex} ~ /${_project}/) {print}}" \
+			"${_sampleSheet}" \
+			>> "${_projectSampleSheet}.tmp"
+		mv "${_projectSampleSheet}"{.tmp,}
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Created ${_projectSampleSheet}."
+	done
 	
 	touch "${_controlFileBase}.finished"
-	
+}
 #	mkdir -p "${PRM_ROOT_DIR}/logs/${_run}/tmp"
 #	python samplesheetChecker.py "${PRM_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}" "${PRM_ROOT_DIR}/logs/${_run}/tmp/project.txt.tmp"
 #	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "samplesheet splitted, now sorting"
@@ -333,7 +374,6 @@ function splitSamplesheetPerProject() {
 #		count=$((count+1))
 #	done
 #	touch "${PRM_ROOT_DIR}/logs/${_run}.samplesheetSplittedPerProject"
-}
 
 function showHelp() {
 	#
@@ -514,8 +554,9 @@ else
 		#
 		filePrefix=$(basename ${sampleSheet%.*})
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${filePrefix}..."
-		mkdir -p "${TMP_ROOT_DIR}/logs/${filePrefix}/"
-		mkdir -p "${PRM_ROOT_DIR}/rawdata/ngs/${filePrefix}"
+		mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${filePrefix}/"
+		mkdir -m 2750 -p "${PRM_ROOT_DIR}/rawdata/ngs/${filePrefix}"
+		mkdir -m 2750 -p "${PRM_ROOT_DIR}/Samplesheets/archive/"
 		rsyncDemultiplexedRuns "${filePrefix}"
 		splitSamplesheetPerProject "${filePrefix}"
 	done
