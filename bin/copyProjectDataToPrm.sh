@@ -276,6 +276,7 @@ function rsyncProjectRun() {
 			echo "The results can be found in: ${PRM_ROOT_DIR}." >> "${_controlFileBase}.started"
 			echo "OK! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details." \
 				>>    "${_controlFileBase}.started" \
+				&& rm -f "${_controlFileBase}.failed"
 				&& mv "${_controlFileBase}."{stared,finished}
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
 		fi
