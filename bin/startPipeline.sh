@@ -345,9 +345,10 @@ do
 			columnName="${sampleSheetColumnNames[${offset}]}"
 		fi
 		sampleSheetColumnOffsets["${columnName}"]="${offset}"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${columnName} and sampleSheetColumnOffsets["${columnName}"] offset ${offset} "
 	done
 	
-	if [[ -z "${sampleSheetColumnOffset['sampleType']}+isset}" ]]; then
+	if [[ ! -z "${sampleSheetColumnOffsets['sampleType']+isset}" ]]; then
 		#
 		# Get sampleType from sample sheet and check if all samples are of the same type.
 		#
@@ -374,7 +375,7 @@ do
 	if [[ -e "${scriptsGeneratedFile}" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project}..."
-		submitPipeline "${project}" ${run}"
+		submitPipeline "${project}" "${run}"
 	fi
 done
 
