@@ -288,16 +288,16 @@ function rsyncProjectRun() {
 	if [[ -e "${_controlFileBase}.failed" ]]; then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_controlFileBase}.failed. Setting track & trace state to failed :(."
 		_url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
-		printf "project,run_id,pipeline,url,copy_results_prm,date\n"  > "${_controlFileBase}.trackAndTrace.csv"
-		printf "${_project},${_project},DNA,${_url},failed,\n"       >> "${_controlFileBase}.trackAndTrace.csv"
+		printf '%s\n' "project,run_id,pipeline,url,copy_results_prm,date"  > "${_controlFileBase}.trackAndTrace.csv"
+		printf '%s\n' "${_project},${_project},DNA,${_url},failed,"       >> "${_controlFileBase}.trackAndTrace.csv"
 		trackAndTracePostFromFile 'status_projects' 'update'            "${_controlFileBase}.trackAndTrace.csv"
 	elif [[ -e "${_controlFileBase}.finished" ]]; then
 		echo "Project/run ${_project}/${_run} is ready. The data is available at ${PRM_ROOT_DIR}/projects/." \
 			>> "${_controlFileBase}.finished"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_controlFileBase}.finished. Setting track & trace state to finished :)."
 		_url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
-		printf "project,run_id,pipeline,url,copy_results_prm,date\n"  > "${_controlFileBase}.trackAndTrace.csv"
-		printf "${_project},${_project},DNA,${_url},finished,\n"     >> "${_controlFileBase}.trackAndTrace.csv"
+		printf '%s\n' "project,run_id,pipeline,url,copy_results_prm,date"  > "${_controlFileBase}.trackAndTrace.csv"
+		printf '%s\n' "${_project},${_project},DNA,${_url},finished,"     >> "${_controlFileBase}.trackAndTrace.csv"
 		trackAndTracePostFromFile 'status_projects' 'update'            "${_controlFileBase}.trackAndTrace.csv"
 	else
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' 'Ended up in unexpected state:'
