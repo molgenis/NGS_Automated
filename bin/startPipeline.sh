@@ -180,7 +180,7 @@ function submitPipeline () {
 	#
 	local _url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
 	printf "project,run_id,pipeline,url,copy_results_prm,date\n"  > "${_controlFileBase}.trackAndTrace.csv"
-	printf "${_project},${_project},DNA,${_url},,\n"             >> "${_controlFileBase}.trackAndTrace.csv"
+	printf %s "${_project},${_project},DNA,${_url},,\n"             >> "${_controlFileBase}.trackAndTrace.csv"
 	trackAndTracePostFromFile 'status_projects' 'add'               "${_controlFileBase}.trackAndTrace.csv"
 	
 	_url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_samples&hideselect=true&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
