@@ -268,7 +268,7 @@ function splitSamplesheetPerProject() {
 		_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${offset}]}"]="${_offset}"
 	done
 	
-	if [[ -z "${_sampleSheetColumnOffset['project']+isset}" ]]; then
+	if [[ -z "${_sampleSheetColumnOffsets['project']+isset}" ]]; then
 		_projectFieldIndex=$((${_sampleSheetColumnOffsets['project']} + 1))
 		_projects=($(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f ${_projectFieldIndex} | sort | uniq ))
 		if [[ "${#_projects[@]:-0}" -lt '1' ]]
