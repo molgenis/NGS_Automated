@@ -157,11 +157,11 @@ function submitPipeline () {
 	
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Starting submitPipeline part for project: ${_project}/${_run} ..."
 	
-	if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.started" ]]
+	if [[ -e "${_controlFileBase}.started" ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping  ${_project}/${_run}, because jobs were already submitted."
 		return
-	elif [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished" ]]
+	elif [[ -e "${_controlFileBase}.finished" ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping  ${_project}/${_run}, because jobs have already finished."
 		return
@@ -203,7 +203,7 @@ function submitPipeline () {
 	else
 		sh submit.sh
 	fi
-	touch "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.started"
+	touch "${_controlFileBase}.started"
 	local _message="Jobs were submitted to the scheduler on ${HOSTNAME_SHORT} by ${ROLE_USER} for ${_project}/${_run} on $(date '+%Y-%m-%d-T%H%M')."
 	echo "${_message}" >> "${_logFile}"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
@@ -377,7 +377,7 @@ do
 	#
 	# Submit generated job scripts (per project).
 	#
-	if [[ -e "${scriptsGeneratedFile}" ]]
+	if [[ -e "${TMP_ROOT_DIR}/logs/${project}/${run}.generateScripts.finished" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project}..."
 		submitPipeline "${project}" "${run}"
