@@ -44,7 +44,7 @@ else
 fi
 
 function rsyncDemultiplexedRuns() {
-	
+
 	local _run="${1}"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_run}..."
 	#
@@ -55,7 +55,7 @@ function rsyncDemultiplexedRuns() {
 	#local _controlFileBase="${TMP_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}"
 	local _controlFileBase="${PRM_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}"
 	local _logFile="${_controlFileBase}.log"
-	
+
 	#
 	# Determine whether an rsync is required for this run, which is the case when
 	#  1. either the sequence run has finished successfully and this copy script has not
@@ -73,7 +73,7 @@ function rsyncDemultiplexedRuns() {
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}."
 		return
 	fi
-	
+
 	if [[ -e "${_controlFileBase}.finished" ]]
 	then
 		#
@@ -84,7 +84,7 @@ function rsyncDemultiplexedRuns() {
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${_run}_Demultiplexing.finished is newer than ${_controlFileBase}.finished"
 		local _demultiplexingFinishedModTime=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} stat --printf='%Y' "${SCR_ROOT_DIR}/logs/${_run}_Demultiplexing.finished")
 		local _myFinishedModTime=$(stat --printf='%Y' "${_controlFileBase}.finished")
-		
+
 		if [[ "${_demultiplexingFinishedModTime}" -gt "${_myFinishedModTime}" ]]
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "*_Demultiplexing.finished newer than ${_controlFileBase}.finished."
@@ -96,7 +96,7 @@ function rsyncDemultiplexedRuns() {
 	else
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${_controlFileBase}.finished present."
 	fi
-	
+
 	#
 	# Track and Trace: log that we will start rsyncing to prm.
 	#
@@ -104,7 +104,7 @@ function rsyncDemultiplexedRuns() {
 	printf '%s\n' "run_id,group,demultiplexing,copy_raw_prm,projects,date"  > "${_controlFileBase}.trackAndTrace.csv"
 	printf '%s\n' "${_run},${group},finished,started,,"                    >> "${_controlFileBase}.trackAndTrace.csv"
 	trackAndTracePostFromFile 'status_overview' 'update'                      "${_controlFileBase}.trackAndTrace.csv"
-	
+
 	#
 	# Perform rsync.
 	#  1. For ${_run} dir: recursively with "default" archive (-a),
@@ -140,7 +140,7 @@ function rsyncDemultiplexedRuns() {
 			>> "${_controlFileBase}.failed"
 		_transferSoFarSoGood='false'
 	}
-	
+
 	#
 	# Rsync samplesheet to prm samplesheets folder.
 	#
@@ -154,7 +154,7 @@ function rsyncDemultiplexedRuns() {
 			>> "${_controlFileBase}.failed"
 		_transferSoFarSoGood='false'
 	}
-	
+
 	#
 	# Sanity check.
 	#
@@ -541,7 +541,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #	1. loop over their analysis ("run") sub dirs and check if there are any we need to rsync.
 #	2. split the sample sheets per project and the data was rsynced.
 #
-declare -a sampleSheetsFromSourceServer=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} "ls -1 ${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}")
+IFS=$'\n' sampleSheetsFromSourceServer=($(ssh ${DATA_MANAGER}@${sourceServerFQDN} "ls -1 ${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}"))
 
 if [[ "${#sampleSheetsFromSourceServer[@]:-0}" -eq '0' ]]
 then
@@ -552,7 +552,8 @@ else
 		#
 		# Process this sample sheet / run.
 		#
-		filePrefix=$(basename ${sampleSheet%.*})
+		fileP=$(basename "${sampleSheet}")
+		filePrefix="${fileP%.*}"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${filePrefix}..."
 		mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${filePrefix}/"
 		mkdir -m 2750 -p "${PRM_ROOT_DIR}/rawdata/ngs/${filePrefix}"
