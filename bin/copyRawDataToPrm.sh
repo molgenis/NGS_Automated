@@ -265,12 +265,12 @@ function splitSamplesheetPerProject() {
 	IFS="${SAMPLESHEET_SEP}" _sampleSheetColumnNames=($(head -1 "${_sampleSheet}"))
 	for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]:-0} ; _offset++ ))
 	do
-		_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${offset}]}"]="${_offset}"
+		_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
 	done
 	
-	if [[ -z "${_sampleSheetColumnOffsets['project']+isset}" ]]; then
+	if [[ ! -z "${_sampleSheetColumnOffsets['project']+isset}" ]]; then
 		_projectFieldIndex=$((${_sampleSheetColumnOffsets['project']} + 1))
-		_projects=($(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f ${_projectFieldIndex} | sort | uniq ))
+		IFS=$'\n' _projects=($(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f ${_projectFieldIndex} | sort | uniq ))
 		if [[ "${#_projects[@]:-0}" -lt '1' ]]
 		then
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} does not contain at least one project value."
@@ -390,17 +390,17 @@ Options:
 	-e   Enable email notification. (Disabled by default.)
 	-n   Dry-run: Do not perform actual sync, but only list changes instead.
 	-l   Log level.
-	     Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
-	-s   Source server address from where the rawdate will be fetched.
-	     Must be a Fully Qualified Domain Name (FQDN).
-	     E.g. gattaca01.gcc.rug.nl or gattaca02.gcc.rug.nl
+		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
+	-s   Source server address from where the rawdate will be fetched
+		Must be a Fully Qualified Domain Name (FQDN).
+		E.g. gattaca01.gcc.rug.nl or gattaca02.gcc.rug.nl
 
 Config and dependencies:
 	This script needs 4 config files, which must be located in ${CFG_DIR}:
-	   1. <group>.cfg       for the group specified with -g
-	   2. <this_host>.cfg   for this server. E.g.: "${HOSTNAME_SHORT}.cfg"
-	   3. <source_host>.cfg for the source server. E.g.: "<hostname>.cfg" (Short name without domain)
-	   4. sharedConfig.cfg  for all groups and all servers.
+	1. <group>.cfg       for the group specified with -g
+	2. <this_host>.cfg   for this server. E.g.: "${HOSTNAME_SHORT}.cfg"
+	3. <source_host>.cfg for the source server. E.g.: "<hostname>.cfg" (Short name without domain)
+	4. sharedConfig.cfg  for all groups and all servers.
 	In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
 ===============================================================================================================
 EOH
@@ -554,7 +554,7 @@ else
 		#
 		filePrefix=$(basename ${sampleSheet%.*})
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${filePrefix}..."
-		mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${filePrefix}/"
+		mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${filePrefix}/"
 		mkdir -m 2750 -p "${PRM_ROOT_DIR}/rawdata/ngs/${filePrefix}"
 		mkdir -m 2750 -p "${PRM_ROOT_DIR}/Samplesheets/archive/"
 		rsyncDemultiplexedRuns "${filePrefix}"

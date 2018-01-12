@@ -60,14 +60,14 @@ Options:
 	-g   Group.
 	-n   Dry-run: Do not perform actual sync, but only list changes instead.
 	-l   Log level.
-	     Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
+		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
 Config and dependencies:
 
 	This script needs 3 config files, which must be located in ${CFG_DIR}:
-	 1. <group>.cfg       for the group specified with -g
-	 2. <host>.cfg        for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
-	 3. sharedConfig.cfg  for all groups and all servers.
+	1. <group>.cfg       for the group specified with -g
+	2. <host>.cfg        for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
+	3. sharedConfig.cfg  for all groups and all servers.
 	In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
 ===============================================================================================================
 
@@ -80,7 +80,7 @@ function rsyncProjectRun() {
 	local _project="${1}"
 	local _run="${2}"
 	local _controlFileBase="${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}"
-	local _logFile="${_controlFileBase}.log"
+	local _log_file="${_controlFileBase}.log"
 	
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run}..."
 	
@@ -200,27 +200,27 @@ function rsyncProjectRun() {
 		"${TMP_ROOT_DIR}/projects/${_project}/${_run}" \
 		"${DATA_MANAGER}@${HOSTNAME_PRM}:${PRM_ROOT_DIR}/projects/${_project}/" \
 		>> "${_log_file}" 2>&1 \
-	 || {
+	|| {
 		mv "${_controlFileBase}."{started,failed}
 		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${TMP_ROOT_DIR}/projects/${_project}/${_run} dir. See ${_log_file} for details."
 		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_log_file} for details." \
 			>> "${_controlFileBase}.failed"
 		_transferSoFarSoGood='false'
 		}
-	
+
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run}.md5 checksums..."
 	rsync -acv ${dryrun:-} \
 		"${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5" \
 		"${DATA_MANAGER}@${HOSTNAME_PRM}:${PRM_ROOT_DIR}/projects/${_project}/" \
 		>> "${_log_file}" 2>&1 \
-	 || {
+	|| {
 		mv "${_controlFileBase}."{started,failed}
 		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5. See ${_log_file} for details."
 		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_log_file} for details." \
 			>> "${_controlFileBase}.failed"
 		_transferSoFarSoGood='false'
 		}
-	
+
 	#
 	# Sanity check.
 	#
@@ -276,12 +276,12 @@ function rsyncProjectRun() {
 			echo "The results can be found in: ${PRM_ROOT_DIR}." >> "${_controlFileBase}.started"
 			echo "OK! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details." \
 				>>    "${_controlFileBase}.started" \
-				&& rm -f "${_controlFileBase}.failed"
-				&& mv "${_controlFileBase}."{stared,finished}
+				&& rm -f "${_controlFileBase}.failed" \
+				&& mv "${_controlFileBase}."{started,finished}
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
 		fi
 	fi
-	
+
 	#
 	# Report status to track & trace.
 	#
@@ -307,8 +307,9 @@ function rsyncProjectRun() {
 
 function archiveSampleSheet() {
 	local _project="${1}"
+	local _run="${2}"
+
 	local _controlFileDir="${TMP_ROOT_DIR}/logs/${_project}"
-	
 	#
 	# Check if rsync of results of all runs for this project have finished successfully.
 	#
@@ -316,23 +317,24 @@ function archiveSampleSheet() {
 	local  _startedCount=$(ls -1 "${_controlFileDir}/"*".${SCRIPT_NAME}.started" 2>/dev/null | wc -l)
 	local   _failedCount=$(ls -1 "${_controlFileDir}/"*".${SCRIPT_NAME}.failed"  2>/dev/null | wc -l)
 	local _finishedCount=$(ls -1 "${_controlFileDir}/"*".${SCRIPT_NAME}.finished" 2>/dev/null | wc -l)
-	
+
 	if [[ ${_startedCount} -eq 0 && ${_failedCount} -eq 0 && ${_finishedCount} -gt 0 ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Archiving sample sheet for ${_project}..."
 	else
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "Not archiving sample sheet for ${_project}, because some runs have not yet finished (successfully)."
+		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "Not archiving sample sheet for ${_project}, because some runs have not yet finished (successfully)."
 		return
 	fi
-	
-	local _status=$(ssh ${DATA_MANAGER}@${HOSTNAME_PRM} "cd "${PRM_ROOT_DIR}/Samplesheets/" && mv "${_project}.${SAMPLESHEET_EXT} archive/"" 2>&1)
-	if
+	log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" 0 \
+		"ssh ${DATA_MANAGER}@${HOSTNAME_PRM} mv ${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT} ${PRM_ROOT_DIR}/Samplesheets/archive/"
+	local _status=$(ssh ${DATA_MANAGER}@${HOSTNAME_PRM} "mv ${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT} ${PRM_ROOT_DIR}/Samplesheets/archive/" 2>&1)
+	if [[ ${_status} -eq 0 ]]
 	then
 		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" 0 "Failed to move ${_project}.${SAMPLESHEET_EXT} to ${HOSTNAME_PRM}:${PRM_ROOT_DIR}/Samplesheets/archive folder: ${_status}"
-		touch "${_controlFileBase}.failed"
+		touch "${_rsyncControlFileBase}.failed"
 	else
 		log4Bash 'DEBUG' ${LINENO} "${FUNCNAME:-main}" 0 "Moved ${_project}.${SAMPLESHEET_EXT} to ${HOSTNAME_PRM}:${PRM_ROOT_DIR}/Samplesheets/archive folder."
-		touch "${_controlFileBase}.finished"
+		touch "${_rsyncControlFileBase}.finished"
 	fi
 }
 
@@ -476,8 +478,8 @@ else
 			do
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/${run}..."
 				rsyncProjectRun "${project}" "${run}"
+				archiveSampleSheet "${project}" "${run}"
 			done
-			archiveSampleSheet "${project}"
 		fi
 	done
 fi
