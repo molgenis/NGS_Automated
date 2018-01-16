@@ -107,10 +107,14 @@ function notification(){
 	declare -a _LFS_ROOT_DIRS=("${TMP_ROOT_DIR:-}" "${SCR_ROOT_DIR:-}" "${PRM_ROOT_DIR:-}")
 	for _LFS_ROOT_DIR in ${_LFS_ROOT_DIRS[@]}
 	do
+		_project_state_files=()
 		if $(ls "${_LFS_ROOT_DIR}/logs/"*"/"*".${_phase}.${_state}" 1> /dev/null 2>&1)
 		then
-			read -r -a _project_state_files < <(ls -1 "${_LFS_ROOT_DIR}/logs/"*"/"*".${_phase}.${_state}") \
+			
+			_project_state_files=($(ls -1 "${_LFS_ROOT_DIR}/logs/"*"/"*".${_phase}.${_state}")) \
 				|| log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Failed to create a list of ${_LFS_ROOT_DIR}/logs/*/*.${_phase}.${_state} files."
+#			read -r -a _project_state_files < <(ls -1 "${_LFS_ROOT_DIR}/logs/"*"/"*".${_phase}.${_state}") \
+#				|| log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Failed to create a list of ${_LFS_ROOT_DIR}/logs/*/*.${_phase}.${_state} files."
 		else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No *.${_phase}.${_state} files present in ${_LFS_ROOT_DIR}/logs/*/."
 			return
@@ -125,7 +129,8 @@ function notification(){
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Missing ${_LFS_ROOT_DIR}/logs/${_phase}.mailinglist"
 			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Cannot send notifications by mail. I'm giving up, bye bye."
 		fi
-		
+
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "PROJECT_STATE_FILES=${_project_state_files}"
 		for _project_state_file in ${_project_state_files[@]}
 		do
 			_file=$(basename "${_project_state_file}")
@@ -145,7 +150,7 @@ function notification(){
 			
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Email subject: ${_subject}"
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Email body   : ${_body}"
-			
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "EMAILSTATUS = ${email}"			
 			if [[ "${email}" == 'true' ]]
 			then
 				printf '%s\n' "${_body}" \
