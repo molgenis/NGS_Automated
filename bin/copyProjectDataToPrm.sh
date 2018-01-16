@@ -308,12 +308,18 @@ function rsyncProjectRun() {
 function archiveSampleSheet() {
 	local _project="${1}"
 	local _run="${2}"
-
+	
 	local _controlFileDir="${TMP_ROOT_DIR}/logs/${_project}"
 	#
 	# Check if rsync of results of all runs for this project have finished successfully.
 	#
 	_rsyncControlFileBase="${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}"
+	
+	if [ -f "${_rsyncControlFileBase}.finished" ]
+	then
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${project} samplesheet already archived"
+		return
+	fi
 	local  _startedCount=$(ls -1 "${_controlFileDir}/"*".${SCRIPT_NAME}.started" 2>/dev/null | wc -l)
 	local   _failedCount=$(ls -1 "${_controlFileDir}/"*".${SCRIPT_NAME}.failed"  2>/dev/null | wc -l)
 	local _finishedCount=$(ls -1 "${_controlFileDir}/"*".${SCRIPT_NAME}.finished" 2>/dev/null | wc -l)
@@ -325,10 +331,11 @@ function archiveSampleSheet() {
 		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "Not archiving sample sheet for ${_project}, because some runs have not yet finished (successfully)."
 		return
 	fi
-	log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" 0 \
+	log4Bash 'DEBUG' ${LINENO} "${FUNCNAME:-main}" 0 \
 		"ssh ${DATA_MANAGER}@${HOSTNAME_PRM} mv ${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT} ${PRM_ROOT_DIR}/Samplesheets/archive/"
 	local _status=$(ssh ${DATA_MANAGER}@${HOSTNAME_PRM} "mv ${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT} ${PRM_ROOT_DIR}/Samplesheets/archive/" 2>&1)
-	if [[ ${_status} -eq 0 ]]
+	log4Bash 'DEBUG' ${LINENO} "${FUNCNAME:-main}" 0 "STATUS: ${_status}"
+	if [[ "${_status}" == *"cannot stat"* ]]
 	then
 		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" 0 "Failed to move ${_project}.${SAMPLESHEET_EXT} to ${HOSTNAME_PRM}:${PRM_ROOT_DIR}/Samplesheets/archive folder: ${_status}"
 		touch "${_rsyncControlFileBase}.failed"
