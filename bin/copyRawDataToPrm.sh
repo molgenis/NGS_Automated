@@ -558,8 +558,7 @@ else
 		#
 		# Process this sample sheet / run.
 		#
-		fileP=$(basename "${sampleSheet}")
-		filePrefix="${fileP%.*}"
+		filePrefix="$(basename "${sampleSheet%.*}")"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${filePrefix}..."
 		#
 		# ToDo: change location of log files back to ${TMP_ROOT_DIR} once we have a 
