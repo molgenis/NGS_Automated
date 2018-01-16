@@ -80,7 +80,7 @@ function rsyncProjectRun() {
 	local _project="${1}"
 	local _run="${2}"
 	local _controlFileBase="${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}"
-	local _log_file="${_controlFileBase}.log"
+	local _logFile="${_controlFileBase}.log"
 	
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run}..."
 	
@@ -177,8 +177,8 @@ function rsyncProjectRun() {
 		#
 		cd "${TMP_ROOT_DIR}/projects/${_project}/" \
 			|| log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot access ${TMP_ROOT_DIR}/projects/${_project}/."
-		md5deep -r -j0 -o f -l "${_run}/" > "${_run}.md5" 2>> "${_log_file}" \
-			|| log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot compute checksums with md5deep. See ${_log_file} for details."
+		md5deep -r -j0 -o f -l "${_run}/" > "${_run}.md5" 2>> "${_logFile}" \
+			|| log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot compute checksums with md5deep. See ${_logFile} for details."
 	fi
 	
 	#
@@ -199,11 +199,11 @@ function rsyncProjectRun() {
 	rsync -av ${dryrun:-} \
 		"${TMP_ROOT_DIR}/projects/${_project}/${_run}" \
 		"${DATA_MANAGER}@${HOSTNAME_PRM}:${PRM_ROOT_DIR}/projects/${_project}/" \
-		>> "${_log_file}" 2>&1 \
+		>> "${_logFile}" 2>&1 \
 	|| {
 		mv "${_controlFileBase}."{started,failed}
-		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${TMP_ROOT_DIR}/projects/${_project}/${_run} dir. See ${_log_file} for details."
-		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_log_file} for details." \
+		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${TMP_ROOT_DIR}/projects/${_project}/${_run} dir. See ${_logFile} for details."
+		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_logFile} for details." \
 			>> "${_controlFileBase}.failed"
 		_transferSoFarSoGood='false'
 		}
@@ -212,11 +212,11 @@ function rsyncProjectRun() {
 	rsync -acv ${dryrun:-} \
 		"${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5" \
 		"${DATA_MANAGER}@${HOSTNAME_PRM}:${PRM_ROOT_DIR}/projects/${_project}/" \
-		>> "${_log_file}" 2>&1 \
+		>> "${_logFile}" 2>&1 \
 	|| {
 		mv "${_controlFileBase}."{started,failed}
-		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5. See ${_log_file} for details."
-		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_log_file} for details." \
+		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5. See ${_logFile} for details."
+		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_logFile} for details." \
 			>> "${_controlFileBase}.failed"
 		_transferSoFarSoGood='false'
 		}
