@@ -515,9 +515,15 @@ fi
 # * and parsing commandline arguments,
 # but before doing the actual data transfers.
 #
+# ToDo: change location of job control files back to ${TMP_ROOT_DIR} once we have a 
+#       proper prm mount on the GD clusters and this script can run a GD cluster
+#       instead of on a research cluster.
+#
+#lockFile="${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
 lockFile="${PRM_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
 thereShallBeOnlyOne "${lockFile}"
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile}..."
+#log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${TMP_ROOT_DIR}/logs..."
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${PRM_ROOT_DIR}/logs..."
 
 #
@@ -555,6 +561,12 @@ else
 		fileP=$(basename "${sampleSheet}")
 		filePrefix="${fileP%.*}"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${filePrefix}..."
+		#
+		# ToDo: change location of log files back to ${TMP_ROOT_DIR} once we have a 
+		#       proper prm mount on the GD clusters and this script can run a GD cluster
+		#       instead of on a research cluster.
+		#
+		#mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${filePrefix}/"
 		mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${filePrefix}/"
 		mkdir -m 2750 -p "${PRM_ROOT_DIR}/rawdata/ngs/${filePrefix}"
 		mkdir -m 2750 -p "${PRM_ROOT_DIR}/Samplesheets/archive/"
