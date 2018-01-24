@@ -374,10 +374,10 @@ function getSampleType(){
 		# Get sampleType from sample sheet and check if all samples are of the same type.
 		#
 		sampleTypeFieldIndex=$((${sampleSheetColumnOffsets['sampleType']} + 1))
-		sampleTypesCount=$(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f ${sampleTypeFieldIndex} | sort | uniq | wc -l)
+		sampleTypesCount=$(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${sampleTypeFieldIndex}" | sort | uniq | wc -l)
 		if [[ "${sampleTypesCount}" -eq '1' ]]
 		then
-			sampleType=$(tail -n 1 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f ${sampleTypeFieldIndex})
+			sampleType=$(tail -n 1 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${sampleTypeFieldIndex}")
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found sampleType: ${sampleType}."
 			echo ${sampleType}
 		else
