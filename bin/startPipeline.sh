@@ -152,6 +152,7 @@ function generateScripts () {
 function submitPipeline () {
 	local _project="${1}"
 	local _run="${2}"
+	local _sampleType="${3}" ## DNA or RNA
 	local _controlFileBase="${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline"
 	local _logFile="${_controlFileBase}.log"
 	
@@ -380,7 +381,7 @@ do
 	if [[ -e "${TMP_ROOT_DIR}/logs/${project}/${run}.generateScripts.finished" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project}..."
-		submitPipeline "${project}" "${run}"
+		submitPipeline "${project}" "${run}" "${sampleType}"
 	fi
 done
 
