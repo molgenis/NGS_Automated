@@ -26,7 +26,7 @@ LIB_DIR="${INSTALLATION_DIR}/lib"
 CFG_DIR="${INSTALLATION_DIR}/etc"
 HOSTNAME_SHORT="$(hostname -s)"
 ROLE_USER="$(whoami)"
-REAL_USER="$(logname)"
+REAL_USER="$(logname 2>/dev/null || echo 'no login name')"
 
 #
 ##
@@ -79,6 +79,7 @@ EOH
 function rsyncProjectRun() {
 	local _project="${1}"
 	local _run="${2}"
+	local _sampleType=${3}
 	local _controlFileBase="${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}"
 	local _logFile="${_controlFileBase}.log"
 	
@@ -141,7 +142,7 @@ function rsyncProjectRun() {
 	#
 	local _url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
 	printf '%s\n' "project,run_id,pipeline,url,copy_results_prm,date"  > "${_controlFileBase}.trackAndTrace.csv"
-	printf '%s\n' "${_project},${_project},DNA,${_url},started,"      >> "${_controlFileBase}.trackAndTrace.csv"
+	printf '%s\n' "${_project},${_project},${_sampleType},${_url},started,"      >> "${_controlFileBase}.trackAndTrace.csv"
 	trackAndTracePostFromFile 'status_projects' 'update'                 "${_controlFileBase}.trackAndTrace.csv"
 	
 	#
@@ -297,7 +298,7 @@ function rsyncProjectRun() {
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_controlFileBase}.finished. Setting track & trace state to finished :)."
 		_url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
 		printf '%s\n' "project,run_id,pipeline,url,copy_results_prm,date"  > "${_controlFileBase}.trackAndTrace.csv"
-		printf '%s\n' "${_project},${_project},DNA,${_url},finished,"     >> "${_controlFileBase}.trackAndTrace.csv"
+		printf '%s\n' "${_project},${_project},${_sampleType},${_url},finished,"     >> "${_controlFileBase}.trackAndTrace.csv"
 		trackAndTracePostFromFile 'status_projects' 'update'            "${_controlFileBase}.trackAndTrace.csv"
 	else
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' 'Ended up in unexpected state:'
@@ -342,6 +343,52 @@ function archiveSampleSheet() {
 	else
 		log4Bash 'DEBUG' ${LINENO} "${FUNCNAME:-main}" 0 "Moved ${_project}.${SAMPLESHEET_EXT} to ${HOSTNAME_PRM}:${PRM_ROOT_DIR}/Samplesheets/archive folder."
 		touch "${_rsyncControlFileBase}.finished"
+	fi
+}
+
+function getSampleType(){
+	local  _sampleSheet="${1}"
+	declare -a sampleSheetColumnNames=()
+	declare -A sampleSheetColumnOffsets=()
+	declare    sampleType='DNA' # Default when not specified in sample sheet.
+	declare    sampleTypeFieldIndex
+	IFS="${SAMPLESHEET_SEP}" sampleSheetColumnNames=($(head -1 "${_sampleSheet}"))
+	for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]:-0} ; offset++ ))
+	do
+		#
+		# Backwards compatibility for "Sample Type" including - the horror - a space and optionally quotes :o.
+		#
+		regex='Sample Type'
+		if [[ "${sampleSheetColumnNames[${offset}]}" =~ ${regex} ]]
+		then
+			columnName='sampleType'
+		else
+			columnName="${sampleSheetColumnNames[${offset}]}"
+		fi
+		sampleSheetColumnOffsets["${columnName}"]="${offset}"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${columnName} and sampleSheetColumnOffsets["${columnName}"] offset ${offset} "
+	done
+	
+	if [[ ! -z "${sampleSheetColumnOffsets['sampleType']+isset}" ]]; then
+		#
+		# Get sampleType from sample sheet and check if all samples are of the same type.
+		#
+		sampleTypeFieldIndex=$((${sampleSheetColumnOffsets['sampleType']} + 1))
+		sampleTypesCount=$(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${sampleTypeFieldIndex}" | sort | uniq | wc -l)
+		if [[ "${sampleTypesCount}" -eq '1' ]]
+		then
+			sampleType=$(tail -n 1 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${sampleTypeFieldIndex}")
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found sampleType: ${sampleType}."
+			echo ${sampleType}
+		else
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} contains multiple different sampleType values."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${project} due to error in sample sheet."
+			continue
+		fi
+	else
+
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sampleType column missing in sample sheet; will use default value: ${sampleType}."
+		echo ${sampleType}
 	fi
 }
 
@@ -483,9 +530,11 @@ else
 		else
 			for run in "${runs[@]}"
 			do
+				sampleType=$(getSampleType ${TMP_ROOT_DIR}/projects/${project}/${run}/jobs/${project}.${SAMPLESHEET_EXT})
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sampleType =${sampleType}"
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/${run}..."
-				rsyncProjectRun "${project}" "${run}"
-				archiveSampleSheet "${project}" "${run}"
+				rsyncProjectRun "${project}" "${run}" "${sampleType}"
+				archiveSampleSheet "${project}" "${run}" "${sampleType}"
 			done
 		fi
 	done

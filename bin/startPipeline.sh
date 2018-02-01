@@ -26,7 +26,7 @@ LIB_DIR="${INSTALLATION_DIR}/lib"
 CFG_DIR="${INSTALLATION_DIR}/etc"
 HOSTNAME_SHORT="$(hostname -s)"
 ROLE_USER="$(whoami)"
-REAL_USER="$(logname)"
+REAL_USER="$(logname 2>/dev/null || echo 'no login name')"
 
 #
 ##
@@ -135,9 +135,9 @@ function generateScripts () {
 	cd "${TMP_ROOT_DIR}/generatedscripts/${_project}/"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigated to $(pwd)."
 	
-	_message="Running: sh ${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh -p ${_project} >> ${_logFile}"
+	_message="Running: sh ${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh -p ${_project} -g ${group}>> ${_logFile}"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
-	sh "${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh" -p "${_project}" >> "${_logFile}" 2>&1
+	sh "${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh" -p "${_project}" -g ${group} >> "${_logFile}" 2>&1
 	
 	cd scripts
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigated to $(pwd)."
@@ -152,6 +152,7 @@ function generateScripts () {
 function submitPipeline () {
 	local _project="${1}"
 	local _run="${2}"
+	local _sampleType="${3}" ## DNA or RNA
 	local _controlFileBase="${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline"
 	local _logFile="${_controlFileBase}.log"
 	
@@ -180,7 +181,7 @@ function submitPipeline () {
 	#
 	local _url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
 	printf '%s\n' "project,run_id,pipeline,url,copy_results_prm,date"  > "${_controlFileBase}.trackAndTrace.csv"
-	printf '%s\n' "${_project},${_project},DNA,${_url},,"             >> "${_controlFileBase}.trackAndTrace.csv"
+	printf '%s\n' "${_project},${_project},${_sampleType},${_url},,"  >> "${_controlFileBase}.trackAndTrace.csv"
 	trackAndTracePostFromFile 'status_projects' 'add'                    "${_controlFileBase}.trackAndTrace.csv"
 	
 	_url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_samples&hideselect=true&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
@@ -380,7 +381,7 @@ do
 	if [[ -e "${TMP_ROOT_DIR}/logs/${project}/${run}.generateScripts.finished" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project}..."
-		submitPipeline "${project}" "${run}"
+		submitPipeline "${project}" "${run}" "${sampleType}"
 	fi
 done
 
