@@ -120,7 +120,7 @@ function rsyncDemultiplexedRuns() {
 	#
 	local _transferSoFarSoGood='true'
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_run} dir..."
-	rsync -av --chmod=Dg-w,g+rsX,o-rwx,Fg-wsx,g+r,o-rwx ${dryrun:-} \
+	rsync -rav --chmod=Dg-w,g+rsX,o-rwx,Fg-wsx,g+r,o-rwx ${dryrun:-} \
 		"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/runs/${_run}/results/*" \
 		"${PRM_ROOT_DIR}/rawdata/ngs/${_run}/" \
 		>> "${_logFile}" 2>&1 \
@@ -213,7 +213,7 @@ function rsyncDemultiplexedRuns() {
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
 		fi
 	fi
-	
+
 	#
 	# Sanity check and report status to track & trace.
 	#
