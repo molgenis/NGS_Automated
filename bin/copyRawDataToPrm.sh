@@ -213,7 +213,7 @@ function rsyncDemultiplexedRuns() {
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
 		fi
 	fi
-	
+
 	#
 	# Sanity check and report status to track & trace.
 	#
