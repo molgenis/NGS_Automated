@@ -200,9 +200,17 @@ function submitPipeline () {
 	if [ ${group} == "umcg-atd" ]
 	then
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Using submit option: --qos=dev."
-		sh submit.sh --qos=dev
+		sh submit.sh --qos=dev >> "${_logFile}" 2>&1 \
+                || {
+                        echo "See ${_logFile} for details." > "${_controlFileBase}.failed"
+                        return
+                }
 	else
-		sh submit.sh
+		sh submit.sh >> "${_logFile}" 2>&1 \
+                || {
+                        echo "See ${_logFile} for details." > "${_controlFileBase}.failed"
+                        return
+                }
 	fi
 	touch "${_controlFileBase}.started"
 	local _message="Jobs were submitted to the scheduler on ${HOSTNAME_SHORT} by ${ROLE_USER} for ${_project}/${_run} on $(date '+%Y-%m-%d-T%H%M')."
