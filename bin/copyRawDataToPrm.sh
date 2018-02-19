@@ -43,6 +43,19 @@ else
 	exit 1
 fi
 
+function contains() {
+	local n=$#
+	local value=${!n}
+	for ((i=1;i < $#;i++)) {
+		if [ "${!i}" == "${value}" ]; then
+			echo "y"
+			return 0
+		fi
+	}
+	echo "n"
+	return 1
+}
+
 function rsyncDemultiplexedRuns() {
 
 	local _run="${1}"
@@ -261,12 +274,57 @@ function splitSamplesheetPerProject() {
 	declare -A _sampleSheetColumnOffsets=()
 	local      _projectFieldIndex
 	declare -a _projects=()
+	declare -a _pipelines=()
+	declare -a _demultiplexOnly=()
 	
 	IFS="${SAMPLESHEET_SEP}" _sampleSheetColumnNames=($(head -1 "${_sampleSheet}"))
 	for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]:-0} ; _offset++ ))
 	do
 		_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
 	done
+	
+	#
+	# Check if the pipeline step can be skipped. 
+	#
+	if [[ ! -z "${_sampleSheetColumnOffsets['pipeline']+isset}" ]]; then
+		_pipelineFieldIndex=$((${_sampleSheetColumnOffsets['pipeline']} + 1))
+		_projectFieldIndex=$((${_sampleSheetColumnOffsets['project']} + 1))
+		IFS=$'\n' _pipelines=($(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f ${_pipelineFieldIndex} | sort | uniq ))
+		if [[ "${#_pipelines[@]:-0}" -lt '1' ]]
+		then
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} does not contain at least one pipeline value."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in sample sheet."
+			touch "${_controlFileBase}.failed"
+			return
+		elif [[ "${#_pipelines[@]:-0}" -eq '1' ]]
+		then
+			for _pipeline in "${_pipelines[@]}"
+			do
+				_pipeline_to_upper_case=$(echo "${_pipeline}"| awk '{print toupper($0)}')
+				if [[ "${_pipeline_to_upper_case}" = *"DEMULTIPLEXING"* ]]
+				then
+					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing only: ${_pipeline}"
+					touch "${_controlFileBase}.finished"
+					return
+				fi
+			done
+		elif [[ "${#_pipelines[@]:-0}" -gt '1' ]]
+		then
+			for _pipeline in "${_pipelines[@]}"
+			do
+				_pipeline_to_upper_case=$(echo "${_pipeline}"| awk '{print toupper($0)}')
+				if [[ "${_pipeline_to_upper_case}" = *"DEMULTIPLEXING"* ]]
+				then
+					IFS=$'\n' _demultiplexOnly=($(awk -F "," "{if (NR>1 && \$${_pipelineFieldIndex} ~ /${_pipelines}/) {print}}" "${_sampleSheet}" |  awk 'BEGIN{FS="${SAMPLESHEET_SEP}"} {print ${_projectFieldIndex}}' | sort -u))
+					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing only: ${_pipeline}"
+				fi
+			done
+		fi
+	else
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "pipeline column missing in sample sheet."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Continue with ${_run} due to missing pipeline column."
+	fi
+	
 	
 	if [[ ! -z "${_sampleSheetColumnOffsets['project']+isset}" ]]; then
 		_projectFieldIndex=$((${_sampleSheetColumnOffsets['project']} + 1))
@@ -291,6 +349,14 @@ function splitSamplesheetPerProject() {
 	for _project in "${_projects[@]}"
 	do
 		#
+		# Skip project if demultiplexing only.
+		#
+		if [ $(contains "${_demultiplexOnly[@]}" "${_project}") == "y" ]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing Only for project: ${_project}, continue"
+			continue
+		else
+		#
 		# ToDo: change location of sample sheet per project back to ${TMP_ROOT_DIR} once we have a 
 		#       proper prm mount on the GD clusters and this script can run a GD cluster
 		#       instead of on a research cluster.
@@ -304,6 +370,7 @@ function splitSamplesheetPerProject() {
 			>> "${_projectSampleSheet}.tmp"
 		mv "${_projectSampleSheet}"{.tmp,}
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Created ${_projectSampleSheet}."
+		fi
 	done
 	
 	touch "${_controlFileBase}.finished"
