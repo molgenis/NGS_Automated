@@ -291,8 +291,8 @@ function splitSamplesheetPerProject() {
 	#
 	# Check if the pipeline step can be skipped. 
 	#
-	if [[ ! -z "${_sampleSheetColumnOffsets['pipeline']+isset}" ]]; then
-		_pipelineFieldIndex=$((${_sampleSheetColumnOffsets['pipeline']} + 1))
+	if [[ ! -z "${_sampleSheetColumnOffsets['GCC_Analysis']+isset}" ]]; then
+		_pipelineFieldIndex=$((${_sampleSheetColumnOffsets['GCC_Analysis']} + 1))
 		_projectFieldIndex=$((${_sampleSheetColumnOffsets['project']} + 1))
 		IFS=$'\n' _pipelines=($(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f ${_pipelineFieldIndex} | sort | uniq ))
 		if [[ "${#_pipelines[@]:-0}" -lt '1' ]]
@@ -326,7 +326,7 @@ function splitSamplesheetPerProject() {
 			done
 		fi
 	else
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "pipeline column missing in sample sheet."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "GCC_Analysis column missing in sample sheet."
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Continue with ${_run} due to missing pipeline column."
 	fi
 	
