@@ -107,6 +107,8 @@ function rsyncDemultiplexedRuns() {
 			return
 		fi
 	else
+
+		mkdir -m 2750 -p "${PRM_ROOT_DIR}/rawdata/ngs/${filePrefix}"
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${_controlFileBase}.finished present."
 	fi
 
@@ -638,7 +640,6 @@ else
 		#
 		#mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${filePrefix}/"
 		mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${filePrefix}/"
-		mkdir -m 2750 -p "${PRM_ROOT_DIR}/rawdata/ngs/${filePrefix}"
 		mkdir -m 2750 -p "${PRM_ROOT_DIR}/Samplesheets/archive/"
 		rsyncDemultiplexedRuns "${filePrefix}"
 		splitSamplesheetPerProject "${filePrefix}"
