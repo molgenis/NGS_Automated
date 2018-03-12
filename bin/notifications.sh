@@ -110,17 +110,14 @@ function notification(){
 		_project_state_files=()
 		if $(ls "${_LFS_ROOT_DIR}/logs/"*"/"*".${_phase}.${_state}" 1> /dev/null 2>&1)
 		then
-			
 			_project_state_files=($(ls -1 "${_LFS_ROOT_DIR}/logs/"*"/"*".${_phase}.${_state}")) \
 				|| log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Failed to create a list of ${_LFS_ROOT_DIR}/logs/*/*.${_phase}.${_state} files."
-#			read -r -a _project_state_files < <(ls -1 "${_LFS_ROOT_DIR}/logs/"*"/"*".${_phase}.${_state}") \
-#				|| log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Failed to create a list of ${_LFS_ROOT_DIR}/logs/*/*.${_phase}.${_state} files."
 		else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No *.${_phase}.${_state} files present in ${_LFS_ROOT_DIR}/logs/*/."
 			return
 		fi
 		
-		if [[ -f "${_LFS_ROOT_DIR}/logs/${_phase}.mailinglist" ]]
+		if [[ -r "${_LFS_ROOT_DIR}/logs/${_phase}.mailinglist" ]]
 		then
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_LFS_ROOT_DIR}/logs/${_phase}.mailinglist."
 			_email_to="$(cat "${_LFS_ROOT_DIR}/logs/${_phase}.mailinglist" | tr '\n' ' ')"
@@ -129,7 +126,7 @@ function notification(){
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Missing ${_LFS_ROOT_DIR}/logs/${_phase}.mailinglist"
 			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Cannot send notifications by mail. I'm giving up, bye bye."
 		fi
-
+		
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "PROJECT_STATE_FILES=${_project_state_files}"
 		for _project_state_file in ${_project_state_files[@]}
 		do
@@ -137,7 +134,7 @@ function notification(){
 			_project=$(basename $(dirname "${_project_state_file}"))
 			_run="${_file%%.*}"
 			
-			if [[ -f "${_project_state_file}.mailed" ]]
+			if [[ -e "${_project_state_file}.mailed" ]]
 			then
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_project_state_file}.mailed"
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping: ${_project}/${_run}. Email was already sent for state ${_state}."
@@ -150,7 +147,7 @@ function notification(){
 			
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Email subject: ${_subject}"
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Email body   : ${_body}"
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "EMAILSTATUS = ${email}"			
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "EMAILSTATUS = ${email}"
 			if [[ "${email}" == 'true' ]]
 			then
 				printf '%s\n' "${_body}" \
