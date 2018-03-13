@@ -92,10 +92,10 @@ function generateScripts () {
 	elif [[ -e "${_controlFileBase}.started" ]]
 	then
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.started exists."
-                log4Bash 'INFO'  "${LINENO}" "${FUNCNAME:-main}" '0' "Will use existing scripts for ${_project}."
-                return
+		log4Bash 'INFO'  "${LINENO}" "${FUNCNAME:-main}" '0' "Will use existing scripts for ${_project}."
+		return
 	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.finished does not exist."
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.finished nor ${_controlFileBase}.started exists."
 		log4Bash 'INFO'  "${LINENO}" "${FUNCNAME:-main}" '0' "Generating scripts for ${_project} ..."
 	fi
 	
@@ -124,7 +124,7 @@ function generateScripts () {
 	echo "${_message}" >> "${_logFile}"
 	cp "${_pathToPipeline}/templates/generate_template.sh" "${_generateShScript}"
 	
-	if [ -f "${TMP_ROOT_DIR}/generatedscripts/${_project}/${_project}.${SAMPLESHEET_EXT}" ]
+	if [[ -e "${TMP_ROOT_DIR}/generatedscripts/${_project}/${_project}.${SAMPLESHEET_EXT}" ]]
 	then
 		_message="${TMP_ROOT_DIR}/generatedscripts/${_project}/${_project}.${SAMPLESHEET_EXT} already exists and will be removed ..."
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
@@ -206,16 +206,16 @@ function submitPipeline () {
 	then
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Using submit option: --qos=dev."
 		sh submit.sh --qos=dev >> "${_logFile}" 2>&1 \
-                || {
-                        echo "See ${_logFile} for details." > "${_controlFileBase}.failed"
-                        return
-                }
+			|| {
+					echo "See ${_logFile} for details." > "${_controlFileBase}.failed"
+					return
+				}
 	else
 		sh submit.sh >> "${_logFile}" 2>&1 \
-                || {
-                        echo "See ${_logFile} for details." > "${_controlFileBase}.failed"
-                        return
-                }
+			|| {
+					echo "See ${_logFile} for details." > "${_controlFileBase}.failed"
+					return
+				}
 	fi
 	touch "${_controlFileBase}.started"
 	local _message="Jobs were submitted to the scheduler on ${HOSTNAME_SHORT} by ${ROLE_USER} for ${_project}/${_run} on $(date '+%Y-%m-%d-T%H%M')."

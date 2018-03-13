@@ -96,12 +96,12 @@ function rsyncProjectRun() {
 	#
 	local _pipelineFinished='false'
 	local _rsyncRequired='false'
-	if [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished" ]]
+	if [[ -e "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished" ]]
 	then
 		# New NGS_Automated 2.x *.pipeline.finished per project per run sub dir.
 		local _pipelineFinishedFile="${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished"
 		_pipelineFinished='true'
-	elif [[ -f "${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.finished" ]]
+	elif [[ -e "${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.finished" ]]
 	then
 		# Deprecated old NGS_Automated 1.x *.pipeline.finished per project.
 		local _pipelineFinishedFile="${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.finished"
@@ -112,7 +112,7 @@ function rsyncProjectRun() {
 	if [[ "${_pipelineFinished}" == 'true' ]]
 	then
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_pipelineFinishedFile}..."
-		if [[ -f "${_controlFileBase}.finished" ]]
+		if [[ -e "${_controlFileBase}.finished" ]]
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_controlFileBase}.finished."
 			if [[ "${_pipelineFinishedFile}" -nt "${_controlFileBase}.finished" ]]
@@ -157,7 +157,7 @@ function rsyncProjectRun() {
 	#  3. and up-to-date.
 	#
 	local _checksumsAvailable='false'
-	if [ -f "${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5" ]
+	if [[ -e "${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5" ]]
 	then
 		if [[ ${_pipelineFinishedFile} -ot "${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5" ]]
 		then
@@ -208,7 +208,7 @@ function rsyncProjectRun() {
 			>> "${_controlFileBase}.failed"
 		_transferSoFarSoGood='false'
 		}
-
+	
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run}.md5 checksums..."
 	rsync -acv ${dryrun:-} \
 		"${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5" \
@@ -221,7 +221,7 @@ function rsyncProjectRun() {
 			>> "${_controlFileBase}.failed"
 		_transferSoFarSoGood='false'
 		}
-
+	
 	#
 	# Sanity check.
 	#
@@ -282,7 +282,7 @@ function rsyncProjectRun() {
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
 		fi
 	fi
-
+	
 	#
 	# Report status to track & trace.
 	#
@@ -308,41 +308,59 @@ function rsyncProjectRun() {
 
 function archiveSampleSheet() {
 	local _project="${1}"
-	local _run="${2}"
-	
 	local _controlFileDir="${TMP_ROOT_DIR}/logs/${_project}"
+	local _archiveSampleSheetControlFileBase="${TMP_ROOT_DIR}/logs/${_project}/${_project}.archiveSampleSheet"
 	#
 	# Check if rsync of results of all runs for this project have finished successfully.
 	#
-	_rsyncControlFileBase="${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}"
-	
-	if [ -f "${_rsyncControlFileBase}.finished" ]
+	if [[ -e "${_archiveSampleSheetControlFileBase}.finished" ]]
 	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${project} samplesheet already archived"
-		return
-	fi
-	local  _startedCount=$(ls -1 "${_controlFileDir}/"*".${SCRIPT_NAME}.started" 2>/dev/null | wc -l)
-	local   _failedCount=$(ls -1 "${_controlFileDir}/"*".${SCRIPT_NAME}.failed"  2>/dev/null | wc -l)
-	local _finishedCount=$(ls -1 "${_controlFileDir}/"*".${SCRIPT_NAME}.finished" 2>/dev/null | wc -l)
-
-	if [[ ${_startedCount} -eq 0 && ${_failedCount} -eq 0 && ${_finishedCount} -gt 0 ]]
-	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Archiving sample sheet for ${_project}..."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Samplesheet already archived for project ${project}."
+		local _status=$(ssh ${DATA_MANAGER}@${HOSTNAME_PRM} \
+			"if [[ -e ${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT} ]]; then \
+				echo 'exists'; \
+			else \
+				echo 'absent'; \
+			fi"
+		)
+		if [[ "${_status}" == 'exists' ]]
+		then
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "    Found (new) ${project} samplesheet, that will be re-archived overwriting the existing one."
+		else
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "    Found no (new) ${project} samplesheet -> skipping samplesheet archiving for project ${_project}."
+			return
+		fi
 	else
-		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "Not archiving sample sheet for ${_project}, because some runs have not yet finished (successfully)."
-		return
+		local  _startedCount=$(ls -1 "${_controlFileDir}/"*".${SCRIPT_NAME}.started" 2>/dev/null | wc -l)
+		local   _failedCount=$(ls -1 "${_controlFileDir}/"*".${SCRIPT_NAME}.failed"  2>/dev/null | wc -l)
+		local _finishedCount=$(ls -1 "${_controlFileDir}/"*".${SCRIPT_NAME}.finished" 2>/dev/null | wc -l)
+		
+		if [[ ${_startedCount} -eq 0 && ${_failedCount} -eq 0 && ${_finishedCount} -gt 0 ]]
+		then
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Archiving sample sheet for ${_project}..."
+		else
+			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "Not archiving sample sheet for ${_project}, because some runs have not yet finished (successfully)."
+			return
+		fi
 	fi
+	touch "${archiveSampleSheetControlFileBase}.started"
 	log4Bash 'DEBUG' ${LINENO} "${FUNCNAME:-main}" 0 \
 		"ssh ${DATA_MANAGER}@${HOSTNAME_PRM} mv ${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT} ${PRM_ROOT_DIR}/Samplesheets/archive/"
 	local _status=$(ssh ${DATA_MANAGER}@${HOSTNAME_PRM} "mv ${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT} ${PRM_ROOT_DIR}/Samplesheets/archive/" 2>&1)
-	log4Bash 'DEBUG' ${LINENO} "${FUNCNAME:-main}" 0 "STATUS: ${_status}"
+	log4Bash 'TRACE' ${LINENO} "${FUNCNAME:-main}" 0 "_status: ${_status}"
 	if [[ "${_status}" == *"cannot stat"* ]]
 	then
 		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" 0 "Failed to move ${_project}.${SAMPLESHEET_EXT} to ${HOSTNAME_PRM}:${PRM_ROOT_DIR}/Samplesheets/archive folder: ${_status}"
-		touch "${_rsyncControlFileBase}.failed"
+		mv "${_archiveSampleSheetControlFileBase}."{started,failed}
+		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): Failed to move ${_project}.${SAMPLESHEET_EXT} to ${HOSTNAME_PRM}:${PRM_ROOT_DIR}/Samplesheets/archive folder: ${_status}" \
+			>> "${_archiveSampleSheetControlFileBase}.failed"
+		
 	else
 		log4Bash 'DEBUG' ${LINENO} "${FUNCNAME:-main}" 0 "Moved ${_project}.${SAMPLESHEET_EXT} to ${HOSTNAME_PRM}:${PRM_ROOT_DIR}/Samplesheets/archive folder."
-		touch "${_rsyncControlFileBase}.finished"
+		echo "OK! $(date '+%Y-%m-%d-T%H%M'): Moved ${_project}.${SAMPLESHEET_EXT} to ${HOSTNAME_PRM}:${PRM_ROOT_DIR}/Samplesheets/archive folder." \
+			>>    "${_archiveSampleSheetControlFileBase}.started" \
+			&& rm -f "${_archiveSampleSheetControlFileBase}.failed" \
+			&& mv "${_archiveSampleSheetControlFileBase}."{started,finished}
 	fi
 }
 
@@ -386,7 +404,6 @@ function getSampleType(){
 			continue
 		fi
 	else
-
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sampleType column missing in sample sheet; will use default value: ${sampleType}."
 		echo ${sampleType}
 	fi
@@ -534,8 +551,11 @@ else
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sampleType =${sampleType}"
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/${run}..."
 				rsyncProjectRun "${project}" "${run}" "${sampleType}"
-				archiveSampleSheet "${project}" "${run}" "${sampleType}"
 			done
+			#
+			# Archive sample sheet when all runs have completed successfully.
+			#
+			archiveSampleSheet "${project}"
 		fi
 	done
 fi
