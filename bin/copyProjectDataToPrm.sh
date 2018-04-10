@@ -343,7 +343,7 @@ function archiveSampleSheet() {
 			return
 		fi
 	fi
-	touch "${archiveSampleSheetControlFileBase}.started"
+	touch "${_archiveSampleSheetControlFileBase}.started"
 	log4Bash 'DEBUG' ${LINENO} "${FUNCNAME:-main}" 0 \
 		"ssh ${DATA_MANAGER}@${HOSTNAME_PRM} mv ${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT} ${PRM_ROOT_DIR}/Samplesheets/archive/"
 	local _status=$(ssh ${DATA_MANAGER}@${HOSTNAME_PRM} "mv ${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT} ${PRM_ROOT_DIR}/Samplesheets/archive/" 2>&1)
