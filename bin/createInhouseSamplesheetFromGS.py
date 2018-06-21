@@ -67,7 +67,7 @@ def printNewSamplesheet(projectSamplesheetPath, GSSamplesheetDataHashmap, sample
                                                         continue
                                 except:
                                         print("keyError:"+ barcodes_project)
-                                        print("FATAL: Inhouse barcode_project " + barcodes_project + "and external:project"+ GSSamplesheetDataHashmap[barcodes_project][0] +"are not the same.")
+                                        print("FATAL: Inhouse barcode_project " + barcodes_project + "and external:project" + GSSamplesheetDataHashmap[barcodes_project][0] + "are not the same.")
                                         exit(1)
 
                                 # add non exeptional columns + values as they where in the original samplesheet to the list.
@@ -80,7 +80,7 @@ def printNewSamplesheet(projectSamplesheetPath, GSSamplesheetDataHashmap, sample
 
         # Do the writing of new samplesheet tot outputPath.
         newfilename = samplesheetOutputDir + basename(projectSamplesheetPath)
-        logger.write("outputFile:"+ newfilename + "\n")
+        logger.write("outputFile:" + newfilename + "\n")
         with open(newfilename, 'w') as f2:
                 writer = csv.writer(f2, delimiter = ',')
                 writer.writerows(new_rows_list)
@@ -158,17 +158,17 @@ if args.samplesheetOutputDir == args.samplesheetNewDir:
 #Check availability, and readability of GS samplesheet.
 for file in glob.iglob(os.path.join(args.GenomeScanInputDir, "CSV_UMCG_*.csv")):
         if os.path.isfile(file) and os.access(file, os.R_OK):
-                logger.write("GenomeScan samplesheet:" + file +"\n")
+                logger.write("GenomeScan samplesheet:" + file + "\n")
         else:
                 logger.write("Either file " + args.GenomeScanInputDir+ "CSV_UMCG_*.csv" + " is missing or is not readable.\n")
                 sys.exit('FATAL ERROR! Check: ' + args.logfile)
 
 #Check availability, and readability of md5sum file.
 if os.path.isfile(args.GenomeScanInputDir+'checksums.md5') and os.access(args.GenomeScanInputDir+'checksums.md5', os.R_OK):
-        md5file = open(args.GenomeScanInputDir +'checksums.md5', 'r')
-        logger.write("md5sum file:" + args.GenomeScanInputDir +'checksums.md5'+"\n")
+        md5file = open(args.GenomeScanInputDir + 'checksums.md5', 'r')
+        logger.write("md5sum file:" + args.GenomeScanInputDir + 'checksums.md5' + "\n")
 else:
-        logger.write("Either file " + args.GenomeScanInputDir+'checksums.md5' + " is missing or is not readable"+"\n")
+        logger.write("Either file " + args.GenomeScanInputDir + 'checksums.md5' + " is missing or is not readable" + "\n")
         sys.exit('FATAL ERROR! Check: ' + args.logfile)
 
 f = open(file,'r') # open the GS samplesheet csv file
@@ -188,8 +188,8 @@ for row in GSReader:
         projects.append(project)
 
         try:
-                GSSamplesheetDataHashmap.setdefault(row['Index1']+ "-" + row['Index2']+"-"+row['Sample_ID'], []).append(row['Sample_ID'])
-                GSSamplesheetDataHashmap.setdefault(row['Index1'] + "-" + row['Index2']+"-"+row['Sample_ID'], []).append(row['GS_ID'])
+                GSSamplesheetDataHashmap.setdefault(row['Index1'] + "-" + row['Index2'] + "-" + row['Sample_ID'], []).append(row['Sample_ID'])
+                GSSamplesheetDataHashmap.setdefault(row['Index1'] + "-" + row['Index2'] + "-" + row['Sample_ID'], []).append(row['GS_ID'])
                 GSSamplesheetDataHashmap.setdefault(row['Index1'] + "-" + row['Index2'] + "-" + row['Sample_ID'], []).append(GSFilenameDataHashmap[row['Index1'] + "-" + row['Index2'] + "-" + row['GS_ID']][0])
                 GSSamplesheetDataHashmap.setdefault(row['Index1'] + "-" + row['Index2'] + "-" + row['Sample_ID'], []).append(GSFilenameDataHashmap[row['Index1'] + "-" + row['Index2'] + "-" + row['GS_ID']][2])
                 GSSamplesheetDataHashmap.setdefault(row['Index1'] + "-" + row['Index2'] + "-" + row['Sample_ID'], []).append(GSFilenameDataHashmap[row['Index1'] + "-" + row['Index2'] + "-" + row['GS_ID']][3])
@@ -197,7 +197,7 @@ for row in GSReader:
                 GSSamplesheetDataHashmap.setdefault(row['Index1'] + "-" + row['Index2'] + "-" + row['Sample_ID'], []).append(GSFilenameDataHashmap[row['Index1'] + "-" + row['Index2'] + "-" + row['GS_ID']][5])
         except:
 
-                print("FATAL ERROR! Check if barcodes are uniq within project, or GS sampleIDs from samplesheet don't correspond with original filenames barcodes."+row['Sample_ID'] +': '+ row['Index1'] + "-" + row['Index2'] + "-" + row['Sample_ID' +" vs "+row['Index1'] + "-" + row['Index2'] + "-" + row['GS_ID']])
+                print("FATAL ERROR! Check if barcodes are uniq within project, or GS sampleIDs from samplesheet don't correspond with original filenames barcodes." + row['Sample_ID'] + ': ' + row['Index1'] + "-" + row['Index2'] + "-" + row['Sample_ID' + " vs " + row['Index1'] + "-" + row['Index2'] + "-" + row['GS_ID']])
                 logger.write("FATAL ERROR! Check if barcodes are uniq within project: " + row['Sample_ID'])
                 sys.exit('FATAL ERROR! Check if barcodes are uniq within projects: ' + args.logfile)
 f.close()
@@ -220,19 +220,19 @@ for project in (uniq_projects):
 
         if __name__ == '__main__':
                 if os.path.isfile(args.samplesheetNewDir+project+'.csv') and os.access(args.samplesheetNewDir+project+'.csv', os.R_OK):
-                        print("File "+args.samplesheetNewDir+project+'.csv'+ " exists and is readable.")
+                        print("File "+args.samplesheetNewDir+project+'.csv' + " exists and is readable.")
                 else:
                         print("Either file "+args.samplesheetNewDir+project+'.csv'+" is missing or is not readable.")
                         sys.exit('FATAL ERROR! Check: ' + args.logfile)
 
                 if (project_counts[project] == (len(open(args.samplesheetNewDir+project+'.csv').readlines())-1)):
-                        logger.write("Number of samples in GS samplesheet ("+str(project_counts[project])+ ") is the same in inhouse samplesheet: " + str(len(open(args.samplesheetNewDir+project+'.csv').readlines())-1)+" for project: "+ project+".\n")
+                        logger.write("Number of samples in GS samplesheet (" + str(project_counts[project]) + ") is the same in inhouse samplesheet: " + str(len(open(args.samplesheetNewDir+project+'.csv').readlines())-1) + " for project: " + project + ".\n")
                 else:
-                        logger.write("FATAL: Number ("+str(project_counts[project])+ ") of samples in GS samplesheet project: "+project+" are NOT the same as in inhouse Project:" + str(project_counts[project])+".\n")
+                        logger.write("FATAL: Number (" + str(project_counts[project]) + ") of samples in GS samplesheet project: " + project + " are NOT the same as in inhouse Project: " + str(project_counts[project]) + ".\n")
                         sys.exit('FATAL ERROR! Check: ' + args.logfile)
 
-        logger.write('GS samplesheet name: '+ project+'.csv' + "\n")
-        projectSamplesheetPath=args.samplesheetNewDir+project+'.csv'
+        logger.write('GS samplesheet name: ' + project + '.csv' + "\n")
+        projectSamplesheetPath=args.samplesheetNewDir + project + '.csv'
 
         #print new Samplesheet.
         printNewSamplesheet(projectSamplesheetPath, GSSamplesheetDataHashmap, args.samplesheetOutputDir)
@@ -240,8 +240,3 @@ for project in (uniq_projects):
 print("\nSamplesheet merging DONE.\n")
 logger.write("\nSamplesheet merging DONE.\n")
 logger.close()
-
-
-
-
-
