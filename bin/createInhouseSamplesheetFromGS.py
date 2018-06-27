@@ -138,7 +138,7 @@ def makeOriginalFilenameHashmap(md5file):
 #
 
 #get commandline parameters
-parser = argparse.ArgumentParser(description='Process some integers.')
+parser = argparse.ArgumentParser(description='Commandline parameters:')
 parser.add_argument("--GenomeScanInputDir")
 parser.add_argument("--samplesheetOutputDir")
 parser.add_argument("--samplesheetNewDir")
