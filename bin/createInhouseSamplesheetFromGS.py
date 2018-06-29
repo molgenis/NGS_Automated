@@ -19,6 +19,8 @@ def printNewSamplesheet(projectSamplesheetPath, GSSamplesheetDataHashmap, sample
         # Do the combining of GS samplesheet data with inhouse samplesheets
         with open(projectSamplesheetPath, 'r') as f1:
                 # next(f1, None)  # skip the headers
+
+
                 reader = csv.DictReader(f1)
                 headers = reader.fieldnames
 
@@ -119,7 +121,7 @@ def makeOriginalFilenameHashmap(md5file):
         originalFileNameDict = defaultdict(dict)
 
         # Parse original fileNames, and combine with sequence run dir.
-        # Example: HWCKVBBXX_103373-011-004_GGACTCCT-ATAGAGAG_L001_R1.fastq.gz
+        # Example:GDSGS#@AFA@!@  HWCKVBBXX_103373-011-004_GGACTCCT-ATAGAGAG_L001_R1.fastq.gz
         for line in md5file:
 
                 if re.match("^([a-z0-9]+).+?([a-zA-Z0-9]{9})_([0-9-]+)_([ATGCN]+-[ATGCN]+)_L00([0-9]{1}).+R1.fastq.gz$",line):
@@ -203,6 +205,10 @@ GSSamplesheetDataHashmap = defaultdict(dict)
 projects = []
 
 #Combine GS samplesheet with original filename information form GSFilenameDataHashmap.
+# GS samplesheet filestructure
+#          GS_ID,         Sample_ID, Pool,   Index1,   Index2
+# 103473-011-001, QXTR_222-Exoom_v1,    1, CGAGGCTG, AGGCTTAG
+
 for row in GSReader:
         # 'Sample_ID' collumn contains the projectName
         if row['Sample_ID'] in (None,""):
