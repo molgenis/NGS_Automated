@@ -134,10 +134,10 @@ function sanityChecking() {
 		local _countFilesSamplesheet=$(tail -n +2 ${TMP_ROOT_DIR}/${_run}/CSV_UMCG_*.csv | wc -l)
 		local _countFastQFiles=$(ls ${TMP_ROOT_DIR}/${_run}/*_R1.fastq.gz | wc -l)
 		if [[ ${_countFilesSamplesheet} -ne ${_countFastQFiles} ]]; then
-			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_run} on scr (${_countFilesSamplesheet}) and prm (${_countFastQFiles}) is NOT the same!" \
+			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_run} on GS samplsheet (${_countFilesSamplesheet}) and files (${_countFastQFiles}) is NOT the same!" \
 				>> "${_controlFileBase}.failed"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
-				"Amount of files for ${_run} on tmp (${_countFilesSamplesheet}) and prm (${_countFastQFiles}) is NOT the same!"
+				"Amount of files for ${_run} on GS samplsheet (${_countFilesSamplesheet}) and files (${_countFastQFiles}) is NOT the same!"
 			_checksumVerification='FAILED'
 		elif [ ! -e "${_controlFileBase}.md5.PASS" ]
 		then
@@ -274,9 +274,14 @@ function sanityChecking() {
 			return
 		fi
 		done
+		touch "${_controlFileBase}.sanityChecking.finished"
+	else 
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "_checksumVerification = ${_checksumVerification}"
+		echo "_checksumVerification = ${_checksumVerification} for run ${_run}" > "${_controlFileBase}.failed"
+		return
 	fi
 
-touch "${_controlFileBase}.sanityChecking.finished"
+
 }
 
 function renameFastQs() {
@@ -293,7 +298,7 @@ then
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.renameFastQs.finished is there, nothing to do here."
 	return
 else
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.sanityChecking.finished not present. continue"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.renameFastQs.finished not present. continue"
 fi
 
 if [[ -e "${_controlFileBase}.sanityChecking.finished" && "${_controlFileBase}.sequencingStartDate" ]]
