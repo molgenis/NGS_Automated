@@ -55,11 +55,11 @@ function sanityChecking() {
 	local _logFile="${_controlFileBase}.log"
 	
 	#
-	# Determine if samplesheet merging is possible for this run, which is the case when
+	# Determine if samplesheet merging is possible for this sequence run, which is the case when
 	#  1. The data transfer sequence run has finished successfully, and 
 	#  2. corresponding samplesheets are present in samplesheets dir.
 	#  3. samplesheets are ok.
-	#  3. checksums are ok.
+	#  4. checksums are ok.
 	
 	#
 	# Check if transfer of raw data has finished.
@@ -358,6 +358,7 @@ function mergeSamplesheetPerProject() {
 	local _controlFileBase="${TMP_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}"
 	local _controlFileFinished="${_controlFileBase}.mergeSamplesheetPerProject.finished"
 	local _logFile="${_controlFileBase}.log"
+	local _processSoFarSoGood='false'
 	
 	if [[ -e "${_controlFileFinished}" ]]
 	then
@@ -369,26 +370,20 @@ function mergeSamplesheetPerProject() {
 		touch "${_controlFileBase}.mergeSamplesheetPerProject.failed"
 	else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${_controlFileFinished} present -> Merge samplesheets for ${_run}..."
+		_processSoFarSoGood='true'
+		
 	fi
 	
 
 #
 # combine GS samplesheet with inhouse samplesheets.
-
 python NGS_Automated/bin/createInhouseSamplesheetFromGS.py \
 --GenomeScanInputDir "${TMP_ROOT_DIR}/${_run}/" \
 --logfile "${_controlFileBase}.log" \
 --samplesheetNewDir "${TMP_ROOT_DIR}/Samplesheets/new/" \
 --samplesheetOutputDir "${TMP_ROOT_DIR}/Samplesheets/"
 
-if [ ${?} -eq 0 ]
-then
-	touch "${_controlFileFinished}"
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Merge samplesheets ${_run} finished."
-else
-	touch "${_controlFileBase}.mergeSamplesheetPerProject.failed"
-	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '0' "Merge samplesheets ${_run} failed."
-fi
+
 
 	
 	declare -a _sampleSheetColumnNames=()
@@ -426,14 +421,37 @@ fi
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " GS run samplesheet can found in: ${TMP_ROOT_DIR}/${_run}/${_runDir}/${_runDir}.csv"
 	cd -
 	
-	# Overwrite any previously created *.failed file if present,
-	# then move the *.failed file to *.finished.
-	# (Note: the content of *.finished will get inserted in the body of email notification messages,
-	# when enabled in <group>.cfg for use by notifications.sh)
-	echo "OK! $(date '+%Y-%m-%d-T%H%M'): Samplesheets ${_run} merged." \
-	>>    "${_controlFileBase}.failed" \
-	&& mv "${_controlFileBase}."{failed,finished}
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Merging samplesheets succeeded.'
+	if [ ${?} -eq 0 ]
+	then
+		touch "${_controlFileFinished}"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Merge samplesheets ${_run} finished."
+		_processSoFarSoGood='true'
+		touch "${TMP_ROOT_DIR}/logs/${_runDir}_Demultiplexing.started"
+	else
+		touch "${_controlFileBase}.mergeSamplesheetPerProject.failed"
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '0' "Merge samplesheets ${_run} failed."
+		return
+	fi
+		
+	if [ "${_processSoFarSoGood}" == 'true' ]
+	then
+		
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Moving  ${_run}/${_runDir} to: ${TMP_ROOT_DIR}/rawdata/ngs/"
+		mv "${TMP_ROOT_DIR}/${_run}/${_runDir}" "${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}"
+		echo "OK! $(date '+%Y-%m-%d-T%H%M'): Samplesheets ${_runDir} merged." \
+		>>    "${TMP_ROOT_DIR}/logs/${_runDir}_Demultiplexing.started" \
+		&& mv "${TMP_ROOT_DIR}/logs/${_runDir}_Demultiplexing."{started,finished}
+		
+	
+		# Overwrite any previously created *.failed file if present,
+		# then move the *.failed file to *.finished.
+		# (Note: the content of *.finished will get inserted in the body of email notification messages,
+		# when enabled in <group>.cfg for use by notifications.sh)
+		echo "OK! $(date '+%Y-%m-%d-T%H%M'): Samplesheets ${_run} merged." \
+		>>    "${_controlFileBase}.failed" \
+		&& mv "${_controlFileBase}."{failed,finished}
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Merging samplesheets succeeded.'
+	fi
 }
 
 function showHelp() {
