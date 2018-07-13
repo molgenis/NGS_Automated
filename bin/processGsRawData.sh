@@ -275,7 +275,7 @@ function sanityChecking() {
 		touch "${_controlFileBase}.sanityChecking.finished"
 	else 
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "_checksumVerification = ${_checksumVerification}"
-		echo "_checksumVerification = ${_checksumVerification} for run ${_run}" > "${_controlFileBase}.failed"
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0'  "_checksumVerification = ${_checksumVerification} for run ${_run}" > "${_controlFileBase}.failed"
 		return
 	fi
 
@@ -288,34 +288,34 @@ function renameFastQs() {
 	local _logFile="${_controlFileBase}.log"
 	local _runPrefix="${TMP_ROOT_DIR}/${_run}/"
 
-if [[ -e "${_controlFileBase}.renameFastQs.finished" ]]
-then
-	#
-	# If previous sanityChecking was ok, skip
-	# 
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.renameFastQs.finished is there, nothing to do here."
-	return
-else
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.renameFastQs.finished not present. continue"
-fi
+	if [[ -e "${_controlFileBase}.renameFastQs.finished" ]]
+	then
+		#
+		# If previous sanityChecking was ok, skip
+		# 
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.renameFastQs.finished is there, nothing to do here."
+		return
+	else
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.renameFastQs.finished not present. continue"
+	fi
 
-if [[ -e "${_controlFileBase}.sanityChecking.finished" && "${_controlFileBase}.sequencingStartDate" ]]
-then
-	#
-	# If previous sanityChecking was ok, skip
-	# 
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.sanityChecking.finished is there, ready for samplename renaming."
-	IFS=$'\n' _sequencingStartDate=($( cat "${_controlFileBase}.sequencingStartDate" | sort | uniq ))
-else
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.sanityChecking.finished not present. return..."
-	return
-fi
+	if [[ -e "${_controlFileBase}.sanityChecking.finished" && "${_controlFileBase}.sequencingStartDate" ]]
+	then
+		#
+		# If previous sanityChecking was ok, skip
+		# 
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.sanityChecking.finished is there, ready for samplename renaming."
+		IFS=$'\n' _sequencingStartDate=($( cat "${_controlFileBase}.sequencingStartDate" | sort | uniq ))
+	else
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.sanityChecking.finished not present. return..."
+		return
+	fi
 
-echo "_sequencingStartDate: ${_sequencingStartDate}"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "_sequencingStartDate: ${_sequencingStartDate}"
 
-cd "${_runPrefix}"
-local _firstFastQ=$(ls -1 *.fastq.gz | head -1)
-	echo "DEBUG:    Found _firstFastQ ............ = ${_firstFastQ}"
+	cd "${_runPrefix}"
+	local _firstFastQ=$(ls -1 *.fastq.gz | head -1)
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "DEBUG:    Found _firstFastQ ............ = ${_firstFastQ}"
 
 	local _regex='^([A-Z0-9]+)_(103373-009)(.+).fastq.gz'
 
@@ -324,28 +324,28 @@ local _firstFastQ=$(ls -1 *.fastq.gz | head -1)
 		local _flowcell="${BASH_REMATCH[1]}"
 		local _runID="${BASH_REMATCH[2]}"
 
-		echo "DEBUG:    Found _flowcell ............... = ${_flowcell}"
-		echo "DEBUG:    Found _runID .................. = ${_runID}"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "DEBUG:    Found _flowcell ............... = ${_flowcell}"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "DEBUG:    Found _runID .................. = ${_runID}"
 	else
-		echo "FATAL: Failed to parse required meta-data values from ID of first read of ${_runPrefix}/${_firstFastQ}"
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '0'  "FATAL: Failed to parse required meta-data values from ID of first read of ${_runPrefix}/${_firstFastQ}"
 		exit 1
 	fi
 
-module load ngs-utils/"${NGS_UTILS_VERSION}"
-module list
+	module load ngs-utils/"${NGS_UTILS_VERSION}"
+	module list
 
-cd "${_runPrefix}"
+	cd "${_runPrefix}"
 
-renameFastQs.bash -s "${_sequencingStartDate}" -f "${_flowcell}_${_runID}"'*'
+	renameFastQs.bash -s "${_sequencingStartDate}" -f "${_flowcell}_${_runID}"'*'
 
-if [ ${?} -eq 0 ]
-then
-	touch "${_controlFileBase}.renameFastQs.finished"
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "renameFastQs finished."
-else
-	touch "${_controlFileBase}.renameFastQs.failed"
-	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '0' "renameFastQs failed."
-fi
+	if [ ${?} -eq 0 ]
+	then
+		touch "${_controlFileBase}.renameFastQs.finished"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "renameFastQs finished."
+	else
+		touch "${_controlFileBase}.renameFastQs.failed"
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '0' "renameFastQs failed."
+	fi
 
 }
 
@@ -373,13 +373,13 @@ function mergeSamplesheetPerProject() {
 	fi
 	
 
-#
-# combine GS samplesheet with inhouse samplesheets.
-python NGS_Automated/bin/createInhouseSamplesheetFromGS.py \
---GenomeScanInputDir "${TMP_ROOT_DIR}/${_run}/" \
---logfile "${_controlFileBase}.log" \
---samplesheetNewDir "${TMP_ROOT_DIR}/Samplesheets/new/" \
---samplesheetOutputDir "${TMP_ROOT_DIR}/Samplesheets/"
+	#
+	# combine GS samplesheet with inhouse samplesheets.
+	python createInhouseSamplesheetFromGS.py \
+	--GenomeScanInputDir "${TMP_ROOT_DIR}/${_run}/" \
+	--logfile "${_controlFileBase}.log" \
+	--samplesheetNewDir "${TMP_ROOT_DIR}/Samplesheets/new/" \
+	--samplesheetOutputDir "${TMP_ROOT_DIR}/Samplesheets/"
 
 
 	declare -a _sampleSheetColumnNames=()
@@ -387,9 +387,9 @@ python NGS_Automated/bin/createInhouseSamplesheetFromGS.py \
 	local      _projectFieldIndex
 	declare -a _projects=()
 	
-	cd "${TMP_ROOT_DIR}/${_run}/" 
-	local _runDir=$(find * -type d | grep -P '[0-9]*_[A_Za-z0-9]*_*[0-9]*')
-	cd -
+	 
+	local _runDir=$(cd "${TMP_ROOT_DIR}/${_run}/" && find * -type d | grep -P '[0-9]*_[A_Za-z0-9]*_*[0-9]*')
+
 	_gsSamplesheet=$(ls ${TMP_ROOT_DIR}/${_run}/CSV_UMCG_*.csv)
 	IFS="${SAMPLESHEET_SEP}" _sampleSheetColumnNames=($(head -1 "${_gsSamplesheet}"))
 	for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]:-0} ; _offset++ ))
@@ -530,7 +530,7 @@ then
 fi
 if [[ -z "${sourceServerFQDN:-}" ]]
 then
-log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a Fully Qualified Domain Name (FQDN) for sourceServer with -s.'
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a Fully Qualified Domain Name (FQDN) for sourceServer with -s.'
 fi
 
 
@@ -587,7 +587,6 @@ fi
 lockFile="${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
 thereShallBeOnlyOne "${lockFile}"
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile}..."
-#log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${TMP_ROOT_DIR}/logs..."
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${TMP_ROOT_DIR}/logs..."
 
 #
@@ -615,7 +614,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 
 declare -a runDirs=($(find "${TMP_ROOT_DIR}" -maxdepth 1 -mindepth 1 -type d -name "[0-9]*-[0-9]*"))
 
-echo "${runDirs[@]}"
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${runDirs[@]}"
 
 if [[ "${#runDirs[@]:-0}" -eq '0' ]]
 then
