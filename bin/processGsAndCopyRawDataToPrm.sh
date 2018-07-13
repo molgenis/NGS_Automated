@@ -79,8 +79,7 @@ function sanityChecking() {
 	if [[ -e "${_controlFileBase}.finished" ]]
 	then
 		#
-		# and check if *_processGsDataForPrm.finished is newer than *.processGsDataForPrm,
-		# which indicates the run was re-demultiplexed and converted to FastQ files.
+		# Check in script was finished before, which indicates the sequence run was already renamed and samplesheets merged.
 		#
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.finished is there, data conversion and samplesheet merging ready done."
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}."
@@ -101,7 +100,7 @@ function sanityChecking() {
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sanityChecking ${_run}. OK"
 		return
 	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.sanityChecking.ok not present. Continu..."
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.sanityChecking.ok not present. Continue..."
 	fi
 	
 	#check if GS samplesheet is present
@@ -125,16 +124,15 @@ function sanityChecking() {
 	#
 	# Sanity checking for _run.
 	#
-	#  1. check presents samplesheet and md5sum files
 	#     (No need to waist a lot of time on computing checksums for a partially failed transfer).
-	#  2. count files presents and describle files
+	#  1. Count fastq files presents and compair with number if samples in samplesheet.
 	#  2. Secondly verify checksums on the destination.
 	#
 	if [[ "${_transferSoFarSoGood}" == 'true' ]];then
 		local _countFilesSamplesheet=$(tail -n +2 ${TMP_ROOT_DIR}/${_run}/CSV_UMCG_*.csv | wc -l)
 		local _countFastQFiles=$(ls ${TMP_ROOT_DIR}/${_run}/*_R1.fastq.gz | wc -l)
 		if [[ ${_countFilesSamplesheet} -ne ${_countFastQFiles} ]]; then
-			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_run} on GS samplsheet (${_countFilesSamplesheet}) and files (${_countFastQFiles}) is NOT the same!" \
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_run} on GS samplsheet (${_countFilesSamplesheet}) and files (${_countFastQFiles}) is NOT the same!" \
 				>> "${_controlFileBase}.failed"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
 				"Amount of files for ${_run} on GS samplsheet (${_countFilesSamplesheet}) and files (${_countFastQFiles}) is NOT the same!"
@@ -166,7 +164,7 @@ function sanityChecking() {
 		fi
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "_checksumVerification = ${_checksumVerification}"
 		if [[ "${_checksumVerification}" == 'FAILED' ]]; then
-			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${_controlFileBase}.md5.log for details." \
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${_controlFileBase}.md5.log for details." \
 				>> "${_controlFileBase}.failed"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Checksum verification failed. See ${_controlFileBase}.md5.log for details."
 		elif [[ "${_checksumVerification}" == 'PASS' || "${_controlFileBase}.md5.PASS" ]]; then
@@ -182,7 +180,7 @@ function sanityChecking() {
 			then
 				cat "${_controlFileBase}.log" >> "${_controlFileBase}.failed"
 			fi
-			echo "OK! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${_controlFileBase}.md5.log for details." \
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "OK! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${_controlFileBase}.md5.log for details." \
 				>>    "${_controlFileBase}.sanityChecking.failed" \
 				&& mv "${_controlFileBase}.sanityChecking."{failed,finished}
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
