@@ -382,8 +382,6 @@ python NGS_Automated/bin/createInhouseSamplesheetFromGS.py \
 --samplesheetOutputDir "${TMP_ROOT_DIR}/Samplesheets/"
 
 
-
-	
 	declare -a _sampleSheetColumnNames=()
 	declare -A _sampleSheetColumnOffsets=()
 	local      _projectFieldIndex
@@ -408,7 +406,7 @@ python NGS_Automated/bin/createInhouseSamplesheetFromGS.py \
 	cd "${TMP_ROOT_DIR}/Samplesheets/"
 	for _project in "${_projects[@]}"
 	do
-		if [ $flag -eq 0 ]
+		if [ "$flag" -eq 0 ]
 		then
 			cat "${_project}.csv" > "${TMP_ROOT_DIR}/${_run}/${_runDir}/${_runDir}.csv"
 			flag=1
@@ -431,7 +429,7 @@ python NGS_Automated/bin/createInhouseSamplesheetFromGS.py \
 		return
 	fi
 		
-	if [ "${_processSoFarSoGood}" == 'true' ]
+	if [[ "${_processSoFarSoGood}" == 'true' ]]
 	then
 		
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Moving  ${_run}/${_runDir} to: ${TMP_ROOT_DIR}/rawdata/ngs/"
