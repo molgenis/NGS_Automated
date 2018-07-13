@@ -313,8 +313,7 @@ function renameFastQs() {
 
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "_sequencingStartDate: ${_sequencingStartDate}"
 
-	cd "${_runPrefix}"
-	local _firstFastQ=$(ls -1 *.fastq.gz | head -1)
+	local _firstFastQ=$(cd "${_runPrefix}" && ls -1 *.fastq.gz | head -1)
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "DEBUG:    Found _firstFastQ ............ = ${_firstFastQ}"
 
 	local _regex='^([A-Z0-9]+)_(103373-009)(.+).fastq.gz'
@@ -334,9 +333,8 @@ function renameFastQs() {
 	module load ngs-utils/"${NGS_UTILS_VERSION}"
 	module list
 
-	cd "${_runPrefix}"
-
-	renameFastQs.bash -s "${_sequencingStartDate}" -f "${_flowcell}_${_runID}"'*'
+	
+	renameFastQs.bash -s "${_sequencingStartDate}" -f "${_runPrefix}/${_flowcell}_${_runID}"'*'
 
 	if [ ${?} -eq 0 ]
 	then
@@ -397,7 +395,8 @@ function mergeSamplesheetPerProject() {
 		_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
 	done
 	_projectFieldIndex=$((${_sampleSheetColumnOffsets['Sample_ID']} + 1))
-	IFS=$'\n' _projects=($(tail -n +2 "${_gsSamplesheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_projectFieldIndex}" | sort | uniq ))
+	
+		IFS=$'\n' _projects=($(tail -n +2 "${_gsSamplesheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_projectFieldIndex}" | sort | uniq ))
 	
 	#
 	# Cat samplesheets projects to _runDir.csv.
@@ -405,7 +404,7 @@ function mergeSamplesheetPerProject() {
 	flag=0
 	for _project in "${_projects[@]}"
 	do
-		if [ "$flag" -eq 0 ]
+		if [ "${flag}" -eq 0 ]
 		then
 			cp "${TMP_ROOT_DIR}/Samplesheets/${_project}.csv" "${TMP_ROOT_DIR}/${_run}/${_runDir}/${_runDir}.csv"
 			flag=1
