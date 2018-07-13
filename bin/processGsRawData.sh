@@ -403,19 +403,18 @@ function mergeSamplesheetPerProject() {
 	# Cat samplesheets projects to _runDir.csv.
 	#
 	flag=0
-	cd "${TMP_ROOT_DIR}/Samplesheets/"
 	for _project in "${_projects[@]}"
 	do
 		if [ "$flag" -eq 0 ]
 		then
-			cat "${_project}.csv" > "${TMP_ROOT_DIR}/${_run}/${_runDir}/${_runDir}.csv"
+			cp "${TMP_ROOT_DIR}/Samplesheets/${_project}.csv" "${TMP_ROOT_DIR}/${_run}/${_runDir}/${_runDir}.csv"
 			flag=1
 		else
-			tail -n +2 "${_project}.csv" >> "${TMP_ROOT_DIR}/${_run}/${_runDir}/${_runDir}.csv"
+			tail -n +2 "${TMP_ROOT_DIR}/Samplesheets/${_project}.csv" >> "${TMP_ROOT_DIR}/${_run}/${_runDir}/${_runDir}.csv"
 		fi
 	done
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " GS run samplesheet can found in: ${TMP_ROOT_DIR}/${_run}/${_runDir}/${_runDir}.csv"
-	cd -
+
 	
 	if [ ${?} -eq 0 ]
 	then
