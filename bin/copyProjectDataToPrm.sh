@@ -197,7 +197,7 @@ function rsyncProjectRun() {
 	#
 	local _transferSoFarSoGood='true'
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run} dir..."
-	rsync -av --chmod=Dg-w,g+rsX,o-rwx,Fg-wsx,g+r,o-rwx ${dryrun:-} \
+	rsync -av --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
 		"${TMP_ROOT_DIR}/projects/${_project}/${_run}" \
 		"${DATA_MANAGER}@${HOSTNAME_PRM}:${PRM_ROOT_DIR}/projects/${_project}/" \
 		>> "${_logFile}" 2>&1 \
@@ -210,7 +210,7 @@ function rsyncProjectRun() {
 		}
 	
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run}.md5 checksums..."
-	rsync -acv --chmod=Dg-w,g+rsX,o-rwx,Fg-wsx,g+r,o-rwx ${dryrun:-} \
+	rsync -acv --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
 		"${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5" \
 		"${DATA_MANAGER}@${HOSTNAME_PRM}:${PRM_ROOT_DIR}/projects/${_project}/" \
 		>> "${_logFile}" 2>&1 \
