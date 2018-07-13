@@ -134,7 +134,7 @@ function rsyncDemultiplexedRuns() {
 	#
 	local _transferSoFarSoGood='true'
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_run} dir..."
-	rsync -av --chmod=Dg-w,g+rsX,o-rwx,Fg-wsx,g+r,o-rwx ${dryrun:-} \
+	rsync -av --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
 		"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/runs/${_run}/results/*" \
 		"${PRM_ROOT_DIR}/rawdata/ngs/${_run}/" \
 		>> "${_logFile}" 2>&1 \
@@ -144,7 +144,7 @@ function rsyncDemultiplexedRuns() {
 			>> "${_controlFileBase}.failed"
 		_transferSoFarSoGood='false'
 	}
-	rsync -acv --chmod=Dg-w,g+rsX,o-rwx,Fg-wsx,g+r,o-rwx ${dryrun:-} \
+	rsync -acv --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
 		"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/runs/${_run}/results/*.md5" \
 		"${PRM_ROOT_DIR}/rawdata/ngs/${_run}/" \
 		>> "${_logFile}" 2>&1 \
@@ -158,7 +158,7 @@ function rsyncDemultiplexedRuns() {
 	#
 	# Rsync samplesheet to prm samplesheets folder.
 	#
-	rsync -av --chmod=Dg-w,g+rsX,o-rwx,Fg-wsx,g+r,o-rwx ${dryrun:-} \
+	rsync -av --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
 		"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}" \
 		"${PRM_ROOT_DIR}/Samplesheets/archive/" \
 		>> "${_logFile}" 2>&1 \
