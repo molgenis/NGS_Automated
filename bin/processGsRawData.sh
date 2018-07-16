@@ -362,12 +362,12 @@ function mergeSamplesheetPerProject() {
 		return
 	elif [[ ! -e "${_controlFileBase}.sanityChecking.finished" || ! -e "${_controlFileBase}.renameFastQs.finished" ]]
 	then
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '0' "Not Found ${_controlFileBase}.sanityChecking.finished or ${_controlFileBase}.renameFastQs.finished"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Not Found ${_controlFileBase}.sanityChecking.finished or ${_controlFileBase}.renameFastQs.finished"
 		touch "${_controlFileBase}.mergeSamplesheetPerProject.failed"
+		return
 	else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${_controlFileFinished} present -> Merge samplesheets for ${_run}..."
 		_processSoFarSoGood='true'
-		
 	fi
 	
 
@@ -541,6 +541,7 @@ declare -a configFiles=(
 	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
 	"${CFG_DIR}/${sourceServer}.cfg"
 	"${CFG_DIR}/sharedConfig.cfg"
+	"${CFG_DIR}/${group}.cfg"
 	"${HOME}/molgenis.cfg"
 )
 for configFile in "${configFiles[@]}"
@@ -610,7 +611,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 
 
-declare -a runDirs=($(find "${TMP_ROOT_DIR}" -maxdepth 1 -mindepth 1 -type d -name "[0-9]*-[0-9]*"))
+declare -a runDirs=($(find "${TMP_ROOT_DIR}/" -maxdepth 1 -mindepth 1 -type d -name "[0-9]*-[0-9]*"))
 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${runDirs[@]}"
 
