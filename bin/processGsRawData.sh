@@ -410,6 +410,8 @@ function mergeSamplesheetPerProject() {
 		else
 			tail -n +2 "${TMP_ROOT_DIR}/Samplesheets/${_project}.csv" >> "${TMP_ROOT_DIR}/${_run}/${_runDir}/${_runDir}.csv"
 		fi
+		#cleanup samplesheets
+		mv "${TMP_ROOT_DIR}/Samplesheets/${_project}.csv" "${TMP_ROOT_DIR}/Samplesheets/archive/"
 	done
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " GS run samplesheet can found in: ${TMP_ROOT_DIR}/${_run}/${_runDir}/${_runDir}.csv"
 
@@ -429,11 +431,15 @@ function mergeSamplesheetPerProject() {
 	if [[ "${_processSoFarSoGood}" == 'true' ]]
 	then
 		
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Moving  ${_run}/${_runDir} to: ${TMP_ROOT_DIR}/rawdata/ngs/"
-		mv "${TMP_ROOT_DIR}/${_run}/${_runDir}" "${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}"
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Moving  ${_run}/${_runDir} to: ${TMP_ROOT_DIR}/runs/${_runDir}/results"
+		mkdir -p "${TMP_ROOT_DIR}/runs/${_runDir}/results"
+		mv "${TMP_ROOT_DIR}/${_run}/${_runDir}/*" "${TMP_ROOT_DIR}/runs/${_runDir}/results/"
+		cp "${TMP_ROOT_DIR}/${_run}/${_runDir}/${_runDir}.csv" "${TMP_ROOT_DIR}/Samplesheets/"
 		echo "OK! $(date '+%Y-%m-%d-T%H%M'): Samplesheets ${_runDir} merged." \
 		>>    "${TMP_ROOT_DIR}/logs/${_runDir}_Demultiplexing.started" \
 		&& mv "${TMP_ROOT_DIR}/logs/${_runDir}_Demultiplexing."{started,finished}
+		
+		
 		
 	
 		# Overwrite any previously created *.failed file if present,
