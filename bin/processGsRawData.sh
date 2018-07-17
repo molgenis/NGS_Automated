@@ -275,7 +275,7 @@ function sanityChecking() {
 		touch "${_controlFileBase}.sanityChecking.finished"
 	else 
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "_checksumVerification = ${_checksumVerification}"
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0'  "_checksumVerification = ${_checksumVerification} for run ${_run}" > "${_controlFileBase}.failed"
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "_checksumVerification = ${_checksumVerification} for run ${_run}" > "${_controlFileBase}.failed"
 		return
 	fi
 
@@ -316,7 +316,7 @@ function renameFastQs() {
 	local _firstFastQ=$(cd "${_runPrefix}" && ls -1 *.fastq.gz | head -1)
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "DEBUG:    Found _firstFastQ ............ = ${_firstFastQ}"
 
-	local _regex='^([A-Z0-9]+)_(103373-009)(.+).fastq.gz'
+	local _regex='^([A-Z0-9]+)_(103373-[0-9]{3})(.+).fastq.gz'
 
 	if [[ "${_firstFastQ}" =~ ${_regex} ]]
 	then
@@ -332,7 +332,6 @@ function renameFastQs() {
 
 	module load ngs-utils/"${NGS_UTILS_VERSION}"
 	module list
-
 	
 	renameFastQs.bash -s "${_sequencingStartDate}" -f "${_runPrefix}/${_flowcell}_${_runID}"'*'
 
@@ -373,7 +372,7 @@ function mergeSamplesheetPerProject() {
 
 	#
 	# combine GS samplesheet with inhouse samplesheets.
-	python createInhouseSamplesheetFromGS.py \
+	createInhouseSamplesheetFromGS.py \
 	--GenomeScanInputDir "${TMP_ROOT_DIR}/${_run}/" \
 	--logfile "${_controlFileBase}.log" \
 	--samplesheetNewDir "${TMP_ROOT_DIR}/Samplesheets/new/" \
