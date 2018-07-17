@@ -433,7 +433,7 @@ function mergeSamplesheetPerProject() {
 		
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Moving  ${_run}/${_runDir} to: ${TMP_ROOT_DIR}/runs/${_runDir}/results"
 		mkdir -p "${TMP_ROOT_DIR}/runs/${_runDir}/results"
-		mv "${TMP_ROOT_DIR}/${_run}/${_runDir}/*" "${TMP_ROOT_DIR}/runs/${_runDir}/results/"
+		mv "${TMP_ROOT_DIR}/${_run}/${_runDir}/"* "${TMP_ROOT_DIR}/runs/${_runDir}/results/"
 		cp "${TMP_ROOT_DIR}/${_run}/${_runDir}/${_runDir}.csv" "${TMP_ROOT_DIR}/Samplesheets/"
 		echo "OK! $(date '+%Y-%m-%d-T%H%M'): Samplesheets ${_runDir} merged." \
 		>>    "${TMP_ROOT_DIR}/logs/${_runDir}_Demultiplexing.started" \
