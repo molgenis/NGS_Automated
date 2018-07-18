@@ -550,7 +550,10 @@ declare -a configFiles=(
 )
 #
 # Extend or overwrite group variables if necessary.
-if [ -e "${CFG_DIR}/${group}-extend.cfg" ];then configFiles+=("${CFG_DIR}/${group}-extend.cfg"); fi
+if [ -e "${CFG_DIR}/${group}-extend.cfg" ]
+then
+	configFiles+=("${CFG_DIR}/${group}-extend.cfg")
+fi
 
 for configFile in "${configFiles[@]}"
 do
