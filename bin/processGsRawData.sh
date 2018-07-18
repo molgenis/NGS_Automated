@@ -410,6 +410,8 @@ function mergeSamplesheetPerProject() {
 		else
 			tail -n +2 "${TMP_ROOT_DIR}/Samplesheets/${_project}.csv" >> "${TMP_ROOT_DIR}/${_run}/${_runDir}/${_runDir}.csv"
 		fi
+		#cleanup samplesheets
+		mv "${TMP_ROOT_DIR}/Samplesheets/${_project}.csv" "${TMP_ROOT_DIR}/Samplesheets/archive/"
 	done
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " GS run samplesheet can found in: ${TMP_ROOT_DIR}/${_run}/${_runDir}/${_runDir}.csv"
 
@@ -429,13 +431,17 @@ function mergeSamplesheetPerProject() {
 	if [[ "${_processSoFarSoGood}" == 'true' ]]
 	then
 		
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Moving  ${_run}/${_runDir} to: ${TMP_ROOT_DIR}/rawdata/ngs/"
-		mv "${TMP_ROOT_DIR}/${_run}/${_runDir}" "${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}"
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Moving  ${_run}/${_runDir} to: ${TMP_ROOT_DIR}/runs/${_runDir}/results"
+		mkdir -p "${TMP_ROOT_DIR}/runs/${_runDir}/results"
+		mv "${TMP_ROOT_DIR}/${_run}/${_runDir}/"* "${TMP_ROOT_DIR}/runs/${_runDir}/results/"
+		cp "${TMP_ROOT_DIR}/${_run}/${_runDir}/${_runDir}.csv" "${TMP_ROOT_DIR}/Samplesheets/"
+		echo "Demultplex statistics not present. See external qc report." \
+		> "${TMP_ROOT_DIR}/runs/${_runDir}/results/${_runDir}.log"
 		echo "OK! $(date '+%Y-%m-%d-T%H%M'): Samplesheets ${_runDir} merged." \
 		>>    "${TMP_ROOT_DIR}/logs/${_runDir}_Demultiplexing.started" \
 		&& mv "${TMP_ROOT_DIR}/logs/${_runDir}_Demultiplexing."{started,finished}
-		
-	
+
+
 		# Overwrite any previously created *.failed file if present,
 		# then move the *.failed file to *.finished.
 		# (Note: the content of *.finished will get inserted in the body of email notification messages,
@@ -540,9 +546,15 @@ declare -a configFiles=(
 	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
 	"${CFG_DIR}/${sourceServer}.cfg"
 	"${CFG_DIR}/sharedConfig.cfg"
-	"${CFG_DIR}/${group}.cfg"
 	"${HOME}/molgenis.cfg"
 )
+#
+# Extend or overwrite group variables if necessary.
+if [ -e "${CFG_DIR}/${group}-extend.cfg" ]
+then
+	configFiles+=("${CFG_DIR}/${group}-extend.cfg")
+fi
+
 for configFile in "${configFiles[@]}"
 do
 	if [[ -f "${configFile}" && -r "${configFile}" ]]
