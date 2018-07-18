@@ -489,6 +489,10 @@ declare -a configFiles=(
 	"${CFG_DIR}/sharedConfig.cfg"
 	"${HOME}/molgenis.cfg"
 )
+#
+# Extend or overwrite group variables if necessary.
+if [ -e "${CFG_DIR}/${group}-extend.cfg" ];then configFiles+=("${CFG_DIR}/${group}-extend.cfg"); fi
+
 for configFile in "${configFiles[@]}"
 do
 	if [[ -f "${configFile}" && -r "${configFile}" ]]
