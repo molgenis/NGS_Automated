@@ -120,7 +120,7 @@ fi
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files..."
 declare -a configFiles=(
-        "${CFG_DIR}/${group}.cfg"
+        "${CFG_DIR}/${GROUP}.cfg"
         "${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
         "${CFG_DIR}/sharedConfig.cfg"
         "${HOME}/molgenis.cfg"
