@@ -167,7 +167,7 @@ do
 
         ## Check if there the run is already completed
         miSeqNameRegex='^M[0-9][0-9]*$'
-        if [[ -f ${SEQDIR}/${project}/RTAComplete.txt ]] && [[ "${sequencer}" =~ ${miSeqNameRegex} ]]
+        if [[ -f "${SEQDIR}/${project}/RTAComplete.txt" ]] && [[ "${sequencer}" =~ ${miSeqNameRegex} ]]
         then
                 miSeqCompleted="yes"
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Miseq run detected: miSeqCompleted=yes for ${project}."
@@ -178,7 +178,7 @@ do
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Runstatus compleet: ${project}."
 		##Check if it is a GAF or GD run
-		if [ ! -f "${ROOTDIR}/${GROUP}/${SCR_LFS}/Samplesheets/${project}.csv" ]
+		if [ ! -f "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" ]
 		then
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheet for ${project}: continue."
 			continue
@@ -231,7 +231,7 @@ do
 
 				### Generating scripts
                                 echo "Generated scripts" >> "${pipelineLogger}"
-                                sh generate_template.sh "${project}" "${SCR_ROOT_DIR}" "${GROUP}" 2>&1 >> "${pipelineLogger}"
+                                bash generate_template.sh "${project}" "${SCR_ROOT_DIR}" "${GROUP}" 2>&1 >> "${pipelineLogger}"
 
 				check=$(tail -1 "${pipelineLogger}")
 				if [[ "${check}" == *"WRONG"* ]]
@@ -247,7 +247,7 @@ do
                                 echo "cd ${SCR_ROOT_DIR}/runs/${project}/jobs" >> "${pipelineLogger}"
                                 cd "${SCR_ROOT_DIR}/runs/${project}/jobs"
 
-				sh submit.sh
+				bash submit.sh
                                 echo "jobs submitted, pipeline is running" >> "${pipelineLogger}"
                                 touch "${SCR_ROOT_DIR}/logs/${project}_Demultiplexing.started"
 
