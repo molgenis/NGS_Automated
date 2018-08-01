@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import argparse
 import csv     # imports the csv module
 import sys
