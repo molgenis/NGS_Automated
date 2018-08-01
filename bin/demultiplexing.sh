@@ -151,10 +151,10 @@ then
 fi
 
 
-### Sequencer is writing to this location: $SEQDIR
+### Sequencer is writing to this location: $SEQ_DIR
 ### Looping through to see if all files
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "ls -1 -d ${SEQDIR}/*/"
-for i in $(ls -1 -d "${SEQDIR}/"*/)
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "ls -1 -d ${SEQ_DIR}/*/"
+for i in $(ls -1 -d "${SEQ_DIR}/"*/)
 do
 	pipelineLogger="${SCR_ROOT_DIR}/generatedscripts/${project}/logger.txt"
 	project=$(basename "${i}")
@@ -167,14 +167,14 @@ do
 
         ## Check if there the run is already completed
         miSeqNameRegex='^M[0-9][0-9]*$'
-        if [[ -f "${SEQDIR}/${project}/RTAComplete.txt" ]] && [[ "${sequencer}" =~ ${miSeqNameRegex} ]]
+        if [[ -f "${SEQ_DIR}/${project}/RTAComplete.txt" ]] && [[ "${sequencer}" =~ ${miSeqNameRegex} ]]
         then
                 miSeqCompleted="yes"
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Miseq run detected: miSeqCompleted=yes for ${project}."
 
         fi
 	## Check if there the run is already completed
-	if [[ -f "${SEQDIR}/${project}/RunCompletionStatus.xml" || "${miSeqCompleted}" == "yes" ]]
+	if [[ -f "${SEQ_DIR}/${project}/RunCompletionStatus.xml" || "${miSeqCompleted}" == "yes" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Runstatus compleet: ${project}."
 		##Check if it is a GAF or GD run
