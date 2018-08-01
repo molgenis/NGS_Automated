@@ -259,10 +259,6 @@ do
 
 				curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${SCR_ROOT_DIR}/logs/${project}_uploading.csv" -FentityTypeId='status_overview' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
 
-				echo "De demultiplexing pipeline is gestart, over een aantal uren zal dit klaar zijn \
-                                en word de data automatisch naar zinc-finger gestuurd, hierna  word de pipeline gestart" | mail -s "Het demultiplexen van ${project} is gestart op (`date +%d/%m/%Y` `date +%H:%M`)" ${ONTVANGER}
-
-
 			fi
                 fi
 	fi
