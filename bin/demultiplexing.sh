@@ -158,7 +158,7 @@ for i in $(ls -1 -d "${SEQ_DIR}/"*/)
 do
 	pipelineLogger="${SCR_ROOT_DIR}/generatedscripts/${project}/logger.txt"
 	project=$(basename "${i}")
-	controlFileBase="${SCR_ROOT_DIR}/logs/${project}/${project}.generateScripts"
+	controlFileBase="${SCR_ROOT_DIR}/logs/${project}/${project}.demultiplexing"
 	logFile="${controlFileBase}.log"
 
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "working on ${project}"
@@ -186,7 +186,7 @@ do
 
 		### SETTING PATHS
 		### Check if the demultiplexing is already started
-		if [ ! -f "${SCR_ROOT_DIR}/logs/${project}_Demultiplexing.started" ]
+		if [ ! -f "${controlFileBase}.started" ]
 		then
 			python checkSampleSheet.py --input "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" --logfile "${logFile}"
 			if [ -s "${logFile}.error" ]
@@ -249,8 +249,8 @@ do
 
 				bash submit.sh
                                 echo "jobs submitted, pipeline is running" >> "${pipelineLogger}"
-                                touch "${SCR_ROOT_DIR}/logs/${project}_Demultiplexing.started"
 
+				touch "${controlFileBase}.started"
 				printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n" > "${SCR_ROOT_DIR}/logs/${project}_uploading.csv"
 				printf "${project},${GROUP},started,,," >> "${SCR_ROOT_DIR}/logs/${project}_uploading.csv"
 
