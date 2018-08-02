@@ -156,9 +156,9 @@ fi
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "ls -1 -d ${SEQ_DIR}/*/"
 for i in $(ls -1 -d "${SEQ_DIR}/"*/)
 do
-	pipelineLogger="${SCR_ROOT_DIR}/generatedscripts/${project}/logger.txt"
 	project=$(basename "${i}")
-	controlFileBase="${SCR_ROOT_DIR}/logs/${project}/${project}.demultiplexing"
+	pipelineLogger="${SCR_ROOT_DIR}/generatedscripts/${project}/logger.txt"
+	controlFileBase="${SCR_ROOT_DIR}/logs/${project}.demultiplexing"
 	logFile="${controlFileBase}.log"
 
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "working on ${project}"
@@ -188,7 +188,7 @@ do
 		### Check if the demultiplexing is already started
 		if [ ! -f "${controlFileBase}.started" ]
 		then
-			python checkSampleSheet.py --input "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" --logfile "${logFile}"
+			checkSampleSheet.py --input "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" --logfile "${logFile}"
 			if [ -s "${logFile}.error" ]
 			then
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${project} skipped."
