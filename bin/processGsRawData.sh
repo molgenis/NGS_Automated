@@ -819,17 +819,17 @@ else
 		#
 		gsBatch="$(basename "${gsBatchDir}")"
 		controlFileBase="${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}"
-		controlFileBaseScript="${controlFileBase}.${SCRIPT_NAME}"
+		export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
 		#
 		# ToDo: change location of log files back to ${TMP_ROOT_DIR} once we have a 
 		#       proper prm mount on the GD clusters and this script can run a GD cluster
 		#       instead of on a research cluster.
 		#
-		if [[ ! -e "${controlFileBaseScript}.finished" ]]
+		if [[ ! -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing batch ${gsBatch}..."
 			mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${gsBatch}/"
-			touch "${controlFileBase}.${SCRIPT_NAME}.started"
+			touch "${JOB_CONTROLE_FILE_BASE}.started"
 			#
 			# Check if transfer of raw data has finished.
 			#
@@ -858,11 +858,12 @@ else
 			if [[ -e "${controlFileBase}.processSamplesheetsAndMoveCovertedData.finished" ]]
 			then
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.processSamplesheetsAndMoveCovertedData.finished present -> processing completed for batch ${gsBatch}..."
-				mv "${controlFileBase}.${SCRIPT_NAME}."{started,finished}
+				rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
+				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Finished processing batch ${gsBatch}."
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.processSamplesheetsAndMoveCovertedData.finished absent -> processing failed for batch ${gsBatch}."
-				mv "${controlFileBase}.${SCRIPT_NAME}."{started,failed}
+				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to process batch ${gsBatch}."
 			fi
 		else
