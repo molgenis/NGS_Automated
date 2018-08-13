@@ -111,6 +111,19 @@ function log4Bash() {
 	#
 	if [ ${_log_level_prio} -ge ${l4b_log_levels['FATAL']} ]; then
 		#
+		# Create ${JOB_CONTROLE_FILE_BASE}.failed if script defined the path to a job control file.
+		#
+		if [[ -n ${JOB_CONTROLE_FILE_BASE:-} ]]
+		then
+			if [[ -f "${JOB_CONTROLE_FILE_BASE}.started" && -w "${JOB_CONTROLE_FILE_BASE}.started" ]]
+			then
+				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+			else
+				touch "${JOB_CONTROLE_FILE_BASE}.failed"
+			fi
+		fi
+		
+		#
 		# Reset trap and exit.
 		#
 		trap - EXIT

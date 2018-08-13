@@ -13,7 +13,6 @@ fi
 
 set -e # Exit if any subcommand or pipeline returns a non-zero exit status.
 set -u # Raise exception if variable is unbound. Combined with set -e will halt execution when an unbound variable is encountered.
-set -o pipefail # Fail when any command in series of piped commands failed as opposed to only when the last command failed.
 
 umask 0027
 
@@ -44,413 +43,579 @@ else
 	exit 1
 fi
 
-
 function sanityChecking() {
 	
-	local _run="${1}"
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_run}..."
+	local _batch="${1}"
+	local _controlFileBase="${2}"
+	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME}"
 	
-	#
-	local _controlFileBase="${TMP_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}"
-	local _logFile="${_controlFileBase}.log"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing batch ${_batch}..."
 	
 	#
 	# Determine if samplesheet merging is possible for this sequence run, which is the case when
-	#  1. The data transfer sequence run has finished successfully, and 
-	#  2. corresponding samplesheets are present in samplesheets dir.
-	#  3. samplesheets are ok.
-	#  4. checksums are ok.
+	#  1. Corresponding samplesheets are present in the Samplesheets dir.
+	#  2. Samplesheets are Ok.
+	#  3. Integrity of the FastQ files is Ok as determined using validation of their checksums.
 	
 	#
-	# Check if transfer of raw data has finished.
+	# Check if function previously finished successfully for this data.
 	#
-	if  [[ -e "${TMP_ROOT_DIR}/${_run}/${_run}.finished" ]]
+	if [[ -e "${_controlFileBaseForFunction}.finished" ]]
 	then
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/${_run}/${_run}.finished present."
-	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/${_run}/${_run}.finished absent."
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}."
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBaseForFunction}.finished is present -> Skipping."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${FUNCNAME} ${_batch}. OK"
 		return
+	else
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
+		touch "${_controlFileBaseForFunction}.started"
 	fi
 	
 	#
-	# Check if processGsDataForPrm script was finished before for this run.
+	# Check if one GS samplesheet is present.
 	#
-	if [[ -e "${_controlFileBase}.finished" ]]
+	local _numberOfSamplesheets=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/CSV_UMCG_"*".${SAMPLESHEET_EXT}" 2>/dev/null | wc -l)
+	local _gsSampleSheet
+	if [[ "${_numberOfSamplesheets}" -eq 1 ]]
 	then
-		#
-		# Check in script was finished before, which indicates the sequence run was already renamed and samplesheets merged.
-		#
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.finished is there, data conversion and samplesheet merging ready done."
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}."
-		return
-	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${_controlFileBase}.finished present."
-	fi
-	
-	#
-	# Check if sanityChecking was finished before for this run.
-	#
-	if [[ -e "${_controlFileBase}.sanityChecking.finished" ]]
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found: one ${TMP_ROOT_DIR}/${_batch}/CSV_UMCG_*.${SAMPLESHEET_EXT} samplesheet."
+		_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/CSV_UMCG_"*".${SAMPLESHEET_EXT}")
+	elif [[ "${_numberOfSamplesheets}" -gt 1 ]]
 	then
-		#
-		# If previous sanityChecking was ok, skip
-		# 
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.sanityChecking.ok is there, ready for samplesheet merging."
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sanityChecking ${_run}. OK"
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "More than one CSV_UMCG_*.${SAMPLESHEET_EXT} GS samplesheet present in ${TMP_ROOT_DIR}/${_batch}/." \
+			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+			&& mv "${_controlFileBaseForFunction}."{started,failed}
 		return
-	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.sanityChecking.ok not present. Continue..."
-	fi
-	
-	#check if GS samplesheet is present
-	if ls ${TMP_ROOT_DIR}/${_run}/CSV_UMCG_* > /dev/null 2>&1;then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "found: ${TMP_ROOT_DIR}/${_run}/CSV_UMCG_* "
-		_gsSamplesheet=$(ls ${TMP_ROOT_DIR}/${_run}/CSV_UMCG_*.csv)
-	else
-		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No GS samplesheet present for run ${TMP_ROOT_DIR}/${_run}/CSV_UMCG_*.csv"
-		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No GS samplesheet present for run ${_run}." >> "${_controlFileBase}.failed"
+	elif [[ "${_numberOfSamplesheets}" -lt 1 ]]
+	then
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "No GS samplesheet present in ${TMP_ROOT_DIR}/${_batch}/." \
+			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+			&& mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	fi
 	
-	#check if checksum file is present.
-	if ls "${TMP_ROOT_DIR}/${_run}/checksums.md5" > /dev/null 2>&1;then
-		_checksumfile=$(ls "${TMP_ROOT_DIR}/${_run}/checksums.md5")
+	#
+	# Check if checksum file is present.
+	#
+	local _checksumFile="${TMP_ROOT_DIR}/${_batch}/checksums.md5"
+	if [[ -e "${_checksumFile}" && -r "${_checksumFile}" ]]
+	then
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_checksumFile}."
 	else
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '0' "No checksums file present." >> "${_controlFileBase}.failed"
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${_checksumFile} file present in ${TMP_ROOT_DIR}/${_batch}/." \
+			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+			&& mv "${_controlFileBaseForFunction}."{started,failed}
 		return
-	fi	
-		local _transferSoFarSoGood='true'
-	#
-	# Sanity checking for _run.
-	#
-	#     (No need to waist a lot of time on computing checksums for a partially failed transfer).
-	#  1. Count fastq files presents and compair with number if samples in samplesheet.
-	#  2. Secondly verify checksums on the destination.
-	#
-	if [[ "${_transferSoFarSoGood}" == 'true' ]];then
-		local _countFilesSamplesheet=$(tail -n +2 ${TMP_ROOT_DIR}/${_run}/CSV_UMCG_*.csv | wc -l)
-		local _countFastQFiles=$(ls ${TMP_ROOT_DIR}/${_run}/*_R1.fastq.gz | wc -l)
-		if [[ ${_countFilesSamplesheet} -ne ${_countFastQFiles} ]]; then
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_run} on GS samplsheet (${_countFilesSamplesheet}) and files (${_countFastQFiles}) is NOT the same!" \
-				>> "${_controlFileBase}.failed"
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
-				"Amount of files for ${_run} on GS samplsheet (${_countFilesSamplesheet}) and files (${_countFastQFiles}) is NOT the same!"
-			_checksumVerification='FAILED'
-		elif [ ! -e "${_controlFileBase}.md5.PASS" ]
-		then
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
-				"Amount of files in samplesheet and in directory is the same for run: ${_run}: ${_countFastQFiles}."
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.md5.PASS missing, start md5sum check..."
-			#
-			# Verify checksums on transfered data.
-			#
-			local _checksumVerification='unknown'
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
-				"Started verification of checksums by ${DATA_MANAGER}@${sourceServerFQDN} using checksums from ${TMP_ROOT_DIR}/${_run}/checksums.md5"
-			_checksumVerification=$(cd ${TMP_ROOT_DIR}/${_run}/
-				if md5sum -c checksums.md5 > ${_controlFileBase}.md5.log 2>&1
-				then
-					echo 'PASS'
-					touch "${_controlFileBase}.md5.PASS"
-				else
-					echo 'FAILED'
-					touch "${_controlFileBase}.md5.FAILED"
-				fi
-			)
-		elif [ -e "${_controlFileBase}.md5.PASS" ]
-		then
-			local _checksumVerification='PASS'
-		fi
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "_checksumVerification = ${_checksumVerification}"
-		if [[ "${_checksumVerification}" == 'FAILED' ]]; then
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${_controlFileBase}.md5.log for details." \
-				>> "${_controlFileBase}.failed"
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Checksum verification failed. See ${_controlFileBase}.md5.log for details."
-		elif [[ "${_checksumVerification}" == 'PASS' || "${_controlFileBase}.md5.PASS" ]]; then
-			#
-			# Overwrite any previously created *.failed file if present,
-			# add new status info incl. demultiplex stats to *.failed file and
-			# then move the *.failed file to *.finished.
-			# (Note: the content of *.finished will get inserted in the body of email notification messages,
-			# when enabled in <group>.cfg for use by notifications.sh)
-			#
-			echo "The results can be found in: ${TMP_ROOT_DIR}." > "${_controlFileBase}.failed"
-			if ls "${_controlFileBase}.log" 1>/dev/null 2>&1
-			then
-				cat "${_controlFileBase}.log" >> "${_controlFileBase}.failed"
-			fi
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "OK! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${_controlFileBase}.md5.log for details." \
-				>>    "${_controlFileBase}.sanityChecking.failed" \
-				&& mv "${_controlFileBase}.sanityChecking."{failed,finished}
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
-		fi
 	fi
 	
-	if [[ "${_checksumVerification}" == 'PASS' ]]; then
-		#
-		# Parse sample sheet to get a list of project values.
-		#
-		declare -a _sampleSheetColumnNames=()
-		declare -A _sampleSheetColumnOffsets=()
-		local      _projectFieldIndex
-		declare -a _projects=()
+	#
+	# Count FastQ files present on disk for each read of a pair and compare with number of lanes in samplesheet.
+	# (No need to waist a lot of time on computing checksums for a partially failed transfer).
+	#
+	local _countFastQLanesInSamplesheet=$(tail -n +2 "${TMP_ROOT_DIR}/${_batch}/CSV_UMCG_"*".${SAMPLESHEET_EXT}" | wc -l)
+	local _countFastQLane1FilesOnDisk=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/"*'_R1.fastq.gz' | wc -l)
+	local _countFastQLane2FilesOnDisk=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/"*'_R2.fastq.gz' | wc -l)
+	if [[ "${_countFastQLanesInSamplesheet}" -ne "${_countFastQLane1FilesOnDisk}" || "${_countFastQLanesInSamplesheet}" -ne "${_countFastQLane2FilesOnDisk}" ]]
+	then
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
+		"Mismatch: found ${_countFastQLanesInSamplesheet} lanes in GS samplesheet, but ${_countFastQLane1FilesOnDisk} *_R1.fastq.gz and ${_countFastQLane2FilesOnDisk} *_R2.fastq.gz files on disk." \
+			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+			&& mv "${_controlFileBaseForFunction}."{started,failed}
+		return
+	else
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Amount of FastQ lanes in samplesheet and *_R[1|2].fastq.gz files is the same for ${_batch}: ${_countFastQLanesInSamplesheet}."
+	fi
 	
-		IFS="${SAMPLESHEET_SEP}" _sampleSheetColumnNames=($(head -1 "${_gsSamplesheet}"))
-		for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]:-0} ; _offset++ ))
-		do
-			_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
-		done
-		#
-		# Check if GS samplesheet contains required project column.
-		#
-		if [[ ! -z "${_sampleSheetColumnOffsets['Sample_ID']+isset}" ]]; then
-			_projectFieldIndex=$((${_sampleSheetColumnOffsets['Sample_ID']} + 1))
-			IFS=$'\n' _projects=($(tail -n +2 "${_gsSamplesheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_projectFieldIndex}" | sort | uniq ))
-			if [[ "${#_projects[@]:-0}" -lt '1' ]]
+	#
+	# Verify checksums for the transfered data.
+	#
+	local _checksumVerification='unknown'
+	if [[ -e "${_controlFileBaseForFunction}.md5.PASS" ]]
+	then
+		_checksumVerification='PASS'
+	else
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBaseForFunction}.md5.PASS absent -> start checksum verification..."
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
+			"Started verification of checksums by ${DATA_MANAGER}@${sourceServerFQDN} using checksums from ${TMP_ROOT_DIR}/${_batch}/${_checksumFile}"
+		_checksumVerification=$(cd ${TMP_ROOT_DIR}/${_batch}/
+			if md5sum -c "${_checksumFile}" >> "${_controlFileBaseForFunction}.started" 2>&1
 			then
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_gsSamplesheet} does not contain at least one project value."
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in samplesheet."
-				touch "${_controlFileBase}.failed"
-				return
-			fi
-		else
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "project column missing in sample sheet."
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in sample sheet."
-			touch "${_controlFileBase}.failed"
-			return
-		fi
-		
-		#
-		# Check if samplesheet is present for all projects.
-		#
-		for _project in "${_projects[@]}"
-		do
-		
-		# ToDo: change location of sample sheet per project back to ${TMP_ROOT_DIR} once we have a 
-		#       proper prm mount on the GD clusters and this script can run a GD cluster
-		#       instead of on a research cluster.
-		#
-			if [[ -f "${TMP_ROOT_DIR}/Samplesheets/new/${_project}.${SAMPLESHEET_EXT}" && -r "${TMP_ROOT_DIR}/Samplesheets/new/${_project}.${SAMPLESHEET_EXT}" && "${_controlFileBase}.samplesheetCheck.finished" ]]
-			then
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_project}.${SAMPLESHEET_EXT} is present." >> "${_logFile}"
-				_sampleSheet="${TMP_ROOT_DIR}/Samplesheets/new/${_project}.${SAMPLESHEET_EXT}"
+				echo 'PASS'
+				touch "${_controlFileBaseForFunction}.md5.PASS"
 			else
-				log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '0' "${_project}.${SAMPLESHEET_EXT} is missing!" >> "${_controlFileBase}.failed"
+				echo 'FAILED'
 			fi
-
-			declare -a _sampleSheetColumnNames=()
-			declare -A _sampleSheetColumnOffsets=()
-			local      _projectFieldIndex
-			declare -a _projects=()
-
-			IFS="${SAMPLESHEET_SEP}" _sampleSheetColumnNames=($(head -1 "${_sampleSheet}"))
-			for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]:-0} ; _offset++ ))
-			do
-				_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
-			done
-
-			declare -a _sequencingStartDate=()
-			local      _sequencingStartDateFieldIndex
-			if [[ ! -z "${_sampleSheetColumnOffsets['sequencingStartDate']+isset}" ]]; then
-			_sequencingStartDateFieldIndex=$((${_sampleSheetColumnOffsets['sequencingStartDate']} + 1))
-			IFS=$'\n' _sequencingStartDate=($(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_sequencingStartDateFieldIndex}" | sort | uniq ))
-			if [[ "${#_sequencingStartDate[@]:-0}" -lt '1' ]]
-			then
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} does not contain at least one project value."
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in samplesheet."
-				touch "${_controlFileBase}.failed"
-				return
-			elif [[  "${#_sequencingStartDate[@]:-0}" -eq '1' ]]
-			then
-				echo "$_sequencingStartDate" >> "${_controlFileBase}.sequencingStartDate"
-			fi
-		else
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "project column missing in sample sheet."
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in sample sheet."
-			touch "${_controlFileBase}.failed"
-			return
-		fi
-		done
-		touch "${_controlFileBase}.sanityChecking.finished"
-	else 
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "_checksumVerification = ${_checksumVerification}"
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "_checksumVerification = ${_checksumVerification} for run ${_run}" > "${_controlFileBase}.failed"
-		return
+		)
 	fi
-
-
-}
-
-function renameFastQs() {
-	local _run="${1}"
-	local _controlFileBase="${TMP_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}"
-	local _logFile="${_controlFileBase}.log"
-	local _runPrefix="${TMP_ROOT_DIR}/${_run}/"
-
-	if [[ -e "${_controlFileBase}.renameFastQs.finished" ]]
-	then
-		#
-		# If previous sanityChecking was ok, skip
-		# 
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.renameFastQs.finished is there, nothing to do here."
-		return
-	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.renameFastQs.finished not present. continue"
-	fi
-
-	if [[ -e "${_controlFileBase}.sanityChecking.finished" && "${_controlFileBase}.sequencingStartDate" ]]
-	then
-		#
-		# If previous sanityChecking was ok, skip
-		# 
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.sanityChecking.finished is there, ready for samplename renaming."
-		IFS=$'\n' _sequencingStartDate=($( cat "${_controlFileBase}.sequencingStartDate" | sort | uniq ))
-	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.sanityChecking.finished not present. return..."
-		return
-	fi
-
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "_sequencingStartDate: ${_sequencingStartDate}"
-
-	local _firstFastQ=$(cd "${_runPrefix}" && ls -1 *.fastq.gz | head -1)
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "DEBUG:    Found _firstFastQ ............ = ${_firstFastQ}"
-
-	local _regex='^([A-Z0-9]+)_(103373-[0-9]{3})(.+).fastq.gz'
-
-	if [[ "${_firstFastQ}" =~ ${_regex} ]]
-	then
-		local _flowcell="${BASH_REMATCH[1]}"
-		local _runID="${BASH_REMATCH[2]}"
-
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "DEBUG:    Found _flowcell ............... = ${_flowcell}"
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "DEBUG:    Found _runID .................. = ${_runID}"
-	else
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '0'  "FATAL: Failed to parse required meta-data values from ID of first read of ${_runPrefix}/${_firstFastQ}"
-		exit 1
-	fi
-
-	module load ngs-utils/"${NGS_UTILS_VERSION}"
-	module list
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "_checksumVerification = ${_checksumVerification}"
 	
-	renameFastQs.bash -s "${_sequencingStartDate}" -f "${_runPrefix}/${_flowcell}_${_runID}"'*'
-
-	if [ ${?} -eq 0 ]
+	if [[ "${_checksumVerification}" != 'PASS' ]]
 	then
-		touch "${_controlFileBase}.renameFastQs.finished"
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "renameFastQs finished."
-	else
-		touch "${_controlFileBase}.renameFastQs.failed"
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '0' "renameFastQs failed."
-	fi
-
-}
-
-function mergeSamplesheetPerProject() {
-	
-	local _run="${1}"
-	local _sampleSheet="${TMP_ROOT_DIR}/Samplesheets/archive/${_run}.${SAMPLESHEET_EXT}"
-	local _controlFileBase="${TMP_ROOT_DIR}/logs/${_run}/${_run}.${SCRIPT_NAME}"
-	local _controlFileFinished="${_controlFileBase}.mergeSamplesheetPerProject.finished"
-	local _logFile="${_controlFileBase}.log"
-	local _processSoFarSoGood='false'
-	
-	if [[ -e "${_controlFileFinished}" ]]
-	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_controlFileFinished} -> Skipping merging ${_run}."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Checksum verification failed. See ${_controlFileBaseForFunction}.failed for details." \
+			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+			&& mv "${_controlFileBaseForFunction}."{started,failed}
 		return
-	elif [[ ! -e "${_controlFileBase}.sanityChecking.finished" || ! -e "${_controlFileBase}.renameFastQs.finished" ]]
-	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Not Found ${_controlFileBase}.sanityChecking.finished or ${_controlFileBase}.renameFastQs.finished"
-		touch "${_controlFileBase}.mergeSamplesheetPerProject.failed"
-		return
-	else
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${_controlFileFinished} present -> Merge samplesheets for ${_run}..."
-		_processSoFarSoGood='true'
 	fi
 	
-
 	#
-	# combine GS samplesheet with inhouse samplesheets.
-	createInhouseSamplesheetFromGS.py \
-	--GenomeScanInputDir "${TMP_ROOT_DIR}/${_run}/" \
-	--logfile "${_controlFileBase}.log" \
-	--samplesheetNewDir "${TMP_ROOT_DIR}/Samplesheets/new/" \
-	--samplesheetOutputDir "${TMP_ROOT_DIR}/Samplesheets/"
-
-
+	# Parse GS samplesheet to get a list of project values.
+	#
 	declare -a _sampleSheetColumnNames=()
 	declare -A _sampleSheetColumnOffsets=()
 	local      _projectFieldIndex
 	declare -a _projects=()
 	
-	 
-	local _runDir=$(cd "${TMP_ROOT_DIR}/${_run}/" && find * -type d | grep -P '[0-9]*_[A_Za-z0-9]*_*[0-9]*')
+	IFS="${SAMPLESHEET_SEP}" _sampleSheetColumnNames=($(head -1 "${_gsSampleSheet}"))
+	for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]:-0} ; _offset++ ))
+	do
+		_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
+	done
+	
+	#
+	# Check if GS samplesheet contains required project column.
+	#
+	if [[ ! -z "${_sampleSheetColumnOffsets['Sample_ID']+isset}" ]]
+	then
+		_projectFieldIndex=$((${_sampleSheetColumnOffsets['Sample_ID']} + 1))
+		IFS=$'\n' _projects=($(tail -n +2 "${_gsSampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_projectFieldIndex}" | sort | uniq ))
+		if [[ "${#_projects[@]:-0}" -lt '1' ]]
+		then
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_gsSampleSheet} does not contain at least one project value." \
+				2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+				&& mv "${_controlFileBaseForFunction}."{started,failed}
+			return
+		fi
+	else
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "project column missing in ${_gsSampleSheet}." \
+			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+			&& mv "${_controlFileBaseForFunction}."{started,failed}
+		return
+	fi
+	
+	#
+	# Initialize (and potentially reset/truncate) files with values for columns that are only allowed to contain a single value for all rows.
+	#
+	local _requiredColumnName
+	for _requiredColumnName in "${!requiredSamplesheetColumns[@]}"
+	do
+		if [[ "${requiredSamplesheetColumns[${_requiredColumnName}]}" == 'single' ]]
+		then
+			printf '' > "${_controlFileBase}.${_requiredColumnName}"
+		fi
+	done
+	
+	#
+	# Check if project samplesheet is present and sane for all projects.
+	#
+	local _project
+	for _project in "${_projects[@]}"
+	do
+		#
+		# ToDo: change location of sample sheet per project back to ${TMP_ROOT_DIR} once we have a 
+		#       proper prm mount on the GD clusters and this script can run a GD cluster
+		#       instead of on a research cluster.
+		#
+		local _sampleSheet="${TMP_ROOT_DIR}/Samplesheets/new/${_project}.${SAMPLESHEET_EXT}"
+		if [[ -f "${_sampleSheet}" && -r "${_sampleSheet}" ]]
+		then
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} is present."
+			dos2unix "${_sampleSheet}" \
+			|| { log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" '0' "Failed to run dos2unix for ${_sampleSheet}." \
+					2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+					&& mv "${_controlFileBaseForFunction}."{started,failed}
+				return
+			}
+		else
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} is missing or not accessible." \
+				2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+				&& mv "${_controlFileBaseForFunction}."{started,failed}
+			return
+		fi
+		
+		#
+		# Get fields (columns) from samplesheet.
+		#
+		declare -a _sampleSheetColumnNames=()
+		declare -A _sampleSheetColumnOffsets=()
+		IFS="${SAMPLESHEET_SEP}" _sampleSheetColumnNames=($(head -1 "${_sampleSheet}"))
+		for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]:-0} ; _offset++ ))
+		do
+			_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
+		done
+		
+		#
+		# Get number of lines/rows with values (e.g. all lines except the header line).
+		#
+		_sampleSheetNumberOfRows=$(tail -n +2 "${_sampleSheet}" | wc -l)
+		
+		#
+		# Check if required columns contain the expected amount of values:
+		#    either 'any' value
+		#    or the same value for all rows/samples
+		#    or no value.
+		#
+		for _requiredColumnName in "${!requiredSamplesheetColumns[@]}"
+		do
+			local _requiredColumnValueState="${requiredSamplesheetColumns[${_requiredColumnName}]}"
+			declare -a _requiredColumnValues=()
+			local      _requiredColumnIndex
+			
+			if [[ -z "${_sampleSheetColumnOffsets[${_requiredColumnName}]+isset}" ]]
+			then
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Required column ${_requiredColumnName} missing in ${_sampleSheet} -> Skipping ${_batch} due to error in samplesheet." \
+					2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+					&& mv "${_controlFileBaseForFunction}."{started,failed}
+				return
+			else
+				_requiredColumnIndex=$((${_sampleSheetColumnOffsets["${_requiredColumnName}"]} + 1))
+				if [[ "${_requiredColumnValueState}" == 'present' ]]
+				then
+					IFS=$'\n' _requiredColumnValues=($(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_requiredColumnIndex}"))
+					if [[ "${#_requiredColumnValues[@]:-0}" -ne "${_sampleSheetNumberOfRows}" ]]
+					then
+						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Column ${_requiredColumnName} in ${_sampleSheet} does NOT contain the expected amount of values: ${_sampleSheetNumberOfRows}." \
+							2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+							&& mv "${_controlFileBaseForFunction}."{started,failed}
+						return
+					else
+						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Column ${_requiredColumnName} contains the right amount of values: ${_sampleSheetNumberOfRows}."
+					fi
+				elif [[ "${_requiredColumnValueState}" == 'single' ]]
+				then
+					IFS=$'\n' _requiredColumnValues=($(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_requiredColumnIndex}" | sort | uniq ))
+					if [[ "${#_requiredColumnValues[@]:-0}" -ne '1' ]]
+					then
+						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Column ${_requiredColumnName} in ${_sampleSheet} must contain the same value for all samples/rows." \
+							2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+							&& mv "${_controlFileBaseForFunction}."{started,failed}
+						return
+					else
+						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Column ${_requiredColumnName} contains the right amount of values: 1."
+						printf '%s\n' "${_requiredColumnValues[0]}" >> "${_controlFileBase}.${_requiredColumnName}"
+					fi
+				elif [[ "${_requiredColumnValueState}" == 'empty' ]]
+				then
+					IFS=$'\n' _requiredColumnValues=($(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_requiredColumnIndex}"))
+					if [[ "${#_requiredColumnValues[@]:-0}" -ne '0' ]]
+					then
+						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Column ${_requiredColumnName} in ${_sampleSheet} must be empty for all samples/rows." \
+							2>&1 | tee -a "${_controlFileBaseForFunction}.started"
+							mv "${_controlFileBaseForFunction}."{started,failed}
+						return
+					else
+						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Column ${_requiredColumnName} contains the right amount of values: 0."
+					fi
+				fi
+			fi
+		done
+	done
+	
+	#
+	# Check if all projects from this batch have the same sequencingStartDate.
+	#
+	local      _sequencingStartDateFile="${_controlFileBase}.sequencingStartDate"
+	declare -a _sequencingStartDates=()
+	local      _sequencingStartDate
+	if [[ -e "${_sequencingStartDateFile}" ]]
+	then
+		IFS=$'\n' _sequencingStartDates=($(sort -u "${_sequencingStartDateFile}"))
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsed ${_sequencingStartDateFile}."
+	else
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sequencingStartDateFile} is missing or not accessible." \
+			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+			&& mv "${_controlFileBaseForFunction}."{started,failed}
+		return
+	fi
+	if [[ "${#_sequencingStartDates[@]:-0}" -eq '1' ]]
+	then
+		#
+		# Remove redundant copies of the sequencingStartDate from the corresponding file.
+		#
+		_sequencingStartDate="${_sequencingStartDates[0]}"
+		printf '%s' "${_sequencingStartDate}" > "${_sequencingStartDateFile}"
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found _sequencingStartDate: ${_sequencingStartDate}."
+	else
+		printf -v _sequencingStartDate ", %s" "${_sequencingStartDates[@]}"
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sequencingStartDateFile} may only contain a single value for all projects of this batch ${_batch}, but we've got ${_sequencingStartDate:2}." \
+			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+			&& mv "${_controlFileBaseForFunction}."{started,failed}
+		return
+	fi
+	
+	#
+	# All is well; add new status info to *.started file and
+	# delete any previously created *.failed file if present,
+	# then move the *.started file to *.finished.
+	# (Note: the content of *.finished will get inserted in the body of email notification messages,
+	# when enabled in <group>.cfg for use by notifications.sh)
+	#
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${FUNCNAME} succeeded for batch ${_batch}. See ${_controlFileBaseForFunction}.finished for details." \
+		2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+		&& rm -f "${_controlFileBaseForFunction}.failed" \
+		&& mv -v "${_controlFileBaseForFunction}."{started,finished}
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
+}
 
-	_gsSamplesheet=$(ls ${TMP_ROOT_DIR}/${_run}/CSV_UMCG_*.csv)
-	IFS="${SAMPLESHEET_SEP}" _sampleSheetColumnNames=($(head -1 "${_gsSamplesheet}"))
+function renameFastQs() {
+	
+	local _batch="${1}"
+	local _controlFileBase="${2}"
+	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME}"
+	local _batchDir="${TMP_ROOT_DIR}/${_batch}/"
+	
+	#
+	# Check if function previously finished successfully for this data.
+	#
+	if [[ -e "${_controlFileBaseForFunction}.finished" ]]
+	then
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBaseForFunction}.finished is present -> Skipping."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${FUNCNAME} ${_batch}. OK"
+		return
+	else
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
+		touch "${_controlFileBaseForFunction}.started"
+	fi
+	
+	#
+	# Get the sequencingStartDate.
+	#
+	local      _sequencingStartDateFile="${_controlFileBase}.sequencingStartDate"
+	if [[ -e "${_sequencingStartDateFile}" ]]
+	then
+		local _sequencingStartDate="$(<"${_sequencingStartDateFile}")"
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsed ${_sequencingStartDateFile} and found _sequencingStartDate: ${_sequencingStartDate}."
+	else
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sequencingStartDateFile} is missing or not accessible." \
+			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+			&& mv "${_controlFileBaseForFunction}."{started,failed}
+		return
+	fi
+	
+	#
+	# Load ngs-utils.
+	#
+	module load ngs-utils/"${NGS_UTILS_VERSION}" \
+		>> "${_controlFileBaseForFunction}.started" 2>&1 \
+		&& module list \
+		>> "${_controlFileBaseForFunction}.started" 2>&1 \
+	|| {
+		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" '0' "Cannot load ngs-utils/${NGS_UTILS_VERSION}. See ${_controlFileBaseForFunction}.failed for details." \
+			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+			&& mv "${_controlFileBaseForFunction}."{started,failed}
+		return
+	}
+	
+	#
+	# Rename FastQ files.
+	#
+	# N.B.: batch may contain FastQ files from more than one flowcell / sequence run!
+	#
+	renameFastQs.bash \
+		-s "${_sequencingStartDate}" \
+		-f "${_batchDir}/"'*_'"${_batch}"'-*.fastq.gz' \
+		>> "${_controlFileBaseForFunction}.started" 2>&1 \
+	|| {
+		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" '0' "renameFastQs failed. See ${_controlFileBaseForFunction}.failed for details." \
+			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+			&& mv "${_controlFileBaseForFunction}."{started,failed}
+		return
+	}
+	
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${FUNCNAME} succeeded for batch ${_batch}. See ${_controlFileBaseForFunction}.finished for details." \
+		2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+		&& rm -f "${_controlFileBaseForFunction}.failed" \
+		&& mv -v "${_controlFileBaseForFunction}."{started,finished}
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
+}
+
+function processSamplesheetsAndMoveCovertedData() {
+	
+	local _batch="${1}"
+	local _sampleSheet="${TMP_ROOT_DIR}/Samplesheets/archive/${_batch}.${SAMPLESHEET_EXT}"
+	local _controlFileBase="${2}"
+	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME}"
+	local _logFile="${_controlFileBaseForFunction}.log"
+	
+	#
+	# Check if function previously finished successfully for this data.
+	#
+	if [[ -e "${_controlFileBaseForFunction}.finished" ]]
+	then
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBaseForFunction}.finished is present -> Skipping."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${FUNCNAME} ${_batch}. OK"
+		return
+	else
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
+		touch "${_controlFileBaseForFunction}.started"
+	fi
+	
+	#
+	# Combine GenomeScan samplesheet per batch with inhouse samplesheet(s) per project.
+	#
+	createInhouseSamplesheetFromGS.py \
+		--GenomeScanInputDir "${TMP_ROOT_DIR}/${_batch}/" \
+		--logfile "${_logFile}" \
+		--samplesheetNewDir "${TMP_ROOT_DIR}/Samplesheets/new/" \
+		--samplesheetOutputDir "${TMP_ROOT_DIR}/${_batch}/" \
+		>> "${_logFile}" 2>&1 \
+	|| {
+		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" '0' "createInhouseSamplesheetFromGS.py failed. See ${_logFile} for details." \
+			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+			&& mv "${_controlFileBaseForFunction}."{started,failed}
+		return
+	}
+	
+	#
+	# Get a list of projects listed in the GenomeScan samplesheet.
+	#
+	declare -a _sampleSheetColumnNames=()
+	declare -A _sampleSheetColumnOffsets=()
+	local      _projectFieldIndex
+	declare -a _projects=()
+	_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/CSV_UMCG_"*".${SAMPLESHEET_EXT}")
+	IFS="${SAMPLESHEET_SEP}" _sampleSheetColumnNames=($(head -1 "${_gsSampleSheet}"))
 	for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]:-0} ; _offset++ ))
 	do
 		_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
 	done
 	_projectFieldIndex=$((${_sampleSheetColumnOffsets['Sample_ID']} + 1))
-	
-		IFS=$'\n' _projects=($(tail -n +2 "${_gsSamplesheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_projectFieldIndex}" | sort | uniq ))
+	IFS=$'\n' _projects=($(tail -n +2 "${_gsSampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_projectFieldIndex}" | sort | uniq ))
 	
 	#
-	# Cat samplesheets projects to _runDir.csv.
+	# Get a list of sequencing run dirs (created by renameFastQs.bash)
+	# and in format ${sequencingStartdate}_${sequencer}_${run}_${flowcell}
 	#
-	flag=0
+	declare -a _runDirs=($(cd "${TMP_ROOT_DIR}/${_batch}/" && find ./ -maxdepth 1 -mindepth 1 -type d -name '*[0-9][0-9]*_[A-Z0-9][A-Z0-9]*_[0-9][0-9]*_[A-Z0-9][A-Z0-9]*' -exec basename {} \;))
+	if [[ "${#_runDirs[@]:-0}" -lt '1' ]]
+	then
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Did not find any sequence run dirs in ${TMP_ROOT_DIR}/${_batch}/." \
+			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+			&& mv "${_controlFileBaseForFunction}."{started,failed}
+		return
+	else
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${#_runDirs[@]} sequence run dirs."
+	fi
+	
+	#
+	# Create samplesheet(s) per sequencing runDir, which may be more than one!
+	#
+	local _runDir
+	local _regex='[0-9]+_[A-Z0-9]+_[0-9]+_([A-Z0-9]+)'
+	for _runDir in "${_runDirs[@]}"
+	do
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating ${TMP_ROOT_DIR}/${_batch}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}..."
+		#
+		# Get flowcell for this run.
+		#
+		if [[ "${_runDir}" =~ ${_regex} ]]
+		then
+			local _flowcell="${BASH_REMATCH[1]}"
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found flowcell ${_flowcell} in sequence run dir ${_runDir}."
+		else
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to parse flowcell from sequence run dir ${_runDir}." \
+				2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+				&& mv "${_controlFileBaseForFunction}."{started,failed}
+			return
+		fi
+		
+		#
+		# Create header line for new sequencing run samplesheet based on the one from the first project samplesheet.
+		#
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating header ${TMP_ROOT_DIR}/${_batch}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}..."
+		head -1 "${TMP_ROOT_DIR}/${_batch}/${_projects[0]}.${SAMPLESHEET_EXT}" > "${TMP_ROOT_DIR}/${_batch}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}"
+		
+		#
+		# Extract lines for this sequencing run from all project samplesheets based on the flowcell ID.
+		#
+		for _project in "${_projects[@]}"
+		do
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Appending rows for ${_flowcell} from project ${_project} to ${TMP_ROOT_DIR}/${_batch}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}..."
+			if grep "${_flowcell}" "${TMP_ROOT_DIR}/${_batch}/${_project}.${SAMPLESHEET_EXT}" >/dev/null
+			then
+				grep "${_flowcell}" "${TMP_ROOT_DIR}/${_batch}/${_project}.${SAMPLESHEET_EXT}" >> "${TMP_ROOT_DIR}/${_batch}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}"
+			fi
+		done
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Finished creating ${TMP_ROOT_DIR}/${_batch}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}."
+	done
+		
+	#
+	# Sanity check: count if the amount of flowcell+lane+barcode lines in the GenomeScan samplesheet 
+	#               is the same as the flowcell+lane+barcode lines in the combined sequencing run samplesheet(s).
+	#
+	local _flowcellLaneBarcodeLinesGS=$(tail -n +2 "${_gsSampleSheet}" | wc -l)
+	local _flowcellLaneBarcodeLinesRuns=0
+	for _runDir in "${_runDirs[@]}"
+	do
+		_flowcellLaneBarcodeLinesRuns=$(( ${_flowcellLaneBarcodeLinesRuns} + $(tail -n +2 "${TMP_ROOT_DIR}/${_batch}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}" | wc -l) ))
+	done
+	if [[ "${_flowcellLaneBarcodeLinesGS}" -ne "${_flowcellLaneBarcodeLinesRuns}" ]]
+	then
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
+			"Number of flowcell+lane+barcode lines in the GenomeScan batch samplesheet does not match flowcell+lane+barcode lines in the samplesheets per sequencing run: ${_flowcellLaneBarcodeLinesGS} vs. ${_flowcellLaneBarcodeLinesRuns}." \
+			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+			&& mv "${_controlFileBaseForFunction}."{started,failed}
+		return
+	else
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_flowcellLaneBarcodeLinesGS} flowcell+lane+barcode lines in both the GenomeScan batch samplesheet and the samplesheets per sequencing run."
+	fi
+	
+	for _runDir in "${_runDirs[@]}"
+	do
+		#
+		# Move converted FastQs with accompanying samplesheets per sequencing run to .../runs/${_runDir}/results/
+		#
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Moving ${TMP_ROOT_DIR}/${_batch}/${_runDir}/* -> ${TMP_ROOT_DIR}/runs/${_runDir}/results/ ..."
+		mkdir -p "${TMP_ROOT_DIR}/runs/${_runDir}/results/" \
+			>> "${_controlFileBaseForFunction}.started" 2>&1 \
+			&& mv -v "${TMP_ROOT_DIR}/${_batch}/${_runDir}/"* \
+			         "${TMP_ROOT_DIR}/runs/${_runDir}/results/" \
+			>> "${_controlFileBaseForFunction}.started" 2>&1 \
+			&& printf '%s\n' "Demultplex statistics not present. See external QC report." \
+			2>> "${_controlFileBaseForFunction}.started" \
+			> "${TMP_ROOT_DIR}/runs/${_runDir}/results/${_runDir}.log" \
+		|| {
+			log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" '0' "Failed to move ${_runDir}. See ${_controlFileBaseForFunction}.failed for details." \
+				2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+				&& mv "${_controlFileBaseForFunction}."{started,failed}
+			return
+		}
+		#
+		# Copy samplesheets per sequencing run to .../Samplesheets/ dir,
+		# so the next step of NGS_Automated will pick it up for further processing.
+		#
+		cp -v "${TMP_ROOT_DIR}/runs/${_runDir}/results/${_runDir}.${SAMPLESHEET_EXT}" \
+		      "${TMP_ROOT_DIR}/Samplesheets/" \
+			>> "${_controlFileBaseForFunction}.started" 2>&1 \
+		|| {
+			log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" '0' "Failed to copy sequencing run samplesheet to ${TMP_ROOT_DIR}/Samplesheets/. See ${_controlFileBaseForFunction}.failed for details." \
+				2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+				&& mv "${_controlFileBaseForFunction}."{started,failed}
+			return
+		}
+		touch "${TMP_ROOT_DIR}/logs/${_runDir}_Demultiplexing.finished" \
+			>> "${_controlFileBaseForFunction}.started" 2>&1 \
+		|| {
+			log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" '0' "Failed to touch ${TMP_ROOT_DIR}/logs/${_runDir}_Demultiplexing.finished. See ${_controlFileBaseForFunction}.failed for details." \
+				2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+				&& mv "${_controlFileBaseForFunction}."{started,failed}
+			return
+		}
+	done
+	
+	#
+	# Cleanup uploaded samplesheets per project.
+	#
+	mkdir -p "${TMP_ROOT_DIR}/Samplesheets/archive/"
 	for _project in "${_projects[@]}"
 	do
-		if [ "${flag}" -eq 0 ]
-		then
-			cp "${TMP_ROOT_DIR}/Samplesheets/${_project}.csv" "${TMP_ROOT_DIR}/${_run}/${_runDir}/${_runDir}.csv"
-			flag=1
-		else
-			tail -n +2 "${TMP_ROOT_DIR}/Samplesheets/${_project}.csv" >> "${TMP_ROOT_DIR}/${_run}/${_runDir}/${_runDir}.csv"
-		fi
-		#cleanup samplesheets
-		mv "${TMP_ROOT_DIR}/Samplesheets/${_project}.csv" "${TMP_ROOT_DIR}/Samplesheets/archive/"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Moving ${TMP_ROOT_DIR}/Samplesheets/new/${_project}.${SAMPLESHEET_EXT} -> ${TMP_ROOT_DIR}/Samplesheets/archive/ ..."
+		mv -v "${TMP_ROOT_DIR}/Samplesheets/new/${_project}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/Samplesheets/archive/"
 	done
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " GS run samplesheet can found in: ${TMP_ROOT_DIR}/${_run}/${_runDir}/${_runDir}.csv"
-
 	
-	if [ ${?} -eq 0 ]
-	then
-		touch "${_controlFileFinished}"
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Merge samplesheets ${_run} finished."
-		_processSoFarSoGood='true'
-		touch "${TMP_ROOT_DIR}/logs/${_runDir}_Demultiplexing.started"
-	else
-		touch "${_controlFileBase}.mergeSamplesheetPerProject.failed"
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '0' "Merge samplesheets ${_run} failed."
-		return
-	fi
-		
-	if [[ "${_processSoFarSoGood}" == 'true' ]]
-	then
-		
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Moving  ${_run}/${_runDir} to: ${TMP_ROOT_DIR}/runs/${_runDir}/results"
-		mkdir -p "${TMP_ROOT_DIR}/runs/${_runDir}/results"
-		mv "${TMP_ROOT_DIR}/${_run}/${_runDir}/"* "${TMP_ROOT_DIR}/runs/${_runDir}/results/"
-		cp "${TMP_ROOT_DIR}/${_run}/${_runDir}/${_runDir}.csv" "${TMP_ROOT_DIR}/Samplesheets/"
-		echo "Demultplex statistics not present. See external qc report." \
-		> "${TMP_ROOT_DIR}/runs/${_runDir}/results/${_runDir}.log"
-		echo "OK! $(date '+%Y-%m-%d-T%H%M'): Samplesheets ${_runDir} merged." \
-		>>    "${TMP_ROOT_DIR}/logs/${_runDir}_Demultiplexing.started" \
-		&& mv "${TMP_ROOT_DIR}/logs/${_runDir}_Demultiplexing."{started,finished}
-
-
-		# Overwrite any previously created *.failed file if present,
-		# then move the *.failed file to *.finished.
-		# (Note: the content of *.finished will get inserted in the body of email notification messages,
-		# when enabled in <group>.cfg for use by notifications.sh)
-		echo "OK! $(date '+%Y-%m-%d-T%H%M'): Samplesheets ${_run} merged." \
-		>>    "${_controlFileBase}.failed" \
-		&& mv "${_controlFileBase}."{failed,finished}
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Merging samplesheets succeeded.'
-	fi
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${FUNCNAME} succeeded for batch ${_batch}. See ${_controlFileBaseForFunction}.finished for details." \
+		2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+		&& rm -f "${_controlFileBaseForFunction}.failed" \
+		&& mv -v "${_controlFileBaseForFunction}."{started,finished}
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
 }
 
 function showHelp() {
@@ -463,13 +628,13 @@ Script to copy (sync) data from a succesfully finished demultiplexed run from tm
 Usage:
 	$(basename $0) OPTIONS
 Options:
-	-h   Show this help.
-	-g   Group.
-	-e   Enable email notification. (Disabled by default.)
-	-n   Dry-run: Do not perform actual sync, but only list changes instead.
-	-l   Log level.
+	-h	Show this help.
+	-g	Group.
+	-e	Enable email notification. (Disabled by default.)
+	-n	Dry-run: Do not perform actual sync, but only list changes instead.
+	-l	Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
-	-s   Source server address from where the rawdate will be fetched
+	-s	Source server address from where the rawdate will be fetched
 		Must be a Fully Qualified Domain Name (FQDN).
 		E.g. gattaca01.gcc.rug.nl or gattaca02.gcc.rug.nl
 
@@ -576,7 +741,8 @@ done
 #
 # Write access to prm storage requires data manager account.
 #
-if [[ "${ROLE_USER}" != "${DATA_MANAGER}" ]]; then
+if [[ "${ROLE_USER}" != "${DATA_MANAGER}" ]]
+then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${DATA_MANAGER}, but you are ${ROLE_USER} (${REAL_USER})."
 fi
 
@@ -615,45 +781,98 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 
 #
-# Get a list of all sample sheets for this group on the specified sourceServer, where the raw data was generated,
-# then
-#	1. loop over their analysis ("run") sub dirs and check if there are any we need to rsync.
-#	2. split the sample sheets per project and the data was rsynced.
+# List of required columns in sample sheets and whether they may not or must be empty.
+#  hash key = column name
+#  hash val = present|single|empty for whether the column must contain a value for every row, 
+#             must contain the same value in every row or must be empty.
 #
+declare -A requiredSamplesheetColumns=(
+	['externalSampleID']='present'
+	['project']='present'
+	['sequencingStartDate']='single'
+	['seqType']='present'
+	['prepKit']='present'
+	['capturingKit']='present'
+	['barcode']='present'
+	['barcode2']='present'
+	['barcodeType']='present'
+	['sequencer']='empty'
+	['run']='empy'
+	['flowcell']='empy'
+	['lane']='empy'
+)
 
+#
+# Get a list of all GenomeScan batch directories.
+#
+declare -a gsBatchDirs=($(find "${TMP_ROOT_DIR}/" -maxdepth 1 -mindepth 1 -type d -name "[0-9]*-[0-9]*"))
+log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found gsBatchDirs: ${gsBatchDirs[@]}"
 
-declare -a runDirs=($(find "${TMP_ROOT_DIR}/" -maxdepth 1 -mindepth 1 -type d -name "[0-9]*-[0-9]*"))
-
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${runDirs[@]}"
-
-if [[ "${#runDirs[@]:-0}" -eq '0' ]]
+if [[ "${#gsBatchDirs[@]:-0}" -eq '0' ]]
 then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No directories found for ${TMP_ROOT_DIR}/"
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No batch directories found in ${TMP_ROOT_DIR}/"
 else
-	for rundir in "${runDirs[@]}"
+	for gsBatchDir in "${gsBatchDirs[@]}"
 	do
 		#
-		# Process this sample sheet / run.
+		# Process this batch.
 		#
-		runPrefix="$(basename "${rundir}")"
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${runPrefix}..."
+		gsBatch="$(basename "${gsBatchDir}")"
+		controlFileBase="${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}"
+		export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
 		#
 		# ToDo: change location of log files back to ${TMP_ROOT_DIR} once we have a 
 		#       proper prm mount on the GD clusters and this script can run a GD cluster
 		#       instead of on a research cluster.
 		#
-		
-		mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${runPrefix}/"
-		
-		sanityChecking "${runPrefix}"
-		renameFastQs "${runPrefix}"
-		mergeSamplesheetPerProject "${runPrefix}"
-
+		if [[ ! -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing batch ${gsBatch}..."
+			mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${gsBatch}/"
+			touch "${JOB_CONTROLE_FILE_BASE}.started"
+			#
+			# Check if transfer of raw data has finished.
+			#
+			if [[ -e "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished" ]]
+			then
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished present -> Data transfer completed; let's process batch ${gsBatch}..."
+				sanityChecking "${gsBatch}" "${controlFileBase}"
+			else
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished absent -> Data transfer not yet completed; skipping batch ${gsBatch}."
+				continue
+			fi
+			if [[ -e "${controlFileBase}.sanityChecking.finished" ]]
+			then
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.sanityChecking.finished present -> sanityChecking completed; let's renameFastQs for batch ${gsBatch}..."
+				renameFastQs "${gsBatch}" "${controlFileBase}"
+			else
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.sanityChecking.finished absent -> sanityChecking failed."
+			fi
+			if [[ -e "${controlFileBase}.renameFastQs.finished" ]]
+			then
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.renameFastQs.finished present -> renameFastQs completed; let's mergeSamplesheetPerProject for batch ${gsBatch}..."
+				processSamplesheetsAndMoveCovertedData "${gsBatch}" "${controlFileBase}"
+			else
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.renameFastQs.finished absent -> renameFastQs failed."
+			fi
+			if [[ -e "${controlFileBase}.processSamplesheetsAndMoveCovertedData.finished" ]]
+			then
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.processSamplesheetsAndMoveCovertedData.finished present -> processing completed for batch ${gsBatch}..."
+				rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
+				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Finished processing batch ${gsBatch}."
+			else
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.processSamplesheetsAndMoveCovertedData.finished absent -> processing failed for batch ${gsBatch}."
+				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to process batch ${gsBatch}."
+			fi
+		else
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${gsBatch}."
+		fi
 	done
 fi
 
-log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished successfully!'
+log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished processing all batches.'
 
 trap - EXIT
 exit 0
-
