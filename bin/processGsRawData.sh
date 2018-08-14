@@ -825,13 +825,15 @@ else
 		#       proper prm mount on the GD clusters and this script can run a GD cluster
 		#       instead of on a research cluster.
 		#
-		if [[ ! -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
+		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${gsBatch}."
+		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing batch ${gsBatch}..."
 			mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${gsBatch}/"
 			touch "${JOB_CONTROLE_FILE_BASE}.started"
 			#
-			# Check if transfer of raw data has finished.
+			# Step 1: Sanity Check if transfer of raw data has finished.
 			#
 			if [[ -e "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished" ]]
 			then
@@ -841,6 +843,9 @@ else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished absent -> Data transfer not yet completed; skipping batch ${gsBatch}."
 				continue
 			fi
+			#
+			# Step 2: Rename FastQs if Sanity check has finished.
+			#
 			if [[ -e "${controlFileBase}.sanityChecking.finished" ]]
 			then
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.sanityChecking.finished present -> sanityChecking completed; let's renameFastQs for batch ${gsBatch}..."
@@ -848,6 +853,9 @@ else
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.sanityChecking.finished absent -> sanityChecking failed."
 			fi
+			#
+			# Step 3: Process samplesheets and move converted data if renaming of FastQs has finished.
+			#
 			if [[ -e "${controlFileBase}.renameFastQs.finished" ]]
 			then
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.renameFastQs.finished present -> renameFastQs completed; let's mergeSamplesheetPerProject for batch ${gsBatch}..."
@@ -855,6 +863,9 @@ else
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.renameFastQs.finished absent -> renameFastQs failed."
 			fi
+			#
+			# Signal success or failure for complete process.
+			#
 			if [[ -e "${controlFileBase}.processSamplesheetsAndMoveCovertedData.finished" ]]
 			then
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.processSamplesheetsAndMoveCovertedData.finished present -> processing completed for batch ${gsBatch}..."
@@ -866,8 +877,6 @@ else
 				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to process batch ${gsBatch}."
 			fi
-		else
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${gsBatch}."
 		fi
 	done
 fi
