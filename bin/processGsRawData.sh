@@ -67,7 +67,7 @@ function sanityChecking() {
 		return
 	else
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
-		touch "${_controlFileBaseForFunction}.started"
+		printf '' > "${_controlFileBaseForFunction}.started"
 	fi
 	
 	#
@@ -218,8 +218,24 @@ function sanityChecking() {
 		if [[ -f "${_sampleSheet}" && -r "${_sampleSheet}" ]]
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} is present."
-			dos2unix "${_sampleSheet}" \
-			|| { log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" '0' "Failed to run dos2unix for ${_sampleSheet}." \
+			#
+			# Make sure
+			#  1. The last line ends with a line end character.
+			#  2. We have the right line end character: convert any carriage return (\r) to newline (\n).
+			#  3. We remove empty lines.
+			#
+			cp "${_sampleSheet}"{,.converted} \
+				2>> "${_controlFileBaseForFunction}.started" \
+				&& printf '\n' \
+				2>> "${_controlFileBaseForFunction}.started" \
+				>> "${_sampleSheet}.converted" \
+				&& sed -i 's/\r/\n/g' "${_sampleSheet}.converted" \
+				2>> "${_controlFileBaseForFunction}.started" \
+				&& sed -i '/^\s*$/d' "${_sampleSheet}.converted" \
+				2>> "${_controlFileBaseForFunction}.started" \
+				&& mv -f "${_sampleSheet}"{.converted,} \
+				2>> "${_controlFileBaseForFunction}.started" \
+			|| { log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" '0' "Failed to convert line end characters and/or remove empty lines for ${_sampleSheet}." \
 					2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
 					&& mv "${_controlFileBaseForFunction}."{started,failed}
 				return
@@ -372,7 +388,7 @@ function renameFastQs() {
 		return
 	else
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
-		touch "${_controlFileBaseForFunction}.started"
+		printf '' > "${_controlFileBaseForFunction}.started"
 	fi
 	
 	#
@@ -445,7 +461,7 @@ function processSamplesheetsAndMoveCovertedData() {
 		return
 	else
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
-		touch "${_controlFileBaseForFunction}.started"
+		printf '' > "${_controlFileBaseForFunction}.started"
 	fi
 	
 	#
@@ -566,7 +582,7 @@ function processSamplesheetsAndMoveCovertedData() {
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Moving ${TMP_ROOT_DIR}/${_batch}/${_runDir}/* -> ${TMP_ROOT_DIR}/runs/${_runDir}/results/ ..."
 		mkdir -p "${TMP_ROOT_DIR}/runs/${_runDir}/results/" \
 			>> "${_controlFileBaseForFunction}.started" 2>&1 \
-			&& mv -v "${TMP_ROOT_DIR}/${_batch}/${_runDir}/"* \
+			&& mv -f -v "${TMP_ROOT_DIR}/${_batch}/${_runDir}/"* \
 			         "${TMP_ROOT_DIR}/runs/${_runDir}/results/" \
 			>> "${_controlFileBaseForFunction}.started" 2>&1 \
 			&& printf '%s\n' "Demultplex statistics not present. See external QC report." \
@@ -739,11 +755,11 @@ done
 
 
 #
-# Write access to prm storage requires data manager account.
+# Make sure to use an account for cron jobs and *without* write access to prm storage.
 #
-if [[ "${ROLE_USER}" != "${DATA_MANAGER}" ]]
+if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]
 then
-	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${DATA_MANAGER}, but you are ${ROLE_USER} (${REAL_USER})."
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
 fi
 
 #
@@ -831,7 +847,7 @@ else
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing batch ${gsBatch}..."
 			mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${gsBatch}/"
-			touch "${JOB_CONTROLE_FILE_BASE}.started"
+			printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 			#
 			# Step 1: Sanity Check if transfer of raw data has finished.
 			#
