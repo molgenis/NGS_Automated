@@ -1,0 +1,2 @@
+*/30 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.10-bare; processGsRawData.sh     -g umcg-genomescan -s zinc-finger.gcc.rug.nl"
+*/15 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.10-bare; notifications.sh        -g umcg-genomescan -e"
