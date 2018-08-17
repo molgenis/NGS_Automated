@@ -857,6 +857,8 @@ else
 				sanityChecking "${gsBatch}" "${controlFileBase}"
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished absent -> Data transfer not yet completed; skipping batch ${gsBatch}."
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Data transfer not yet completed; skipping batch ${gsBatch}." \
+					2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 				continue
 			fi
 			#
@@ -886,12 +888,14 @@ else
 			then
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.processSamplesheetsAndMoveCovertedData.finished present -> processing completed for batch ${gsBatch}..."
 				rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Finished processing batch ${gsBatch}." \
+					2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Finished processing batch ${gsBatch}."
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.processSamplesheetsAndMoveCovertedData.finished absent -> processing failed for batch ${gsBatch}."
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to process batch ${gsBatch}." \
+					2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to process batch ${gsBatch}."
 			fi
 		fi
 	done
