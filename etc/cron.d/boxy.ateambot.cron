@@ -1,2 +1,0 @@
-*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.1; startPipeline.sh -g umcg-atd"
-*/5  * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.1; notifications.sh -g umcg-atd"

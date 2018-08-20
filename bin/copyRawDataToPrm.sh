@@ -179,6 +179,7 @@ function rsyncDemultiplexedRuns() {
 	if [[ "${_transferSoFarSoGood}" == 'true' ]];then
 		local _countFilesDemultiplexRunDirScr=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} "find ${SCR_ROOT_DIR}/runs/${_run}/results/${_run}* -type f | wc -l")
 		local _countFilesDemultiplexRunDirPrm=$(find "${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}"* -type f | wc -l)
+		local _checksumVerification='unknown'
 		if [[ ${_countFilesDemultiplexRunDirScr} -ne ${_countFilesDemultiplexRunDirPrm} ]]; then
 			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_run} on scr (${_countFilesDemultiplexRunDirScr}) and prm (${_countFilesDemultiplexRunDirPrm}) is NOT the same!" \
 				>> "${_controlFileBase}.failed"
@@ -191,7 +192,6 @@ function rsyncDemultiplexedRuns() {
 			#
 			# Verify checksums on prm storage.
 			#
-			local _checksumVerification='unknown'
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
 				"Started verification of checksums by ${DATA_MANAGER}@${sourceServerFQDN} using checksums from ${PRM_ROOT_DIR}/rawdata/ngs/${_run}/*.md5."
 			_checksumVerification=$(cd ${PRM_ROOT_DIR}/rawdata/ngs/${_run}

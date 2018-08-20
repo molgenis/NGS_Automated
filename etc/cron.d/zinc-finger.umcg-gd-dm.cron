@@ -1,0 +1,3 @@
+#*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.9-bare; copyRawDataToPrm.sh     -g umcg-gd -s gattaca02.gcc.rug.nl"
+*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.9-bare; copyProjectDataToPrm.sh -g umcg-gd"
+*/30 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.9-bare; processGsRawData.sh     -g umcg-genomescan -s zinc-finger.gcc.rug.nl"

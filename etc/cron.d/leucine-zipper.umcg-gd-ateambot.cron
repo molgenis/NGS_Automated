@@ -1,0 +1,5 @@
+*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.9; startPipeline.sh -g umcg-gd"
+*/15 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.9-bare; notifications.sh -g umcg-gd -e"
+*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; bash /groups/umcg-gd/tmp06/GavinStandAlone/tools/runGavin.sh"
+*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; bash /groups/umcg-gd/tmp06/GavinStandAlone/cleanup.sh umcg-gd"
+0    6 * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; ${HOME}/FileSystemCheckGD.sh"
