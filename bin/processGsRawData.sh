@@ -135,7 +135,7 @@ function sanityChecking() {
 	else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBaseForFunction}.md5.PASS absent -> start checksum verification..."
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
-			"Started verification of checksums by ${DATA_MANAGER}@${sourceServerFQDN} using checksums from ${TMP_ROOT_DIR}/${_batch}/${_checksumFile}"
+			"Started verification of checksums by ${ATEAMBOTUSER}@${HOSTNAME_SHORT} using checksums from ${TMP_ROOT_DIR}/${_batch}/${_checksumFile}"
 		_checksumVerification=$(cd ${TMP_ROOT_DIR}/${_batch}/
 			if md5sum -c "${_checksumFile}" >> "${_controlFileBaseForFunction}.started" 2>&1
 			then
@@ -640,26 +640,22 @@ function showHelp() {
 	#
 	cat <<EOH
 ===============================================================================================================
-Script to copy (sync) data from a succesfully finished demultiplexed run from tmp to prm storage.
+Script to process GenomeScan data:
+	1. Convert FastQ files to format required by NGS_DNA / NGS_RNA piplines.
+	2. Supplement samplesheets with meta-data from the sequencing experiment.
 Usage:
 	$(basename $0) OPTIONS
 Options:
 	-h	Show this help.
 	-g	Group.
-	-e	Enable email notification. (Disabled by default.)
-	-n	Dry-run: Do not perform actual sync, but only list changes instead.
 	-l	Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
-	-s	Source server address from where the rawdate will be fetched
-		Must be a Fully Qualified Domain Name (FQDN).
-		E.g. gattaca01.gcc.rug.nl or gattaca02.gcc.rug.nl
 
 Config and dependencies:
 	This script needs 4 config files, which must be located in ${CFG_DIR}:
 	1. <group>.cfg       for the group specified with -g
 	2. <this_host>.cfg   for this server. E.g.: "${HOSTNAME_SHORT}.cfg"
-	3. <source_host>.cfg for the source server. E.g.: "<hostname>.cfg" (Short name without domain)
-	4. sharedConfig.cfg  for all groups and all servers.
+	3. sharedConfig.cfg  for all groups and all servers.
 	In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
 ===============================================================================================================
 EOH
@@ -678,8 +674,7 @@ EOH
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments..."
 declare group=''
-declare sourceServerFQDN=''
-while getopts "g:l:s:h" opt
+while getopts "g:l:h" opt
 do
 	case $opt in
 		h)
@@ -687,10 +682,6 @@ do
 			;;
 		g)
 			group="${OPTARG}"
-			;;
-		s)
-			sourceServerFQDN="${OPTARG}"
-			sourceServer="${sourceServerFQDN%%.*}"
 			;;
 		l)
 			l4b_log_level="${OPTARG^^}"
@@ -712,11 +703,6 @@ if [[ -z "${group:-}" ]]
 then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
 fi
-if [[ -z "${sourceServerFQDN:-}" ]]
-then
-	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a Fully Qualified Domain Name (FQDN) for sourceServer with -s.'
-fi
-
 
 #
 # Source config files.
@@ -725,16 +711,9 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files..."
 declare -a configFiles=(
 	"${CFG_DIR}/${group}.cfg"
 	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
-	"${CFG_DIR}/${sourceServer}.cfg"
 	"${CFG_DIR}/sharedConfig.cfg"
 	"${HOME}/molgenis.cfg"
 )
-#
-# Extend or overwrite group variables if necessary.
-if [ -e "${CFG_DIR}/${group}-extend.cfg" ]
-then
-	configFiles+=("${CFG_DIR}/${group}-extend.cfg")
-fi
 
 for configFile in "${configFiles[@]}"
 do
@@ -771,30 +750,11 @@ fi
 # * and parsing commandline arguments,
 # but before doing the actual data transfers.
 #
-# ToDo: change location of job control files back to ${TMP_ROOT_DIR} once we have a 
-#       proper prm mount on the GD clusters and this script can run a GD cluster
-#       instead of on a research cluster.
-#
 
 lockFile="${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
 thereShallBeOnlyOne "${lockFile}"
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile}..."
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${TMP_ROOT_DIR}/logs..."
-
-#
-# Use multiplexing to reduce the amount of SSH connections created
-# when rsyncing using the group's data manager account.
-# 
-#  1. Become the "${DATA_MANAGER} user who will rsync the data to prm and 
-#  2. Add to ~/.ssh/config:
-#		ControlMaster auto
-#		ControlPath ~/.ssh/tmp/%h_%p_%r
-#		ControlPersist 5m
-#  3. Create ~/.ssh/tmp dir:
-#		mkdir -p -m 700 ~/.ssh/tmp
-#  3. Recursively restrict access to the ~/.ssh dir to allow only the owner/user:
-#		chmod -R go-rwx ~/.ssh
-#
 
 #
 # List of required columns in sample sheets and whether they may not or must be empty.
@@ -857,6 +817,8 @@ else
 				sanityChecking "${gsBatch}" "${controlFileBase}"
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished absent -> Data transfer not yet completed; skipping batch ${gsBatch}."
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Data transfer not yet completed; skipping batch ${gsBatch}." \
+					2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 				continue
 			fi
 			#
@@ -886,12 +848,14 @@ else
 			then
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.processSamplesheetsAndMoveCovertedData.finished present -> processing completed for batch ${gsBatch}..."
 				rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Finished processing batch ${gsBatch}." \
+					2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Finished processing batch ${gsBatch}."
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.processSamplesheetsAndMoveCovertedData.finished absent -> processing failed for batch ${gsBatch}."
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to process batch ${gsBatch}." \
+					2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to process batch ${gsBatch}."
 			fi
 		fi
 	done
