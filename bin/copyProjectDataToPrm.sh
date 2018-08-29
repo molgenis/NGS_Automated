@@ -322,6 +322,24 @@ function rsyncProjectRun() {
 			echo "${_project}: panel: ${_panel} stored to Chronqc database." \
                         >> "${_controlFileBase}.finished"
 		fi
+		#
+		# Set all the jobs to finished 
+		#
+		finished_date=$(date +"%Y-%m-%dT%H:%M:%S+0200")
+		_url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_samples&hideselect=true&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
+		printf '%s\n' "project_job,job,project,started_date,finished_date,status,url,step"  > "${_controlFileBase}.trackAndTraceJobs.csv"
+		grep '^processJob' ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/submit.sh | tr '"' ' ' | awk -v pro=${_project} -v url=${_url} -v finished=${finished_date} '{OFS=","} {print pro"_"$2,$2,pro,"",finished,"finished",url}' \
+			>> "${_controlFileBase}.trackAndTraceJobs.csv"
+		awk '{FS=","}{if (NR==1){print $0}else{split($2,a,"_"); print $0","a[1]"_"a[2]}}' "${_controlFileBase}.trackAndTraceJobs.csv"\
+			> "${_controlFileBase}.trackAndTraceJobs.csv.tmp"
+		mv "${_controlFileBase}.trackAndTraceJobs.csv.tmp" "${_controlFileBase}.trackAndTraceJobs.csv"
+
+		awk 'BEGIN {FS=","} {print $1}' "${_controlFileBase}.trackAndTraceJobs.csv" > "${_controlFileBase}.trackAndTraceJobIDs.csv"
+
+		while read line
+		do
+			trackAndTracePut 'status_jobs' "${line}" "status" "finished"
+		done<"${_controlFileBase}.trackAndTraceJobIDs.csv"
 
 	else
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' 'Ended up in unexpected state:'
@@ -407,7 +425,7 @@ function getSampleType(){
 			columnName="${sampleSheetColumnNames[${offset}]}"
 		fi
 		sampleSheetColumnOffsets["${columnName}"]="${offset}"
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${columnName} and sampleSheetColumnOffsets["${columnName}"] offset ${offset} "
+	#	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${columnName} and sampleSheetColumnOffsets["${columnName}"] offset ${offset} "
 	done
 	
 	if [[ ! -z "${sampleSheetColumnOffsets['sampleType']+isset}" ]]; then
@@ -419,7 +437,7 @@ function getSampleType(){
 		if [[ "${sampleTypesCount}" -eq '1' ]]
 		then
 			sampleType=$(tail -n 1 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${sampleTypeFieldIndex}")
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found sampleType: ${sampleType}."
+	#		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found sampleType: ${sampleType}."
 			echo ${sampleType}
 		else
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} contains multiple different sampleType values."
@@ -427,7 +445,7 @@ function getSampleType(){
 			continue
 		fi
 	else
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sampleType column missing in sample sheet; will use default value: ${sampleType}."
+	#	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sampleType column missing in sample sheet; will use default value: ${sampleType}."
 		echo ${sampleType}
 	fi
 }

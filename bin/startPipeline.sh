@@ -98,7 +98,7 @@ function generateScripts () {
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBase}.finished nor ${_controlFileBase}.started exists."
 		log4Bash 'INFO'  "${LINENO}" "${FUNCNAME:-main}" '0' "Generating scripts for ${_project} ..."
 	fi
-	
+
 	if [ "${_sampleType}" == "DNA" ]
 	then
 		_version="${NGS_DNA_VERSION}"
@@ -113,17 +113,17 @@ function generateScripts () {
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Unknown _sampleType: ${_sampleType}."
 	fi
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "_pathToPipeline is ${_pathToPipeline}"
-	
+
 	_message="Creating directory: ${TMP_ROOT_DIR}/generatedscripts/${_project}/ ..."
 	echo "${_message}" > "${_logFile}"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
 	mkdir -p "${TMP_ROOT_DIR}/generatedscripts/${_project}/"
-	
+
 	_message="Copying ${_pathToPipeline}/templates/generate_template.sh to ${_generateShScript} ..."
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
 	echo "${_message}" >> "${_logFile}"
 	cp "${_pathToPipeline}/templates/generate_template.sh" "${_generateShScript}"
-	
+
 	if [[ -e "${TMP_ROOT_DIR}/generatedscripts/${_project}/${_project}.${SAMPLESHEET_EXT}" ]]
 	then
 		_message="${TMP_ROOT_DIR}/generatedscripts/${_project}/${_project}.${SAMPLESHEET_EXT} already exists and will be removed ..."
@@ -131,22 +131,22 @@ function generateScripts () {
 		echo "${_message}" >> "${_logFile}"
 		rm "${TMP_ROOT_DIR}/generatedscripts/${_project}/${_project}.${SAMPLESHEET_EXT}"
 	fi
-	
+
 	_message="Copying ${TMP_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT} to ${TMP_ROOT_DIR}/generatedscripts/${_project}/ ..."
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
 	echo "${_message}" >> "${_logFile}"
 	cp "${TMP_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/generatedscripts/${_project}/"
-	
+
 	cd "${TMP_ROOT_DIR}/generatedscripts/${_project}/"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigated to $(pwd)."
-	
+
 	_message="Running: sh ${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh -p ${_project} -g ${group}>> ${_logFile}"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
 	sh "${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh" -p "${_project}" -g ${group} >> "${_logFile}" 2>&1
 	touch "${_controlFileBase}.started"
 	cd scripts
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigated to $(pwd)."
-	
+
 	sh submit.sh
 	touch "${_controlFileBase}.finished"
 	_message="Scripts generated and created: ${_controlFileBase}.finished."
@@ -160,9 +160,9 @@ function submitPipeline () {
 	local _sampleType="${3}" ## DNA or RNA
 	local _controlFileBase="${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline"
 	local _logFile="${_controlFileBase}.log"
-	
+
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Starting submitPipeline part for project: ${_project}/${_run} ..."
-	
+
 	if [[ -e "${_controlFileBase}.started" ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping  ${_project}/${_run}, because jobs were already submitted."
@@ -172,15 +172,46 @@ function submitPipeline () {
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping  ${_project}/${_run}, because jobs have already finished."
 		return
 	fi
-	
+
 	if [[ ! -e "${TMP_ROOT_DIR}/logs/${_project}" ]]
 	then
 		mkdir -p "${TMP_ROOT_DIR}/logs/${_project}"
 	fi
-	
+
 	cd "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigated to: ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/"
-	
+
+	declare -a sampleSheetColumnNames=()
+        declare -A sampleSheetColumnOffsets=()
+        declare    sampleTypeFieldIndex
+        IFS="${SAMPLESHEET_SEP}" sampleSheetColumnNames=($(head -1 "${project}.${SAMPLESHEET_EXT}"))
+	for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]:-0} ; offset++ ))
+        do
+		#
+                # Backwards compatibility for "Sample Type" including - the horror - a space and optionally quotes :o.
+                #
+                regex='Sample Type'
+                if [[ "${sampleSheetColumnNames[${offset}]}" =~ ${regex} ]]
+                then
+			columnName='sampleType'
+                else
+			columnName="${sampleSheetColumnNames[${offset}]}"
+                fi
+                sampleSheetColumnOffsets["${columnName}"]="${offset}"
+                log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${columnName} and sampleSheetColumnOffsets["${columnName}"] offset ${offset} "
+        done
+	prio="false"
+	if [[ ! -z "${sampleSheetColumnOffsets['FirstPriority']+isset}" ]]
+	then
+		priorityFieldIndex=$((${sampleSheetColumnOffsets['FirstPriority']} + 1))
+		priority="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v prio=${priorityFieldIndex} 'BEGIN {FS=","}{print $prio}')"
+		if [[ "${priority}" == *"TRUE"* ]]
+		then
+			echo "should submit this in prio queue"
+			prio="true"
+		fi
+	fi
+
 	#
 	# Track and Trace: log that we will start running jobs on the cluster.
 	#
@@ -188,7 +219,7 @@ function submitPipeline () {
 	printf '%s\n' "project,run_id,pipeline,url,copy_results_prm,date"  > "${_controlFileBase}.trackAndTrace.csv"
 	printf '%s\n' "${_project},${_project},${_sampleType},${_url},,"  >> "${_controlFileBase}.trackAndTrace.csv"
 	trackAndTracePostFromFile 'status_projects' 'add'                    "${_controlFileBase}.trackAndTrace.csv"
-	
+
 	_url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_samples&hideselect=true&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
 	printf '%s\n' "project_job,job,project,started_date,finished_date,status,url,step"  > "${_controlFileBase}.trackAndTrace.csv"
 	grep '^processJob' submit.sh | tr '"' ' ' | awk -v pro=${_project} -v url=${_url} '{OFS=","} {print pro"_"$2,$2,pro,"","","",url}' \
@@ -197,7 +228,7 @@ function submitPipeline () {
 		> "${_controlFileBase}.trackAndTrace.csv.tmp"
 	mv "${_controlFileBase}.trackAndTrace.csv.tmp" "${_controlFileBase}.trackAndTrace.csv"
 	trackAndTracePostFromFile 'status_jobs' 'add' "${_controlFileBase}.trackAndTrace.csv"
-	
+
 	#
 	# Submit jobs to scheduler.
 	#
@@ -210,6 +241,13 @@ function submitPipeline () {
 					echo "See ${_logFile} for details." > "${_controlFileBase}.failed"
 					return
 				}
+	elif [ "${prio}" == "true" ]
+	then
+		sh submit.sh --qos=priority >> "${_logFile}" 2>&1 \
+                        || {
+                                        echo "See ${_logFile} for details." > "${_controlFileBase}.failed"
+                                        return
+                                }
 	else
 		sh submit.sh >> "${_logFile}" 2>&1 \
 			|| {
@@ -218,7 +256,12 @@ function submitPipeline () {
 				}
 	fi
 	touch "${_controlFileBase}.started"
-	local _message="Jobs were submitted to the scheduler on ${HOSTNAME_SHORT} by ${ROLE_USER} for ${_project}/${_run} on $(date '+%Y-%m-%d-T%H%M')."
+	if [ "${prio}" == "true" ]
+	then
+		local _message="Jobs were submitted to the scheduler on in the prio queue on ${HOSTNAME_SHORT} by ${ROLE_USER} for ${_project}/${_run} on $(date '+%Y-%m-%d-T%H%M')."
+	else
+		local _message="Jobs were submitted to the scheduler on ${HOSTNAME_SHORT} by ${ROLE_USER} for ${_project}/${_run} on $(date '+%Y-%m-%d-T%H%M')."
+	fi
 	echo "${_message}" >> "${_logFile}"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
 }
@@ -333,16 +376,16 @@ sampleSheets=($(ls -1 "${TMP_ROOT_DIR}/Samplesheets/"*".${SAMPLESHEET_EXT}"))
 for sampleSheet in "${sampleSheets[@]}"
 do
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing sample sheet: ${sampleSheet} ..."
-	
+
 	project=$(basename "${sampleSheet}" ".${SAMPLESHEET_EXT}")
 	run='run01'
-	
+
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing: ${project} ..."
 	if [[ ! -e "${TMP_ROOT_DIR}/logs/${project}" ]]
 	then
 		mkdir -m 2770 "${TMP_ROOT_DIR}/logs/${project}"
 	fi
-	
+
 	#
 	# Generate scripts (per sample sheet).
 	#
@@ -366,7 +409,7 @@ do
 		sampleSheetColumnOffsets["${columnName}"]="${offset}"
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${columnName} and sampleSheetColumnOffsets["${columnName}"] offset ${offset} "
 	done
-	
+
 	if [[ ! -z "${sampleSheetColumnOffsets['sampleType']+isset}" ]]; then
 		#
 		# Get sampleType from sample sheet and check if all samples are of the same type.
@@ -385,9 +428,11 @@ do
 	else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sampleType column missing in sample sheet; will use default value: ${sampleType}."
 	fi
-	
+
 	generateScripts "${project}" "${run}" "${sampleType}"
-	
+
+
+
 	#
 	# Submit generated job scripts (per project).
 	#
