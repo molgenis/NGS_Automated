@@ -325,16 +325,8 @@ function rsyncProjectRun() {
 		#
 		# Set all the jobs to finished 
 		#
-		finished_date=$(date +"%Y-%m-%dT%H:%M:%S+0200")
-		_url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_samples&hideselect=true&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
-		printf '%s\n' "project_job,job,project,started_date,finished_date,status,url,step"  > "${_controlFileBase}.trackAndTraceJobs.csv"
-		grep '^processJob' ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/submit.sh | tr '"' ' ' | awk -v pro=${_project} -v url=${_url} -v finished=${finished_date} '{OFS=","} {print pro"_"$2,$2,pro,"",finished,"finished",url}' \
-			>> "${_controlFileBase}.trackAndTraceJobs.csv"
-		awk '{FS=","}{if (NR==1){print $0}else{split($2,a,"_"); print $0","a[1]"_"a[2]}}' "${_controlFileBase}.trackAndTraceJobs.csv"\
-			> "${_controlFileBase}.trackAndTraceJobs.csv.tmp"
-		mv "${_controlFileBase}.trackAndTraceJobs.csv.tmp" "${_controlFileBase}.trackAndTraceJobs.csv"
-
-		awk 'BEGIN {FS=","} {print $1}' "${_controlFileBase}.trackAndTraceJobs.csv" > "${_controlFileBase}.trackAndTraceJobIDs.csv"
+		grep '^processJob' ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/submit.sh | tr '"' ' ' | awk -v pro=${_project} '{OFS=","} {print pro"_"$2}' \
+			>> "${_controlFileBase}.trackAndTraceJobIDs.csv"
 
 		while read line
 		do
