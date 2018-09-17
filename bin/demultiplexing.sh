@@ -158,7 +158,7 @@ for i in $(ls -1 -d "${SEQ_DIR}/"*/)
 do
 	project=$(basename "${i}")
 	pipelineLogger="${SCR_ROOT_DIR}/generatedscripts/${project}/logger.txt"
-	controlFileBase="${SCR_ROOT_DIR}/logs/${project}.demultiplexing"
+	controlFileBase="${SCR_ROOT_DIR}/logs/run01.${project}.demultiplexing"
 	logFile="${controlFileBase}.log"
 
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "working on ${project}"

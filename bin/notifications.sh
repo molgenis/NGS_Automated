@@ -108,9 +108,9 @@ function notification(){
 	for _LFS_ROOT_DIR in ${_LFS_ROOT_DIRS[@]}
 	do
 		_project_state_files=()
-		if $(ls "${_LFS_ROOT_DIR}/logs/"*"/"*"${_phase}.${_state}" 1> /dev/null 2>&1)
+		if $(ls "${_LFS_ROOT_DIR}/logs/"*"/"*".${_phase}.${_state}" 1> /dev/null 2>&1)
 		then
-			_project_state_files=($(ls -1 "${_LFS_ROOT_DIR}/logs/"*"/"*"${_phase}.${_state}")) \
+			_project_state_files=($(ls -1 "${_LFS_ROOT_DIR}/logs/"*"/"*".${_phase}.${_state}")) \
 				|| log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Failed to create a list of ${_LFS_ROOT_DIR}/logs/*/*.${_phase}.${_state} files."
 		else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No *.${_phase}.${_state} files present in ${_LFS_ROOT_DIR}/logs/*/."
