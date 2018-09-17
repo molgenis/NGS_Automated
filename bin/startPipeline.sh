@@ -190,16 +190,16 @@ function submitPipeline () {
 		#
                 # Backwards compatibility for "Sample Type" including - the horror - a space and optionally quotes :o.
                 #
-                regex='Sample Type'
-                if [[ "${sampleSheetColumnNames[${offset}]}" =~ ${regex} ]]
-                then
+		regex='Sample Type'
+		if [[ "${sampleSheetColumnNames[${offset}]}" =~ ${regex} ]]
+		then
 			columnName='sampleType'
-                else
+		else
 			columnName="${sampleSheetColumnNames[${offset}]}"
-                fi
-                sampleSheetColumnOffsets["${columnName}"]="${offset}"
-                log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${columnName} and sampleSheetColumnOffsets["${columnName}"] offset ${offset} "
-        done
+		fi
+		sampleSheetColumnOffsets["${columnName}"]="${offset}"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${columnName} and sampleSheetColumnOffsets["${columnName}"] offset ${offset} "
+	done
 	prio="false"
 	if [[ ! -z "${sampleSheetColumnOffsets['FirstPriority']+isset}" ]]
 	then
@@ -244,10 +244,10 @@ function submitPipeline () {
 	elif [ "${prio}" == "true" ]
 	then
 		sh submit.sh --qos=priority >> "${_logFile}" 2>&1 \
-                        || {
-                                        echo "See ${_logFile} for details." > "${_controlFileBase}.failed"
-                                        return
-                                }
+			|| {
+					echo "See ${_logFile} for details." > "${_controlFileBase}.failed"
+					return
+				}
 	else
 		sh submit.sh >> "${_logFile}" 2>&1 \
 			|| {
