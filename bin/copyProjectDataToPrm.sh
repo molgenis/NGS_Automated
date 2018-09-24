@@ -322,6 +322,16 @@ function rsyncProjectRun() {
 			echo "${_project}: panel: ${_panel} stored to Chronqc database." \
                         >> "${_controlFileBase}.finished"
 		fi
+		#
+		# Set all the jobs to finished 
+		#
+		grep '^processJob' ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/submit.sh | tr '"' ' ' | awk -v pro=${_project} '{OFS=","} {print pro"_"$2}' \
+			>> "${_controlFileBase}.trackAndTraceJobIDs.csv"
+
+		while read line
+		do
+			trackAndTracePut 'status_jobs' "${line}" "status" "finished"
+		done<"${_controlFileBase}.trackAndTraceJobIDs.csv"
 
 	else
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' 'Ended up in unexpected state:'
@@ -407,7 +417,7 @@ function getSampleType(){
 			columnName="${sampleSheetColumnNames[${offset}]}"
 		fi
 		sampleSheetColumnOffsets["${columnName}"]="${offset}"
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${columnName} and sampleSheetColumnOffsets["${columnName}"] offset ${offset} "
+	#	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${columnName} and sampleSheetColumnOffsets["${columnName}"] offset ${offset} "
 	done
 	
 	if [[ ! -z "${sampleSheetColumnOffsets['sampleType']+isset}" ]]; then
@@ -419,7 +429,7 @@ function getSampleType(){
 		if [[ "${sampleTypesCount}" -eq '1' ]]
 		then
 			sampleType=$(tail -n 1 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${sampleTypeFieldIndex}")
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found sampleType: ${sampleType}."
+	#		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found sampleType: ${sampleType}."
 			echo ${sampleType}
 		else
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} contains multiple different sampleType values."
@@ -427,7 +437,7 @@ function getSampleType(){
 			continue
 		fi
 	else
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sampleType column missing in sample sheet; will use default value: ${sampleType}."
+	#	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sampleType column missing in sample sheet; will use default value: ${sampleType}."
 		echo ${sampleType}
 	fi
 }
