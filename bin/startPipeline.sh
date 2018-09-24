@@ -182,14 +182,14 @@ function submitPipeline () {
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigated to: ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/"
 
 	declare -a sampleSheetColumnNames=()
-        declare -A sampleSheetColumnOffsets=()
-        declare    sampleTypeFieldIndex
+	declare -A sampleSheetColumnOffsets=()
+	declare    sampleTypeFieldIndex
         IFS="${SAMPLESHEET_SEP}" sampleSheetColumnNames=($(head -1 "${project}.${SAMPLESHEET_EXT}"))
 	for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]:-0} ; offset++ ))
-        do
+	do
 		#
-                # Backwards compatibility for "Sample Type" including - the horror - a space and optionally quotes :o.
-                #
+		# Backwards compatibility for "Sample Type" including - the horror - a space and optionally quotes :o.
+		#
 		regex='Sample Type'
 		if [[ "${sampleSheetColumnNames[${offset}]}" =~ ${regex} ]]
 		then
