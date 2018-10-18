@@ -101,13 +101,9 @@ function generateScripts () {
 
 	if [ "${_sampleType}" == "DNA" ]
 	then
-		_version="${NGS_DNA_VERSION}"
-		module load "${_loadPipeline}/${_version}" || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to load ${_loadPipeline} module."
 		_pathToPipeline="${EBROOTNGS_DNA}"
 	elif [ "${_sampleType}" == "RNA" ]
 	then
-		_version="${NGS_RNA_VERSION}"
-		module load "${_loadPipeline}/${_version}" || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to load ${_loadPipeline} module."
 		_pathToPipeline="${EBROOTNGS_RNA}"
 	else
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Unknown _sampleType: ${_sampleType}."
