@@ -78,11 +78,11 @@ function rsyncDemultiplexedRuns() {
 	#
 	# Check if production of raw data @ sourceServer has finished.
 	#
-	if ssh ${DATA_MANAGER}@${sourceServerFQDN} test -e "${SCR_ROOT_DIR}/logs/${_run}_Demultiplexing.finished"
+	if ssh ${DATA_MANAGER}@${sourceServerFQDN} test -e "${SCR_ROOT_DIR}/logs/run01.${_run}.demultiplexing.finished"
 	then
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/logs/${_run}_Demultiplexing.finished present."
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/logs/run01.${_run}.demultiplexing.finished present."
 	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/logs/${_run}_Demultiplexing.finished absent."
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/logs/run01.${_run}.demultiplexing.finished absent."
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}."
 		return
 	fi
@@ -94,15 +94,15 @@ function rsyncDemultiplexedRuns() {
 		# and check if *_Demultiplexing.finished is newer than *.dataCopiedToPrm,
 		# which indicates the run was re-demultiplexed and converted to FastQ files.
 		#
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${_run}_Demultiplexing.finished is newer than ${_controlFileBase}.finished"
-		local _demultiplexingFinishedModTime=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} stat --printf='%Y' "${SCR_ROOT_DIR}/logs/${_run}_Demultiplexing.finished")
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if run01.${_run}.demultiplexing.finished is newer than ${_controlFileBase}.finished"
+		local _demultiplexingFinishedModTime=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} stat --printf='%Y' "${SCR_ROOT_DIR}/logs/run01.${_run}.demultiplexing.finished")
 		local _myFinishedModTime=$(stat --printf='%Y' "${_controlFileBase}.finished")
 		
 		if [[ "${_demultiplexingFinishedModTime}" -gt "${_myFinishedModTime}" ]]
 		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "*_Demultiplexing.finished newer than ${_controlFileBase}.finished."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "*.demultiplexing.finished newer than ${_controlFileBase}.finished."
 		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "*_Demultiplexing.finished older than ${_controlFileBase}.finished."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "*.demultiplexing.finished older than ${_controlFileBase}.finished."
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}."
 			return
 		fi
