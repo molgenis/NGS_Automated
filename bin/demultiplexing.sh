@@ -159,9 +159,9 @@ do
 	project=$(basename "${i}")
 	pipelineLogger="${SCR_ROOT_DIR}/generatedscripts/${project}/logger.txt"
 
-	if [ ! -d ${SCR_ROOT_DIR}/logs/${project}/ ]
+	if [ ! -d "${SCR_ROOT_DIR}/logs/${project}/" ]
 	then
-		mkdir ${SCR_ROOT_DIR}/logs/${project}/
+		mkdir "${SCR_ROOT_DIR}/logs/${project}/"
 	fi
 
 	controlFileBase="${SCR_ROOT_DIR}/logs/${project}/run01.demultiplexing"
