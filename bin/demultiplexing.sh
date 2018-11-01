@@ -158,7 +158,13 @@ for i in $(ls -1 -d "${SEQ_DIR}/"*/)
 do
 	project=$(basename "${i}")
 	pipelineLogger="${SCR_ROOT_DIR}/generatedscripts/${project}/logger.txt"
-	controlFileBase="${SCR_ROOT_DIR}/logs/run01.${project}.demultiplexing"
+
+	if [ ! -d ${SCR_ROOT_DIR}/logs/${project}/ ]
+	then
+		mkdir ${SCR_ROOT_DIR}/logs/${project}/
+	fi
+
+	controlFileBase="${SCR_ROOT_DIR}/logs/${project}/run01.demultiplexing"
 	logFile="${controlFileBase}.log"
 
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "working on ${project}"
@@ -251,13 +257,13 @@ do
                                 echo "jobs submitted, pipeline is running" >> "${pipelineLogger}"
 
 				touch "${controlFileBase}.started"
-				printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n" > "${SCR_ROOT_DIR}/logs/${project}_uploading.csv"
-				printf "${project},${GROUP},started,,," >> "${SCR_ROOT_DIR}/logs/${project}_uploading.csv"
+				printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n" > "${SCR_ROOT_DIR}/logs/${project}/run01.uploading.csv"
+				printf "${project},${GROUP},started,,," >> "${SCR_ROOT_DIR}/logs/${project}/run01.uploading.csv"
 
 				CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
 				TOKEN=${CURLRESPONSE:10:32}
 
-				curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${SCR_ROOT_DIR}/logs/${project}_uploading.csv" -FentityTypeId='status_overview' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
+				curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${SCR_ROOT_DIR}/logs/${project}/run01.uploading.csv" -FentityTypeId='status_overview' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
 
 			fi
                 fi
