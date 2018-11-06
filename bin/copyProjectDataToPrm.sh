@@ -148,7 +148,7 @@ function rsyncProjectRun() {
 	#
 	# Count the number of all files produced in this analysis run.
 	#
-	local _countFilesProjectRunDirTmp=$(find "${TMP_ROOT_DIR}/projects/${_project}/${_run}/" -type f | wc -l)
+	local _countFilesProjectRunDirTmp=$(find "${TMP_ROOT_DIR}/projects/${_project}/${_run}/" -type f -o -type l | wc -l)
 	
 	#
 	# Recursively create a list of MD5 checksums unless it is 
