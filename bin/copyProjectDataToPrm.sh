@@ -231,7 +231,7 @@ function rsyncProjectRun() {
 	#
 	if [[ "${_transferSoFarSoGood}" == 'true' ]]
 	then
-		local _countFilesProjectRunDirPrm=$(ssh ${DATA_MANAGER}@${HOSTNAME_PRM} "find ${PRM_ROOT_DIR}/projects/${_project}/${_run}/ -type f | wc -l")
+		local _countFilesProjectRunDirPrm=$(ssh ${DATA_MANAGER}@${HOSTNAME_PRM} "find ${PRM_ROOT_DIR}/projects/${_project}/${_run}/ -type f -o -type l | wc -l")
 		if [[ ${_countFilesProjectRunDirTmp} -ne ${_countFilesProjectRunDirPrm} ]]
 		then
 			mv "${_controlFileBase}."{started,failed}
