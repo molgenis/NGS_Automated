@@ -114,7 +114,7 @@ function notification(){
 				|| log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Failed to create a list of ${_LFS_ROOT_DIR}/logs/*/*.${_phase}.${_state} files."
 		else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No *.${_phase}.${_state} files present in ${_LFS_ROOT_DIR}/logs/*/."
-			return
+			continue
 		fi
 		
 		if [[ -r "${_LFS_ROOT_DIR}/logs/${_phase}.mailinglist" ]]
