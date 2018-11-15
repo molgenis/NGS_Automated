@@ -1,0 +1,3 @@
+*/5 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.12-NGS_Demultiplexing-2.2.12; demultiplexing.sh -g umcg-gd -l WARN"
+*/5 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load ngs-utils/18.09.1 ; checkSamplesheet.sh -s /groups/umcg-gd/scr01/"
+0 6 * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; ${HOME}/FileSystemCheckGD.sh"
