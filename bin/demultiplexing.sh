@@ -192,7 +192,7 @@ do
 
 		### SETTING PATHS
 		### Check if the demultiplexing is already started
-		if [ ! -f "${controlFileBase}.started" ]
+		if [[ ! -f "${controlFileBase}.started" && ! -f "${controlFileBase}.finished" ]]
 		then
 			checkSampleSheet.py --input "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" --logfile "${logFile}"
 			if [ -s "${logFile}.error" ]
