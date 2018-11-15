@@ -379,7 +379,18 @@ function splitSamplesheetPerProject() {
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Created ${_projectSampleSheet}."
 		fi
 	done
-	
+
+	#
+	# Move samplesheet to archive on sourceServerFQDN
+	#
+	if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "mv ${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}* ${SCR_ROOT_DIR}/Samplesheets/archive/"
+	then
+		ssh "${DATA_MANAGER}@${sourceServerFQDN}" "mv ${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}* ${SCR_ROOT_DIR}/Samplesheets/archive/"
+	else
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}.${SAMPLESHEET_EXT} cannot be moved to ${SCR_ROOT_DIR}/Samplesheets/archive/ on ${sourceServerFQDN}."
+		touch "${_controlFileBase}.failed"
+		return
+	fi
 	touch "${_controlFileBase}.finished"
 }
 
