@@ -60,6 +60,28 @@ See separate README_v1.md for details on the (deprecated) version
        `<<<<<<<<<<<<<<<<<<<<<<<<<< 3: copyProjectDataToPrm <<<<<<<<<<<<<<<<<<<<<<<<<<<
 ```
 
+```
+flow gattaca01 (scr01) --> chaperone (prm06) --> leucine-zipper (tmp06) --> chaperone (prm06)
+
+#### gattaca01:
+###### umcg-gd-ateambot 
+module load NGS_Automated/2.0.12-NGS_Demultiplexing-2.2.12; demultiplexing.sh -g umcg-gd
+
+#### chaperone:
+###### umcg-gd-dm
+module load NGS_Automated/2.0.12-bare; copyRawDataToPrm.sh -g umcg-gd -s gattaca01.gcc.rug.nl
+
+#### leucine-zipper:
+###### umcg-gd-ateambot
+module load NGS_Automated/2.0.12-NGS_DNA-3.4.4; startPipeline.sh -g umcg-gd"
+
+###### umcg-gd-dm
+module load NGS_Automated/2.0.13-bare; copyProjectDataToPrm.sh -g umcg-gd
+
+
+```
+
+
 #### Job control flow
 
 The path to phase.state files must be:
