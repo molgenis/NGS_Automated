@@ -352,13 +352,13 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #       that created the sample sheet per project can run a GD cluster
 #       instead of on a research cluster to create them directly on tmp.
 #
-declare -a sampleSheets=($(ssh ${HOSTNAME_PRM} "ls -1 ${PRM_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}"))
-if [[ "${#sampleSheets[@]:-0}" -eq '0' ]]
+if ! ssh ${HOSTNAME_PRM} "ls -1 ${PRM_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}" >/dev/null 2>&1
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found @ ${PRM_ROOT_DIR}/Samplesheets/: There is nothing to do."
 	trap - EXIT
 	exit 0
 else
+	declare -a sampleSheets=($(ssh ${HOSTNAME_PRM} "ls -1 ${PRM_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}"))
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Fetching ${#sampleSheets[@]} sample sheets from ${PRM_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT} ..."
 	rsync -rltD \
 		"${HOSTNAME_PRM}:/${PRM_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}" \
