@@ -112,7 +112,7 @@ function sanityChecking() {
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_checksumFile}."
 		_countFastQFilesInChecksumFile=$(grep '_R[1-2].fastq.gz' "${_checksumFile}" | wc -l)
-		if [[ "${_countFastQFilesInChecksumFile}" -ne (("${_countFastQ1FilesOnDisk}" + "${_countFastQ2FilesOnDisk}")) ]]
+		if [[ "${_countFastQFilesInChecksumFile}" -ne $(("${_countFastQ1FilesOnDisk}" + "${_countFastQ2FilesOnDisk}")) ]]
 		then
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
 				"Mismatch: found ${_countFastQFilesInChecksumFile} FastQ files in checksum file, but ${_countFastQ1FilesOnDisk} *_R1.fastq.gz and ${_countFastQ2FilesOnDisk} *_R2.fastq.gz files on disk." \
