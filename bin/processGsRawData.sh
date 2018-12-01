@@ -603,7 +603,8 @@ function processSamplesheetsAndMoveCovertedData() {
 				&& mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		}
-		touch "${TMP_ROOT_DIR}/logs/${_runDir}_Demultiplexing.finished" \
+		mkdir -p "${TMP_ROOT_DIR}/logs/${_runDir}" \
+			&& touch "${TMP_ROOT_DIR}/logs/${_runDir}/run01.demultiplexing.finished" \
 			>> "${_controlFileBaseForFunction}.started" 2>&1 \
 		|| {
 			log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" '0' "Failed to touch ${TMP_ROOT_DIR}/logs/${_runDir}_Demultiplexing.finished. See ${_controlFileBaseForFunction}.failed for details." \
