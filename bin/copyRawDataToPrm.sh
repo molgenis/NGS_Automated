@@ -57,7 +57,6 @@ function contains() {
 }
 
 function rsyncDemultiplexedRuns() {
-	
 	local _run="${1}"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_run}..."
 	#
@@ -68,13 +67,10 @@ function rsyncDemultiplexedRuns() {
 	#local _controlFileBase="${TMP_ROOT_DIR}/logs/${_run}/run01.${SCRIPT_NAME}"
 	local _controlFileBase="${PRM_ROOT_DIR}/logs/${_run}/run01.${SCRIPT_NAME}"
 	local _logFile="${_controlFileBase}.log"
-	
 	#
 	# Determine whether an rsync is required for this run, which is the case when
 	#  1. either the sequence run has finished successfully and this copy script has not
 	#  2. or when a pipeline has updated the results after a previous execution of this script.
-	#
-	
 	#
 	# Check if production of raw data @ sourceServer has finished.
 	#
@@ -86,7 +82,6 @@ function rsyncDemultiplexedRuns() {
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}."
 		return
 	fi
-	
 	if [[ -e "${_controlFileBase}.finished" ]]
 	then
 		#
@@ -110,7 +105,6 @@ function rsyncDemultiplexedRuns() {
 		mkdir -m 2750 -p "${PRM_ROOT_DIR}/rawdata/ngs/${filePrefix}"
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${_controlFileBase}.finished present."
 	fi
-	
 	#
 	# Track and Trace: log that we will start rsyncing to prm.
 	#
@@ -118,7 +112,6 @@ function rsyncDemultiplexedRuns() {
 	printf '%s\n' "run_id,group,demultiplexing,copy_raw_prm,projects,date"  > "${_controlFileBase}.trackAndTrace.csv"
 	printf '%s\n' "${_run},${group},finished,started,,"                    >> "${_controlFileBase}.trackAndTrace.csv"
 	trackAndTracePostFromFile 'status_overview' 'update'                      "${_controlFileBase}.trackAndTrace.csv"
-	
 	#
 	# Perform rsync.
 	#  1. For ${_run} dir: recursively with "default" archive (-a),
@@ -154,7 +147,6 @@ function rsyncDemultiplexedRuns() {
 			>> "${_controlFileBase}.failed"
 		_transferSoFarSoGood='false'
 	}
-	
 	#
 	# Rsync samplesheet to prm samplesheets folder.
 	#
@@ -168,7 +160,6 @@ function rsyncDemultiplexedRuns() {
 			>> "${_controlFileBase}.failed"
 		_transferSoFarSoGood='false'
 	}
-	
 	#
 	# Sanity check.
 	#
@@ -227,7 +218,6 @@ function rsyncDemultiplexedRuns() {
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
 		fi
 	fi
-	
 	#
 	# Sanity check and report status to track & trace.
 	#
@@ -248,7 +238,6 @@ function rsyncDemultiplexedRuns() {
 }
 
 function splitSamplesheetPerProject() {
-	
 	local _run="${1}"
 	local _sampleSheet="${PRM_ROOT_DIR}/Samplesheets/archive/${_run}.${SAMPLESHEET_EXT}"
 	#
@@ -260,7 +249,7 @@ function splitSamplesheetPerProject() {
 	local _rsyncControlFileFinished="${PRM_ROOT_DIR}/logs/${_run}/run01.${SCRIPT_NAME}.finished"
 	local _controlFileBase="${PRM_ROOT_DIR}/logs/${_run}/run01.splitSamplesheetPerProject"
 	local _logFile="${_controlFileBase}.log"
-	
+	#
 	if [[ -e "${_controlFileBase}.finished" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_controlFileBase}.finished -> Skipping ${_run}."
@@ -272,7 +261,6 @@ function splitSamplesheetPerProject() {
 	else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${_controlFileBase}.finished present -> Splitting sample sheet per project for ${_run}..."
 	fi
-	
 	#
 	# Parse sample sheet to get a list of project values.
 	#
@@ -282,13 +270,12 @@ function splitSamplesheetPerProject() {
 	declare -a _projects=()
 	declare -a _pipelines=()
 	declare -a _demultiplexOnly=("n")
-	
+	#
 	IFS="${SAMPLESHEET_SEP}" _sampleSheetColumnNames=($(head -1 "${_sampleSheet}"))
 	for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]:-0} ; _offset++ ))
 	do
 		_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
 	done
-	
 	#
 	# Check if the pipeline step can be skipped. 
 	#
@@ -330,7 +317,6 @@ function splitSamplesheetPerProject() {
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "GCC_Analysis column missing in sample sheet."
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Continue with ${_run} due to missing pipeline column."
 	fi
-	
 	#
 	# Check if sample sheet contains required project column.
 	#
@@ -379,7 +365,6 @@ function splitSamplesheetPerProject() {
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Created ${_projectSampleSheet}."
 		fi
 	done
-
 	#
 	# Move samplesheet to archive on sourceServerFQDN
 	#
@@ -406,13 +391,17 @@ Usage:
 Options:
 	-h   Show this help.
 	-g   Group.
-	-e   Enable email notification. (Disabled by default.)
 	-n   Dry-run: Do not perform actual sync, but only list changes instead.
 	-l   Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 	-s   Source server address from where the rawdate will be fetched
 		Must be a Fully Qualified Domain Name (FQDN).
 		E.g. gattaca01.gcc.rug.nl or gattaca02.gcc.rug.nl
+	-r   Root dir on the server specified with -s and from where the raw data will be fetched (optional).
+		By default this is the SCR_ROOT_DIR variable, which is compiled from variables specified in the
+		<group>.cfg, <source_host>.cfg and sharedConfig.cfg config files (see below.)
+		You need to override SCR_ROOT_DIR when the data is to be fetched from a non default path,
+		which is for example the case when fetching data from another group.
 
 Config and dependencies:
 	This script needs 4 config files, which must be located in ${CFG_DIR}:
@@ -438,10 +427,10 @@ EOH
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments..."
 declare group=''
-declare email='false'
 declare dryrun=''
 declare sourceServerFQDN=''
-while getopts "g:l:s:hen" opt
+declare sourceServerRootDir=''
+while getopts "g:l:s:r:hn" opt
 do
 	case $opt in
 		h)
@@ -450,15 +439,15 @@ do
 		g)
 			group="${OPTARG}"
 			;;
-		e)
-			email='true'
-			;;
 		n)
 			dryrun='-n'
 			;;
 		s)
 			sourceServerFQDN="${OPTARG}"
 			sourceServer="${sourceServerFQDN%%.*}"
+			;;
+		r)
+			sourceServerRootDir="${OPTARG}"
 			;;
 		l)
 			l4b_log_level="${OPTARG^^}"
@@ -500,13 +489,6 @@ declare -a configFiles=(
 	"${CFG_DIR}/sharedConfig.cfg"
 	"${HOME}/molgenis.cfg"
 )
-#
-# Extend or overwrite group variables if necessary.
-if [ -e "${CFG_DIR}/${group}-extend.cfg" ]
-then
-	configFiles+=("${CFG_DIR}/${group}-extend.cfg")
-fi
-
 for configFile in "${configFiles[@]}"
 do
 	if [[ -f "${configFile}" && -r "${configFile}" ]]
@@ -524,6 +506,14 @@ do
 	fi
 done
 
+#
+# Overrule group's SCR_ROOT_DIR if necessary.
+#
+if [[ ! -z "${sourceServerRootDir:-}" ]]
+then
+	SCR_ROOT_DIR="${sourceServerRootDir}"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Using alternative sourceServerRootDir ${sourceServerRootDir} as SCR_ROOT_DIR."
+fi
 
 #
 # Write access to prm storage requires data manager account.
