@@ -381,12 +381,10 @@ function sanityChecking() {
 }
 
 function renameFastQs() {
-	
 	local _batch="${1}"
 	local _controlFileBase="${2}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME}"
 	local _batchDir="${TMP_ROOT_DIR}/${_batch}/"
-	
 	#
 	# Check if function previously finished successfully for this data.
 	#
@@ -399,7 +397,6 @@ function renameFastQs() {
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
 		printf '' > "${_controlFileBaseForFunction}.started"
 	fi
-	
 	#
 	# Get the sequencingStartDate.
 	#
@@ -414,7 +411,6 @@ function renameFastQs() {
 			&& mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	fi
-	
 	#
 	# Load ngs-utils.
 	#
@@ -428,7 +424,6 @@ function renameFastQs() {
 			&& mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	}
-	
 	#
 	# Rename FastQ files.
 	#
@@ -444,7 +439,6 @@ function renameFastQs() {
 			&& mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	}
-	
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${FUNCNAME} succeeded for batch ${_batch}. See ${_controlFileBaseForFunction}.finished for details." \
 		2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
 		&& rm -f "${_controlFileBaseForFunction}.failed" \
@@ -453,13 +447,11 @@ function renameFastQs() {
 }
 
 function processSamplesheetsAndMoveCovertedData() {
-	
 	local _batch="${1}"
 	local _sampleSheet="${TMP_ROOT_DIR}/Samplesheets/archive/${_batch}.${SAMPLESHEET_EXT}"
 	local _controlFileBase="${2}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME}"
 	local _logFile="${_controlFileBaseForFunction}.log"
-	
 	#
 	# Check if function previously finished successfully for this data.
 	#
@@ -472,15 +464,14 @@ function processSamplesheetsAndMoveCovertedData() {
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
 		printf '' > "${_controlFileBaseForFunction}.started"
 	fi
-	
 	#
 	# Combine GenomeScan samplesheet per batch with inhouse samplesheet(s) per project.
 	#
 	createInhouseSamplesheetFromGS.py \
-		--GenomeScanInputDir "${TMP_ROOT_DIR}/${_batch}/" \
-		--logfile "${_logFile}" \
-		--samplesheetNewDir "${TMP_ROOT_DIR}/Samplesheets/new/" \
-		--samplesheetOutputDir "${TMP_ROOT_DIR}/${_batch}/" \
+		--genomeScanInputDir "${TMP_ROOT_DIR}/${_batch}/" \
+		--inhouseSamplesheetsInputDir "${TMP_ROOT_DIR}/Samplesheets/new/" \
+		--samplesheetsOutputDir "${TMP_ROOT_DIR}/${_batch}/" \
+		--logFile "${_logFile}" \
 		>> "${_logFile}" 2>&1 \
 	|| {
 		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" '0' "createInhouseSamplesheetFromGS.py failed. See ${_logFile} for details." \
@@ -488,7 +479,6 @@ function processSamplesheetsAndMoveCovertedData() {
 			&& mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	}
-	
 	#
 	# Get a list of projects listed in the GenomeScan samplesheet.
 	#
@@ -504,7 +494,6 @@ function processSamplesheetsAndMoveCovertedData() {
 	done
 	_projectFieldIndex=$((${_sampleSheetColumnOffsets['Sample_ID']} + 1))
 	IFS=$'\n' _projects=($(tail -n +2 "${_gsSampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_projectFieldIndex}" | sort | uniq ))
-	
 	#
 	# Get a list of sequencing run dirs (created by renameFastQs.bash)
 	# and in format ${sequencingStartdate}_${sequencer}_${run}_${flowcell}
@@ -519,7 +508,6 @@ function processSamplesheetsAndMoveCovertedData() {
 	else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${#_runDirs[@]} sequence run dirs."
 	fi
-	
 	#
 	# Create samplesheet(s) per sequencing runDir, which may be more than one!
 	#
@@ -541,13 +529,11 @@ function processSamplesheetsAndMoveCovertedData() {
 				&& mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		fi
-		
 		#
 		# Create header line for new sequencing run samplesheet based on the one from the first project samplesheet.
 		#
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating header ${TMP_ROOT_DIR}/${_batch}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}..."
 		head -1 "${TMP_ROOT_DIR}/${_batch}/${_projects[0]}.${SAMPLESHEET_EXT}" > "${TMP_ROOT_DIR}/${_batch}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}"
-		
 		#
 		# Extract lines for this sequencing run from all project samplesheets based on the flowcell ID.
 		#
@@ -561,7 +547,6 @@ function processSamplesheetsAndMoveCovertedData() {
 		done
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Finished creating ${TMP_ROOT_DIR}/${_batch}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}."
 	done
-		
 	#
 	# Sanity check: count if the amount of flowcell+lane+barcode lines in the GenomeScan samplesheet 
 	#               is the same as the flowcell+lane+barcode lines in the combined sequencing run samplesheet(s).
@@ -582,7 +567,9 @@ function processSamplesheetsAndMoveCovertedData() {
 	else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_flowcellLaneBarcodeLinesGS} flowcell+lane+barcode lines in both the GenomeScan batch samplesheet and the samplesheets per sequencing run."
 	fi
-	
+	#
+	# Move/copy converted FastQs with accompanying samplesheets to their destination.
+	#
 	for _runDir in "${_runDirs[@]}"
 	do
 		#
@@ -625,7 +612,6 @@ function processSamplesheetsAndMoveCovertedData() {
 			return
 		}
 	done
-	
 	#
 	# Cleanup uploaded samplesheets per project.
 	#
@@ -635,7 +621,6 @@ function processSamplesheetsAndMoveCovertedData() {
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Moving ${TMP_ROOT_DIR}/Samplesheets/new/${_project}.${SAMPLESHEET_EXT} -> ${TMP_ROOT_DIR}/Samplesheets/archive/ ..."
 		mv -v "${TMP_ROOT_DIR}/Samplesheets/new/${_project}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/Samplesheets/archive/"
 	done
-	
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${FUNCNAME} succeeded for batch ${_batch}. See ${_controlFileBaseForFunction}.finished for details." \
 		2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
 		&& rm -f "${_controlFileBaseForFunction}.failed" \
