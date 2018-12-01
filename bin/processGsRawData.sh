@@ -548,24 +548,24 @@ function processSamplesheetsAndMoveCovertedData() {
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Finished creating ${TMP_ROOT_DIR}/${_batch}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}."
 	done
 	#
-	# Sanity check: count if the amount of flowcell+lane+barcode lines in the GenomeScan samplesheet 
-	#               is the same as the flowcell+lane+barcode lines in the combined sequencing run samplesheet(s).
+	# Sanity check: count if the amount of sample lines in the GenomeScan samplesheet 
+	#               is the same or higher as the flowcell+lane+barcode lines in the combined sequencing run samplesheet(s).
 	#
-	local _flowcellLaneBarcodeLinesGS=$(tail -n +2 "${_gsSampleSheet}" | wc -l)
+	local _sampleLinesGS=$(tail -n +2 "${_gsSampleSheet}" | wc -l)
 	local _flowcellLaneBarcodeLinesRuns=0
 	for _runDir in "${_runDirs[@]}"
 	do
 		_flowcellLaneBarcodeLinesRuns=$(( ${_flowcellLaneBarcodeLinesRuns} + $(tail -n +2 "${TMP_ROOT_DIR}/${_batch}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}" | wc -l) ))
 	done
-	if [[ "${_flowcellLaneBarcodeLinesGS}" -ne "${_flowcellLaneBarcodeLinesRuns}" ]]
+	if [[ "${_flowcellLaneBarcodeLinesRuns}" -lt "${_sampleLinesGS}" ]]
 	then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
-			"Number of flowcell+lane+barcode lines in the GenomeScan batch samplesheet does not match flowcell+lane+barcode lines in the samplesheets per sequencing run: ${_flowcellLaneBarcodeLinesGS} vs. ${_flowcellLaneBarcodeLinesRuns}." \
+			"Number of flowcell+lane+barcode lines in the samplesheets per sequencing run (${_flowcellLaneBarcodeLinesRuns}) is too low for the number of samples in the GenomeScan samplesheet (${_sampleLinesGS})." \
 			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
 			&& mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	else
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_flowcellLaneBarcodeLinesGS} flowcell+lane+barcode lines in both the GenomeScan batch samplesheet and the samplesheets per sequencing run."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_flowcellLaneBarcodeLinesRuns} flowcell+lane+barcode lines in the samplesheets per sequencing run for ${_sampleLinesGS} samples in the GenomeScan samplesheet."
 	fi
 	#
 	# Move/copy converted FastQs with accompanying samplesheets to their destination.
