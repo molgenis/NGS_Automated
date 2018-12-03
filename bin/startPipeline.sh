@@ -231,8 +231,8 @@ function submitPipeline () {
 	log4Bash 'INFO'  "${LINENO}" "${FUNCNAME:-main}" '0' "Submitting jobs for ${_project}/${_run} ..."
 	if [ ${group} == "umcg-atd" ]
 	then
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Using submit option: --qos=dev."
-		sh submit.sh --qos=dev >> "${_logFile}" 2>&1 \
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Using submit option: --qos=leftover."
+		sh submit.sh --qos=leftover >> "${_logFile}" 2>&1 \
 			|| {
 					echo "See ${_logFile} for details." > "${_controlFileBase}.failed"
 					return
