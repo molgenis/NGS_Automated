@@ -8,7 +8,7 @@ import re
 import argparse
 from collections import defaultdict
 from os.path import basename
-
+import logging
 
 #
 ## functions
@@ -82,18 +82,17 @@ def printNewSamplesheet(_projectSamplesheetPath, _gsSamplesheetDataHashmap, _sam
                         #
                         _newRows.append(_newRowValues)
                 else:
-                    print("FATAL: project name for the sample (_barcodesProject=" + _barcodesProject + ") from inhouse sample sheet and from GenomeScan sample sheet is not the same project.")
-                    exit(1)
+                    logging.critical('Project name for the sample (_barcodesProject=' + _barcodesProject + ') from inhouse sample sheet and from GenomeScan sample sheet is not the same project.')
+                    sys.exit('FATAL ERROR!')
             except:
-                logger.write('FATAL: failed to supplement sample (barcode_project=' + _barcodesProject + ') with meta-data from GenomeScan sample sheet.' + "\n")
-                print('FATAL: failed to supplement sample (barcode_project=' + _barcodesProject + ') with meta-data from GenomeScan sample sheet.')
-                exit(1)
+                logging.critical('Failed to supplement sample (barcode_project=' + _barcodesProject + ') with meta-data from GenomeScan sample sheet.')
+                sys.exit('FATAL ERROR!')
         _f1.close()
     #
     # Write new inhouse complete samplesheet per project.
     #
     _newSamplesheetPath = _samplesheetsOutputDir + basename(_projectSamplesheetPath)
-    logger.write("Writing new complete samplesheet to: " + _newSamplesheetPath + "...\n")
+    logging.info('Writing new complete samplesheet to: ' + _newSamplesheetPath + ' ...')
     with open(_newSamplesheetPath, 'w') as f2:
         writer = csv.writer(f2, delimiter = ',')
         writer.writerows(_newRows)
@@ -121,9 +120,9 @@ def makeOriginalFilenameHashmap(_checksumsFilePath):
                 _flowcellDict[_flowcell]['sequencingStartDate'] = _sequencingStartDate
                 _flowcellDict[_flowcell]['sequencer'] = _sequencer
                 _flowcellDict[_flowcell]['run'] = _run
-                logger.write('Parsed sequencingStartDate=' + _sequencingStartDate + ', sequencer=' + _sequencer + ' and run=' + _run + ' from converted FastQ output dir ' + _dir + ".\n")
+                logging.debug('Parsed sequencingStartDate=' + _sequencingStartDate + ', sequencer=' + _sequencer + ' and run=' + _run + ' from converted FastQ output dir ' + _dir + '.')
             else:
-                logger.write('Skipping dir ' + _dir + ', whose name is not in the expected format for a dir containing (renamed) FastQ files.' + "\n")
+                logging.debug('Skipping dir ' + _dir + ', whose name is not in the expected format for a dir containing (renamed) FastQ files.')
     #
     # Parse original fileNames listed in checksum file and combine with sequence run info for each sample.
     #
@@ -181,39 +180,43 @@ def readableDir(prospectiveDir):
 #
 parser = argparse.ArgumentParser(description='Commandline parameters:')
 parser.add_argument("--genomeScanInputDir", type=readableDir, required=True, help='Input directory containing one GenomeScan batch (*.csv, checksums.m5 and *.fastq.gz files).')
-parser.add_argument("--samplesheetsOutputDir", type=readableDir, required=True, help='Directory where complete, merged inhouse samplesheets are stored.')
 parser.add_argument("--inhouseSamplesheetsInputDir", type=readableDir , required=True, help='Input directory containing incomplete new inhouse samplesheets.')
-parser.add_argument("--logFile" , required=True)
+parser.add_argument("--samplesheetsOutputDir", type=readableDir, required=True, help='Directory where complete, merged inhouse samplesheets are stored.')
+parser.add_argument("--logLevel" , required=False, default='INFO', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'])
 args = parser.parse_args()
 #
-# Open log file.
+# Initialize logging.
 #
-logger = open(args.logFile, 'w')
-print("\nStarting to combine samplesheets.\n")
+numericLogLevel = getattr(logging, args.logLevel.upper(), None)
+if not isinstance(numericLogLevel, int):
+    raise ValueError('Invalid log level specified with --logLevel: %s' % args.logLevel)
+logging.basicConfig(level=numericLogLevel, format='%(filename)s %(asctime)s %(levelname)s @ L:%(lineno)d> %(message)s')
+logging.info('Starting to combine samplesheets...')
+
 #
 # Check if input and output path are not the same.
 #
 if args.samplesheetsOutputDir == args.inhouseSamplesheetsInputDir:
-    logger.write("Samplesheet input and output folder are the same. Not allowed to prevent overrwiting original files.\n")
-    sys.exit('FATAL ERROR! Check the log file: ' + args.logFile)
+    logging.critical('Samplesheet input and output folder are the same. Choose another folder for the output to prevent overwriting original files.')
+    sys.exit('FATAL ERROR!')
 #
 # Check availability and readability of GS samplesheet.
 #
 for gsSamplesheetFile in glob.iglob(os.path.join(args.genomeScanInputDir, "CSV_UMCG_*.csv")):
     if os.path.isfile(gsSamplesheetFile) and os.access(gsSamplesheetFile, os.R_OK):
-        logger.write("GenomeScan samplesheet:" + gsSamplesheetFile + "\n")
+        logging.info('Found GenomeScan samplesheet: ' + gsSamplesheetFile + '.')
     else:
-        logger.write("Either the " + args.genomeScanInputDir+ "CSV_UMCG_*.csv" + " file is missing or it is not readable.\n")
-        sys.exit('FATAL ERROR! Check the log file: ' + args.logFile)
+        logging.critical('Either the ' + args.genomeScanInputDir + 'CSV_UMCG_*.csv file is missing or it is not readable.')
+        sys.exit('FATAL ERROR!')
 #
 # Check availability and readability of md5sum file.
 #
 checksumsFilePath = args.genomeScanInputDir + 'checksums.md5'
 if os.path.isfile(checksumsFilePath) and os.access(checksumsFilePath, os.R_OK):
-    logger.write('Found checksums file: ' + checksumsFilePath + "\n")
+    logging.info('Found checksums file: ' + checksumsFilePath + '.')
 else:
-    logger.write('Either the ' + checksumsFilePath + ' file is missing or it is not readable.' + "\n")
-    sys.exit('FATAL ERROR! Check the log file: ' + args.logFile)
+    logging.critical('Either the ' + checksumsFilePath + ' file is missing or it is not readable.')
+    sys.exit('FATAL ERROR!')
 
 #
 # Get sequencing meta-data from original filenames as listed in the checksum file.
@@ -233,7 +236,7 @@ gsSamplesheetDataHashmap = defaultdict(dict)
 projects = []
 for row in gsReader:
     if row['Sample_ID'] in (None,""):
-        logger.write('WARN: Empty row detected in GS samplesheet.' + "\n")
+        logging.warning('Empty row detected in GS samplesheet.')
         continue
     project=row['Sample_ID'] # Confusingly 'Sample_ID' column actually contains the projectName.
     genomeScanID=row['GS_ID']
@@ -241,8 +244,8 @@ for row in gsReader:
     barcodesProject = row['Index1'] + '-' + row['Index2'] + '-' + project
     barcodesGenomeScanID = row['Index1'] + '-' + row['Index2'] + '-' + genomeScanID
     if gsSamplesheetDataHashmap.has_key(barcodesProject):
-        logger.write('FATAL: Barcodes ' + row['Index1'] + '-' + row['Index2'] + ' are not uniq in project ' + project + "\n")
-        sys.exit('FATAL ERROR! Check the log file: ' + args.logFile)
+        logging.critical('Barcodes ' + row['Index1'] + '-' + row['Index2'] + ' are not uniq in project ' + project + '.')
+        sys.exit('FATAL ERROR!')
     try:
         #
         # Example data structure of gsSamplesheetDataHashmap:
@@ -266,8 +269,8 @@ for row in gsReader:
         #pp.pprint(gsSamplesheetDataHashmap)
         #pp.pprint('#####################################################')
     except:
-        logger.write('FATAL: Meta data parsed from original FastQ filenames as supplied by GenomeScan missing for sample ' + genomeScanID + ' with barcodes ' + row['Index1'] + '-' + row['Index2'] + ' from project ' + project + ".\n")
-        sys.exit('FATAL ERROR! Check the log file: ' + args.logFile)
+        logging.critical('Meta data parsed from original FastQ filenames as supplied by GenomeScan missing for sample ' + genomeScanID + ' with barcodes ' + row['Index1'] + '-' + row['Index2'] + ' from project ' + project + '.')
+        sys.exit('FATAL ERROR!')
 gsSamplesheetFileHandle.close()
 #
 # Get list of uniq project names and count number of samples per project.
@@ -286,20 +289,18 @@ for project in (uniqProjects):
         # Check if project samplesheet is present and if number of samples for this project is the same as in GD samplesheet.
         #
         if os.path.isfile(projectSamplesheetPath) and os.access(projectSamplesheetPath, os.R_OK):
-            logger.write('File ' + projectSamplesheetPath + ' exists and is readable.' + ".\n")
+            logging.debug('File ' + projectSamplesheetPath + ' exists and is readable.')
         else:
-            logger.write('FATAL: File ' + projectSamplesheetPath + ' is either missing or not readable.' + ".\n")
-            sys.exit('FATAL ERROR! Check the log file: ' + args.logFile)
+            logging.critical('File ' + projectSamplesheetPath + ' is either missing or not readable.')
+            sys.exit('FATAL ERROR!')
         if (projectCounts[project] == (len(open(projectSamplesheetPath).readlines())-1)):
-            logger.write('Number of samples in GS samplesheet (' + str(projectCounts[project]) + ') is the same as in inhouse samplesheet for project: ' + project + ".\n")
+            logging.debug('Number of samples in GS samplesheet (' + str(projectCounts[project]) + ') is the same as in inhouse samplesheet for project: ' + project + '.')
         else:
-            logger.write('FATAL: Number of samples in GS samplesheet (' + str(projectCounts[project]) + ') is NOT the same as in inhouse Project (' + (len(open(projectSamplesheetPath).readlines())-1) + ' for project ' + project + ".\n")
-            sys.exit('FATAL ERROR! Check the log file: ' + args.logFile)
+            logging.critical('Number of samples in GS samplesheet (' + str(projectCounts[project]) + ') is NOT the same as in inhouse Project (' + (len(open(projectSamplesheetPath).readlines())-1) + ' for project ' + project + '.')
+            sys.exit('FATAL ERROR!')
         #
         # Create new complete samplesheet.
         #
         printNewSamplesheet(projectSamplesheetPath, gsSamplesheetDataHashmap, args.samplesheetsOutputDir)
 
-logger.write("\nSamplesheet merging DONE.\n")
-logger.close()
-print("\nSamplesheet merging DONE.\n")
+logging.info('Samplesheet merging DONE!')

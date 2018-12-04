@@ -465,13 +465,29 @@ function processSamplesheetsAndMoveCovertedData() {
 		printf '' > "${_controlFileBaseForFunction}.started"
 	fi
 	#
+	# Convert log4bash log levels to Python logging levels where necessary
+	#
+	declare _pythonLogLevel='INFO' # default fallback.
+	if [[ "${l4b_log_level}" == 'TRACE' ]]
+	then
+		_pythonLogLevel='DEBUG'
+	elif [[ "${l4b_log_level}" == 'WARN' ]]
+	then
+		_pythonLogLevel='WARNING'
+	elif [[ "${l4b_log_level}" == 'FATAL' ]]
+	then
+		_pythonLogLevel='CRITICAL'
+	else
+		_pythonLogLevel="${l4b_log_level}"
+	fi
+	#
 	# Combine GenomeScan samplesheet per batch with inhouse samplesheet(s) per project.
 	#
 	createInhouseSamplesheetFromGS.py \
 		--genomeScanInputDir "${TMP_ROOT_DIR}/${_batch}/" \
 		--inhouseSamplesheetsInputDir "${TMP_ROOT_DIR}/Samplesheets/new/" \
 		--samplesheetsOutputDir "${TMP_ROOT_DIR}/${_batch}/" \
-		--logFile "${_logFile}" \
+		--logLevel "${_pythonLogLevel}" \
 		>> "${_logFile}" 2>&1 \
 	|| {
 		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" '0' "createInhouseSamplesheetFromGS.py failed. See ${_logFile} for details." \
