@@ -1,2 +1,11 @@
-*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.9-bare; copyRawDataToPrm.sh -g umcg-genomescan -s zf-ds.gcc.rug.nl"
-*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.9-bare; copyRawDataToPrm.sh -g umcg-gd -s gattaca02.gcc.rug.nl"
+#
+# In theory running copyRawDataToPrm.sh every 10 min is fine, but we need to run it twice for the same group:
+#  * For fetching data from gattaca02 (inhouse sequenced samples)
+#  * For fetching data from zf-ds (samples sequenced at GenomeScan)
+# As the code currently creates a lock file per group to prevent running multiple instances simultaneously,
+# we need to separate these cron jobs in time to make sure they both have a chance of running.
+#
+#*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.15-bare; copyRawDataToPrm.sh -g umcg-gd -s zf-ds.gcc.rug.nl      -r /groups/umcg-genomescan/tmp05"
+#*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.15-bare; copyRawDataToPrm.sh -g umcg-gd -s gattaca02.gcc.rug.nl"
+0,20,40 * * * *  /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.15-bare; copyRawDataToPrm.sh -g umcg-gd -s zf-ds.gcc.rug.nl      -r /groups/umcg-genomescan/tmp05"
+10,30,50 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.15-bare; copyRawDataToPrm.sh -g umcg-gd -s gattaca02.gcc.rug.nl"
