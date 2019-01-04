@@ -299,7 +299,7 @@ function rsyncProjectRun() {
 		printf '%s\n' "project,run_id,pipeline,url,copy_results_prm,date"  > "${_controlFileBase}.trackAndTrace.csv"
 		printf '%s\n' "${_project},${_project},${_sampleType},${_url},finished,"     >> "${_controlFileBase}.trackAndTrace.csv"
 		trackAndTracePostFromFile 'status_projects' 'update'            "${_controlFileBase}.trackAndTrace.csv"
-
+		
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/multiqc_data/${_project}.run_date_info.csv"
 		if [[ -e "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/multiqc_data/${_project}.run_date_info.csv" ]]; then
 		#
@@ -308,30 +308,31 @@ function rsyncProjectRun() {
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/multiqc_data/${_project}.run_date_info.csv. Updating ChronQC database with ${_project}."
 			module load chronqc/${CHRONQC_VERSION} || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} 'Failed to load chronqc module.'
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "$(module list)"
-
-			#Get panel information from $_project} based on column 'capturingKit'.
+			
+			# Get panel information from $_project} based on column 'capturingKit'.
 			_panel=$(awk -F "${SAMPLESHEET_SEP}" 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i}}{if(NR > 1) print $(f["capturingKit"]) }' ${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/${project}.${SAMPLESHEET_EXT} | sort -u | cut -d'/' -f2)
-
+			
 			chronqc database --update --db ${PRM_ROOT_DIR}/chronqc/${CHRONQC_DATABASE_NAME} \
 			--run-date-info ${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/multiqc_data/${_project}.run_date_info.csv \
 			--multiqc-sources ${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/multiqc_data/multiqc_sources.txt \
 			${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/multiqc_data/multiqc_general_stats.txt \
 			${_panel}
-
-			echo "${_project}: panel: ${_panel} stored to Chronqc database." \
-                        >> "${_controlFileBase}.finished"
+			
+			echo "${_project}: panel: ${_panel} stored to Chronqc database." >> "${_controlFileBase}.finished"
 		fi
 		#
 		# Set all the jobs to finished 
 		#
-		grep '^processJob' ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/submit.sh | tr '"' ' ' | awk -v pro=${_project} '{OFS=","} {print pro"_"$2}' \
+		grep '^processJob' ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/submit.sh \
+			| tr '"' ' ' \
+			| awk -v pro=${_project} '{OFS=","} {print pro"_"$2}' \
 			>> "${_controlFileBase}.trackAndTraceJobIDs.csv"
-
+		
 		while read line
 		do
 			trackAndTracePut 'status_jobs' "${line}" "status" "finished"
 		done<"${_controlFileBase}.trackAndTraceJobIDs.csv"
-
+		
 	else
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' 'Ended up in unexpected state:'
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected either ${_controlFileBase}.finished or ${_controlFileBase}.failed, but both are absent."
