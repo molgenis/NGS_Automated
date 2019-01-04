@@ -234,7 +234,6 @@ function rsyncProjectRun() {
 		local _countFilesProjectRunDirPrm=$(ssh ${DATA_MANAGER}@${HOSTNAME_PRM} "find ${PRM_ROOT_DIR}/projects/${_project}/${_run}/ -type f -o -type l | wc -l")
 		if [[ ${_countFilesProjectRunDirTmp} -ne ${_countFilesProjectRunDirPrm} ]]
 		then
-			mv "${_controlFileBase}."{started,failed}
 			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectRunDirTmp}) and prm (${_countFilesProjectRunDirPrm}) is NOT the same!" \
 				>> "${_controlFileBase}.failed"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
