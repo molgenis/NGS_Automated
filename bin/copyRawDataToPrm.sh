@@ -58,7 +58,7 @@ function contains() {
 
 function rsyncDemultiplexedRuns() {
 	local _run="${1}"
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_run}..."
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_run}..."
 	#
 	# ToDo: change location of job control files back to ${TMP_ROOT_DIR} once we have a 
 	#       proper prm mount on the GD clusters and this script can run a GD cluster
@@ -89,21 +89,21 @@ function rsyncDemultiplexedRuns() {
 		# and check if ${_run}/run01.demultiplexing.finished is newer than *.dataCopiedToPrm,
 		# which indicates the run was re-demultiplexed and converted to FastQ files.
 		#
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${_run}/run01.demultiplexing.finished is newer than ${_controlFileBase}.finished"
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${_run}/run01.demultiplexing.finished is newer than ${JOB_CONTROLE_FILE_BASE}.finished"
 		local _demultiplexingFinishedModTime=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} stat --printf='%Y' "${SCR_ROOT_DIR}/logs/${_run}/run01.demultiplexing.finished")
-		local _myFinishedModTime=$(stat --printf='%Y' "${_controlFileBase}.finished")
-		
+		local _myFinishedModTime=$(stat --printf='%Y' "${JOB_CONTROLE_FILE_BASE}.finished")
+
 		if [[ "${_demultiplexingFinishedModTime}" -gt "${_myFinishedModTime}" ]]
 		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}/run01.demultiplexing.finished newer than ${_controlFileBase}.finished."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}/run01.demultiplexing.finished newer than ${JOB_CONTROLE_FILE_BASE}.finished."
 		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}/run01.demultiplexing.finished older than ${_controlFileBase}.finished."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}/run01.demultiplexing.finished older than ${JOB_CONTROLE_FILE_BASE}.finished."
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}."
 			return
 		fi
 	else
 		mkdir -m 2750 -p "${PRM_ROOT_DIR}/rawdata/ngs/${filePrefix}"
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${_controlFileBase}.finished present."
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${JOB_CONTROLE_FILE_BASE}.finished present."
 	fi
 	#
 	# Track and Trace: log that we will start rsyncing to prm.
@@ -127,37 +127,38 @@ function rsyncDemultiplexedRuns() {
 	#
 	local _transferSoFarSoGood='true'
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_run} dir..."
-	rsync -vrltD --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
+	echo "working on ${_run}" > "${lockFile}"
+	rsync -vrltD --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
 		"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/runs/${_run}/results/*" \
 		"${PRM_ROOT_DIR}/rawdata/ngs/${_run}/" \
-		>> "${_logFile}" 2>&1 \
 	|| {
-		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${sourceServerFQDN}:${SCR_ROOT_DIR}/runs/${_run} dir. See ${_logFile} for details."
-		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync of sequence run dir failed. See ${_logFile} for details." \
-			>> "${_controlFileBase}.failed"
+		mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${sourceServerFQDN}:${SCR_ROOT_DIR}/runs/${_run} dir. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
+		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync of sequence run dir failed. See ${JOB_CONTROLE_FILE_BASE}.failed for details." \
+			>> "${JOB_CONTROLE_FILE_BASE}.failed"
 		_transferSoFarSoGood='false'
 	}
-	rsync -vrltD --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
+	rsync -vrltD --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
 		"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/runs/${_run}/results/*.md5" \
 		"${PRM_ROOT_DIR}/rawdata/ngs/${_run}/" \
-		>> "${_logFile}" 2>&1 \
 	|| {
-		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${sourceServerFQDN}:${SCR_ROOT_DIR}/runs/${_run}/*.md5. See ${_logFile} for details."
-		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync of checksums failed. See ${_logFile} for details." \
-			>> "${_controlFileBase}.failed"
+		mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${sourceServerFQDN}:${SCR_ROOT_DIR}/runs/${_run}/*.md5. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
+		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync of checksums failed. See ${JOB_CONTROLE_FILE_BASE}.failed for details." \
+			>> "${JOB_CONTROLE_FILE_BASE}.failed"
 		_transferSoFarSoGood='false'
 	}
 	#
 	# Rsync samplesheet to prm samplesheets folder.
 	#
-	rsync -vrltD --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
+	rsync -vrltD --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
 		"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}" \
 		"${PRM_ROOT_DIR}/Samplesheets/archive/" \
-		>> "${_logFile}" 2>&1 \
 	|| {
-		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}. See ${_logFile} for details."
-		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync of sample sheet failed. See ${_logFile} for details." \
-			>> "${_controlFileBase}.failed"
+		mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
+		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync of sample sheet failed. See ${JOB_CONTROLE_FILE_BASE}.failed for details." \
+			>> "${JOB_CONTROLE_FILE_BASE}.failed"
 		_transferSoFarSoGood='false'
 	}
 	#
@@ -172,8 +173,9 @@ function rsyncDemultiplexedRuns() {
 		local _countFilesDemultiplexRunDirPrm=$(find "${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}"* -type f | wc -l)
 		local _checksumVerification='unknown'
 		if [[ ${_countFilesDemultiplexRunDirScr} -ne ${_countFilesDemultiplexRunDirPrm} ]]; then
+			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_run} on scr (${_countFilesDemultiplexRunDirScr}) and prm (${_countFilesDemultiplexRunDirPrm}) is NOT the same!" \
-				>> "${_controlFileBase}.failed"
+				>> "${JOB_CONTROLE_FILE_BASE}.failed"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
 				"Amount of files for ${_run} on tmp (${_countFilesDemultiplexRunDirScr}) and prm (${_countFilesDemultiplexRunDirPrm}) is NOT the same!"
 			_checksumVerification='FAILED'
@@ -183,10 +185,12 @@ function rsyncDemultiplexedRuns() {
 			#
 			# Verify checksums on prm storage.
 			#
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
-				"Started verification of checksums by ${DATA_MANAGER}@${sourceServerFQDN} using checksums from ${PRM_ROOT_DIR}/rawdata/ngs/${_run}/*.md5."
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
+				"Started verification of checksums by ${DATA_MANAGER}@${sourceServerFQDN} using checksums from ${PRM_ROOT_DIR}/rawdata/ngs/${_run}/*.md5." \
+				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
+
 			_checksumVerification=$(cd ${PRM_ROOT_DIR}/rawdata/ngs/${_run}
-				if md5sum -c *.md5 > ${_controlFileBase}.md5.log 2>&1
+				if md5sum -c *.md5 > ${JOB_CONTROLE_FILE_BASE}.md5.log 2>&1
 				then
 					echo 'PASS'
 				else
@@ -195,11 +199,14 @@ function rsyncDemultiplexedRuns() {
 			)
 		fi
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "_checksumVerification = ${_checksumVerification}"
-		if [[ "${_checksumVerification}" == 'FAILED' ]]; then
-			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${_controlFileBase}.md5.log for details." \
-				>> "${_controlFileBase}.failed"
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Checksum verification failed. See ${_controlFileBase}.md5.log for details."
-		elif [[ "${_checksumVerification}" == 'PASS' ]]; then
+		if [[ "${_checksumVerification}" == 'FAILED' ]]
+		then
+			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${JOB_CONTROLE_FILE_BASE}.md5.log for details." \
+				>> "${JOB_CONTROLE_FILE_BASE}.failed"
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Checksum verification failed. See ${JOB_CONTROLE_FILE_BASE}.md5.log for details."
+		elif [[ "${_checksumVerification}" == 'PASS' ]]
+		then
 			#
 			# Overwrite any previously created *.failed file if present,
 			# add new status info incl. demultiplex stats to *.failed file and
@@ -207,33 +214,35 @@ function rsyncDemultiplexedRuns() {
 			# (Note: the content of *.finished will get inserted in the body of email notification messages,
 			# when enabled in <group>.cfg for use by notifications.sh)
 			#
-			echo "The results can be found in: ${PRM_ROOT_DIR}." > "${_controlFileBase}.failed"
+			echo "The results can be found in: ${PRM_ROOT_DIR}." > "${JOB_CONTROLE_FILE_BASE}.failed"
 			if ls "${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}"*.log 1>/dev/null 2>&1
 			then
-				cat "${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}"*.log >> "${_controlFileBase}.failed"
+				cat "${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}"*.log >> "${JOB_CONTROLE_FILE_BASE}.failed"
 			fi
-			echo "OK! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${_controlFileBase}.md5.log for details." \
-				>>    "${_controlFileBase}.failed" \
-				&& mv "${_controlFileBase}."{failed,finished}
+			echo "OK! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${JOB_CONTROLE_FILE_BASE}.md5.log for details." \
+				>>    "${JOB_CONTROLE_FILE_BASE}.failed" \
+				&& mv "${JOB_CONTROLE_FILE_BASE}."{failed,finished}
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
 		fi
 	fi
 	#
 	# Sanity check and report status to track & trace.
 	#
-	if [[ -e "${_controlFileBase}.failed" ]]; then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_controlFileBase}.failed. Setting track & trace state to failed :(."
-		printf '%s\n' "run_id,group,demultiplexing,copy_raw_prm,projects,date"  > "${_controlFileBase}.trackAndTrace.csv"
-		printf '%s\n' "${_run},${group},finished,failed,,"                     >> "${_controlFileBase}.trackAndTrace.csv"
-		trackAndTracePostFromFile 'status_overview' 'update'                      "${_controlFileBase}.trackAndTrace.csv"
-	elif [[ -e "${_controlFileBase}.finished" ]]; then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_controlFileBase}.finished. Setting track & trace state to finished :)."
-		printf '%s\n' "run_id,group,demultiplexing,copy_raw_prm,projects,date"  > "${_controlFileBase}.trackAndTrace.csv"
-		printf '%s\n' "${_run},${group},finished,finished,,"                   >> "${_controlFileBase}.trackAndTrace.csv"
-		trackAndTracePostFromFile 'status_overview' 'update'                      "${_controlFileBase}.trackAndTrace.csv"
+	if [[ -e "${JOB_CONTROLE_FILE_BASE}.failed" ]]
+	then
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.failed. Setting track & trace state to failed :(."
+		printf '%s\n' "run_id,group,demultiplexing,copy_raw_prm,projects,date"  > "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
+		printf '%s\n' "${_run},${group},finished,failed,,"                     >> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
+		trackAndTracePostFromFile 'status_overview' 'update'                      "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
+	elif [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
+	then
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished. Setting track & trace state to finished :)."
+		printf '%s\n' "run_id,group,demultiplexing,copy_raw_prm,projects,date"  > "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
+		printf '%s\n' "${_run},${group},finished,finished,,"                   >> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
+		trackAndTracePostFromFile 'status_overview' 'update'                      "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
 	else
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' 'Ended up in unexpected state:'
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected either ${_controlFileBase}.finished or ${_controlFileBase}.failed, but both are absent."
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected either ${JOB_CONTROLE_FILE_BASE}.finished or ${JOB_CONTROLE_FILE_BASE}.failed, but both are absent."
 	fi
 }
 
@@ -245,21 +254,22 @@ function splitSamplesheetPerProject() {
 	#       proper prm mount on the GD clusters and this script can run a GD cluster
 	#       instead of on a research cluster.
 	#
-	#local _controlFileBase="${TMP_ROOT_DIR}/logs/${_run}/${_run}.splitSamplesheetPerProject"
+	#local JOB_CONTROLE_FILE_BASE="${TMP_ROOT_DIR}/logs/${_run}/${_run}.splitSamplesheetPerProject"
 	local _rsyncControlFileFinished="${PRM_ROOT_DIR}/logs/${_run}/run01.${SCRIPT_NAME}.finished"
 	local _controlFileBase="${PRM_ROOT_DIR}/logs/${_run}/run01.splitSamplesheetPerProject"
 	local _logFile="${_controlFileBase}.log"
 	#
 	if [[ -e "${_controlFileBase}.finished" ]]
 	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_controlFileBase}.finished -> Skipping ${_run}."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished -> Skipping ${_run}."
 		return
 	elif [[ ! -e "${_rsyncControlFileFinished}" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Not found ${_rsyncControlFileFinished} -> Skipping splitting ${_run}."
 		return
 	else
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${_controlFileBase}.finished present -> Splitting sample sheet per project for ${_run}..."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${JOB_CONTROLE_FILE_BASE}.finished present -> Splitting sample sheet per project for ${_run}..." \
+			2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 	fi
 	#
 	# Parse sample sheet to get a list of project values.
@@ -270,7 +280,6 @@ function splitSamplesheetPerProject() {
 	declare -a _projects=()
 	declare -a _pipelines=()
 	declare -a _demultiplexOnly=("n")
-	#
 	IFS="${SAMPLESHEET_SEP}" _sampleSheetColumnNames=($(head -1 "${_sampleSheet}"))
 	for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]:-0} ; _offset++ ))
 	do
@@ -285,9 +294,11 @@ function splitSamplesheetPerProject() {
 		IFS=$'\n' _pipelines=($(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f ${_pipelineFieldIndex} | sort | uniq ))
 		if [[ "${#_pipelines[@]:-0}" -lt '1' ]]
 		then
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} does not contain at least one pipeline value."
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in sample sheet."
-			touch "${_controlFileBase}.failed"
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} does not contain at least one pipeline value." \
+			2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in sample sheet." \
+			2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
+                                        && mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			return
 		elif [[ "${#_pipelines[@]:-0}" -eq '1' ]]
 		then
@@ -296,8 +307,9 @@ function splitSamplesheetPerProject() {
 				_pipeline_to_upper_case=$(echo "${_pipeline}"| awk '{print toupper($0)}')
 				if [[ "${_pipeline_to_upper_case}" = *"DEMULTIPLEXING ONLY"* ]]
 				then
-					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing only."
-					touch "${_controlFileBase}.finished"
+					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing only." \
+						2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
+					mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 					return
 				fi
 			done
@@ -309,13 +321,16 @@ function splitSamplesheetPerProject() {
 				if [[ "${_pipeline_to_upper_case}" == *"DEMULTIPLEXING ONLY"* ]]
 				then
 					IFS=$'\n' _demultiplexOnly=($(awk -F "${SAMPLESHEET_SEP}" "{if (NR>1 && \$${_pipelineFieldIndex} ~ /${_pipelines}/) {print}}" "${_sampleSheet}" |  awk "BEGIN{FS=\"${SAMPLESHEET_SEP}\"} {print \$${_projectFieldIndex}}" | sort -u))
-					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing only detected."
+					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing only detected." \
+						2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 				fi
 			done
 		fi
 	else
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "GCC_Analysis column missing in sample sheet."
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Continue with ${_run} due to missing pipeline column."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "GCC_Analysis column missing in sample sheet." \
+			2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Continue with ${_run} due to missing pipeline column." \
+			2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 	fi
 	#
 	# Check if sample sheet contains required project column.
@@ -325,15 +340,19 @@ function splitSamplesheetPerProject() {
 		IFS=$'\n' _projects=($(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_projectFieldIndex}" | sort | uniq ))
 		if [[ "${#_projects[@]:-0}" -lt '1' ]]
 		then
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} does not contain at least one project value."
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in sample sheet."
-			touch "${_controlFileBase}.failed"
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} does not contain at least one project value." \
+				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in sample sheet." \
+				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
+                                        && mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			return
 		fi
 	else
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "project column missing in sample sheet."
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in sample sheet."
-		touch "${_controlFileBase}.failed"
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "project column missing in sample sheet." \
+			2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in sample sheet." \
+			2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
+                                        && mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 		return
 	fi
 	#
@@ -346,7 +365,7 @@ function splitSamplesheetPerProject() {
 		#
 		if [ $(contains "${_demultiplexOnly[@]}" "${_project}") == "y" ]
 		then
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing Only for project: ${_project}, continue"
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing Only for project: ${_project}, continue" \
 			continue
 		else
 		#
@@ -362,7 +381,8 @@ function splitSamplesheetPerProject() {
 			"${_sampleSheet}" \
 			>> "${_projectSampleSheet}.tmp"
 		mv "${_projectSampleSheet}"{.tmp,}
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Created ${_projectSampleSheet}."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Created ${_projectSampleSheet}." \
+			2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 		fi
 	done
 	#
@@ -370,13 +390,15 @@ function splitSamplesheetPerProject() {
 	#
 	if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "mv ${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}* ${SCR_ROOT_DIR}/Samplesheets/archive/"
 	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}.${SAMPLESHEET_EXT} moved to ${SCR_ROOT_DIR}/Samplesheets/archive/ on ${sourceServerFQDN}."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}.${SAMPLESHEET_EXT} moved to ${SCR_ROOT_DIR}/Samplesheets/archive/ on ${sourceServerFQDN}." \
+			2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
+			&& mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 	else
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}.${SAMPLESHEET_EXT} cannot be moved to ${SCR_ROOT_DIR}/Samplesheets/archive/ on ${sourceServerFQDN}."
-		touch "${_controlFileBase}.failed"
+			2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
+			&& mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 		return
 	fi
-	touch "${_controlFileBase}.finished"
 }
 
 function showHelp() {
@@ -502,7 +524,7 @@ do
 		mixed_stdouterr=$(source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot source ${configFile}."
 		source ${configFile}  # May seem redundant, but is a mandatory workaround for some Bash versions.
 	else
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Config file ${configFile} missing or not accessible."
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Config file ${configFile} missing or not accessible." 
 	fi
 done
 
@@ -590,7 +612,7 @@ else
 fi
 
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished successfully!'
-
+echo "" > "${lockFile}"
 trap - EXIT
 exit 0
 
