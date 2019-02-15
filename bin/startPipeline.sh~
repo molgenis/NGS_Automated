@@ -80,7 +80,8 @@ function generateScripts () {
 	local _sampleType="${3}" ## DNA or RNA
 	local _loadPipeline="NGS_${_sampleType}"
 	local _generateShScript="${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh"
-	export JOB_CONTROLE_FILE_BASE="${TMP_ROOT_DIR}/logs/${_project}/${_run}.generateScripts"
+	local JOB_CONTROLE_FILE_BASE="${TMP_ROOT_DIR}/logs/${_project}/${_run}.generateScripts"
+	local _logFile="${JOB_CONTROLE_FILE_BASE}.log"
 	local _message
 	#
 	if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
@@ -111,14 +112,12 @@ function generateScripts () {
 	fi
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "_pathToPipeline is ${_pathToPipeline}"
 	_message="Creating directory: ${TMP_ROOT_DIR}/generatedscripts/${_project}/ ..."
-
-	echo "${_message}" >> "${JOB_CONTROLE_FILE_BASE}.started"
-
+	echo "${_message}" > "${_logFile}"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
 	mkdir -p "${TMP_ROOT_DIR}/generatedscripts/${_project}/"
 	_message="Copying ${_pathToPipeline}/templates/generate_template.sh to ${_generateShScript} ..."
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
-	echo "${_message}" >> "${JOB_CONTROLE_FILE_BASE}.started"
+	echo "${_message}" >> "${_logFile}"
 	cp "${_pathToPipeline}/templates/generate_template.sh" "${_generateShScript}"
 	#
 	# Check if we need to remove a previously used potentially wrong samplesheet.
@@ -127,7 +126,7 @@ function generateScripts () {
 	then
 		_message="${TMP_ROOT_DIR}/generatedscripts/${_project}/${_project}.${SAMPLESHEET_EXT} already exists and will be removed ..."
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
-		echo "${_message}" >> "${JOB_CONTROLE_FILE_BASE}.started"
+		echo "${_message}" >> "${_logFile}"
 		rm "${TMP_ROOT_DIR}/generatedscripts/${_project}/${_project}.${SAMPLESHEET_EXT}"
 	fi
 	#
@@ -135,35 +134,35 @@ function generateScripts () {
 	#
 	_message="Copying ${TMP_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT} to ${TMP_ROOT_DIR}/generatedscripts/${_project}/ ..."
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
-	echo "${_message}" >> "${JOB_CONTROLE_FILE_BASE}.started"
+	echo "${_message}" >> "${_logFile}"
 	cp "${TMP_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/generatedscripts/${_project}/"
 	#
 	# Generate scripts.
 	#
 	cd "${TMP_ROOT_DIR}/generatedscripts/${_project}/"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigated to $(pwd)."
-	_message="Running: sh ${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh -p ${_project} -g ${group} >> ${JOB_CONTROLE_FILE_BASE}.started"
+	_message="Running: sh ${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh -p ${_project} -g ${group}>> ${_logFile}"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
-	sh "${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh" -p "${_project}" -g ${group} >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
-
+	sh "${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh" -p "${_project}" -g ${group} >> "${_logFile}" 2>&1
+	touch "${JOB_CONTROLE_FILE_BASE}.started"
 	cd scripts
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigated to $(pwd)."
 	#
 	# Execute generated scripts.
 	#
 	sh submit.sh
-	mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+	touch "${JOB_CONTROLE_FILE_BASE}.finished"
 	_message="Scripts generated and created: ${JOB_CONTROLE_FILE_BASE}.finished."
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
-	echo "${_message}" >> "${JOB_CONTROLE_FILE_BASE}.finished"
+	echo "${_message}" >> "${_logFile}"
 }
 
 function submitPipeline () {
 	local _project="${1}"
 	local _run="${2}"
 	local _sampleType="${3}" ## DNA or RNA
-	export JOB_CONTROLE_FILE_BASE="${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline"
-
+	local JOB_CONTROLE_FILE_BASE="${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline"
+	local _logFile="${JOB_CONTROLE_FILE_BASE}.log"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Starting submitPipeline part for project: ${_project}/${_run} ..."
 	if [[ -e "${JOB_CONTROLE_FILE_BASE}.started" ]]
 	then
@@ -233,25 +232,22 @@ function submitPipeline () {
 	if [ ${group} == "umcg-atd" ]
 	then
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Using submit option: --qos=leftover."
-		sh submit.sh --qos=leftover >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1 \
+		sh submit.sh --qos=leftover >> "${_logFile}" 2>&1 \
 			|| {
-					mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-					echo "See ${JOB_CONTROLE_FILE_BASE}.failed for details." > "${JOB_CONTROLE_FILE_BASE}.failed"
+					echo "See ${_logFile} for details." > "${JOB_CONTROLE_FILE_BASE}.failed"
 					return
 				}
 	elif [ "${prio}" == "true" ]
 	then
-		sh submit.sh --qos=priority >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1 \
+		sh submit.sh --qos=priority >> "${_logFile}" 2>&1 \
 			|| {
-					mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-					echo "See ${JOB_CONTROLE_FILE_BASE}.failed for details." > "${JOB_CONTROLE_FILE_BASE}.failed"
+					echo "See ${_logFile} for details." > "${JOB_CONTROLE_FILE_BASE}.failed"
 					return
 				}
 	else
-		sh submit.sh >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1 \
+		sh submit.sh >> "${_logFile}" 2>&1 \
 			|| {
-					mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-					echo "See ${JOB_CONTROLE_FILE_BASE}.failed for details." >> "${JOB_CONTROLE_FILE_BASE}.failed"
+					echo "See ${_logFile} for details." > "${JOB_CONTROLE_FILE_BASE}.failed"
 					return
 				}
 	fi
@@ -262,7 +258,7 @@ function submitPipeline () {
 	else
 		local _message="Jobs were submitted to the scheduler on ${HOSTNAME_SHORT} by ${ROLE_USER} for ${_project}/${_run} on $(date '+%Y-%m-%d-T%H%M')."
 	fi
-	echo "${_message}" >> "${JOB_CONTROLE_FILE_BASE}.started"
+	echo "${_message}" >> "${_logFile}"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
 }
 
