@@ -157,7 +157,11 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "ls -1 -d ${SEQ_DIR}/*/"
 for i in $(ls -1 -d "${SEQ_DIR}/"*/)
 do
 	project=$(basename "${i}")
-	pipelineLogger="${SCR_ROOT_DIR}/generatedscripts/${project}/logger.txt"
+	if [ ! -f "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" ]
+	then
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheet for ${project}: continue."
+			continue
+	fi
 
 	if [ ! -d "${SCR_ROOT_DIR}/logs/${project}/" ]
 	then
@@ -204,28 +208,20 @@ do
 			fi
 
 			## Direct to generatedscripts folder
-			cd "${SCR_ROOT_DIR}/generatedscripts/${project}/" \
-			|| mv "${JOB_CONTROLE_FILE_BASE}."{started,failed} \
-			log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot access ${SCR_ROOT_DIR}/generatedscripts/${_project}/."
+			cd "${SCR_ROOT_DIR}/generatedscripts/${project}/"
 
 			## Copy generate script and samplesheet
 			cp "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" "${project}.csv"
 			echo "copied ${SCR_ROOT_DIR}/Samplesheets/${project}.csv to ${project}.csv" >> "${JOB_CONTROLE_FILE_BASE}.started"
 
-			cp "${EBROOTNGS_DEMULTIPLEXING}/generate_template.sh" ./ \
-			|| mv "${JOB_CONTROLE_FILE_BASE}."{started,failed} \
-                        log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Could not copy "${EBROOTNGS_DEMULTIPLEXING}/generate_template.sh"
+			cp "${EBROOTNGS_DEMULTIPLEXING}/generate_template.sh" ./
+
 			echo "Copied ${EBROOTNGS_DEMULTIPLEXING}/generate_template.sh to ." >> "${JOB_CONTROLE_FILE_BASE}.started"
 
 			### Generating scripts
-                        echo "Generated scripts" >> "${pipelineLogger}"
-                        bash generate_template.sh "${project}" "${SCR_ROOT_DIR}" "${GROUP}" 2>&1 >> "${JOB_CONTROLE_FILE_BASE}.started" \
-			|| mv "${JOB_CONTROLE_FILE_BASE}."{started,failed} \
-			log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Something went wrong running the generate template script. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
+                        bash generate_template.sh "${project}" "${SCR_ROOT_DIR}" "${GROUP}" 2>&1 >> "${JOB_CONTROLE_FILE_BASE}.started"
 
-                        cd "${SCR_ROOT_DIR}/runs/${project}/jobs" \
-			|| mv "${JOB_CONTROLE_FILE_BASE}."{started,failed} \
-                        log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot access ${SCR_ROOT_DIR}/runs/${project}/jobs/."
+                        cd "${SCR_ROOT_DIR}/runs/${project}/jobs"
 
 			bash submit.sh
                         echo "jobs submitted, pipeline is running" >> "${JOB_CONTROLE_FILE_BASE}.started"
