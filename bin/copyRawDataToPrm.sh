@@ -188,7 +188,7 @@ function rsyncDemultiplexedRuns() {
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
 				"Started verification of checksums by ${DATA_MANAGER}@${sourceServerFQDN} using checksums from ${PRM_ROOT_DIR}/rawdata/ngs/${_run}/*.md5." \
 				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
-
+			
 			_checksumVerification=$(cd ${PRM_ROOT_DIR}/rawdata/ngs/${_run}
 				if md5sum -c *.md5 > ${JOB_CONTROLE_FILE_BASE}.md5.log 2>&1
 				then
@@ -295,10 +295,10 @@ function splitSamplesheetPerProject() {
 		if [[ "${#_pipelines[@]:-0}" -lt '1' ]]
 		then
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} does not contain at least one pipeline value." \
-			2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
+				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in sample sheet." \
-			2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
-                                        && mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
+				&& mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			return
 		elif [[ "${#_pipelines[@]:-0}" -eq '1' ]]
 		then
@@ -344,7 +344,7 @@ function splitSamplesheetPerProject() {
 				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in sample sheet." \
 				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
-                                        && mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+				&& mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			return
 		fi
 	else
@@ -352,7 +352,7 @@ function splitSamplesheetPerProject() {
 			2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in sample sheet." \
 			2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
-                                        && mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+			&& mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 		return
 	fi
 	#
