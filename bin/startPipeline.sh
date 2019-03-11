@@ -204,7 +204,7 @@ function submitPipeline () {
 	then
 		priorityFieldIndex=$((${sampleSheetColumnOffsets['FirstPriority']} + 1))
 		priority="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v prio=${priorityFieldIndex} 'BEGIN {FS=","}{print $prio}')"
-		if [[ "${priority}" == *"TRUE"* ]]
+		if [[ "${priority^^}" == *"TRUE"* ]]
 		then
 			echo "should submit this in prio queue"
 			prio="true"
@@ -230,7 +230,7 @@ function submitPipeline () {
 	# Submit jobs to scheduler.
 	#
 	log4Bash 'INFO'  "${LINENO}" "${FUNCNAME:-main}" '0' "Submitting jobs for ${_project}/${_run} ..."
-	if [ ${group} == "umcg-atd" ]
+	if [ "${group}" == "umcg-atd" ]
 	then
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Using submit option: --qos=leftover."
 		sh submit.sh --qos=leftover >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1 \

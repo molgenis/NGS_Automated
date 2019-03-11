@@ -157,17 +157,20 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "ls -1 -d ${SEQ_DIR}/*/"
 for i in $(ls -1 -d "${SEQ_DIR}/"*/)
 do
 	project=$(basename "${i}")
-	pipelineLogger="${SCR_ROOT_DIR}/generatedscripts/${project}/logger.txt"
+	if [ ! -f "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" ]
+	then
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheet for ${project}: continue."
+			continue
+	fi
 
 	if [ ! -d "${SCR_ROOT_DIR}/logs/${project}/" ]
 	then
 		mkdir "${SCR_ROOT_DIR}/logs/${project}/"
 	fi
 
-	controlFileBase="${SCR_ROOT_DIR}/logs/${project}/run01.demultiplexing"
-	logFile="${controlFileBase}.log"
+	export JOB_CONTROLE_FILE_BASE="${SCR_ROOT_DIR}/logs/${project}/run01.demultiplexing"
 
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "working on ${project}"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking ${project}"
 	sequencer=$(echo "${project}" | awk 'BEGIN {FS="_"} {print $2}')
 	miSeqCompleted="no"
 
@@ -192,80 +195,45 @@ do
 
 		### SETTING PATHS
 		### Check if the demultiplexing is already started
-		if [[ ! -f "${controlFileBase}.started" && ! -f "${controlFileBase}.finished" ]]
+		if [[ ! -f "${JOB_CONTROLE_FILE_BASE}.started" && ! -f "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 		then
-			checkSampleSheet.py --input "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" --logfile "${logFile}"
-			if [ -s "${logFile}.error" ]
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Working on ${project}" \
+			2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
+
+			### Check if runfolder already exists
+			if [ ! -d "${SCR_ROOT_DIR}/generatedscripts/${project}" ]
 			then
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${project} skipped."
-				cat  "${logFile}.error" | mail -s "Samplesheet error ${project}" "${ONTVANGER}"
-				rm "${logFile}.error"
-				break
-			else
-				echo  "Samplesheet is OK" >> "${logFile}"
-				#####
-				## RUN PIPELINE PART ##
-				#####
-				echo "All checks are done. Logging from now on can be found: ${pipelineLogger}" >> "${logFile}"
-
-				## Check if Check file (if samplesheet is already there) is existing
-				if [ -f "${SCR_ROOT_DIR}/Samplesheets/${project}_Check.txt" ]
-				then
-					## Remove tmp Check file
-                                        rm "${SCR_ROOT_DIR}/Samplesheets/${project}_Check.txt"
-					echo "rm ${SCR_ROOT_DIR}/Samplesheets/${project}_Check.txt" >> "${pipelineLogger}"
-				fi
-
-					### Check if runfolder already exists
-				if [ ! -d "${SCR_ROOT_DIR}/generatedscripts/${project}" ]
-				then
-					mkdir -p "${SCR_ROOT_DIR}/generatedscripts/${project}/"
-					echo "mkdir -p ${SCR_ROOT_DIR}/generatedscripts/${project}/" >> "${pipelineLogger}"
-				fi
-
-				## Direct to generatedscripts folder
-				cd "${SCR_ROOT_DIR}/generatedscripts/${project}/"
-
-				## Copy generate script and samplesheet
-				cp "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" "${project}.csv"
-				echo "copied ${SCR_ROOT_DIR}/Samplesheets/${project}.csv to ${project}.csv" >> "${pipelineLogger}"
-
-				cp "${EBROOTNGS_DEMULTIPLEXING}/generate_template.sh" ./
-				echo "Copied ${EBROOTNGS_DEMULTIPLEXING}/generate_template.sh to ." >> "${pipelineLogger}"
-				echo "" >> "${pipelineLogger}"
-
-
-				### Generating scripts
-                                echo "Generated scripts" >> "${pipelineLogger}"
-                                bash generate_template.sh "${project}" "${SCR_ROOT_DIR}" "${GROUP}" 2>&1 >> "${pipelineLogger}"
-
-				check=$(tail -1 "${pipelineLogger}")
-				if [[ "${check}" == *"WRONG"* ]]
-				then
-					echo "there is something wrong, EXIT"
-					echo "###"
-					echo "### Here comes the last three lines of the logger:"
-					tail -3 "${pipelineLogger}"
-					echo "###"
-					echo "###"
-					exit 1 
-				fi
-                                echo "cd ${SCR_ROOT_DIR}/runs/${project}/jobs" >> "${pipelineLogger}"
-                                cd "${SCR_ROOT_DIR}/runs/${project}/jobs"
-
-				bash submit.sh
-                                echo "jobs submitted, pipeline is running" >> "${pipelineLogger}"
-
-				touch "${controlFileBase}.started"
-				printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n" > "${SCR_ROOT_DIR}/logs/${project}/run01.uploading.csv"
-				printf "${project},${GROUP},started,,," >> "${SCR_ROOT_DIR}/logs/${project}/run01.uploading.csv"
-
-				CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
-				TOKEN=${CURLRESPONSE:10:32}
-
-				curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${SCR_ROOT_DIR}/logs/${project}/run01.uploading.csv" -FentityTypeId='status_overview' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
-
+				mkdir -p "${SCR_ROOT_DIR}/generatedscripts/${project}/"
+				echo "mkdir -p ${SCR_ROOT_DIR}/generatedscripts/${project}/" >> "${JOB_CONTROLE_FILE_BASE}.started"
 			fi
+
+			## Direct to generatedscripts folder
+			cd "${SCR_ROOT_DIR}/generatedscripts/${project}/"
+
+			## Copy generate script and samplesheet
+			cp "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" "${project}.csv"
+			echo "copied ${SCR_ROOT_DIR}/Samplesheets/${project}.csv to ${project}.csv" >> "${JOB_CONTROLE_FILE_BASE}.started"
+
+			cp "${EBROOTNGS_DEMULTIPLEXING}/generate_template.sh" ./
+
+			echo "Copied ${EBROOTNGS_DEMULTIPLEXING}/generate_template.sh to ." >> "${JOB_CONTROLE_FILE_BASE}.started"
+
+			### Generating scripts
+                        bash generate_template.sh "${project}" "${SCR_ROOT_DIR}" "${GROUP}" 2>&1 >> "${JOB_CONTROLE_FILE_BASE}.started"
+
+                        cd "${SCR_ROOT_DIR}/runs/${project}/jobs"
+
+			bash submit.sh
+                        echo "jobs submitted, pipeline is running" >> "${JOB_CONTROLE_FILE_BASE}.started"
+
+			printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n" > "${SCR_ROOT_DIR}/logs/${project}/run01.uploading.csv"
+			printf "${project},${GROUP},started,,," >> "${SCR_ROOT_DIR}/logs/${project}/run01.uploading.csv"
+
+			CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
+			TOKEN=${CURLRESPONSE:10:32}
+
+			curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${SCR_ROOT_DIR}/logs/${project}/run01.uploading.csv" -FentityTypeId='status_overview' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
+
                 fi
 	fi
 done
