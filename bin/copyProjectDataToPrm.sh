@@ -177,24 +177,24 @@ function rsyncProjectRun() {
 	2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" 
 	rsync -av --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
 		"${TMP_ROOT_DIR}/projects/${_project}/${_run}" \
-		"${DATA_MANAGER}@${HOSTNAME_PRM}:${PRM_ROOT_DIR}/projects/${_project}/" 
+		"${DATA_MANAGER}@${HOSTNAME_PRM}:${PRM_ROOT_DIR}/projects/${_project}/" \
 	|| {
 		mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${TMP_ROOT_DIR}/projects/${_project}/${_run} dir. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
 		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${JOB_CONTROLE_FILE_BASE}.failed for details." \
-			>> "${JOB_CONTROLE_FILE_BASE}.failed"
+			>> "${JOB_CONTROLE_FILE_BASE}.failed" \
 		_transferSoFarSoGood='false'
 		}
 	
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run}.md5 checksums..."
 	rsync -acv --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
 		"${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5" \
-		"${DATA_MANAGER}@${HOSTNAME_PRM}:${PRM_ROOT_DIR}/projects/${_project}/" 
+		"${DATA_MANAGER}@${HOSTNAME_PRM}:${PRM_ROOT_DIR}/projects/${_project}/" \
 	|| {
 		mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
 		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${JOB_CONTROLE_FILE_BASE}.failed for details." \
-			>> "${JOB_CONTROLE_FILE_BASE}.failed"
+			>> "${JOB_CONTROLE_FILE_BASE}.failed" \
 		_transferSoFarSoGood='false'
 		}
 	
@@ -210,19 +210,17 @@ function rsyncProjectRun() {
 		local _countFilesProjectRunDirPrm=$(ssh ${DATA_MANAGER}@${HOSTNAME_PRM} "find ${PRM_ROOT_DIR}/projects/${_project}/${_run}/ -type f -o -type l | wc -l")
 		if [[ ${_countFilesProjectRunDirTmp} -ne ${_countFilesProjectRunDirPrm} ]]
 		then
-			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-		
+
 			ssh "${DATA_MANAGER}@${HOSTNAME_PRM}" "find ${PRM_ROOT_DIR}/projects/${_project}/${_run}/ -type f -o -type l | sort -V" > "${JOB_CONTROLE_FILE_BASE}.countPrmFiles.txt"
 			find "${TMP_ROOT_DIR}/projects/${_project}/${_run}/" -type f -o -type l | sort -V > "${JOB_CONTROLE_FILE_BASE}.countTmpFiles.txt"
-			difference=$(diff "${JOB_CONTROLE_FILE_BASE}.countPrmFiles.txt" "${JOB_CONTROLE_FILE_BASE}.countTmpFiles.txt")
 
-			echo -e "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectRunDirTmp}) and prm (${_countFilesProjectRunDirPrm}) is NOT the same!\n\n${difference}" \
-				>> "${JOB_CONTROLE_FILE_BASE}.failed"
+			echo "diff -q ${JOB_CONTROLE_FILE_BASE}.countPrmFiles.txt ${JOB_CONTROLE_FILE_BASE}.countTmpFiles.txt"
+			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectRunDirTmp}) and prm (${_countFilesProjectRunDirPrm}) is NOT the same!" \
+				>> "${JOB_CONTROLE_FILE_BASE}.started"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
-				"Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectRunDirTmp}) and prm (${_countFilesProjectRunDirPrm}) is NOT the same!\n\n${difference}" \
-					2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
-					&& mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+				"Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectRunDirTmp}) and prm (${_countFilesProjectRunDirPrm}) is NOT the same!"
 			_checksumVerification='FAILED'
+
 		else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
 				"Amount of files on tmp and prm is the same for ${_project}/${_run}: ${_countFilesProjectRunDirPrm}."
@@ -238,6 +236,7 @@ function rsyncProjectRun() {
 				then
 					echo 'PASS'
 				else
+					grep 'FAILED' ${_run}.md5.log > "${TMP_ROOT_DIR}/logs/${_project}/${_run}.md5.failed.log"
 					echo 'FAILED'
 				fi
 			")
@@ -280,9 +279,9 @@ function rsyncProjectRun() {
 			>> "${JOB_CONTROLE_FILE_BASE}.finished"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished. Setting track & trace state to finished :)."
 		_url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
-		printf '%s\n' "project,run_id,pipeline,url,copy_results_prm,date"  > "${_controlFileBase}.trackAndTrace.csv"
-		printf '%s\n' "${_project},${_project},${_sampleType},${_url},finished,"     >> "${_controlFileBase}.trackAndTrace.csv"
-		trackAndTracePostFromFile 'status_projects' 'update'            "${_controlFileBase}.trackAndTrace.csv"
+		printf '%s\n' "project,run_id,pipeline,url,copy_results_prm,date"  > "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
+		printf '%s\n' "${_project},${_project},${_sampleType},${_url},finished,"     >> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
+		trackAndTracePostFromFile 'status_projects' 'update'            "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/multiqc_data/${_project}.run_date_info.csv"
 		if [[ -e "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/multiqc_data/${_project}.run_date_info.csv" ]]; then
 		#
@@ -301,20 +300,20 @@ function rsyncProjectRun() {
 			${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/multiqc_data/multiqc_general_stats.txt \
 			${_panel}
 			
-			echo "${_project}: panel: ${_panel} stored to Chronqc database." >> "${_controlFileBase}.finished"
+			echo "${_project}: panel: ${_panel} stored to Chronqc database." >> "${JOB_CONTROLE_FILE_BASE}.finished"
 		fi
 		#
 		# Set all the jobs to finished 
 		#
-		grep '^processJob' ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/submit.sh \
-			| tr '"' ' ' \
-			| awk -v pro=${_project} '{OFS=","} {print pro"_"$2}' \
-			>> "${_controlFileBase}.trackAndTraceJobIDs.csv"
+#		grep '^processJob' ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/submit.sh \
+#			| tr '"' ' ' \
+#			| awk -v pro=${_project} '{OFS=","} {print pro"_"$2}' \
+#			>> "${JOB_CONTROLE_FILE_BASE}.trackAndTraceJobIDs.csv"
 		
-		while read line
-		do
-			trackAndTracePut 'status_jobs' "${line}" "status" "finished"
-		done<"${_controlFileBase}.trackAndTraceJobIDs.csv"
+#		while read line
+#		do
+#			trackAndTracePut 'status_jobs' "${line}" "status" "finished"
+#		done<"${JOB_CONTROLE_FILE_BASE}.trackAndTraceJobIDs.csv"
 		
 	else
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' 'Ended up in unexpected state:'
