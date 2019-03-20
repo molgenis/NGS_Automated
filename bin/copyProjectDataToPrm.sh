@@ -214,7 +214,7 @@ function rsyncProjectRun() {
 			ssh "${DATA_MANAGER}@${HOSTNAME_PRM}" "find ${PRM_ROOT_DIR}/projects/${_project}/${_run}/ -type f -o -type l | sort -V" > "${JOB_CONTROLE_FILE_BASE}.countPrmFiles.txt"
 			find "${TMP_ROOT_DIR}/projects/${_project}/${_run}/" -type f -o -type l | sort -V > "${JOB_CONTROLE_FILE_BASE}.countTmpFiles.txt"
 
-			echo "diff -q ${JOB_CONTROLE_FILE_BASE}.countPrmFiles.txt ${JOB_CONTROLE_FILE_BASE}.countTmpFiles.txt"
+			echo "diff -q ${JOB_CONTROLE_FILE_BASE}.countPrmFiles.txt ${JOB_CONTROLE_FILE_BASE}.countTmpFiles.txt" >> "${JOB_CONTROLE_FILE_BASE}.started"
 			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectRunDirTmp}) and prm (${_countFilesProjectRunDirPrm}) is NOT the same!" \
 				>> "${JOB_CONTROLE_FILE_BASE}.started"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
@@ -236,7 +236,7 @@ function rsyncProjectRun() {
 				then
 					echo 'PASS'
 				else
-					grep 'FAILED' ${_run}.md5.log > "${TMP_ROOT_DIR}/logs/${_project}/${_run}.md5.failed.log"
+					grep 'FAILED' ${_run}.md5.log > ${_run}.md5.failed.log
 					echo 'FAILED'
 				fi
 			")
@@ -245,7 +245,8 @@ function rsyncProjectRun() {
 		if [[ "${_checksumVerification}" == 'FAILED' ]]
 		then
 			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details." \
+			rsync -av "${DATA_MANAGER}@${HOSTNAME_PRM}:/${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5.failed.log" "${TMP_ROOT_DIR}/logs/${_project}/"
+			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${TMP_ROOT_DIR}/logs/${_project}/${_run}.md5.failed.log for details." \
 				>> "${JOB_CONTROLE_FILE_BASE}.failed"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Checksum verification failed. See ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details."
 		elif [[ "${_checksumVerification}" == 'PASS' ]]
