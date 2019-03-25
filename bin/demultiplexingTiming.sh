@@ -3,13 +3,7 @@
 set -e
 set -u
 
-
-#
-##      This script will run on gattaca0[1-2]. And will check how old the run0*.demultiplexing.started is (last time it is modified). 
-###     It will make a file per project, called like the project.csv, containing the run number.
-##      LZ will pull these files, so the project can be monitored on LZ. 
-## 
-#
+# module load NGS_Automated/beta; demultiplexingTiming.sh -g umcg-atd -l DEBUG
 
 if [[ "${BASH_VERSINFO}" -lt 4 || "${BASH_VERSINFO[0]}" -lt 4 ]]
 then
@@ -157,7 +151,14 @@ then
         log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
 fi
 
+#
+##      This script will run on gattaca0[1-2]. And will check how old the run0*.demultiplexing.started is (last time it is modified). 
+###     It will make a file per project, called like the project.csv, containing the run number.
+##      LZ will pull these files, so the project can be monitored on LZ. 
+## 
+#
 
+run='run01'
 timeStampDir="${SCR_ROOT_DIR}/logs/Timestamp/"
 
 
@@ -172,54 +173,49 @@ do
     fi
 
 
-    timeStamp=$(find "${SCR_ROOT_DIR}/logs/${sequenceRun}/" -type f -mmin +60 -iname "run0"[1-9]"demultiplexing.started")
-    echo "timestamp check"
-    if [[ -z "${timeStamp}" ]]
+    if [ -e "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.demultiplexing.finished" ]
     then
-        echo "timestamp is niet leeg!"
-        if [ -e "${SCR_ROOT_DIR}/logs/${sequenceRun}/run0"[1-9]".demultiplexing.finished" ]
+        echo ".finished bestaat"
+        declare -a sampleSheetColumnNames=()
+        declare -A sampleSheetColumnOffsets=()
+        declare -a projects=()
+        
+        IFS="," sampleSheetColumnNames=($(head -1 "${sampleSheet}"))
+        
+        for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]:-0} ; offset++ ))
+        do
+            sampleSheetColumnOffsets["${sampleSheetColumnNames[${offset}]}"]="${offset}"
+        done
+
+        if [[ ! -z "${sampleSheetColumnOffsets['project']+isset}" ]] 
         then
-            echo ".finished bestaat"
-            declare -a sampleSheetColumnNames=()
-            declare -A sampleSheetColumnOffsets=()
-            declare -a projects=()
-            
-            IFS="," sampleSheetColumnNames=($(head -1 "${sampleSheet}"))
-            
-            for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]:-0} ; offset++ ))
-            do
-                sampleSheetColumnOffsets["${sampleSheetColumnNames[${offset}]}"]="${offset}"
-            done
-
-            if [[ ! -z "${sampleSheetColumnOffsets['project']+isset}" ]] 
-            then
-                projectFieldIndex=$((${sampleSheetColumnOffsets['project']} + 1))
-                IFS=$'\n' projects=($(tail -n +2 "${sampleSheet}" | cut -d "," -f "${projectFieldIndex}" | sort | uniq ))
-            fi
-
-            for project in "${projects[@]}"
-            do
-                echo "${project}"
-                projectStampFile="${timeStampDir}/${project}.csv"
-                if [[ -e "${projectStampFile}" ]]
-                then
-                    echo "${projectStampFile} already exists"
-                else
-                    printf "${sequenceRun}" >> "${projectStampFile}" 
-                fi
-                touch "${SCR_ROOT_DIR}/logs/${sequenceRun}/${SCRIPT_NAME}.finished"
-                echo "Demultiplexing is finished"
-            done
-        else
-            echo ".started file is NOT older than 1 hours. Demultiplexing is running"
-
+            projectFieldIndex=$((${sampleSheetColumnOffsets['project']} + 1))
+            IFS=$'\n' projects=($(tail -n +2 "${sampleSheet}" | cut -d "," -f "${projectFieldIndex}" | sort | uniq ))
         fi
 
+        for project in "${projects[@]}"
+        do
+            echo "${project}"
+            projectStampFile="${timeStampDir}/${project}.csv"
+            if [[ -e "${projectStampFile}" ]]
+            then
+                echo "${projectStampFile} already exists"
+            else
+                echo "${sequenceRun}" >> "${projectStampFile}"
+            fi
+            touch "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.finished"
+            echo "Demultiplexing is finished"
+        done
     else
-         echo "demultiplexing.started file is OLDER than 1 hour."
-         echo "${SCR_ROOT_DIR}/logs/${sequenceRun}/${SCRIPT_NAME}.failed"
-         echo -e "Dear GCC helpdesk,\n\nPlease check if there is somethink wrong with the demultiplexing pipeline.\nThe demultiplexing of run ${sequenceRun} is not finished after 1h.\n\nKind regards\nGCC" >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${SCRIPT_NAME}.failed"
-
+        timeStamp=$(find "${SCR_ROOT_DIR}/logs/${sequenceRun}/" -type f -mmin +60 -iname "${run}.demultiplexing.started")
+        if [[ -z "${timeStamp}" ]]
+        then
+            echo "demultiplexing is running"
+        else
+            echo "demultiplexing.started file is OLDER than 1 hour."
+            echo "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.failed"
+            echo -e "Dear GCC helpdesk,\n\nPlease check if there is somethink wrong with the demultiplexing pipeline.\nThe demultiplexing of run ${sequenceRun} is not finished after 1h.\n\nKind regards\nGCC" > "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.failed"
+        fi 
     fi
 done
 
