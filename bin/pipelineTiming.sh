@@ -7,12 +7,13 @@ set -u
 # module load NGS_Automated/beta; pipelineTiming.sh -g umcg-atd -s gattaca01.gcc.rug.nl -r /groups/umcg-atd/scr01/ -l DEBUG
 
 #
-##      This script will run on Leucine-zipper or zinc-finger. First it will pull the project files, from projects from whom the demultiplex pipeline is fished.
-###     And then it will check if the run0*.pipeline.started is older than 6h, *.generateScripts.started is older than 5h and the *.copyProjectDataToPrm.finished is older than 5(last time it was modified). 
-####    If the .started is not older than 5 or 6h, no worries the pipeline is probably still running.
-####    If there is no .started file it will check if there is a .finished file. If there is a .fished file, no worries, the pipeline is fished. 
-###    
-## 
+##      This script will run on Leucine-zipper or zinc-finger. First it will pull the project files, from projects from whom the demultiplex pipeline is finished.
+###     It will check if there is a .finished file for the generateScripts, pipeline, copyProjectDataPrm, if there is, these steps are finished. 
+####    If no .finished file is precent, it will check if the run0*.pipeline.started is older than 6h, 
+####    *.generateScripts.started is older than 5h and the *.copyProjectDataPrm.started is older than 5(last time it was modified). 
+###     If the .started is not older than 5 or 6h, no worries the pipeline is probably still running.
+##      If the .started file is older than 5 or 6 hours, it wil generate a .failed file.
+#
 
 if [[ "${BASH_VERSINFO}" -lt 4 || "${BASH_VERSINFO[0]}" -lt 4 ]]
 then
@@ -197,11 +198,15 @@ projectStartDir="${TMP_ROOT_DIR}/logs/Timestamp"
 
 rsync -av ${sourceServerFQDN}:"${SCR_ROOT_DIR}/logs/Timestamp/*.csv" "${projectStartDir}" 
 
-for projectSheet in $(ls "${projectStartDir}")
+for projectSheet in $(ls "${projectStartDir}/"*".csv")
 do 
 
     project=$(basename "${projectSheet}" .csv)
-    
+
+    touch "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
+    echo -e "moment of checking run time: $(date)\nproject: ${project}\n" > "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
+    log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Using project: ${project}"
+
     if [[ ! -d "${logsDir}/${project}/" ]]
     then
         continue
@@ -210,65 +215,81 @@ do
     ## step 1, checks the generatedScirps
     if [ -e "${logsDir}/${project}/${run}.generateScripts.finished" ]
     then    
-        echo "generatedScripts is finisched"
-        echo "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.finished"
+        echo -e "generatedScripts finished for project ${project}" >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
+        touch "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.finished"
+        log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "generateScripts finished for project ${project}"
     else
         timeStampGeneratedScripts=$(find "${logsDir}/${project}/" -type f -mmin +300 -iname "${run}.generateScripts.started")
         if [[ -z "${timeStampGeneratedScripts}" ]]
         then
-            echo "generatedScipts has not started jet or is running"
+            echo -e "generateScipts has not started yet or is running" >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
+            log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "generateScipts has not started yet or is running for project ${project}"
             continue
         else
-            echo "generatedScripts.started file is OLDER than 5 hour."
-            echo "${TMP_ROOT_DIR}/logs/${project}/${run}.generateScriptsTiming.failed"
+            echo -e "generateScripts.started file is OLDER than 5 hour.\n" \
+            "time ${run}.generateScripts.started was last modified:" \
+            $(stat -c %y "${TMP_ROOT_DIR}/logs/${project}/${run}.generateScripts.started") >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
+            
+            touch "${TMP_ROOT_DIR}/logs/${project}/${run}.generateScriptsTiming.failed"
             echo -e "Dear GCC helpdesk,\n\nPlease check if there is somethink wrong with the pipeline.\nThe generatedScripts step for project ${project} is not finished after 5h.\n\nKind regards\nGCC" > "${TMP_ROOT_DIR}/logs/${project}/${run}.generateScriptsTiming.failed"
+            log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "generateScripts.started file is OLDER than 5 hour for project ${project}"
             continue
         fi
     fi
-    echo "generatedScripts finished for project ${project}"
     
     ## step 2, checks the pipeline
     if [ -e "${logsDir}/${project}/${run}.pipeline.finished" ]
     then
-        echo "pipeline is finisched"
-        echo "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.finisched"
+        echo "pipeline is finished for project ${project}" >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
+        touch "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.finished"
+        log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "pipeline finished for project ${project}"
     else
         timeStampPipeline=$(find "${logsDir}/${project}/" -type f -mmin +360 -iname "${run}.pipeline.started")
         if [[ -z "${timeStampPipeline}" ]]
         then
-            echo "pipeline is has not started jet or is still running"
+            echo -e "pipeline is has not started yet or is still running" >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
+            log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "pipeline has not started yet or is running for project ${project}"
             continue
         else
-            echo "pipeline.started file is OLDER than 6 hour."
-            echo "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.failed"
+            echo -e "pipeline.started file is OLDER than 6 hour.\n" \
+            "time ${run}.pipeline.started was last modified:" \
+            $(stat -c %y "${TMP_ROOT_DIR}/logs/${project}/${run}.pipeline.started") >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
+            touch "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.failed"
             echo -e "Dear GCC helpdesk,\n\nPlease check if there is somethink wrong with the pipeline.\nThe pipeline for project ${project} is not finished after 6h.\n\nKind regards\nGCC" > "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.failed"
+            log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "pipeline.started file is OLDER than 6 hour for project ${project}"
             continue
         fi
     fi 
-    echo "pipeline finished for project ${project}"
     
-    ## step 3, check the copyProjectDataPrm
-    if [ -e "${logsDir}/${project}/${run}.copyProjectDataPrm.finished" ]
+    ## step 3, check the copyProjectDataToPrm
+    if [ -e "${logsDir}/${project}/${run}.copyProjectDataToPrm.finished" ]
     then
-        echo "copyProjectDataPrm is finisched"
-        echo "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.finisched"
+        echo -e "copyProjectDataToPrm is finished for project ${project}" >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
+        touch "${TMP_ROOT_DIR}/logs/${project}/${run}.copyProjectDataToPrmTiming.finished"
+        log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "copyProjectDataToPrm finished for project ${project}"
     else
-        timeStampCopyProjectDataToPrm=$(find "${logsDir}/${project}/" -type f -mmin +300 -iname "${run}.copyProjectDataPrm.started")
+        timeStampCopyProjectDataToPrm=$(find "${logsDir}/${project}/" -type f -mmin +300 -iname "${run}.copyProjectDataToPrm.started")
         if [[ -z "${timeStampCopyProjectDataToPrm}" ]]
         then
-            echo "copyProjectDataToPrm has not started jet, or is running"
+            echo -e "copyProjectDataToPrm has not started jet, or is running" >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
+            log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "copyProjectDataToPrm has not started yet or is running for project ${project}"
             continue
         else
-            echo "copyProjectDataPrm.started file is OLDER than 5 hour."
-            echo "${TMP_ROOT_DIR}/logs/${project}/${run}.copyProjectDataPrmTiming.failed"
-            echo -e "Dear GCC helpdesk,\n\nPlease check if there is somethink wrong with the pipeline.\nThe copyProjectDataPrm has started but is not finished after 6h for project ${project}.\n\nKind regards\nGCC" > "${TMP_ROOT_DIR}/logs/${project}/${run}.copyProjectDataPrmTiming.failed"
+            echo -e "copyProjectDataToPrm.started file is OLDER than 5 hour.\n" \ 
+            "time ${run}.copyProjectDataToPrm.started was last modified:\n" \
+            $(stat -c %y "${TMP_ROOT_DIR}/logs/${project}/${run}.copyProjectDataToPrm.started") >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
+            touch "${TMP_ROOT_DIR}/logs/${project}/${run}.copyProjectDataToPrmTiming.failed"
+            echo -e "Dear GCC helpdesk,\n\nPlease check if there is somethink wrong with the pipeline.\nThe copyProjectDataToPrm has started but is not finished after 6h for project ${project}.\n\nKind regards\nGCC" > "${TMP_ROOT_DIR}/logs/${project}/${run}.copyProjectDataToPrmTiming.failed"
+            log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "copyProjectDataToPrm.started file OLDER than 5 hour for project ${project}"
             continue
         fi
     fi
 
-    echo "copyProjectDataToPrm finished for project ${project}"
-    $(ssh ${sourceServerFQDN} "mv ${SCR_ROOT_DIR}/logs/Timestamp/${projectSheet} ${SCR_ROOT_DIR}/logs/Timestamp/archive/")
-    mv "${projectStartDir}/${projectSheet}" "${projectStartDir}/archive/"
+    echo -e "The complete pipeline is finished for project ${project}" >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
+    log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The complete pipeline is finished for project ${project}"
+    
+    ssh ${sourceServerFQDN} "mv ${SCR_ROOT_DIR}/logs/Timestamp/${project}.csv ${SCR_ROOT_DIR}/logs/Timestamp/archive/"
+    mv "${projectStartDir}/${project}.csv" "${projectStartDir}/archive/"
 done
 
 trap - EXIT

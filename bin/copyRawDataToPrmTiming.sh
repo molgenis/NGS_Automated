@@ -7,13 +7,14 @@ set -u
 
 
 #
-##      This script will run on chaperon or boxy. First it will pull the project files, from projects from whom the demultiplex pipeline is fished.
-###     And then it will check if the run01.copyRawDataToPrm.started is older than xh(last time it was modified). 
-####    If the .started is not older than xh, no worries the pipeline is probably still running.
-####    If there is no .started file it will check if there is a .finished file. If there is a .fished file, no worries, the pipeline is fished. 
-###    
-## 
-#
+##      This script will run on chaperone or boxy. First it will pull the project files, from projects from whom the demultiplex pipeline is finished.
+###     And then it will check if there is a .finished file, if there is, the copyRawDataToPrm is finished.
+####    If there is no .finished file, it will check if there is a .started file and if this file is older than 6h (last time it was modified).
+###     If the .started is not older than 6h, no worries the pipeline is probably still running.
+##      If the .started file is older than 6h, it will generate a copyRawDataToPrmTiming.failed. 
+#    
+ 
+
 if [[ "${BASH_VERSINFO}" -lt 4 || "${BASH_VERSINFO[0]}" -lt 4 ]]
 then
     echo "Sorry, you need at least bash 4.x to use ${0}." >&2
@@ -193,39 +194,48 @@ fi
 
 run='run01'
 logsDir="${TMP_ROOT_DIR}/logs/"
-echo "sourceServerFQDN:${sourceServerFQDN}"
-echo "sourceServerRootDir:${sourceServerRootDir}"
-echo "${ATEAMBOTUSER}@${sourceServerFQDN}"
 # make project folder on chaperone/boxy
 
 for projectSheet in $(ssh ${ATEAMBOTUSER}@${sourceServerFQDN} "ls ${SCR_ROOT_DIR}/logs/Timestamp/*.csv")
 do 
-    echo "${projectSheet}"
+
     project=$(basename "${projectSheet}" .csv)
-    echo "${project}"
 
     sequenceRun=$(ssh ${ATEAMBOTUSER}@${sourceServerFQDN} "cat ${projectSheet}")
-    echo "${sequenceRun}"
+    
+    touch "${TMP_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
+
+    echo -e "moment of checking run time: $(date)\nsequenceRun: ${sequenceRun}\nproject: ${project}" > "${TMP_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
+    log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Using sequenceRun: ${sequenceRun}"
+    log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Using project: ${project}"
+
     if [[ ! -d "${logsDir}/${sequenceRun}" ]]
     then
-        echo "${logsDir}/${sequenceRun} does not exist"
         continue
     fi
 
     if [ -e "${logsDir}/${sequenceRun}/${run}.copyRawDataToPrm.finished" ]
     then
-        echo "copyRawData ${sequenceRun} is finished"
-        echo "${TMP_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.finished"
+        echo -e "copyRawDataToPrm for sequenceRun: ${sequenceRun} is finished" >> "${TMP_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
+        touch "${TMP_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.finished"
         echo -e "${run}.${SCRIPT_NAME}.finished" >> "${TMP_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.finished"
+        log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "copyRawDataToPrm for sequenceRun: ${sequenceRun} is finished"
         continue
     else
         timeStampCopyRawDataToPrm=$(find "/${logsDir}/${sequenceRun}/" -type f -mmin +360 -iname "${run}.copyRawDataToPrm.started")
         if [[ -z "${timeStampCopyRawDataToPrm}" ]]
         then
-            echo "copyRawDataPrm is still running, no worries"
+            echo -e "copyRawDataToPrm for sequenceRun: ${sequenceRun} is still running" >> "${TMP_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
+            log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "copyRawDataToPrm for sequenceRun: ${sequenceRun} is still running"
         else
-            echo "copyRawDataPrm.started file is OLDER than 6 hour."
-            echo "${TMP_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.failed"
+            echo -e "copyRawDataToPrm for sequenceRun: ${sequenceRun} is running over 6h\n" \
+            "time ${run}.copyRawDataToPrm.started was last modified:" \
+            $(stat -c %y "${TMP_ROOT_DIR}/logs/${sequenceRun}/${run}.copyRawDataToPrm.started") \
+            >> "${TMP_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
+
+            log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "copyRawDataToPrm for sequenceRun: ${sequenceRun} is running over 6h"
+            
+            touch "${TMP_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.failed"
             echo -e "Dear GCC helpdesk,\n\nPlease check if there is somethink wrong with the pipeline.\nThe copyRawDataToPrm has started but is not finished after 6h for sequenceRun ${sequenceRun}.\n\nKind regards\nGCC" > "${TMP_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.failed"
         fi
     fi
