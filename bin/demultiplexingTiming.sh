@@ -166,14 +166,14 @@ do
 
     sequenceRun=$(basename "${sampleSheet}" .csv)
     
-    echo "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
-    echo -e "moment of checking run time:" >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
-    date >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
-    echo -e "${sampleSheet}" >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
+    touch "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
+    echo -e "moment of checking run time: $(date)\nsamplesheet: ${sampleSheet}\n" > "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
+    log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using sampleSheet: ${sampleSheet}"
     
     if [[ ! -d "${SCR_ROOT_DIR}/logs/${sequenceRun}/" ]]
     then
-        echo -e "Sequencer is not finished jet" >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
+        echo -e "Sequencer is not finished yet" >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
+        log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer is not finished yet for run ${sequenceRun}"
         continue
     fi
 
@@ -199,28 +199,34 @@ do
 
         for project in "${projects[@]}"
         do
-            echo "project: ${project}"
+            log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "project: ${project}"
+            echo -e "project: ${project}" >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
+
             projectStampFile="${timeStampDir}/${project}.csv"
             if [[ -e "${projectStampFile}" ]]
             then
-                echo "${projectStampFile} already exists"
+                log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "projectTimeStampFile: ${projectStampFile} already exist"
             else
-                echo "${sequenceRun}" >> "${projectStampFile}"
+                echo -e "${sequenceRun}" >> "${projectStampFile}"
             fi
             touch "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.finished"
             echo -e "Demultiplexing is finished for sequence run ${sequenceRun}" >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
+            log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing is finished for sequence run ${sequenceRun}"
         done
     else
         timeStamp=$(find "${SCR_ROOT_DIR}/logs/${sequenceRun}/" -type f -mmin +60 -iname "${run}.demultiplexing.started")
         if [[ -z "${timeStamp}" ]]
         then
             echo -e "Demultiplexing is running for sequence run ${sequenceRun}" >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
+            log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing is running for sequence run ${sequenceRun}"
         else
-            echo -e "demultiplexing.started file is OLDER than 1 hour." >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
-            echo -e "time ${run}.demultiplexing.started was last modified:" >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
-            stat -c %y "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.demultiplexing.started" >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
-            echo "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.failed"
+            echo -e "demultiplexing.started file is OLDER than 1 hour.\ntime ${run}.demultiplexing.started was last modified:" \
+            $(stat -c %y "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.demultiplexing.started") >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
+            
+            touch "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.failed"
             echo -e "Dear GCC helpdesk,\n\nPlease check if there is somethink wrong with the demultiplexing pipeline.\nThe demultiplexing of run ${sequenceRun} is not finished after 1h.\n\nKind regards\nGCC" > "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.failed"
+            
+            log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing.started file is OLDER than 1 hour for sequencerun: ${sequenceRun}"
         fi 
     fi
 done
