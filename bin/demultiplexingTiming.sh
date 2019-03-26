@@ -155,27 +155,31 @@ fi
 ##      This script will run on gattaca0[1-2]. And will check how old the run0*.demultiplexing.started is (last time it is modified). 
 ###     It will make a file per project, called like the project.csv, containing the run number.
 ##      LZ will pull these files, so the project can be monitored on LZ. 
-## 
-#
+# 
+
 
 run='run01'
 timeStampDir="${SCR_ROOT_DIR}/logs/Timestamp/"
 
-
 for sampleSheet in $(ls "${SCR_ROOT_DIR}/Samplesheets/"*".csv")
 do 
-    echo "${sampleSheet}"
-    sequenceRun=$(basename "${sampleSheet}" .csv)
 
+    sequenceRun=$(basename "${sampleSheet}" .csv)
+    
+    echo "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
+    echo -e "moment of checking run time:" >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
+    date >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
+    echo -e "${sampleSheet}" >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
+    
     if [[ ! -d "${SCR_ROOT_DIR}/logs/${sequenceRun}/" ]]
     then
+        echo -e "Sequencer is not finished jet" >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
         continue
     fi
 
 
     if [ -e "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.demultiplexing.finished" ]
     then
-        echo ".finished bestaat"
         declare -a sampleSheetColumnNames=()
         declare -A sampleSheetColumnOffsets=()
         declare -a projects=()
@@ -195,7 +199,7 @@ do
 
         for project in "${projects[@]}"
         do
-            echo "${project}"
+            echo "project: ${project}"
             projectStampFile="${timeStampDir}/${project}.csv"
             if [[ -e "${projectStampFile}" ]]
             then
@@ -204,15 +208,17 @@ do
                 echo "${sequenceRun}" >> "${projectStampFile}"
             fi
             touch "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.finished"
-            echo "Demultiplexing is finished"
+            echo -e "Demultiplexing is finished for sequence run ${sequenceRun}" >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
         done
     else
         timeStamp=$(find "${SCR_ROOT_DIR}/logs/${sequenceRun}/" -type f -mmin +60 -iname "${run}.demultiplexing.started")
         if [[ -z "${timeStamp}" ]]
         then
-            echo "demultiplexing is running"
+            echo -e "Demultiplexing is running for sequence run ${sequenceRun}" >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
         else
-            echo "demultiplexing.started file is OLDER than 1 hour."
+            echo -e "demultiplexing.started file is OLDER than 1 hour." >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
+            echo -e "time ${run}.demultiplexing.started was last modified:" >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
+            stat -c %y "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.demultiplexing.started" >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
             echo "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.failed"
             echo -e "Dear GCC helpdesk,\n\nPlease check if there is somethink wrong with the demultiplexing pipeline.\nThe demultiplexing of run ${sequenceRun} is not finished after 1h.\n\nKind regards\nGCC" > "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.failed"
         fi 
