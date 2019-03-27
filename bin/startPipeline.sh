@@ -356,7 +356,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #       that created the sample sheet per project can run a GD cluster
 #       instead of on a research cluster to create them directly on tmp.
 #
-IFS=$'\n' declare -a sampleSheets=($(ssh ${HOSTNAME_PRM} "find ${PRM_ROOT_DIR}/Samplesheets/ -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name *.${SAMPLESHEET_EXT}"))
+declare -a sampleSheets=($(ssh ${HOSTNAME_PRM} "find ${PRM_ROOT_DIR}/Samplesheets/ -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name *.${SAMPLESHEET_EXT}"))
 if [[ "${#sampleSheets[@]:-0}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found @ ${PRM_ROOT_DIR}/Samplesheets/: There is nothing to do."
