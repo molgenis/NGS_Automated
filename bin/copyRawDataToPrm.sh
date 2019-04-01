@@ -251,7 +251,7 @@ function splitSamplesheetPerProject() {
 	local _sampleSheet="${PRM_ROOT_DIR}/Samplesheets/archive/${_run}.${SAMPLESHEET_EXT}"
 	#
 	# ToDo: change location of job control files back to ${TMP_ROOT_DIR} once we have a 
-	#       proper prm mount on the GD clusters and this script can run a GD cluster
+	#       proper prm mount on the GD clusters and this script can run on a GD cluster
 	#       instead of on a research cluster.
 	#
 	#local JOB_CONTROLE_FILE_BASE="${TMP_ROOT_DIR}/logs/${_run}/${_run}.splitSamplesheetPerProject"
@@ -370,7 +370,7 @@ function splitSamplesheetPerProject() {
 		else
 		#
 		# ToDo: change location of sample sheet per project back to ${TMP_ROOT_DIR} once we have a 
-		#       proper prm mount on the GD clusters and this script can run a GD cluster
+		#       proper prm mount on the GD clusters and this script can run on a GD cluster
 		#       instead of on a research cluster.
 		#
 		#local _projectSampleSheet="${TMP_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}"
