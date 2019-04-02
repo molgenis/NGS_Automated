@@ -64,9 +64,9 @@ function rsyncDemultiplexedRuns() {
 	#       proper prm mount on the GD clusters and this script can run a GD cluster
 	#       instead of on a research cluster.
 	#
-	#local _controlFileBase="${TMP_ROOT_DIR}/logs/${_run}/run01.${SCRIPT_NAME}"
-	local _controlFileBase="${PRM_ROOT_DIR}/logs/${_run}/run01.${SCRIPT_NAME}"
-	local _logFile="${_controlFileBase}.log"
+	#local JOB_CONTROLE_FILE_BASE="${TMP_ROOT_DIR}/logs/${_run}/run01.${SCRIPT_NAME}"
+	local JOB_CONTROLE_FILE_BASE="${PRM_ROOT_DIR}/logs/${_run}/run01.${SCRIPT_NAME}"
+	local _logFile="${JOB_CONTROLE_FILE_BASE}.log"
 	#
 	# Determine whether an rsync is required for this run, which is the case when
 	#  1. either the sequence run has finished successfully and this copy script has not
@@ -82,7 +82,7 @@ function rsyncDemultiplexedRuns() {
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}."
 		return
 	fi
-	if [[ -e "${_controlFileBase}.finished" ]]
+	if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 	then
 		#
 		# Get modification times as integers (seconds since epoch) 
@@ -108,10 +108,10 @@ function rsyncDemultiplexedRuns() {
 	#
 	# Track and Trace: log that we will start rsyncing to prm.
 	#
-	touch "${_controlFileBase}.started"
-	printf '%s\n' "run_id,group,demultiplexing,copy_raw_prm,projects,date"  > "${_controlFileBase}.trackAndTrace.csv"
-	printf '%s\n' "${_run},${group},finished,started,,"                    >> "${_controlFileBase}.trackAndTrace.csv"
-	trackAndTracePostFromFile 'status_overview' 'update'                      "${_controlFileBase}.trackAndTrace.csv"
+	touch "${JOB_CONTROLE_FILE_BASE}.started"
+	printf '%s\n' "run_id,group,demultiplexing,copy_raw_prm,projects,date"  > "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
+	printf '%s\n' "${_run},${group},finished,started,,"                    >> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
+	trackAndTracePostFromFile 'status_overview' 'update'                      "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
 	#
 	# Perform rsync.
 	#  1. For ${_run} dir: recursively with "default" archive (-a),
@@ -256,10 +256,10 @@ function splitSamplesheetPerProject() {
 	#
 	#local JOB_CONTROLE_FILE_BASE="${TMP_ROOT_DIR}/logs/${_run}/${_run}.splitSamplesheetPerProject"
 	local _rsyncControlFileFinished="${PRM_ROOT_DIR}/logs/${_run}/run01.${SCRIPT_NAME}.finished"
-	local _controlFileBase="${PRM_ROOT_DIR}/logs/${_run}/run01.splitSamplesheetPerProject"
-	local _logFile="${_controlFileBase}.log"
+	local JOB_CONTROLE_FILE_BASE="${PRM_ROOT_DIR}/logs/${_run}/run01.splitSamplesheetPerProject"
+	local _logFile="${JOB_CONTROLE_FILE_BASE}.log"
 	#
-	if [[ -e "${_controlFileBase}.finished" ]]
+	if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished -> Skipping ${_run}."
 		return
