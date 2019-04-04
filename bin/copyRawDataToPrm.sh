@@ -127,7 +127,7 @@ function rsyncDemultiplexedRuns() {
 	#
 	local _transferSoFarSoGood='true'
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_run} dir..."
-	echo "working on ${_run}" > "${lockFile}"
+	echo "working on ${_run}" > "${PRM_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
 	rsync -vrltD --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
 		"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/runs/${_run}/results/*" \
 		"${PRM_ROOT_DIR}/rawdata/ngs/${_run}/" \
@@ -608,11 +608,13 @@ else
 		mkdir -m 2750 -p "${PRM_ROOT_DIR}/Samplesheets/archive/"
 		rsyncDemultiplexedRuns "${filePrefix}"
 		splitSamplesheetPerProject "${filePrefix}"
+
 	done
 fi
 
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished successfully!'
-echo "" > "${lockFile}"
+echo "done" > "${PRM_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
+
 trap - EXIT
 exit 0
 

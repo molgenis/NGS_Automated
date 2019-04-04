@@ -82,6 +82,7 @@ function generateScripts () {
 	local _generateShScript="${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh"
 	export JOB_CONTROLE_FILE_BASE="${TMP_ROOT_DIR}/logs/${_project}/${_run}.generateScripts"
 	local _message
+	echo "generating scripts for ${_project} (incl copyPrmToTmpData)" > "${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
 	#
 	if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 	then
@@ -163,7 +164,7 @@ function submitPipeline () {
 	local _run="${2}"
 	local _sampleType="${3}" ## DNA or RNA
 	export JOB_CONTROLE_FILE_BASE="${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline"
-
+	echo "submitting pipeline for ${_project}" > "${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Starting submitPipeline part for project: ${_project}/${_run} ..."
 	if [[ -e "${JOB_CONTROLE_FILE_BASE}.started" ]]
 	then
@@ -437,6 +438,6 @@ do
 		submitPipeline "${project}" "${run}" "${sampleType}"
 	fi
 done
-
+echo "done" > "${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
 trap - EXIT
 exit 0
