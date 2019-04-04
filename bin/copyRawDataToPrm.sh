@@ -608,11 +608,13 @@ else
 		mkdir -m 2750 -p "${PRM_ROOT_DIR}/Samplesheets/archive/"
 		rsyncDemultiplexedRuns "${filePrefix}"
 		splitSamplesheetPerProject "${filePrefix}"
+
 	done
 fi
 
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished successfully!'
-echo "" > "${lockFile}"
+echo "done" > "${PRM_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
+
 trap - EXIT
 exit 0
 
