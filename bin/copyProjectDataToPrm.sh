@@ -350,7 +350,7 @@ function archiveSampleSheet() {
 		local  _startedCount=$(ls -1 "${_controlFileDir}/"*".${SCRIPT_NAME}.started" 2>/dev/null | wc -l)
 		local   _failedCount=$(ls -1 "${_controlFileDir}/"*".${SCRIPT_NAME}.failed"  2>/dev/null | wc -l)
 		local _finishedCount=$(ls -1 "${_controlFileDir}/"*".${SCRIPT_NAME}.finished" 2>/dev/null | wc -l)
-		
+
 		if [[ ${_startedCount} -eq 0 && ${_failedCount} -eq 0 && ${_finishedCount} -gt 0 ]]
 		then
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Archiving sample sheet for ${_project}..."
@@ -370,7 +370,6 @@ function archiveSampleSheet() {
 		mv "${_archiveSampleSheetControlFileBase}."{started,failed}
 		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): Failed to move ${_project}.${SAMPLESHEET_EXT} to ${HOSTNAME_PRM}:${PRM_ROOT_DIR}/Samplesheets/archive folder: ${_status}" \
 			>> "${_archiveSampleSheetControlFileBase}.failed"
-		
 	else
 		log4Bash 'DEBUG' ${LINENO} "${FUNCNAME:-main}" 0 "Moved ${_project}.${SAMPLESHEET_EXT} to ${HOSTNAME_PRM}:${PRM_ROOT_DIR}/Samplesheets/archive folder."
 		echo "OK! $(date '+%Y-%m-%d-T%H%M'): Moved ${_project}.${SAMPLESHEET_EXT} to ${HOSTNAME_PRM}:${PRM_ROOT_DIR}/Samplesheets/archive folder." \
@@ -378,6 +377,9 @@ function archiveSampleSheet() {
 			&& rm -f "${_archiveSampleSheetControlFileBase}.failed" \
 			&& mv "${_archiveSampleSheetControlFileBase}."{started,finished}
 	fi
+	log4Bash 'DEBUG' ${LINENO} "${FUNCNAME:-main}" 0 "removing ${TMP_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}"
+	rm -f "${TMP_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}"
+
 }
 
 function getSampleType(){
