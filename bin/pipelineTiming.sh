@@ -4,7 +4,7 @@ set -e
 set -u
 
 
-# module load NGS_Automated/beta; pipelineTiming.sh -g umcg-atd -s gattaca01.gcc.rug.nl -r /groups/umcg-atd/scr01/ -l DEBUG
+# module load NGS_Automated/beta; pipelineTiming.sh -g umcg-atd -s gattaca02.gcc.rug.nl -r /groups/umcg-atd/scr01/ -l DEBUG
 
 #
 ##      This script will run on Leucine-zipper or zinc-finger. First it will pull the project files, from projects from whom the demultiplex pipeline is finished.
@@ -192,6 +192,14 @@ then
         log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
 fi
 
+
+checkProjectSheet=$(ssh ${ATEAMBOTUSER}@${sourceServerFQDN} "find ${SCR_ROOT_DIR}/logs/Timestamp/ -type f -iname *.csv")
+
+if [[ -z "${checkProjectSheet}" ]]
+then
+    log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "All runs are processed, no new project sheet available"
+fi
+
 run='run01'
 logsDir="${TMP_ROOT_DIR}/logs/"
 projectStartDir="${TMP_ROOT_DIR}/logs/Timestamp" 
@@ -201,6 +209,10 @@ rsync -av ${sourceServerFQDN}:"${SCR_ROOT_DIR}/logs/Timestamp/*.csv" "${projectS
 for projectSheet in $(ls "${projectStartDir}/"*".csv")
 do 
 
+    if [[ ! -e "${projectSheet}" ]]
+    then
+        continue
+    fi
     project=$(basename "${projectSheet}" .csv)
 
     touch "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
