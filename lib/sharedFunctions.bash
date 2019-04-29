@@ -172,38 +172,44 @@ function trackAndTracePostFromFile() {
 	local _file="${3}"
 
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Trying to get a token for REST API @ https://${MOLGENISSERVER}/api/v1/login..."
+	if curl -f -s -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login
+	then
+		local _curlResponse=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
+		local _token=${_curlResponse:10:32}
+	
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Trying to POST track&trace info using action ${_action} for entityTypeId=${_entityTypeId} from file=${_file} to https://${MOLGENISSERVER}/plugin/importwizard/importFile..."
 
-	local _curlResponse=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
-	local _token=${_curlResponse:10:32}
-
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Trying to POST track&trace info using action ${_action} for entityTypeId=${_entityTypeId} from file=${_file} to https://${MOLGENISSERVER}/plugin/importwizard/importFile..."
-
-	local _lastHttpResponseStatus=$(curl -i \
+		local _lastHttpResponseStatus=$(curl -i \
 			-H "x-molgenis-token:${_token}" \
 			-X POST \
 			-F "file=@${_file}" \
 			-F "entityTypeId=${_entityTypeId}" \
 			-F "action=${_action}" \
+			-F "-FmetadataAction=ignore" \
 			-F 'notify=false' \
 			https://${MOLGENISSERVER}/plugin/importwizard/importFile \
 		| grep -E '^HTTP/[0-9]+.[0-9]+ [0-9]{3}' \
 		| tail -n 1)
-
-	local _regex='^HTTP/[0-9]+.[0-9]+ ([0-9]{3})'
-	if [[ "${_lastHttpResponseStatus}" =~ ${_regex} ]]
-	then
-		local _statusCode="${BASH_REMATCH[1]}"
-		if [[ ${_statusCode} -ge 400 ]]
+	
+		local _regex='^HTTP/[0-9]+.[0-9]+ ([0-9]{3})'
+		if [[ "${_lastHttpResponseStatus}" =~ ${_regex} ]]
 		then
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "HTTP response status was ${_lastHttpResponseStatus}."
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to POST track&trace info using action ${_action} for entityTypeId=${_entityTypeId} from file=${_file} to https://${MOLGENISSERVER}/plugin/importwizard/importFile"
+			local _statusCode="${BASH_REMATCH[1]}"
+			if [[ ${_statusCode} -ge 400 ]]
+			then
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "HTTP response status was ${_lastHttpResponseStatus}."
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to POST track&trace info using action ${_action} for entityTypeId=${_entityTypeId} from file=${_file} to https://${MOLGENISSERVER}/plugin/importwizard/importFile"
+			else
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully POSTed track&trace info. HTTP response status was ${_lastHttpResponseStatus}."
+			fi
 		else
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully POSTed track&trace info. HTTP response status was ${_lastHttpResponseStatus}."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to parse status code number from HTTP response status ${_lastHttpResponseStatus}."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to POST track&trace info using action ${_action} for entityTypeId=${_entityTypeId} from file=${_file} to https://${MOLGENISSERVER}/plugin/importwizard/importFile"
 		fi
 	else
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to parse status code number from HTTP response status ${_lastHttpResponseStatus}."
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to POST track&trace info using action ${_action} for entityTypeId=${_entityTypeId} from file=${_file} to https://${MOLGENISSERVER}/plugin/importwizard/importFile"
+		echo "could not connect to a molgenis server: ${MOLGENISSERVER}"
 	fi
+
 }
 
 function trackAndTracePut() {
@@ -212,12 +218,14 @@ function trackAndTracePut() {
 	local _field="${3}"
 	local _content="${4}"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Trying to get a token for REST API @ https://${MOLGENISSERVER}/api/v1/login..."
-	local _curlResponse=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
-	local _token=${_curlResponse:10:32}
+	if curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login
+	then
+		local _curlResponse=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
+		local _token=${_curlResponse:10:32}
 
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Trying to set status ${_content} for field ${_field} in entityTypeId=${_entityTypeId} with jobID ${_jobID}"
-	echo "curl -i -H \"x-molgenis-token:${_token}\" -X PUT -d \"${_content}\" https://${MOLGENISSERVER}/api/v1/${_entityTypeId}/${_jobID}/${_field}"
-	local _lastHttpResponseStatus=$(curl -i \
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Trying to set status ${_content} for field ${_field} in entityTypeId=${_entityTypeId} with jobID ${_jobID}"
+		echo "curl -i -H \"x-molgenis-token:${_token}\" -X PUT -d \"${_content}\" https://${MOLGENISSERVER}/api/v1/${_entityTypeId}/${_jobID}/${_field}"
+		local _lastHttpResponseStatus=$(curl -i \
 			-H "Content-Type:application/json" \
                         -H "x-molgenis-token:${_token}" \
                         -X PUT \
@@ -226,19 +234,22 @@ function trackAndTracePut() {
                 | grep -E '^HTTP/[0-9]+.[0-9]+ [0-9]{3}' \
                 | tail -n 1)
 
-	local _regex='^HTTP/[0-9]+.[0-9]+ ([0-9]{3})'
-	if [[ "${_lastHttpResponseStatus}" =~ ${_regex} ]]
-	then
-		local _statusCode="${BASH_REMATCH[1]}"
-		if [[ ${_statusCode} -ge 400 ]]
+		local _regex='^HTTP/[0-9]+.[0-9]+ ([0-9]{3})'
+		if [[ "${_lastHttpResponseStatus}" =~ ${_regex} ]]
 		then
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "HTTP response status was ${_lastHttpResponseStatus}."
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to set status ${_content} for field ${_field} in entityTypeId=${_entityTypeId} with jobID ${_jobID}"
+			local _statusCode="${BASH_REMATCH[1]}"
+			if [[ ${_statusCode} -ge 400 ]]
+			then
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "HTTP response status was ${_lastHttpResponseStatus}."
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to set status ${_content} for field ${_field} in entityTypeId=${_entityTypeId} with jobID ${_jobID}"
+			else
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully PUTted track&trace info. HTTP response status was ${_lastHttpResponseStatus}."
+			fi
 		else
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully PUTted track&trace info. HTTP response status was ${_lastHttpResponseStatus}."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to parse status code number from HTTP response status ${_lastHttpResponseStatus}."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to set status ${_content} for field ${_field} in entityTypeId=${_entityTypeId} with jobID ${_jobID}"
 		fi
 	else
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to parse status code number from HTTP response status ${_lastHttpResponseStatus}."
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to set status ${_content} for field ${_field} in entityTypeId=${_entityTypeId} with jobID ${_jobID}"
+		echo "could not upload to a molgenis server: ${MOLGENISSERVER}"
 	fi
 }
