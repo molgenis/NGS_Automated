@@ -470,7 +470,6 @@ function renameFastQs() {
 
 function processSamplesheetsAndMoveCovertedData() {
 	local _batch="${1}"
-	local _sampleSheet="${TMP_ROOT_DIR}/Samplesheets/archive/${_batch}.${SAMPLESHEET_EXT}"
 	local _controlFileBase="${2}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME}"
 	local _logFile="${_controlFileBaseForFunction}.log"
