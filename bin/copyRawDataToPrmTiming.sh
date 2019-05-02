@@ -3,7 +3,7 @@
 set -e
 set -u
 
-# module load NGS_Automated/beta-bare; copyRawDataToPrmTiming.sh -g umcg-atd -s gattaca01.gcc.rug.nl -r /groups/umcg-atd/scr01/ -l DEBUG
+# module load NGS_Automated/beta-bare; copyRawDataToPrmTiming.sh -g umcg-atd -s gattaca02.gcc.rug.nl -r /groups/umcg-atd/scr01/ -l DEBUG
 
 
 #
@@ -187,21 +187,30 @@ fi
 #
 # Make sure to use an account for cron jobs and *without* write access to prm storage.
 #
-if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]
+if [[ "${ROLE_USER}" != "${DATA_MANAGER}" ]]
 then
-        log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
+        log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${DATA_MANAGER}, but you are ${ROLE_USER} (${REAL_USER})."
 fi
 
 run='run01'
 logsDir="${TMP_ROOT_DIR}/logs/"
 # make project folder on chaperone/boxy
 
-for projectSheet in $(ssh ${ATEAMBOTUSER}@${sourceServerFQDN} "ls ${SCR_ROOT_DIR}/logs/Timestamp/*.csv")
+
+
+checkProjectSheet=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} "find ${SCR_ROOT_DIR}/logs/Timestamp/ -type f -iname *.csv")
+
+if [[ -z "${checkProjectSheet}" ]]
+then
+    log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "All runs are processed, no new project sheet available"
+fi
+
+for projectSheet in $(ssh ${DATA_MANAGER}@${sourceServerFQDN} "ls ${SCR_ROOT_DIR}/logs/Timestamp/*.csv")
 do 
 
     project=$(basename "${projectSheet}" .csv)
 
-    sequenceRun=$(ssh ${ATEAMBOTUSER}@${sourceServerFQDN} "cat ${projectSheet}")
+    sequenceRun=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} "cat ${projectSheet}")
     
     touch "${TMP_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
 
