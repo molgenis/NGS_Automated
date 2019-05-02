@@ -81,7 +81,7 @@ function sanityChecking() {
 		# Make sure:
 		#  1. The last line ends with a line end character.
 		#  2. We have the right line end character: convert any carriage return (\r) to newline (\n).
-		#  3. We remove empty lines.
+		#  3. We remove empty lines: lines containing only white space and/or field separators are considered empty too.
 		#
 		cp "${_gsSampleSheet}"{,.converted} \
 			2>> "${_controlFileBaseForFunction}.started" \
@@ -90,7 +90,7 @@ function sanityChecking() {
 			>> "${_gsSampleSheet}.converted" \
 			&& sed -i 's/\r/\n/g' "${_gsSampleSheet}.converted" \
 			2>> "${_controlFileBaseForFunction}.started" \
-			&& sed -i '/^\s*$/d' "${_gsSampleSheet}.converted" \
+			&& sed -i "/^[\s${SAMPLESHEET_SEP}]*$/d" "${_gsSampleSheet}.converted" \
 			2>> "${_controlFileBaseForFunction}.started" \
 			&& mv -f "${_gsSampleSheet}"{.converted,} \
 			2>> "${_controlFileBaseForFunction}.started" \
@@ -258,7 +258,7 @@ function sanityChecking() {
 			# Make sure
 			#  1. The last line ends with a line end character.
 			#  2. We have the right line end character: convert any carriage return (\r) to newline (\n).
-			#  3. We remove empty lines.
+			#  3. We remove empty lines: lines containing only white space and/or field separators are considered empty too.
 			#
 			cp "${_sampleSheet}"{,.converted} \
 				2>> "${_controlFileBaseForFunction}.started" \
@@ -267,7 +267,7 @@ function sanityChecking() {
 				>> "${_sampleSheet}.converted" \
 				&& sed -i 's/\r/\n/g' "${_sampleSheet}.converted" \
 				2>> "${_controlFileBaseForFunction}.started" \
-				&& sed -i '/^\s*$/d' "${_sampleSheet}.converted" \
+				&& sed -i "/^[\s${SAMPLESHEET_SEP}]*$/d" "${_sampleSheet}.converted" \
 				2>> "${_controlFileBaseForFunction}.started" \
 				&& mv -f "${_sampleSheet}"{.converted,} \
 				2>> "${_controlFileBaseForFunction}.started" \
@@ -470,7 +470,6 @@ function renameFastQs() {
 
 function processSamplesheetsAndMoveCovertedData() {
 	local _batch="${1}"
-	local _sampleSheet="${TMP_ROOT_DIR}/Samplesheets/archive/${_batch}.${SAMPLESHEET_EXT}"
 	local _controlFileBase="${2}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME}"
 	local _logFile="${_controlFileBaseForFunction}.log"
