@@ -56,7 +56,7 @@ function contains() {
 	return 1
 }
 
-function rsyncDemultiplexedRuns() {
+function rsyncRuns() {
 	local _run="${1}"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_run}..."
 	#
@@ -74,11 +74,11 @@ function rsyncDemultiplexedRuns() {
 	#
 	# Check if production of raw data @ sourceServer has finished.
 	#
-	if ssh ${DATA_MANAGER}@${sourceServerFQDN} test -e "${SCR_ROOT_DIR}/logs/${_run}/run01.demultiplexing.finished"
+	if ssh ${DATA_MANAGER}@${sourceServerFQDN} test -e "${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${_run}/${STEPBEFOREFINISHEDFILE}"
 	then
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/logs/${_run}/run01.demultiplexing.finished present."
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${_run}/${STEPBEFOREFINISHEDFILE} present."
 	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/logs/${_run}/run01.demultiplexing.finished absent."
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${_run}/${STEPBEFOREFINISHEDFILE} absent."
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}."
 		return
 	fi
@@ -89,25 +89,26 @@ function rsyncDemultiplexedRuns() {
 		# and check if ${_run}/run01.demultiplexing.finished is newer than *.dataCopiedToPrm,
 		# which indicates the run was re-demultiplexed and converted to FastQ files.
 		#
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${_run}/run01.demultiplexing.finished is newer than ${JOB_CONTROLE_FILE_BASE}.finished"
-		local _demultiplexingFinishedModTime=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} stat --printf='%Y' "${SCR_ROOT_DIR}/logs/${_run}/run01.demultiplexing.finished")
+
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${_run}/${STEPBEFOREFINISHEDFILE}  is newer than ${JOB_CONTROLE_FILE_BASE}.finished"
+		local _fileFinishedModTime=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} stat --printf='%Y' "${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${_run}/${STEPBEFOREFINISHEDFILE}")
 		local _myFinishedModTime=$(stat --printf='%Y' "${JOB_CONTROLE_FILE_BASE}.finished")
 
-		if [[ "${_demultiplexingFinishedModTime}" -gt "${_myFinishedModTime}" ]]
+		if [[ "${_fileFinishedModTime}" -gt "${_myFinishedModTime}" ]]
 		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}/run01.demultiplexing.finished newer than ${JOB_CONTROLE_FILE_BASE}.finished."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}/${STEPBEFOREFINISHEDFILE} newer than ${JOB_CONTROLE_FILE_BASE}.finished."
 		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}/run01.demultiplexing.finished older than ${JOB_CONTROLE_FILE_BASE}.finished."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}/${STEPBEFOREFINISHEDFILE} older than ${JOB_CONTROLE_FILE_BASE}.finished."
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}."
 			return
 		fi
 	else
-		mkdir -m 2750 -p "${PRM_ROOT_DIR}/rawdata/ngs/${filePrefix}"
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No ${JOB_CONTROLE_FILE_BASE}.finished present."
 	fi
 	#
 	# Track and Trace: log that we will start rsyncing to prm.
 	#
+############## FIX THIS FOR GAP
 	touch "${JOB_CONTROLE_FILE_BASE}.started"
 	printf '%s\n' "run_id,group,demultiplexing,copy_raw_prm,projects,date"  > "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
 	printf '%s\n' "${_run},${group},finished,started,,"                    >> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
@@ -128,103 +129,102 @@ function rsyncDemultiplexedRuns() {
 	local _transferSoFarSoGood='true'
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_run} dir..."
 	echo "working on ${_run}" > "${PRM_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
-	rsync -vrltD --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
-		"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/runs/${_run}/results/*" \
-		"${PRM_ROOT_DIR}/rawdata/ngs/${_run}/" \
-	|| {
-		mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${sourceServerFQDN}:${SCR_ROOT_DIR}/runs/${_run} dir. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
-		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync of sequence run dir failed. See ${JOB_CONTROLE_FILE_BASE}.failed for details." \
-			>> "${JOB_CONTROLE_FILE_BASE}.failed"
-		_transferSoFarSoGood='false'
-	}
-	rsync -vrltD --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
-		"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/runs/${_run}/results/*.md5" \
-		"${PRM_ROOT_DIR}/rawdata/ngs/${_run}/" \
-	|| {
-		mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${sourceServerFQDN}:${SCR_ROOT_DIR}/runs/${_run}/*.md5. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
-		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync of checksums failed. See ${JOB_CONTROLE_FILE_BASE}.failed for details." \
-			>> "${JOB_CONTROLE_FILE_BASE}.failed"
-		_transferSoFarSoGood='false'
-	}
-	#
-	# Rsync samplesheet to prm samplesheets folder.
-	#
-	rsync -vrltD --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
-		"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}" \
-		"${PRM_ROOT_DIR}/Samplesheets/archive/" \
-	|| {
-		mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
-		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync of sample sheet failed. See ${JOB_CONTROLE_FILE_BASE}.failed for details." \
-			>> "${JOB_CONTROLE_FILE_BASE}.failed"
-		_transferSoFarSoGood='false'
-	}
-	#
-	# Sanity check.
-	#
-	#  1. Firstly do a quick count of the amount of files to make sure we are complete.
-	#     (No need to waist a lot of time on computing checksums for a partially failed transfer).
-	#  2. Secondly verify checksums on the destination.
-	#
-	if [[ "${_transferSoFarSoGood}" == 'true' ]];then
-		local _countFilesDemultiplexRunDirScr=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} "find ${SCR_ROOT_DIR}/runs/${_run}/results/${_run}* -type f | wc -l")
-		local _countFilesDemultiplexRunDirPrm=$(find "${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}"* -type f | wc -l)
-		local _checksumVerification='unknown'
-		if [[ ${_countFilesDemultiplexRunDirScr} -ne ${_countFilesDemultiplexRunDirPrm} ]]; then
+	
+	for i in ${COPYDATAARRAY}
+	do
+		mkdir -m 2750 -p "${PRM_ROOT_DIR}/rawdata/${i}/${filePrefix}"
+
+		echo "${COPYDATAARRAY}"
+
+		rsync -vrltD --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
+			"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${i}/${_run}" \
+			"${PRM_ROOT_DIR}/rawdata/${i}/" \
+		|| {
 			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_run} on scr (${_countFilesDemultiplexRunDirScr}) and prm (${_countFilesDemultiplexRunDirPrm}) is NOT the same!" \
+			log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${i}/${_run}/ dir. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
+			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync of sequence run dir failed. See ${JOB_CONTROLE_FILE_BASE}.failed for details." \
 				>> "${JOB_CONTROLE_FILE_BASE}.failed"
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
-				"Amount of files for ${_run} on tmp (${_countFilesDemultiplexRunDirScr}) and prm (${_countFilesDemultiplexRunDirPrm}) is NOT the same!"
-			_checksumVerification='FAILED'
-		else
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
-				"Amount of files on tmp and prm is the same for ${_run}: ${_countFilesDemultiplexRunDirPrm}."
-			#
-			# Verify checksums on prm storage.
-			#
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
-				"Started verification of checksums by ${DATA_MANAGER}@${sourceServerFQDN} using checksums from ${PRM_ROOT_DIR}/rawdata/ngs/${_run}/*.md5." \
-				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
-			
-			_checksumVerification=$(cd ${PRM_ROOT_DIR}/rawdata/ngs/${_run}
-				if md5sum -c *.md5 > ${JOB_CONTROLE_FILE_BASE}.md5.log 2>&1
+			_transferSoFarSoGood='false'
+		}
+		#
+		# Sanity check.
+		#
+		#  1. Firstly do a quick count of the amount of files to make sure we are complete.
+		#     (No need to waist a lot of time on computing checksums for a partially failed transfer).
+		#  2. Secondly verify checksums on the destination.
+		#
+	##### HIER BEN IK 
+		if [[ "${_transferSoFarSoGood}" == 'true' ]];then
+			echo "${SCR_ROOT_DIR}/rawdata/${i}/${_run}/"
+			echo "${SCR_ROOT_DIR}/rawdata/${i}/${_run}/"
+			echo "${SCR_ROOT_DIR}/rawdata/${i}/${_run}/"
+			echo "${SCR_ROOT_DIR}/rawdata/${i}/${_run}/"
+			echo "${SCR_ROOT_DIR}/rawdata/${i}/${_run}/"
+			local _countFilesRunDirScr=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} "find ${SCR_ROOT_DIR}/rawdata/${i}/${_run}/* -type f | wc -l")
+			local _countFilesRunDirPrm=$(find "${PRM_ROOT_DIR}/rawdata/${i}/${_run}/"* -type f | wc -l)
+			local _checksumVerification='unknown'
+			if [[ ${_countFilesRunDirScr} -ne ${_countFilesRunDirPrm} ]]; then
+				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+				echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_run} on scr (${_countFilesRunDirScr}) and prm (${_countFilesRunDirPrm}) is NOT the same!" \
+					>> "${JOB_CONTROLE_FILE_BASE}.failed"
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
+					"Amount of files for ${_run} on tmp (${_countFilesRunDirScr}) and prm (${_countFilesRunDirPrm}) is NOT the same!"
+				_checksumVerification='FAILED'
+			else
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
+				"Amount of files on tmp and prm is the same for ${_run}: ${_countFilesRunDirPrm}."
+				#
+				# Verify checksums on prm storage.
+				#
+
+				if [ ${i} == "array/IDAT" ]
 				then
-					echo 'PASS'
+					_checksumVerification='PASS'
 				else
-					echo 'FAILED'
+
+					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
+						"Started verification of checksums by ${DATA_MANAGER}@${sourceServerFQDN} using checksums from ${PRM_ROOT_DIR}/rawdata/${i}/${_run}/*.md5." \
+						2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
+
+					_checksumVerification=$(cd ${PRM_ROOT_DIR}/rawdata/${i}/${_run}
+						if md5sum -c *.md5 > ${JOB_CONTROLE_FILE_BASE}.md5.log 2>&1
+						then
+							echo 'PASS'
+						else
+							echo 'FAILED'
+						fi
+					)
 				fi
-			)
-		fi
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "_checksumVerification = ${_checksumVerification}"
-		if [[ "${_checksumVerification}" == 'FAILED' ]]
-		then
-			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${JOB_CONTROLE_FILE_BASE}.md5.log for details." \
-				>> "${JOB_CONTROLE_FILE_BASE}.failed"
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Checksum verification failed. See ${JOB_CONTROLE_FILE_BASE}.md5.log for details."
-		elif [[ "${_checksumVerification}" == 'PASS' ]]
-		then
-			#
-			# Overwrite any previously created *.failed file if present,
-			# add new status info incl. demultiplex stats to *.failed file and
-			# then move the *.failed file to *.finished.
-			# (Note: the content of *.finished will get inserted in the body of email notification messages,
-			# when enabled in <group>.cfg for use by notifications.sh)
-			#
-			echo "The results can be found in: ${PRM_ROOT_DIR}." > "${JOB_CONTROLE_FILE_BASE}.failed"
-			if ls "${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}"*.log 1>/dev/null 2>&1
-			then
-				cat "${PRM_ROOT_DIR}/rawdata/ngs/${_run}/${_run}"*.log >> "${JOB_CONTROLE_FILE_BASE}.failed"
 			fi
-			echo "OK! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${JOB_CONTROLE_FILE_BASE}.md5.log for details." \
-				>>    "${JOB_CONTROLE_FILE_BASE}.failed" \
-				&& mv "${JOB_CONTROLE_FILE_BASE}."{failed,finished}
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "_checksumVerification = ${_checksumVerification}"
+			if [[ "${_checksumVerification}" == 'FAILED' ]]
+			then
+				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+				echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${JOB_CONTROLE_FILE_BASE}.md5.log for details." \
+					>> "${JOB_CONTROLE_FILE_BASE}.failed"
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Checksum verification failed. See ${JOB_CONTROLE_FILE_BASE}.md5.log for details."
+			elif [[ "${_checksumVerification}" == 'PASS' ]]
+				then
+				#
+				# Overwrite any previously created *.failed file if present,
+				# add new status info incl. demultiplex stats to *.failed file and
+				# then move the *.failed file to *.finished.
+				# (Note: the content of *.finished will get inserted in the body of email notification messages,
+				# when enabled in <group>.cfg for use by notifications.sh)
+				#
+				echo "The results can be found in: ${PRM_ROOT_DIR}." > "${JOB_CONTROLE_FILE_BASE}.failed"
+				if ls "${PRM_ROOT_DIR}/rawdata/${i}/${_run}/${_run}"*.log 1>/dev/null 2>&1
+				then
+					cat "${PRM_ROOT_DIR}/rawdata/${i}/${_run}/${_run}"*.log >> "${JOB_CONTROLE_FILE_BASE}.failed"
+				fi
+				echo "OK! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${JOB_CONTROLE_FILE_BASE}.md5.log for details." \
+					>>    "${JOB_CONTROLE_FILE_BASE}.failed" \
+					&& mv "${JOB_CONTROLE_FILE_BASE}."{failed,finished}
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
+			fi
 		fi
-	fi
+	done
+
 	#
 	# Sanity check and report status to track & trace.
 	#
@@ -258,7 +258,22 @@ function splitSamplesheetPerProject() {
 	local _rsyncControlFileFinished="${PRM_ROOT_DIR}/logs/${_run}/run01.${SCRIPT_NAME}.finished"
 	local JOB_CONTROLE_FILE_BASE="${PRM_ROOT_DIR}/logs/${_run}/run01.splitSamplesheetPerProject"
 	local _logFile="${JOB_CONTROLE_FILE_BASE}.log"
+
 	#
+	#
+	# Rsync samplesheet to prm samplesheets folder.
+	#
+	rsync -vrltD --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
+		"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}" \
+		"${PRM_ROOT_DIR}/Samplesheets/archive/" \
+	|| {
+		mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
+		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync of sample sheet failed. See ${JOB_CONTROLE_FILE_BASE}.failed for details." \
+			>> "${JOB_CONTROLE_FILE_BASE}.failed"
+	}
+
+
 	if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished -> Skipping ${_run}."
@@ -407,7 +422,7 @@ function showHelp() {
 	#
 	cat <<EOH
 ===============================================================================================================
-Script to copy (sync) data from a succesfully finished demultiplexed run from tmp to prm storage.
+Script to copy (sync) data from a succesfully finished run from tmp to prm storage.
 Usage:
 	$(basename $0) OPTIONS
 Options:
@@ -540,10 +555,12 @@ fi
 #
 # Write access to prm storage requires data manager account.
 #
+if [ 1 == 0 ]
+then
 if [[ "${ROLE_USER}" != "${DATA_MANAGER}" ]]; then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${DATA_MANAGER}, but you are ${ROLE_USER} (${REAL_USER})."
 fi
-
+fi
 #
 # Make sure only one copy of this script runs simultaneously
 # per data collection we want to copy to prm -> one copy per group.
@@ -604,10 +621,24 @@ else
 		#       instead of on a research cluster.
 		#
 		#mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${filePrefix}/"
-		mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${filePrefix}/"
-		mkdir -m 2750 -p "${PRM_ROOT_DIR}/Samplesheets/archive/"
-		rsyncDemultiplexedRuns "${filePrefix}"
-		splitSamplesheetPerProject "${filePrefix}"
+		if ssh ${DATA_MANAGER}@${sourceServerFQDN} "head -1 "${sampleSheet}" | grep 'SentrixBarcode_A'"
+		then
+			colnum="$(ssh ${DATA_MANAGER}@${sourceServerFQDN} "head -1 "${sampleSheet}" | sed 's/,/\n/g'| nl | grep 'SentrixBarcode_A$' | grep -o '[0-9][0-9]*'")"
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found SentrixBarcode_A in column number ${colnum}."
+			barcodes=($(ssh ${DATA_MANAGER}@${sourceServerFQDN} "tail -n +2 "${sampleSheet}" | cut -d , -f "${colnum}" | sort | uniq"))
+			echo ${barcodes[@]}
+		else
+			barcodes=("${filePrefix}")
+		fi
+		for barcode in "${barcodes[@]}"
+		do
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${barcode}..."
+			mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${barcode}/"
+			mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${filePrefix}/"
+			mkdir -m 2750 -p "${PRM_ROOT_DIR}/Samplesheets/archive/"
+			rsyncRuns "${barcode}"
+			splitSamplesheetPerProject "${filePrefix}"
+		done
 
 	done
 fi

@@ -78,7 +78,6 @@ function generateScripts () {
 	local _project="${1}"
 	local _run="${2}"
 	local _sampleType="${3}" ## DNA or RNA
-	local _loadPipeline="NGS_${_sampleType}"
 	local _generateShScript="${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh"
 	export JOB_CONTROLE_FILE_BASE="${TMP_ROOT_DIR}/logs/${_project}/${_run}.generateScripts"
 	local _message
@@ -107,6 +106,9 @@ function generateScripts () {
 	elif [ "${_sampleType}" == "RNA" ]
 	then
 		_pathToPipeline="${EBROOTNGS_RNA}"
+	elif [ "${_sampleType}" == "GAP" ]
+	then
+		_pathToPipeline="${EBROOTGAP}"
 	else
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Unknown _sampleType: ${_sampleType}."
 	fi
@@ -185,6 +187,11 @@ function submitPipeline () {
 	declare -A sampleSheetColumnOffsets=()
 	declare    sampleTypeFieldIndex
 	IFS="${SAMPLESHEET_SEP}" sampleSheetColumnNames=($(head -1 "${project}.${SAMPLESHEET_EXT}"))
+	echo "head -1 ${project}.${SAMPLESHEET_EXT}"
+	echo "head -1 ${project}.${SAMPLESHEET_EXT}"
+	echo "head -1 ${project}.${SAMPLESHEET_EXT}"
+	echo "head -1 ${project}.${SAMPLESHEET_EXT}"
+	echo "head -1 ${project}.${SAMPLESHEET_EXT}"
 	for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]:-0} ; offset++ ))
 	do
 		#
@@ -231,7 +238,7 @@ function submitPipeline () {
 	# Submit jobs to scheduler.
 	#
 	log4Bash 'INFO'  "${LINENO}" "${FUNCNAME:-main}" '0' "Submitting jobs for ${_project}/${_run} ..."
-	if [ "${group}" == "umcg-atd" ]
+	if [[ "${group}" == "umcg-atd" || "${group}" == "umcg-gsad" ]]
 	then
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Using submit option: --qos=leftover."
 		sh submit.sh --qos=leftover >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1 \
@@ -376,6 +383,7 @@ fi
 sampleSheets=($(ls -1 "${TMP_ROOT_DIR}/Samplesheets/"*".${SAMPLESHEET_EXT}"))
 for sampleSheet in "${sampleSheets[@]}"
 do
+	mac2unix "${sampleSheet}"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing sample sheet: ${sampleSheet} ..."
 	project=$(basename "${sampleSheet}" ".${SAMPLESHEET_EXT}")
 	run='run01'
@@ -389,8 +397,8 @@ do
 	#
 	declare -a sampleSheetColumnNames=()
 	declare -A sampleSheetColumnOffsets=()
-	declare    sampleType='DNA' # Default when not specified in sample sheet.
 	declare    sampleTypeFieldIndex
+	sampleType='DNA'
 	IFS="${SAMPLESHEET_SEP}" sampleSheetColumnNames=($(head -1 "${sampleSheet}"))
 	#
 	# Backwards compatibility for "Sample Type" including - the horror - a space and optionally quotes :o.
