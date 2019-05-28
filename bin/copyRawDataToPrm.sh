@@ -548,11 +548,8 @@ fi
 #
 # Write access to prm storage requires data manager account.
 #
-if [ 1 == 0 ]
-then
 if [[ "${ROLE_USER}" != "${DATA_MANAGER}" ]]; then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${DATA_MANAGER}, but you are ${ROLE_USER} (${REAL_USER})."
-fi
 fi
 #
 # Make sure only one copy of this script runs simultaneously
