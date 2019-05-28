@@ -134,7 +134,6 @@ function rsyncRuns() {
 	do
 		mkdir -m 2750 -p "${PRM_ROOT_DIR}/rawdata/${i}/${filePrefix}"
 
-		echo "${COPYDATAARRAY}"
 
 		rsync -vrltDL --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
 			"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${i}/${_run}" \
@@ -154,11 +153,6 @@ function rsyncRuns() {
 		#  2. Secondly verify checksums on the destination.
 		#
 		if [[ "${_transferSoFarSoGood}" == 'true' ]];then
-			echo "${SCR_ROOT_DIR}/rawdata/${i}/${_run}/"
-			echo "${SCR_ROOT_DIR}/rawdata/${i}/${_run}/"
-			echo "${SCR_ROOT_DIR}/rawdata/${i}/${_run}/"
-			echo "${SCR_ROOT_DIR}/rawdata/${i}/${_run}/"
-			echo "${SCR_ROOT_DIR}/rawdata/${i}/${_run}/"
 			local _countFilesRunDirScr=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} "find ${SCR_ROOT_DIR}/rawdata/${i}/${_run}/* -type f | wc -l")
 			local _countFilesRunDirPrm=$(find "${PRM_ROOT_DIR}/rawdata/${i}/${_run}/"* -type f | wc -l)
 			local _checksumVerification='unknown'
@@ -625,7 +619,6 @@ else
 			colnum="$(ssh ${DATA_MANAGER}@${sourceServerFQDN} "head -1 "${sampleSheet}" | sed 's/,/\n/g'| nl | grep 'SentrixBarcode_A$' | grep -o '[0-9][0-9]*'")"
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found SentrixBarcode_A in column number ${colnum}."
 			barcodes=($(ssh ${DATA_MANAGER}@${sourceServerFQDN} "tail -n +2 "${sampleSheet}" | cut -d , -f "${colnum}" | sort | uniq"))
-			echo ${barcodes[@]}
 		else
 			barcodes=("${filePrefix}")
 		fi
