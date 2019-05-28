@@ -153,7 +153,6 @@ function rsyncRuns() {
 		#     (No need to waist a lot of time on computing checksums for a partially failed transfer).
 		#  2. Secondly verify checksums on the destination.
 		#
-	##### HIER BEN IK 
 		if [[ "${_transferSoFarSoGood}" == 'true' ]];then
 			echo "${SCR_ROOT_DIR}/rawdata/${i}/${_run}/"
 			echo "${SCR_ROOT_DIR}/rawdata/${i}/${_run}/"
