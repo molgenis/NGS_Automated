@@ -124,7 +124,7 @@ function rsyncProjectRun() {
 	#
 	# Count the number of all files produced in this analysis run.
 	#
-	local _countFilesProjectRunDirTmp=$(ssh ${DATA_MANAGER}@${HOSTNAME_TMP} "find "${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}/results/*" -type f -o -type l | wc -l")
+	local _countFilesProjectRunDirTmp=$(ssh ${DATA_MANAGER}@${HOSTNAME_TMP} "find ${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}/results/* -type f -o -type l | wc -l")
 
 	# Perform rsync.
 	#  1. For ${_run} dir: recursively with "default" archive (-a),

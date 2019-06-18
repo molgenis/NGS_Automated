@@ -196,7 +196,7 @@ else
 		else
 			for run in "${runs[@]}"
 			do
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/${run}..."
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/${run}..."
 				calculateMd5 "${project}" "${run}"
 			done
 		fi
