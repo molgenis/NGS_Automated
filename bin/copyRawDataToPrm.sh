@@ -58,6 +58,8 @@ function contains() {
 
 function rsyncRuns() {
 	local _run="${1}"
+	local count="${2}"
+	local totalCount="${3}"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_run}..."
 	#
 	# ToDo: change location of job control files back to ${TMP_ROOT_DIR} once we have a 
@@ -110,6 +112,7 @@ function rsyncRuns() {
 	#
 ############## FIX THIS FOR GAP
 	touch "${JOB_CONTROLE_FILE_BASE}.started"
+	echo "started: $(date +%FT%T%z)" > ${JOB_CONTROLE_FILE_BASE}.totalRuntime
 	printf '%s\n' "run_id,group,demultiplexing,copy_raw_prm,projects,date"  > "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
 	printf '%s\n' "${_run},${group},finished,started,,"                    >> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
 	trackAndTracePostFromFile 'status_overview' 'update'                      "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
@@ -213,6 +216,8 @@ function rsyncRuns() {
 				echo "OK! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${JOB_CONTROLE_FILE_BASE}.md5.log for details." \
 					>>    "${JOB_CONTROLE_FILE_BASE}.failed" \
 					&& mv "${JOB_CONTROLE_FILE_BASE}."{failed,finished}
+
+				echo "finished: $(date +%FT%T%z)" >> ${JOB_CONTROLE_FILE_BASE}.totalRuntime
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
 			fi
 		fi
@@ -237,11 +242,17 @@ function rsyncRuns() {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' 'Ended up in unexpected state:'
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected either ${JOB_CONTROLE_FILE_BASE}.finished or ${JOB_CONTROLE_FILE_BASE}.failed, but both are absent."
 	fi
+	if [ "${count}" == "${totalCount}" ]
+	then
+		touch ${PRM_ROOT_DIR}/logs/${filePrefix}/run01.${SCRIPT_NAME}.finished
+	fi
+
 }
 
 function splitSamplesheetPerProject() {
 	local _run="${1}"
 	local _sampleSheet="${PRM_ROOT_DIR}/Samplesheets/archive/${_run}.${SAMPLESHEET_EXT}"
+	
 	#
 	# ToDo: change location of job control files back to ${TMP_ROOT_DIR} once we have a 
 	#       proper prm mount on the GD clusters and this script can run on a GD cluster
@@ -296,9 +307,9 @@ function splitSamplesheetPerProject() {
 	#
 	# Check if the pipeline step can be skipped. 
 	#
-	if [[ ! -z "${_sampleSheetColumnOffsets['GCC_Analysis']+isset}" ]]; then
-		_pipelineFieldIndex=$((${_sampleSheetColumnOffsets['GCC_Analysis']} + 1))
-		_projectFieldIndex=$((${_sampleSheetColumnOffsets['project']} + 1))
+	if [[ ! -z "${_sampleSheetColumnOffsets["${PROJECTCOLUMN}"]+isset}" ]]; then
+		_pipelineFieldIndex=$((${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]} + 1))
+		_projectFieldIndex=$((${_sampleSheetColumnOffsets["${PROJECTCOLUMN}"]} + 1))
 		IFS=$'\n' _pipelines=($(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f ${_pipelineFieldIndex} | sort | uniq ))
 		if [[ "${#_pipelines[@]:-0}" -lt '1' ]]
 		then
@@ -343,8 +354,8 @@ function splitSamplesheetPerProject() {
 	#
 	# Check if sample sheet contains required project column.
 	#
-	if [[ ! -z "${_sampleSheetColumnOffsets['project']+isset}" ]]; then
-		_projectFieldIndex=$((${_sampleSheetColumnOffsets['project']} + 1))
+	if [[ ! -z "${_sampleSheetColumnOffsets["${PROJECTCOLUMN}"]+isset}" ]]; then
+		_projectFieldIndex=$((${_sampleSheetColumnOffsets["${PROJECTCOLUMN}"]} + 1))
 		IFS=$'\n' _projects=($(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_projectFieldIndex}" | sort | uniq ))
 		if [[ "${#_projects[@]:-0}" -lt '1' ]]
 		then
@@ -368,9 +379,13 @@ function splitSamplesheetPerProject() {
 	#
 	for _project in "${_projects[@]}"
 	do
+		echo ${_project}
+		echo ${_project}
+		echo ${_project}
+		echo ${_project}
 		#
 		# Skip project if demultiplexing only.
-		#
+		#v
 		if [ $(contains "${_demultiplexOnly[@]}" "${_project}") == "y" ]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing Only for project: ${_project}, continue" \
@@ -384,10 +399,7 @@ function splitSamplesheetPerProject() {
 		#local _projectSampleSheet="${TMP_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}"
 		local _projectSampleSheet="${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}"
 		head -1 "${_sampleSheet}" > "${_projectSampleSheet}.tmp"
-		awk -F "${SAMPLESHEET_SEP}" \
-			"{if (NR>1 && \$${_projectFieldIndex} ~ /${_project}/) {print}}" \
-			"${_sampleSheet}" \
-			>> "${_projectSampleSheet}.tmp"
+		grep "${_project}" ${_sampleSheet} >> ${_projectSampleSheet}.tmp
 		mv "${_projectSampleSheet}"{.tmp,}
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Created ${_projectSampleSheet}." \
 			2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
@@ -619,15 +631,19 @@ else
 		else
 			barcodes=("${filePrefix}")
 		fi
+		numberOfBarcodes=${#barcodes[@]}
+		count=0
 		for barcode in "${barcodes[@]}"
 		do
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${barcode}..."
 			mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${barcode}/"
 			mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${filePrefix}/"
 			mkdir -m 2750 -p "${PRM_ROOT_DIR}/Samplesheets/archive/"
-			rsyncRuns "${barcode}"
-			splitSamplesheetPerProject "${filePrefix}"
+			count=$((count+1))
+			echo "counting: ${count} of ${numberOfBarcodes}" 
+			rsyncRuns "${barcode}" "${count}" "${numberOfBarcodes}"
 		done
+		splitSamplesheetPerProject "${filePrefix}"
 
 	done
 fi
