@@ -364,7 +364,7 @@ function sanityChecking() {
         local      _sequencingStartDateFile="${_controlFileBase}.sequencingStartDate"
         if [[ -e "${_sequencingStartDateFile}" ]]
         then
-                $(stat --format %y "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished" | awk '{ gsub("-",""); print substr($1,3,8) }' > "${_sequencingStartDateFile}")
+		$(date -d "@$(stat -c '%Y' ${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished )" +'%y%m%d' > "${_sequencingStartDateFile}")
                 log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsed ${_sequencingStartDateFile}."
         else
                 log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sequencingStartDateFile} is missing or not accessible." \
