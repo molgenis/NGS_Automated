@@ -7,7 +7,7 @@
 #
 if [[ "${BASH_VERSINFO}" -lt 4 || "${BASH_VERSINFO[0]}" -lt 4 ]]
 then
-    	echo "Sorry, you need at least bash 4.x to use ${0}." >&2
+	echo "Sorry, you need at least bash 4.x to use ${0}." >&2
         exit 1
 fi
 
@@ -36,22 +36,22 @@ REAL_USER="$(logname 2>/dev/null || echo 'no login name')"
 
 if [[ -f "${LIB_DIR}/sharedFunctions.bash" && -r "${LIB_DIR}/sharedFunctions.bash" ]]
 then
-    	source "${LIB_DIR}/sharedFunctions.bash"
+	source "${LIB_DIR}/sharedFunctions.bash"
 else
-    	printf '%s\n' "FATAL: cannot find or cannot access sharedFunctions.bash"
-        trap - EXIT
-        exit 1
+	printf '%s\n' "FATAL: cannot find or cannot access sharedFunctions.bash"
+	trap - EXIT
+	exit 1
 fi
 
 function showHelp() {
-        #
-        # Display commandline help on STDOUT.
-        #
+	#
+	# Display commandline help on STDOUT.
+	#
 	cat <<EOH
 ===============================================================================================================
 Script to get the running times of the complete pipeline
 Usage:
-      	$(basename $0) OPTIONS
+	$(basename $0) OPTIONS
 Options:
         -h   Show this help.
         -g   Group.
@@ -67,7 +67,7 @@ Config and dependencies:
         In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
 ===============================================================================================================
 EOH
-   	trap - EXIT
+	trap - EXIT
         exit 0
 }
 
@@ -84,24 +84,24 @@ declare group=''
 declare email='false'
 declare dryrun=''
 while getopts "g:l:h" opt; do
-        case $opt in
-                h)
-                  	showHelp
-                        ;;
-                g)
-                  	group="${OPTARG}"
-                        ;;
-                l)
-                  	l4b_log_level=${OPTARG^^}
-                        l4b_log_level_prio=${l4b_log_levels[${l4b_log_level}]}
-                        ;;
+	case $opt in
+		h)
+			showHelp
+			;;
+		g)
+			group="${OPTARG}"
+			;;
+		l)
+			l4b_log_level=${OPTARG^^}
+			l4b_log_level_prio=${l4b_log_levels[${l4b_log_level}]}
+			;;
                 \?)
-                   	log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Invalid option -${OPTARG}. Try $(basename $0) -h for help."
-                        ;;
+			log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Invalid option -${OPTARG}. Try $(basename $0) -h for help."
+			;;
                 :)
-                  	log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Option -${OPTARG} requires an argument. Try $(basename $0) -h for help."
-                        ;;
-        esac
+			log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Option -${OPTARG} requires an argument. Try $(basename $0) -h for help."
+			;;
+	esac
 done
 
 
@@ -109,10 +109,10 @@ done
 # Check commandline options.
 #
 if [[ -z "${group:-}" ]]; then
-        log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
 fi
 if [[ -n "${dryrun:-}" ]]; then
-        log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Enabled dryrun option for rsync.'
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Enabled dryrun option for rsync.'
 fi
 
 
@@ -124,6 +124,7 @@ declare -a configFiles=(
         "${CFG_DIR}/${group}.cfg"
         "${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
         "${CFG_DIR}/sharedConfig.cfg"
+	"${HOME}/molgenis.cfg"
 )
 for configFile in "${configFiles[@]}"; do
         if [[ -f "${configFile}" && -r "${configFile}" ]]; then
@@ -143,8 +144,8 @@ done
 #
 # Execution of this script requires ateambot account.
 #
-if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]; then
-        log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
+if [[ "${ROLE_USER}" != "${DATA_MANAGER}" ]]; then
+        log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${DATA_MANAGER}, but you are ${ROLE_USER} (${REAL_USER})."
 fi
 
 
@@ -153,11 +154,10 @@ projectsDir="${workDir}/projects/"
 logsDir="${workDir}/logs/"
 logsDirSourceServer="/groups/umcg-gd/scr01/logs/"
 
-cd ${projectsDir}
-find * -nowarn -mtime -40 -type d -maxdepth 0 -exec ls -d {} \; > ~/Timing/AllProjects40days.txt
-wc -l ~/Timing/AllProjects40days.txt
+cd "${projectsDir}"
+find * -nowarn -mtime -40 -type d -maxdepth 0 -exec ls -d {} \; > "${logsDir}/AllProjects40days.txt"
 SAMPLESHEET_SEP=","
-echo -e "unique_id\trawdataname\tproject\ttotal_min\ttotal_hours\tmachine\tnumberofSamples\tstartTime\tfinishedTime\tcopyRawDataToPrmDuration\tpipelineDuration\tcopyProjectDataToPrmTiming\tdemultiplexingDuration" > ~/${logsDir}/timing.txt
+echo -e "unique_id,rawdataname,project,total_min,total_hours,machine,numberofSamples,startTime,finishedTime,copyRawDataToPrmDuration,pipelineDuration,copyProjectDataToPrmTiming,demultiplexingDuration" > ${logsDir}/status_timing.csv
 while read project 
 do
 	echo "start"
@@ -190,7 +190,7 @@ do
 		if ssh ${sourceServerFQDNprimary} -n test -e "${logsDirSourceServer}/${filePrefix}/run01.demultiplexing.finished"
 		then
 			start=$(ssh -n ${sourceServerFQDNprimary} stat -c '%Y' "${logsDirSourceServer}/${filePrefix}/run01.demultiplexing.finished" )
-			machine="${sourceServerFQDNprimary}"
+			machine="${HOSTNAME_TMP}"
 		else
 			if ssh ${sourceServerFQDNsecondary} -n test -e "${logsDirSourceServer}/${filePrefix}/run01.demultiplexing.finished"
 			then
@@ -205,35 +205,34 @@ do
 	else
 		if ssh ${genomeScanCluster} -n test -e "/groups/umcg-genomescan/${genomeScanClusterTmp}/runs/${filePrefix}/results/${filePrefix}.csv"
 		then
-			machine="zinc-finger"
+			machine="${HOSTNAME_TMP}"
 			start=$(ssh -n ${genomeScanCluster} stat -c '%Y' "/groups/umcg-genomescan/${genomeScanClusterTmp}/runs/${filePrefix}/results/${filePrefix}.csv")
 
 		fi
 	fi	
-		startDateEpoch=$(echo "${start}")
-		startCopyingEpoch=$(stat -c '%Y' ${logsDir}/${filePrefix}/run01.copyRawDataToPrm.started)
-		finishedCopyingEpoch=$(stat -c '%Y' ${logsDir}/${filePrefix}/run01.copyRawDataToPrm.finished)
-		startPipelineEpoch=$(stat -c '%Y' "${projectsDir}/${project}/run01/jobs/submit.sh")
-		finishedPipelineEpoch=$(stat -c '%Y' "${projectsDir}/${project}/run01/jobs/pipeline.finished")
-		finishedProjectDataToPrmEpoch=$(ssh -n ${HOSTNAME_TMP} stat -c '%Y' "/groups/${group}/${DIAGNOSTICS_TMP_LFS}/logs/${project}/run01.copyProjectDataToPrm.finished")
-		totalDurationInMin=$(((finishedProjectDataToPrmEpoch-startDateEpoch)/ 60))
-		totalDurationInHr=$(((finishedProjectDataToPrmEpoch-startDateEpoch)/ 3600))
-		copyRawDataToPrmDuration=$(((finishedCopyingEpoch-startCopyingEpoch)/ 60))
-		pipelineDuration=$(((finishedPipelineEpoch-startPipelineEpoch)/ 60))
+	startDateEpoch=$(echo "${start}")
+	startCopyingEpoch=$(stat -c '%Y' ${logsDir}/${filePrefix}/run01.copyRawDataToPrm.started)
+	finishedCopyingEpoch=$(stat -c '%Y' ${logsDir}/${filePrefix}/run01.copyRawDataToPrm.finished)
+	startPipelineEpoch=$(stat -c '%Y' "${projectsDir}/${project}/run01/jobs/submit.sh")
+	finishedPipelineEpoch=$(stat -c '%Y' "${projectsDir}/${project}/run01/jobs/pipeline.finished")
+	finishedProjectDataToPrmEpoch=$(ssh -n ${HOSTNAME_TMP} stat -c '%Y' "/groups/${group}/${DIAGNOSTICS_TMP_LFS}/logs/${project}/run01.copyProjectDataToPrm.finished")
+	totalDurationInMin=$(((finishedProjectDataToPrmEpoch-startDateEpoch)/ 60))
+	totalDurationInHr=$(((finishedProjectDataToPrmEpoch-startDateEpoch)/ 3600))
+	copyRawDataToPrmDuration=$(((finishedCopyingEpoch-startCopyingEpoch)/ 60))
+	pipelineDuration=$(((finishedPipelineEpoch-startPipelineEpoch)/ 60))
 
-		copyProjectDataToPrmDuration=$(((finishedProjectDataToPrmEpoch-finishedPipelineEpoch)/ 60))
+	copyProjectDataToPrmDuration=$(((finishedProjectDataToPrmEpoch-finishedPipelineEpoch)/ 60))
 
-		startDate=$(date -d "@${start}" +'%FT%T%z')
-		finishedDate=$(date -d "@${finishedProjectDataToPrmEpoch}" +'%FT%T%z')
+	startDate=$(date -d "@${start}" +'%FT%T%z')
+	finishedDate=$(date -d "@${finishedProjectDataToPrmEpoch}" +'%FT%T%z')
 
-		echo -e "${filePrefix}-${project}\t${filePrefix}\t${project}\t${totalDurationInMin}\t${totalDurationInHr}\t${machine}\t${numberOfSamples}\t${startDate}\t${finishedDate}\t${copyRawDataToPrmDuration}\t${pipelineDuration}\t${copyProjectDataToPrmDuration}" >> ~/${logsDir}/timing.txt
-
-		echo "Sequencing run id ${filePrefix} started on ${startDate} on ${machine}. It contains project: ${project} and it has ${numberOfSamples} samples."
-		echo "The copying of the project data to prm finished at ${finishedDate}, in total this was ${totalDurationInMin} minutes (approx. ${totalDurationInHr} hours)"
-
-
-	#ssh gattaca01.gcc.rug.nl "stat /groups/umcg-lab/scr01/sequencers/${sequencingStartDate}_${sequencer}_${runID}_${flowcell}/Config/NextSeqCalibration.cfg | grep Modify | awk '{print $2,$3}'"
-done<~/Timing/AllProjects40days.txt
+	echo -e "${filePrefix}-${project},${filePrefix},${project},${totalDurationInMin},${totalDurationInHr},${machine},${numberOfSamples},${startDate},${finishedDate},${copyRawDataToPrmDuration},${pipelineDuration},${copyProjectDataToPrmDuration}," >> ${logsDir}/status_timing.csv
+	trackAndTracePostFromFile 'status_timing' 'add_update_existing' "${logsDir}/status_timing.csv"
+	echo "Sequencing run id ${filePrefix} started on ${startDate} on ${machine}. It contains project: ${project} and it has ${numberOfSamples} samples."
+	echo "The copying of the project data to prm finished at ${finishedDate}, in total this was ${totalDurationInMin} minutes (approx. ${totalDurationInHr} hours)"
 
 
+done<"${logsDir}/AllProjects40days.txt"
 
+trap - EXIT
+exit 0
