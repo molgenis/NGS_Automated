@@ -357,37 +357,21 @@ function sanityChecking() {
 			fi
 		done
 	done
-	#
-	# Check if all projects from this batch have the same sequencingStartDate.
-	#
-	local      _sequencingStartDateFile="${_controlFileBase}.sequencingStartDate"
-	declare -a _sequencingStartDates=()
-	local      _sequencingStartDate
-	if [[ -e "${_sequencingStartDateFile}" ]]
-	then
-		IFS=$'\n' _sequencingStartDates=($(sort -u "${_sequencingStartDateFile}"))
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsed ${_sequencingStartDateFile}."
-	else
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sequencingStartDateFile} is missing or not accessible." \
-			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-			&& mv "${_controlFileBaseForFunction}."{started,failed}
-		return
-	fi
-	if [[ "${#_sequencingStartDates[@]:-0}" -eq '1' ]]
-	then
-		#
-		# Remove redundant copies of the sequencingStartDate from the corresponding file.
-		#
-		_sequencingStartDate="${_sequencingStartDates[0]}"
-		printf '%s' "${_sequencingStartDate}" > "${_sequencingStartDateFile}"
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found _sequencingStartDate: ${_sequencingStartDate}."
-	else
-		printf -v _sequencingStartDate ", %s" "${_sequencingStartDates[@]}"
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sequencingStartDateFile} may only contain a single value for all projects of this batch ${_batch}, but we've got ${_sequencingStartDate:2}." \
-			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-			&& mv "${_controlFileBaseForFunction}."{started,failed}
-		return
-	fi
+
+        #
+        # Check if all projects from this batch have the same sequencingStartDate.
+        #
+        local      _sequencingStartDateFile="${_controlFileBase}.sequencingStartDate"
+        if [[ -e "${_sequencingStartDateFile}" ]]
+        then
+                $(stat --format %y "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished" | awk '{ gsub("-",""); print substr($1,3,8) }' > "${_sequencingStartDateFile})
+                log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsed ${_sequencingStartDateFile}."
+        else
+                log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sequencingStartDateFile} is missing or not accessible." \
+                        2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+                        && mv "${_controlFileBaseForFunction}."{started,failed}
+                return
+        fi
 	#
 	# All is well; add new status info to *.started file and
 	# delete any previously created *.failed file if present,
