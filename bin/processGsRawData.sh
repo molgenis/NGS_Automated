@@ -357,21 +357,26 @@ function sanityChecking() {
 			fi
 		done
 	done
-
-        #
-        # Check if all projects from this batch have the same sequencingStartDate.
-        #
-        local      _sequencingStartDateFile="${_controlFileBase}.sequencingStartDate"
-        if [[ -e "${_sequencingStartDateFile}" ]]
-        then
-		$(date -d "@$(stat -c '%Y' ${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished )" +'%y%m%d' > "${_sequencingStartDateFile}")
-                log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsed ${_sequencingStartDateFile}."
-        else
-                log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sequencingStartDateFile} is missing or not accessible." \
-                        2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-                        && mv "${_controlFileBaseForFunction}."{started,failed}
-                return
-        fi
+	#
+	# Get sequencingStartDate from time stamp of file used to signal that the data upload finished successfully.
+	#
+	# Technically both the "data transfer finished" date as well as the "sample prep finished + samplesheet created" date are not correct 
+	# when used as "sequencingStartDate" as the former one is too late and the latter one too early, 
+	# but the sample prep finished + samplesheet created dates may differ for the projects located in the same batch / on the same flowcell.
+	# A flowcell can only have one sequencingStartDate though.
+	# Therefore we overwrite the "sequencingStartDate" value from the samplesheets per project with the "data upload finished" date.
+	#
+	local _sequencingStartDateFile="${_controlFileBase}.sequencingStartDate"
+	if [[ -e "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished" ]]
+	then
+		$(date -d "@$(stat -c '%Y' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished")" +'%y%m%d' > "${_sequencingStartDateFile}")
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Fetched sequencingStartDate from last modification time stamp of ${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished."
+	else
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished is missing or not accessible." \
+			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+			&& mv "${_controlFileBaseForFunction}."{started,failed}
+		return
+	fi
 	#
 	# All is well; add new status info to *.started file and
 	# delete any previously created *.failed file if present,
