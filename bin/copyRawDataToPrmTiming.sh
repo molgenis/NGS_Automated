@@ -7,11 +7,11 @@ set -u
 
 
 #
-##	  This script will run on chaperone or boxy. First it will pull the project files, from projects from whom the demultiplex pipeline is finished.
-###	 And then it will check if there is a .finished file, if there is, the copyRawDataToPrm is finished.
+##		This script will run on chaperone or boxy. First it will pull the project files, from projects from whom the demultiplex pipeline is finished.
+###		And then it will check if there is a .finished file, if there is, the copyRawDataToPrm is finished.
 ####	If there is no .finished file, it will check if there is a .started file and if this file is older than 6h (last time it was modified).
-###	 If the .started is not older than 6h, no worries the pipeline is probably still running.
-##	  If the .started file is older than 6h, it will generate a copyRawDataToPrmTiming.failed. 
+###		If the .started is not older than 6h, no worries the pipeline is probably still running.
+##		If the .started file is older than 6h, it will generate a copyRawDataToPrmTiming.failed. 
 #	
  
 
@@ -49,45 +49,45 @@ else
 fi
 
 function showHelp() {
-		#
-		# Display commandline help on STDOUT.
-		#
-		cat <<EOH
+	#
+	# Display commandline help on STDOUT.
+	#
+	cat <<EOH
 ======================================================================================================================
 Script to start NGS_Demultiplexing automagicly when sequencer is finished, and corresponding samplesheet is available.
 
 Usage:
 
-		$(basename $0) OPTIONS
+	$(basename $0) OPTIONS
 
 Options:
 
-		-h   Show this help.
-		-g   Group.
-		-l   Log level.
-				Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
-		-s   Source server address from where the rawdate will be fetched
-				Must be a Fully Qualified Domain Name (FQDN).
-				E.g. gattaca01.gcc.rug.nl or gattaca02.gcc.rug.nl
-		-r   Root dir on the server specified with -s and from where the raw data will be fetched (optional).
-				By default this is the SCR_ROOT_DIR variable, which is compiled from variables specified in the
-				<group>.cfg, <source_host>.cfg and sharedConfig.cfg config files (see below.)
-				You need to override SCR_ROOT_DIR when the data is to be fetched from a non default path,
-				which is for example the case when fetching data from another group.
+	-h	Show this help.
+	-g	Group.
+	-l	Log level.
+		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
+	-s	Source server address from where the rawdate will be fetched
+		Must be a Fully Qualified Domain Name (FQDN).
+		E.g. gattaca01.gcc.rug.nl or gattaca02.gcc.rug.nl
+	-r	Root dir on the server specified with -s and from where the raw data will be fetched (optional).
+		By default this is the SCR_ROOT_DIR variable, which is compiled from variables specified in the
+		<group>.cfg, <source_host>.cfg and sharedConfig.cfg config files (see below.)
+		You need to override SCR_ROOT_DIR when the data is to be fetched from a non default path,
+		which is for example the case when fetching data from another group.
 Config and dependencies:
 
-	This script needs 3 config files, which must be located in ${CFG_DIR}:
-	 1. <group>.cfg	 for the group specified with -g
-	 2. <this_host>.cfg		for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
-	 3. <source_host>.cfg for the source server. E.g.: "<hostname>.cfg" (Short name without domain)
-	 4. sharedConfig.cfg  for all groups and all servers.
-	In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
+This script needs 3 config files, which must be located in ${CFG_DIR}:
+ 1. <group>.cfg	for the group specified with -g
+ 2. <this_host>.cfg	for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
+ 3. <source_host>.cfg	for the source server. E.g.: "<hostname>.cfg" (Short name without domain)
+ 4. sharedConfig.cfg	for all groups and all servers.
+In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
 
 ======================================================================================================================
 
 EOH
-		trap - EXIT
-		exit 0
+	trap - EXIT
+	exit 0
 }
 
 
@@ -107,31 +107,31 @@ declare sourceServerRootDir=''
 
 while getopts "g:l:s:r:h" opt
 do
-		case $opt in
-				h)
-						showHelp
-						;;
-				g)
-						GROUP="${OPTARG}"
-						;;
-				s)
-						sourceServerFQDN="${OPTARG}"
-						sourceServer="${sourceServerFQDN%%.*}"
-						;;
-				r)
-						sourceServerRootDir="${OPTARG}"
-						;;
-				l)
-						l4b_log_level=${OPTARG^^}
-						l4b_log_level_prio=${l4b_log_levels[${l4b_log_level}]}
-						;;
-				\?)
-						log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Invalid option -${OPTARG}. Try $(basename $0) -h for help."
-						;;
-				:)
-						log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Option -${OPTARG} requires an argument. Try $(basename $0) -h for help."
-						;;
-		esac
+	case $opt in
+		h)
+			showHelp
+			;;
+		g)
+			GROUP="${OPTARG}"
+			;;
+		s)
+			sourceServerFQDN="${OPTARG}"
+			sourceServer="${sourceServerFQDN%%.*}"
+			;;
+		r)
+			sourceServerRootDir="${OPTARG}"
+			;;
+		l)
+			l4b_log_level=${OPTARG^^}
+			l4b_log_level_prio=${l4b_log_levels[${l4b_log_level}]}
+			;;
+		\?)
+			log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Invalid option -${OPTARG}. Try $(basename $0) -h for help."
+			;;
+		:)
+			log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Option -${OPTARG} requires an argument. Try $(basename $0) -h for help."
+			;;
+	esac
 done
 
 #
@@ -139,7 +139,7 @@ done
 #
 if [[ -z "${GROUP:-}" ]]
 then
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
 fi
 if [[ -z "${sourceServerFQDN:-}" ]]
 then
@@ -151,27 +151,27 @@ fi
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files..."
 declare -a configFiles=(
-		"${CFG_DIR}/${GROUP}.cfg"
-		"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
-		"${CFG_DIR}/${sourceServer}.cfg"
-		"${CFG_DIR}/sharedConfig.cfg"
-		"${HOME}/molgenis.cfg"
+	"${CFG_DIR}/${GROUP}.cfg"
+	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
+	"${CFG_DIR}/${sourceServer}.cfg"
+	"${CFG_DIR}/sharedConfig.cfg"
+	"${HOME}/molgenis.cfg"
 )
 
 for configFile in "${configFiles[@]}"; do 
-		if [[ -f "${configFile}" && -r "${configFile}" ]]
-		then
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config file ${configFile}..."
-				#
-				# In some Bash versions the source command does not work properly with process substitution.
-				# Therefore we source a first time with process substitution for proper error handling
-				# and a second time without just to make sure we can use the content from the sourced files.
-				#
-				mixed_stdouterr=$(source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot source ${configFile}."
-				source ${configFile}  # May seem redundant, but is a mandatory workaround for some Bash versions.
-		else
-				log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Config file ${configFile} missing or not accessible."
-		fi
+	if [[ -f "${configFile}" && -r "${configFile}" ]]
+	then
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config file ${configFile}..."
+		#
+		# In some Bash versions the source command does not work properly with process substitution.
+		# Therefore we source a first time with process substitution for proper error handling
+		# and a second time without just to make sure we can use the content from the sourced files.
+		#
+		mixed_stdouterr=$(source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot source ${configFile}."
+		source ${configFile}  # May seem redundant, but is a mandatory workaround for some Bash versions.
+	else
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Config file ${configFile} missing or not accessible."
+	fi
 done
 
 #
@@ -189,7 +189,7 @@ fi
 #
 if [[ "${ROLE_USER}" != "${DATA_MANAGER}" ]]
 then
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${DATA_MANAGER}, but you are ${ROLE_USER} (${REAL_USER})."
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${DATA_MANAGER}, but you are ${ROLE_USER} (${REAL_USER})."
 fi
 
 run='run01'
@@ -243,9 +243,8 @@ do
 			>> "${PRM_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
 
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "copyRawDataToPrm for sequenceRun: ${sequenceRun} is running over 4h"
-			
 			touch "${PRM_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.failed"
-			echo -e "Dear GCC helpdesk,\n\nPlease check if there is somethink wrong with the pipeline.\nThe copyRawDataToPrm has started but is not finished after 4h for sequenceRun ${sequenceRun}.\n\nKind regards\nGCC" > "${TMP_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.failed"
+			echo -e "Dear GCC helpdesk,\n\nPlease check if there is somethink wrong with the pipeline.\nThe copyRawDataToPrm has started but is not finished after 4h for sequenceRun ${sequenceRun}.\n\nKind regards\nGCC" > "${PRM_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.failed"
 		fi
 	fi
 done
