@@ -379,10 +379,6 @@ function splitSamplesheetPerProject() {
 	#
 	for _project in "${_projects[@]}"
 	do
-		echo ${_project}
-		echo ${_project}
-		echo ${_project}
-		echo ${_project}
 		#
 		# Skip project if demultiplexing only.
 		#v

@@ -200,16 +200,52 @@ function rsyncProjectRun() {
 			cd ${PRM_ROOT_DIR}/projects/${_project}/
 			if md5sum -c ${_run}.md5 > ${_run}.md5.log 2>&1
 			then
-				echo ${PRM_ROOT_DIR}
 				cd "${PRM_ROOT_DIR}/concordance/${PRMRAWDATA}/"
 				declare -a files=($(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/${CONCORDANCEFILESPATH}" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name "${CONCORDANCEFILESEXTENSION}"))
 				for i in "${files[@]}"
 				do
-					ln -sf "${i}"
+					if [ "${_sampleType}" == 'GAP' ]
+					then
+						
+						sd=$(cat "${i}.sd")
+						if [[ "${sd}" < '0.2' ]]
+						then
+							ln -sf "${i}"
+						else
+							log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
+                                                        "SD for ${i} is higher than 0.2, skipped"
+						fi
+					fi
 				done
 				echo "removing symlink for project"
 				rm -f "${PRM_ROOT_DIR}/concordance/${PRMRAWDATA}/${_project}.final.vcf.gz"
 				cd -
+				if [ "${_sampleType}" == 'GAP' ]
+				then
+					echo "Array RUN! making symlinks for DiagnosticOutput"
+					cd "/groups/${GROUP}/${DAT_DISK}/DiagnosticOutput/"
+					windowsPathDelimeter="\\"
+
+					callrate=$(ls "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/Callrates_${_project}.txt")
+					echo "\\zkh\appdata\medgen\leucinezipper\\${callrate//\//$windowsPathDelimeter}" > "Callrates_${_project}.txt"
+
+					penncnvproject=$(ls "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/${_project}_PennCNV.txt")
+					echo "\\zkh\appdata\medgen\leucinezipper\\${penncnvproject//\//$windowsPathDelimeter}" > "${_project}_PennCNV.txt"
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/"
+					if [ -d  "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/" ]
+					then
+						declare -a pennCNVFiles=($(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/" -name "*.txt"))
+						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${pennCNVFiles[@]}"
+						for pennCnv in ${pennCNVFiles[@]}
+						do
+							name=$(basename "${pennCnv}")
+							convertedPennCNV=${pennCnv//\//$windowsPathDelimeter}
+							echo "\\zkh\appdata\medgen\leucinezipper\\${pennCnv//\//$windowsPathDelimeter}" > "/groups/${GROUP}/${DAT_DISK}/DiagnosticOutput/perSample/${name}"
+						done
+					fi
+					cd -
+				fi
+
 				echo "The results can be found in: ${PRM_ROOT_DIR}." >> "${JOB_CONTROLE_FILE_BASE}.started"
 				echo "OK! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details." \
 				>>    "${JOB_CONTROLE_FILE_BASE}.started" \

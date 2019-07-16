@@ -172,26 +172,21 @@ echo "hoi"
 concordanceDir="/groups/${NGSGROUP}/${TMP_LFS}/concordance/"
 ngsVcfDirPRM="/groups/${NGSGROUP}/${PRM_LFS}/concordance/ngs/"
 arrayVcfDirPRM="/groups/${ARRAYGROUP}/${PRM_LFS}/concordance/array/"
-echo "doei"
-echo "ssh ${HOSTNAME_PRM} find ${ngsVcfDirPRM} -type f -o -type l -iname *final.vcf.gz"
-for vcfFile in $(ssh ${HOSTNAME_PRM} "find ${ngsVcfDirPRM} -type f -o -type l -iname *final.vcf.gz")
+
+for vcfFile in $(ssh ${HOSTNAME_PRM} "find ${ngsVcfDirPRM} \( -type f -o -type l \) -name *final.vcf.gz")
 do
 
-	echo "_____________________________________________________________" ##Can be removed later, more easy to see when a new sample is processed
-	rsync --copy-links ${HOSTNAME_PRM}:"${vcfFile}" "${concordanceDir}/ngs/"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "processing ngs-vcf ${vcfFile}"
 	ngsVcfId=$(basename "${vcfFile}" .final.vcf.gz)
-	echo "start"
-	ngsBarcode=$(zcat ${concordanceDir}/ngs/${ngsVcfId}.final.vcf.gz | grep "##FastQ_Barcode=" | awk 'BEGIN {FS="="}{OFS="_"} {print _,$2}')
-	echo "start2"
-
+	ngsBarcode=$(ssh ${HOSTNAME_PRM} "zcat ${vcfFile} | grep \"##FastQ_Barcode=\" | awk 'BEGIN {FS=\"=\"}{OFS=\"_\"} {print _,$2}'")
 	ngsInfo=$(echo "${ngsVcfId}" | awk 'BEGIN {FS="_"}{OFS="_"}{print $3,$4,$5}')
 	ngsInfoList=$(echo "${ngsInfo}${ngsBarcode}")
+
 	dnaNo=$(echo "${ngsVcfId}" | awk 'BEGIN {FS="_"}{print substr($3,4)}')
 
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "info from ngs.vcf: ${ngsInfoList}"
 
-	checkArrayVcf=$(ssh ${HOSTNAME_PRM} "find ${arrayVcfDirPRM} -type f -o -type l -iname DNA-${dnaNo}_*.FINAL.vcf")
+	checkArrayVcf=$(ssh ${HOSTNAME_PRM} "find ${arrayVcfDirPRM} \( -type f -o -type l \) -name '*DNA-"${dnaNo}"_*.FINAL.vcf' ")
 
 	copyArrayFile="false"
 	cluster=""
@@ -219,22 +214,22 @@ do
 
 	if [ "${copyArrayFile}" == "true" ]
 	then
-		rsync --copy-links ${HOSTNAME_PRM}:${arrayVcfDirPRM}/DNA-${dnaNo}_*.FINAL.vcf "${concordanceDir}/array/"
-
-		arrayFile=$(ls -1 "${concordanceDir}/array/DNA-${dnaNo}_"*".FINAL.vcf")
+		#rsync --copy-links ${HOSTNAME_PRM}:${arrayVcfDirPRM}/DNA-${dnaNo}_*.FINAL.vcf "${concordanceDir}/array/"
+		echo "cluster: ${cluster}"
+		arrayFile=$(ssh ${cluster} "ls -1 ${arrayVcfDirPRM}/DNA-${dnaNo}_*.FINAL.vcf")
+		echo "--------- ${arrayFile}"
 		arrayId="$(basename "${arrayFile}" .FINAL.vcf)"
 		arrayInfoList=$(echo "${arrayId}" | awk 'BEGIN {FS="_"}{OFS="_"}{print $1,$2,$3,$5,$6}')
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "processing array vcf ${arrayFile}"
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "info from array.vcf: ${arrayInfoList}"
 
 	fi
-
-	if [[ -f "${arrayInfoList}_${ngsInfoList}.sampleId.txt" ]]
+	if [ -f "${concordanceDir}/logs/${arrayInfoList}_${ngsInfoList}.ConcordanceCheck.finished" ]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "the concordance between ${arrayInfoList} ${ngsInfoList} is being calculated"
 		continue
 	else
-		echo -e "data1Id\tdata2Id\tlocation1\tlocation2\n${arrayId}\t${ngsVcfId}\t${HOSTNAME_PRM}:${vcfFile}\t${HOSTNAME_PRM}:${arrayFile}" > "${concordanceDir}/samplesheets/${arrayInfoList}_${ngsInfoList}.sampleId.txt"
+		echo -e "data1Id\tdata2Id\tlocation1\tlocation2\n${arrayId}\t${ngsVcfId}\t${HOSTNAME_PRM}:${ngsVcfDirPRM}/${ngsVcfId}.final.vcf.gz\t${HOSTNAME_PRM}:${arrayVcfDirPRM}/${arrayId}.FINAL.vcf" > "${concordanceDir}/samplesheets/${arrayInfoList}_${ngsInfoList}.sampleId.txt"
 	fi 
 
 done

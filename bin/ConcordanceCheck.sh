@@ -147,10 +147,10 @@ done
 # Make sure to use an account for cron jobs and *without* write access to prm storage.
 #
 
-if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]
-then
-        log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
-fi
+#if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]
+#then
+#        log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
+#fi
 
 
 module load HTSlib/1.3.2-foss-2015b
@@ -168,47 +168,55 @@ for sampleSheet in $(find "${concordanceDir}/samplesheets/" -type f -iname "*sam
 do
 	echo "______________________________________________________________________________" ## remove when script is finished
 	concordanceCheckId=$(basename "${sampleSheet}" .sampleId.txt)
+	touch "/groups/${GROUP}/${TMP_LFS}/concordance/logs/${concordanceCheckId}.ConcordanceCheck.started"
 	arrayId=$(sed 1d "${sampleSheet}" | awk 'BEGIN {FS="\t"}{print $1}')
 	arrayVcf=$(echo "${arrayId}.FINAL.vcf")
+	arrayFileLocation=$(sed 1d "${sampleSheet}" | awk 'BEGIN {FS="\t"}{print $4}')
+	rsync -av --copy-links ${arrayFileLocation} "${arrayVcfDir}"
 	ngsId=$(sed 1d "${sampleSheet}" | awk 'BEGIN {FS="\t"}{print $2}')
 	ngsVcf=$(echo "${ngsId}.final.vcf.gz")
+	ngsFileLocation=$(sed 1d "${sampleSheet}" | awk 'BEGIN {FS="\t"}{print $3}')
+	rsync -av --copy-links ${ngsFileLocation} "${ngsVcfDir}"
 
 	bedType="$(zcat "${ngsVcfDir}/${ngsVcf}" | grep -m 1 -o -P 'intervals=\[[^\]]*.bed\]' | cut -d [ -f2 | cut -d ] -f1)"
 	bedDir="$(dirname ${bedType})"
 	bedFile="${bedDir}/captured.merged.bed"
 
-	mkdir -p "${concordanceDir}/temp/${concordanceCheckId}/"
+	mkdir -p "${concordanceDir}/tmp/${concordanceCheckId}/"
 
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Calculating concordance over ${ngsVcf} compared to ${arrayVcf}"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Using ${bedFile} to intersect the array vcf file"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Output file name: ${concordanceCheckId}"
 
 	##remove indel-calls from ngs-vcf
-	zcat "${ngsVcfDir}/${ngsVcf}" | grep '^#' > "${concordanceDir}/temp/${concordanceCheckId}/${ngsId}.FINAL.vcf"
-	zcat "${ngsVcfDir}/${ngsVcf}" | grep -v '^#' | awk '{if (length($4)<2 && length($5)<2 ){print $0}}' >> "${concordanceDir}/temp/${concordanceCheckId}/${ngsId}.FINAL.vcf"
+	zcat "${ngsVcfDir}/${ngsVcf}" | grep '^#' > "${concordanceDir}/tmp/${concordanceCheckId}/${ngsId}.FINAL.vcf"
+	zcat "${ngsVcfDir}/${ngsVcf}" | grep -v '^#' | awk '{if (length($4)<2 && length($5)<2 ){print $0}}' >> "${concordanceDir}/tmp/${concordanceCheckId}/${ngsId}.FINAL.vcf"
 
-	bgzip -c "${concordanceDir}/temp/${concordanceCheckId}/${ngsId}.FINAL.vcf" > "${concordanceDir}/temp/${concordanceCheckId}/${ngsId}.FINAL.vcf.gz"
-	tabix -p vcf "${concordanceDir}/temp/${concordanceCheckId}/${ngsId}.FINAL.vcf.gz"
+	bgzip -c "${concordanceDir}/tmp/${concordanceCheckId}/${ngsId}.FINAL.vcf" > "${concordanceDir}/tmp/${concordanceCheckId}/${ngsId}.FINAL.vcf.gz"
+	tabix -p vcf "${concordanceDir}/tmp/${concordanceCheckId}/${ngsId}.FINAL.vcf.gz"
 
-	bedtools intersect -a "${arrayVcfDir}/${arrayVcf}" -b "${bedFile}" -header  > "${concordanceDir}/temp/${concordanceCheckId}/${arrayId}.FINAL.ExonFiltered.vcf"
+	bedtools intersect -a "${arrayVcfDir}/${arrayVcf}" -b "${bedFile}" -header  > "${concordanceDir}/tmp/${concordanceCheckId}/${arrayId}.FINAL.ExonFiltered.vcf"
 
-	bgzip -c "${concordanceDir}/temp/${concordanceCheckId}/${arrayId}.FINAL.ExonFiltered.vcf" > "${concordanceDir}/temp/${concordanceCheckId}/${arrayId}.FINAL.ExonFiltered.vcf.gz"
-	tabix -p vcf "${concordanceDir}/temp/${concordanceCheckId}/${arrayId}.FINAL.ExonFiltered.vcf.gz"
+	bgzip -c "${concordanceDir}/tmp/${concordanceCheckId}/${arrayId}.FINAL.ExonFiltered.vcf" > "${concordanceDir}/tmp/${concordanceCheckId}/${arrayId}.FINAL.ExonFiltered.vcf.gz"
+	tabix -p vcf "${concordanceDir}/tmp/${concordanceCheckId}/${arrayId}.FINAL.ExonFiltered.vcf.gz"
 
 	java -XX:ParallelGCThreads=1 -Djava.io.tmpdir="${concordanceDir}/temp/" -Xmx9g -jar ${EBROOTCOMPAREGENOTYPECALLS}/CompareGenotypeCalls.jar \
-	-d1 "${concordanceDir}/temp/${concordanceCheckId}/${arrayId}.FINAL.ExonFiltered.vcf.gz" \
+	-d1 "${concordanceDir}/tmp/${concordanceCheckId}/${arrayId}.FINAL.ExonFiltered.vcf.gz" \
 	-D1 VCF \
-	-d2 "${concordanceDir}/temp/${concordanceCheckId}/${ngsId}.FINAL.vcf.gz" \
+	-d2 "${concordanceDir}/tmp/${concordanceCheckId}/${ngsId}.FINAL.vcf.gz" \
 	-D2 VCF \
 	-ac \
 	--sampleMap "${sampleSheet}" \
-	-o "${concordanceDir}/output/${concordanceCheckId}" \
+	-o "${concordanceDir}/tmp/${concordanceCheckId}" \
 	-sva
 
-#	mv "${sampleSheet}" "${concordanceDir}/samplesheets/archive/"
-#	mv "${arrayVcfDir}/${arrayVcf}" "${arrayVcfDir}/archive/"
-#	mv "${ngsVcfDir}/${ngsVcf}" "${ngsVcfDir}/archive/"
-#	rm -r "${concordanceDir}/temp/${concordanceCheckId}/"
+	echo "moving ${concordanceDir}/tmp/${concordanceCheckId}.sample to ${concordanceDir}/results/"
+	mv "${concordanceDir}/tmp/${concordanceCheckId}.sample" "${concordanceDir}/results/"
+	echo "moving ${concordanceDir}/tmp/${concordanceCheckId}.variants to ${concordanceDir}/results/"
+	mv "${concordanceDir}/tmp/${concordanceCheckId}.variants" "${concordanceDir}/results/"
+
+	echo "finished"
+	mv "/groups/${GROUP}/${TMP_LFS}/concordance/logs/${concordanceCheckId}.ConcordanceCheck."{started,finished}
 
 done
 
