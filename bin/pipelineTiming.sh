@@ -77,17 +77,17 @@ Options:
 Config and dependencies:
 
 This script needs 3 config files, which must be located in ${CFG_DIR}:
- 1. <group>.cfg	 for the group specified with -g
- 2. <this_host>.cfg		for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
- 3. <source_host>.cfg for the source server. E.g.: "<hostname>.cfg" (Short name without domain)
- 4. sharedConfig.cfg  for all groups and all servers.
+ 1. <group>.cfg	for the group specified with -g
+ 2. <this_host>.cfg	for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
+ 3. <source_host>.cfg	for the source server. E.g.: "<hostname>.cfg" (Short name without domain)
+ 4. sharedConfig.cfg	for all groups and all servers.
 In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
 
 ======================================================================================================================
 
 EOH
-		trap - EXIT
-		exit 0
+	trap - EXIT
+	exit 0
 }
 
 

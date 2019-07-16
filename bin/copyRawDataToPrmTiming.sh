@@ -237,14 +237,14 @@ do
 			echo -e "copyRawDataToPrm for sequenceRun: ${sequenceRun} is still running" >> "${PRM_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "copyRawDataToPrm for sequenceRun: ${sequenceRun} is still running"
 		else
-			echo -e "copyRawDataToPrm for sequenceRun: ${sequenceRun} is running over 6h\n" \
+			echo -e "copyRawDataToPrm for sequenceRun: ${sequenceRun} is running over 4h\n" \
 			"time ${run}.copyRawDataToPrm.started was last modified:" \
 			$(stat -c %y "${PRM_ROOT_DIR}/logs/${sequenceRun}/${run}.copyRawDataToPrm.started") \
 			>> "${PRM_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
 
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "copyRawDataToPrm for sequenceRun: ${sequenceRun} is running over 4h"
 			touch "${PRM_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.failed"
-			echo -e "Dear GCC helpdesk,\n\nPlease check if there is somethink wrong with the pipeline.\nThe copyRawDataToPrm has started but is not finished after 4h for sequenceRun ${sequenceRun}.\n\nKind regards\nGCC" > "${PRM_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.failed"
+			echo -e "Dear HPC helpdesk,\n\nPlease check if there is something wrong with the pipeline.\nThe copyRawDataToPrm has started but is not finished after 4h for sequenceRun ${sequenceRun}.\n\nKind regards\nHPC" > "${PRM_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.failed"
 		fi
 	fi
 done
