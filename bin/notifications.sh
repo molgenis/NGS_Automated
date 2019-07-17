@@ -162,6 +162,7 @@ function notification(){
 			then
 				_subject="The jobs from project ${_project}/${_run} were resubmitted for phase ${_phase} on ${HOSTNAME_SHORT} at ${_timestamp}."
 				_body="$(cat "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted")"
+				_email_to="hpc.helpdesk@umcg.nl"
 			else
 				_subject="Project ${_project}/${_run} has ${_state} for phase ${_phase} on ${HOSTNAME_SHORT} at ${_timestamp}."
 				_body="$(cat "${_project_state_file}")"
@@ -186,9 +187,7 @@ function notification(){
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating file: ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted.mailed"
 				touch "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted.mailed"
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing file: ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.failed."
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing file: ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.failed.mailed"
 				rm "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.failed"
-				rm "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.failed.mailed"
 			else
 				continue
 			fi
