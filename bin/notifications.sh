@@ -130,7 +130,6 @@ function notification(){
 
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "PROJECT_STATE_FILES=${_project_state_files}"
 
-
 		for _project_state_file in ${_project_state_files[@]}
 		do
 			_file=$(basename "${_project_state_file}")
@@ -141,7 +140,6 @@ function notification(){
 			then
 				if [[ -e "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.failed" && ! -e "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.failed.mailed" && ! -e "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted" ]]
 				then
-
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No resubmitted jobs and the project is also not finished yet."
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Going to resubmit jobs for: ${_project}"
 					bash "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/submit.sh" > "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted"
@@ -159,7 +157,6 @@ function notification(){
 			fi
 
 			_timestamp="$(date --date="$(LC_DATE=C stat --printf='%y' "${_project_state_file}" | cut -d ' ' -f1,2)" "+%Y-%m-%dT%H:%M:%S")"
-
 
 			if [[ -e "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted" ]]
 			then
