@@ -74,7 +74,7 @@ EOH
 # Check for status and email notification
 #
 function notification(){
-	
+
 	local    _phase="${1%:*}"
 	local    _state="${1#*:}"
 	local -a _project_state_files=()
@@ -86,9 +86,9 @@ function notification(){
 	local    _subject
 	local    _body
 	local    _email_to
-	
+
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing projects with phase ${_phase} in state: ${_state} ..."
-	
+
 	#
 	# The path to phase state files must be:
 	#	"${TMP_ROOT_DIR}/logs/${project}/${run}.${_phase}.${_state}"
@@ -105,6 +105,7 @@ function notification(){
 	#	${run}     = the incremental 'analysis run number'. Starts with run01 and incremented in case of re-analysis.
 	#
 	declare -a _LFS_ROOT_DIRS=("${TMP_ROOT_DIR:-}" "${SCR_ROOT_DIR:-}" "${PRM_ROOT_DIR:-}")
+
 	for _LFS_ROOT_DIR in ${_LFS_ROOT_DIRS[@]}
 	do
 		_project_state_files=()
@@ -116,7 +117,7 @@ function notification(){
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No *.${_phase}.${_state} files present in ${_LFS_ROOT_DIR}/logs/*/."
 			continue
 		fi
-		
+
 		if [[ -r "${_LFS_ROOT_DIR}/logs/${_phase}.mailinglist" ]]
 		then
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_LFS_ROOT_DIR}/logs/${_phase}.mailinglist."
@@ -126,28 +127,53 @@ function notification(){
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Missing ${_LFS_ROOT_DIR}/logs/${_phase}.mailinglist"
 			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Cannot send notifications by mail. I'm giving up, bye bye."
 		fi
-		
+
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "PROJECT_STATE_FILES=${_project_state_files}"
+
+
 		for _project_state_file in ${_project_state_files[@]}
 		do
 			_file=$(basename "${_project_state_file}")
 			_project=$(basename $(dirname "${_project_state_file}"))
 			_run="${_file%%.*}"
-			
+
+			if [[ ${_phase} == "pipeline" && ! -e "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.finished" ]]
+			then
+				if [[ -e "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.failed" && ! -e "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.failed.mailed" && ! -e "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted" ]]
+				then
+
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No resubmitted jobs and the project is also not finished yet."
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Going to resubmit jobs for: ${_project}"
+					bash "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/submit.sh" > "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted"
+				else
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted"
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping: ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted. Jobs were already resubmitted for state ${_state}."
+				fi
+			fi
+
 			if [[ -e "${_project_state_file}.mailed" ]]
 			then
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_project_state_file}.mailed"
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping: ${_project}/${_run}. Email was already sent for state ${_state}."
 				continue
 			fi
-			
+
 			_timestamp="$(date --date="$(LC_DATE=C stat --printf='%y' "${_project_state_file}" | cut -d ' ' -f1,2)" "+%Y-%m-%dT%H:%M:%S")"
-			_subject="Project ${_project}/${_run} has ${_state} for phase ${_phase} on ${HOSTNAME_SHORT} at ${_timestamp}."
-			_body="$(cat "${_project_state_file}")"
-			
+
+
+			if [[ -e "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted" ]]
+			then
+				_subject="The jobs from project ${_project}/${_run} were resubmitted for phase ${_phase} on ${HOSTNAME_SHORT} at ${_timestamp}."
+				_body="$(cat "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted")"
+			else
+				_subject="Project ${_project}/${_run} has ${_state} for phase ${_phase} on ${HOSTNAME_SHORT} at ${_timestamp}."
+				_body="$(cat "${_project_state_file}")"
+			fi
+
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Email subject: ${_subject}"
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Email body   : ${_body}"
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "EMAILSTATUS = ${email}"
+
 			if [[ "${email}" == 'true' ]]
 			then
 				printf '%s\n' "${_body}" \
@@ -156,6 +182,18 @@ function notification(){
 				touch "${_project_state_file}.mailed"
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Email disabled and not creating file: ${_project_state_file}.mailed"
+			fi
+
+			if [[ -e "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted" && ! -e "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted.mailed" ]]
+			then
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating file: ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted.mailed"
+				touch "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted.mailed"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing file: ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.failed."
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing file: ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.failed.mailed"
+				rm "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.failed"
+				rm "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.failed.mailed"
+			else
+				continue
 			fi
 		done
 	done
