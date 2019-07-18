@@ -192,14 +192,10 @@ then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${DATA_MANAGER}, but you are ${ROLE_USER} (${REAL_USER})."
 fi
 
-run='run01'
 logsDir="${PRM_ROOT_DIR}/logs/"
-# make project folder on chaperone/boxy
 
-
-
+## check if there are any runs to process
 checkProjectSheet=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} "find ${SCR_ROOT_DIR}/logs/Timestamp/ -type f -iname *.csv")
-
 if [[ -z "${checkProjectSheet}" ]]
 then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "All runs are processed, no new project sheet available"
@@ -212,17 +208,30 @@ do
 
 	sequenceRun=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} "cat ${projectSheet}")
 	
+	## check if the coptRawDataToPrm step started.
+	if [[ ! -d "${logsDir}/${sequenceRun}" ]]
+	then
+		continue
+	fi
+
+	## determine run number.
+	if [ -e "${logsDir}/${sequenceRun}/"*".copyRawDataToPrm.finished" ]
+	then
+		run=$(basename "${logsDir}/${sequenceRun}/"*".copyRawDataToPrm.finished" .copyRawDataToPrm.finished)
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using run number: ${run}"
+	elif [ -e "${logsDir}/${sequenceRun}/"*".copyRawDataToPrm.finished"  ]
+	then
+		run=$(basename "${logsDir}/${sequenceRun}/"*".copyRawDataToPrm.started" .copyRawDataToPrm.started)
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using run number: ${run}"
+	fi
+
 	touch "${PRM_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
 
 	echo -e "moment of checking run time: $(date)\nsequenceRun: ${sequenceRun}\nproject: ${project}" > "${PRM_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Using sequenceRun: ${sequenceRun}"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Using project: ${project}"
 
-	if [[ ! -d "${logsDir}/${sequenceRun}" ]]
-	then
-		continue
-	fi
-
+	## check if the copyRawDataToPrm step is finished. If it is not finished, check how old the .started file is.
 	if [ -e "${logsDir}/${sequenceRun}/${run}.copyRawDataToPrm.finished" ]
 	then
 		echo -e "copyRawDataToPrm for sequenceRun: ${sequenceRun} is finished" >> "${PRM_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"

@@ -193,40 +193,48 @@ then
 fi
 
 
-checkProjectSheet=$(ssh ${ATEAMBOTUSER}@${sourceServerFQDN} "find ${SCR_ROOT_DIR}/logs/Timestamp/ -type f -iname *.csv")
+checkProjectSheet=$(ssh ${ATEAMBOTUSER}@${sourceServerFQDN} "find ${SCR_ROOT_DIR}/logs/Timestamp/ -type f -name *.csv -maxdepth 1")
 
 if [[ -z "${checkProjectSheet}" ]]
 then
-	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "All runs are processed, no new project sheet available"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '1' "All runs are processed, no new project sheet available"
 fi
 
-run='run01'
+
 logsDir="${TMP_ROOT_DIR}/logs/"
-projectStartDir="${TMP_ROOT_DIR}/logs/Timestamp" 
+projectStartDir="${TMP_ROOT_DIR}/logs/Timestamp"
 
 rsync -av ${sourceServerFQDN}:"${SCR_ROOT_DIR}/logs/Timestamp/*.csv" "${projectStartDir}" 
 
 for projectSheet in $(ls "${projectStartDir}/"*".csv")
 do 
-
-	if [[ ! -e "${projectSheet}" ]]
-	then
-		continue
-	fi
 	project=$(basename "${projectSheet}" .csv)
 
-	touch "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
-	echo -e "moment of checking run time: $(date)\nproject: ${project}\n" > "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Using project: ${project}"
+	## determine run number.
+	if [ -e "${logsDir}/${project}/"*".generateScripts.finished" ]
+	then
+		run=$(basename "${logsDir}/${project}/"*".generateScripts.finished" .generateScripts.finished)
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using run number: ${run}"
+	elif [ -e "${logsDir}/${project}/"*".generateScripts.started"  ]
+	then
+		run=$(basename "${logsDir}/${project}/"*".generateScripts.started" .generateScripts.started)
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using run number: ${run}"
+	fi
 
 	if [[ ! -d "${logsDir}/${project}/" ]]
 	then
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The pipeline has not started jet for project: ${project}"
 		continue
+	else
+		touch "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
+		echo -e "moment of checking run time: $(date)\nproject: ${project}\n" > "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Using project: ${project}"
 	fi
+	
 
 	## step 1, checks the generatedScirps
 	if [ -e "${logsDir}/${project}/${run}.generateScripts.finished" ]
-	then	
+	then
 		echo -e "generatedScripts finished for project ${project}" >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
 		touch "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.finished"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "generateScripts finished for project ${project}"
@@ -238,13 +246,13 @@ do
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "generateScipts has not started yet or is running for project ${project}"
 			continue
 		else
-			echo -e "generateScripts.started file is OLDER than 4 hour.\n" \
+			echo -e "generateScripts.started file is OLDER than 4 hours.\n" \
 			"time ${run}.generateScripts.started was last modified:" \
 			$(stat -c %y "${TMP_ROOT_DIR}/logs/${project}/${run}.generateScripts.started") >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
-		
+	
 			touch "${TMP_ROOT_DIR}/logs/${project}/${run}.generateScriptsTiming.failed"
-			echo -e "Dear HPC helpdesk,\n\nPlease check if there is something wrong with the pipeline.\nThe generatedScripts step for project ${project} is not finished after 5h.\n\nKind regards\nHPC" > "${TMP_ROOT_DIR}/logs/${project}/${run}.generateScriptsTiming.failed"
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "generateScripts.started file is OLDER than 5 hour for project ${project}"
+			echo -e "Dear HPC helpdesk,\n\nPlease check if there is something wrong with the pipeline.\nThe generatedScripts step for project ${project} is not finished after 4h.\n\nKind regards\nHPC" > "${TMP_ROOT_DIR}/logs/${project}/${run}.generateScriptsTiming.failed"
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "generateScripts.started file is OLDER than 4 hours for project ${project}"
 			continue
 		fi
 	fi
@@ -263,12 +271,12 @@ do
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "pipeline has not started yet or is running for project ${project}"
 			continue
 		else
-			echo -e "pipeline.started file is OLDER than 10 hour.\n" \
+			echo -e "pipeline.started file is OLDER than 10 hours.\n" \
 			"time ${run}.pipeline.started was last modified:" \
 			$(stat -c %y "${TMP_ROOT_DIR}/logs/${project}/${run}.pipeline.started") >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
 			touch "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.failed"
-			echo -e "Dear HPC helpdesk,\n\nPlease check if there is something wrong with the pipeline.\nThe pipeline for project ${project} is not finished after 6h.\n\nKind regards\nHPC" > "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.failed"
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "pipeline.started file is OLDER than 6 hour for project ${project}"
+			echo -e "Dear HPC helpdesk,\n\nPlease check if there is something wrong with the pipeline.\nThe pipeline for project ${project} is not finished after 10h.\n\nKind regards\nHPC" > "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.failed"
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "pipeline.started file is OLDER than 10 hours for project ${project}"
 			continue
 		fi
 	fi 
@@ -287,12 +295,12 @@ do
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "copyProjectDataToPrm has not started yet or is running for project ${project}"
 			continue
 		else
-			echo -e "copyProjectDataToPrm.started file is OLDER than 4 hour.\n" \ 
+			echo -e "copyProjectDataToPrm.started file is OLDER than 4 hours.\n" \ 
 			"time ${run}.copyProjectDataToPrm.started was last modified:\n" \
 			$(stat -c %y "${TMP_ROOT_DIR}/logs/${project}/${run}.copyProjectDataToPrm.started") >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
 			touch "${TMP_ROOT_DIR}/logs/${project}/${run}.copyProjectDataToPrmTiming.failed"
 			echo -e "Dear HPC helpdesk,\n\nPlease check if there is something wrong with the pipeline.\nThe copyProjectDataToPrm has started but is not finished after 6h for project ${project}.\n\nKind regards\nHPC" > "${TMP_ROOT_DIR}/logs/${project}/${run}.copyProjectDataToPrmTiming.failed"
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "copyProjectDataToPrm.started file OLDER than 5 hour for project ${project}"
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "copyProjectDataToPrm.started file OLDER than 4 hours for project ${project}"
 			continue
 		fi
 	fi
