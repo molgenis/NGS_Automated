@@ -138,18 +138,12 @@ function notification() {
 
 			if [[ ! -e "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.finished" ]]
 			then
-				echo "---------------GEEN FINISHED-----------------------"
-				echo "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.finished"
 				if [[ ${_project_state_file} == "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.failed" && ! -e "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted" ]]
 				then
-					echo "-----------------PIPELINE FAILED AND NOT RESUBMITTED-----------------------"
-					echo "aanwezig: ${_project_state_file} == ${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.failed"
-					echo "niet aanwezig: ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted"
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No resubmitted jobs and the project is also not finished yet."
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Going to resubmit jobs for: ${_project}"
 					resubmit
 				else
-					echo "-------------------ALREADY RESUBMITTED--------------"
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted"
 					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping: ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted. Jobs were already resubmitted for state ${_state}."
 				fi
@@ -185,7 +179,6 @@ function notification() {
 }
 
 function resubmit() {
-	echo "------------------RESUBMIT FUNCTION------------------"
 	bash "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/submit.sh" > "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${TMP_ROOT_DIR}/logs/resubmit.mailinglist."
 	_timestamp="$(date --date="$(LC_DATE=C stat --printf='%y' "${_project_state_file}" | cut -d ' ' -f1,2)" "+%Y-%m-%dT%H:%M:%S")"
