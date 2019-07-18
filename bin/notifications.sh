@@ -145,9 +145,7 @@ function notification() {
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No resubmitted jobs and the project is also not finished yet."
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Going to resubmit jobs for: ${_project}"
 
-					cd "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/"
 					bash "submit.sh" > "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted"
-					cd -
 				else
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted"
 					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping: ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted. Jobs were already resubmitted for state ${_state}."
