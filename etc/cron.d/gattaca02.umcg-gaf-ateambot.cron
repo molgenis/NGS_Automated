@@ -1,0 +1,3 @@
+*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load ngs-utils/18.09.1 ; checkSamplesheet.sh -s /groups/umcg-gaf/scr01/"
+*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.18-NGS_Demultiplexing-2.3.0; demultiplexing.sh -g umcg-gaf -l WARN"
+*/15 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.18-bare; notifications.sh -g umcg-gaf -e"
