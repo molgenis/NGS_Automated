@@ -166,7 +166,7 @@ for sampleSheet in $(find "${concordanceDir}/samplesheets/" -type f -iname "*sam
 do
 	echo "______________________________________________________________________________" ## remove when script is finished
 	concordanceCheckId=$(basename "${sampleSheet}" .sampleId.txt)
-	touch "/groups/${GROUP}/${TMP_LFS}/concordance/logs/${concordanceCheckId}.ConcordanceCheck.started"
+	touch "${concordanceDir}/logs/${concordanceCheckId}.ConcordanceCheck.started"
 	arrayId=$(sed 1d "${sampleSheet}" | awk 'BEGIN {FS="\t"}{print $1}')
 	arrayVcf=$(echo "${arrayId}.FINAL.vcf")
 	arrayFileLocation=$(sed 1d "${sampleSheet}" | awk 'BEGIN {FS="\t"}{print $4}')
