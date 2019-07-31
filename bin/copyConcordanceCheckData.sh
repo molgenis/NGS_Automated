@@ -214,9 +214,9 @@ else
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${filePrefix}..."
 		ngsVcfId=$(ssh ${DATA_MANAGER}@${HOSTNAME_TMP} "awk '{if (NR>1){print \$2}}' ${sampleSheet}")
 
-		if ssh ${DATA_MANAGER}@${HOSTNAME_TMP} test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/concordance/logs/${filePrefix}.ConcordanceCheck.finished"
+		if ssh "${DATA_MANAGER}@${HOSTNAME_TMP}" test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/concordance/logs/${filePrefix}.ConcordanceCheck.finished"
 		then
-			touch ${PRM_ROOT_DIR}/concordance/logs/${ngsVcfId}.copyConcordanceCheckData.started
+			touch "${PRM_ROOT_DIR}/concordance/logs/${ngsVcfId}.copyConcordanceCheckData.started"
 			rsync -av ${DATA_MANAGER}@${HOSTNAME_TMP}:/${TMP_ROOT_DIAGNOSTICS_DIR}/concordance/results/${filePrefix}.* "${PRM_ROOT_DIR}/concordance/results/" 
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "removing ${PRM_ROOT_DIR}/concordance/ngs/${ngsVcfId}.final.vcf.gz and ${sampleSheet} from prm"
 			ssh ${DATA_MANAGER}@${HOSTNAME_TMP} "rm -f ${sampleSheet}"

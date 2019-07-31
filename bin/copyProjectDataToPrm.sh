@@ -109,7 +109,7 @@ function rsyncProjectRun() {
 	else
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run}..." \
 		2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
-		echo "started: $(date +%FT%T%z)" > ${JOB_CONTROLE_FILE_BASE}.totalRunTime
+		echo "started: $(date +%FT%T%z)" > "${JOB_CONTROLE_FILE_BASE}.totalRunTime"
 
 	fi
 
@@ -320,7 +320,7 @@ function rsyncProjectRun() {
 	log4Bash 'DEBUG' ${LINENO} "${FUNCNAME:-main}" 0 \
                 "moving ${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT} ${PRM_ROOT_DIR}/Samplesheets/archive/"
 	mv "${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}" "${PRM_ROOT_DIR}/Samplesheets/archive/"
-	echo "finished: $(date +%FT%T%z)" >> ${JOB_CONTROLE_FILE_BASE}.totalRunTime
+	echo "finished: $(date +%FT%T%z)" >> "${JOB_CONTROLE_FILE_BASE}.totalRunTime"
 }
 
 function getSampleType(){

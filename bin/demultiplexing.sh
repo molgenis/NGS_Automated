@@ -199,7 +199,7 @@ do
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Working on ${project}" \
 			2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
-			echo "started: $(date +%FT%T%z)" > ${SCR_ROOT_DIR}/logs/${project}/run01.demultiplexing.totalRuntime
+			echo "started: $(date +%FT%T%z)" > "${SCR_ROOT_DIR}/logs/${project}/run01.demultiplexing.totalRuntime"
 			### Check if runfolder already exists
 			if [ ! -d "${SCR_ROOT_DIR}/generatedscripts/${project}" ]
 			then

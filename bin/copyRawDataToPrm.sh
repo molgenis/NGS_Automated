@@ -112,7 +112,7 @@ function rsyncRuns() {
 	#
 ############## FIX THIS FOR GAP
 	touch "${JOB_CONTROLE_FILE_BASE}.started"
-	echo "started: $(date +%FT%T%z)" > ${JOB_CONTROLE_FILE_BASE}.totalRuntime
+	echo "started: $(date +%FT%T%z)" > "${JOB_CONTROLE_FILE_BASE}.totalRuntime"
 	printf '%s\n' "run_id,group,demultiplexing,copy_raw_prm,projects,date"  > "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
 	printf '%s\n' "${_run},${group},finished,started,,"                    >> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
 	trackAndTracePostFromFile 'status_overview' 'update'                      "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
@@ -217,7 +217,7 @@ function rsyncRuns() {
 					>>    "${JOB_CONTROLE_FILE_BASE}.failed" \
 					&& mv "${JOB_CONTROLE_FILE_BASE}."{failed,finished}
 
-				echo "finished: $(date +%FT%T%z)" >> ${JOB_CONTROLE_FILE_BASE}.totalRuntime
+				echo "finished: $(date +%FT%T%z)" >> "${JOB_CONTROLE_FILE_BASE}.totalRuntime"
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
 			fi
 		fi
@@ -244,7 +244,7 @@ function rsyncRuns() {
 	fi
 	if [ "${count}" == "${totalCount}" ]
 	then
-		touch ${PRM_ROOT_DIR}/logs/${filePrefix}/run01.${SCRIPT_NAME}.finished
+		touch "${PRM_ROOT_DIR}/logs/${filePrefix}/run01.${SCRIPT_NAME}.finished"
 	fi
 
 }
@@ -381,7 +381,7 @@ function splitSamplesheetPerProject() {
 	do
 		#
 		# Skip project if demultiplexing only.
-		#v
+		#
 		if [ $(contains "${_demultiplexOnly[@]}" "${_project}") == "y" ]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing Only for project: ${_project}, continue" \
@@ -392,10 +392,9 @@ function splitSamplesheetPerProject() {
 		#       proper prm mount on the GD clusters and this script can run on a GD cluster
 		#       instead of on a research cluster.
 		#
-		#local _projectSampleSheet="${TMP_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}"
 		local _projectSampleSheet="${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}"
 		head -1 "${_sampleSheet}" > "${_projectSampleSheet}.tmp"
-		grep "${_project}" ${_sampleSheet} >> ${_projectSampleSheet}.tmp
+		grep "${_project}" "${_sampleSheet}" >> "${_projectSampleSheet}.tmp"
 		mv "${_projectSampleSheet}"{.tmp,}
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Created ${_projectSampleSheet}." \
 			2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
