@@ -45,8 +45,6 @@ function showHelp() {
         cat <<EOH
 ======================================================================================================================
 Scripts to calculate automatically concordance between ngs and array data.
-ngs.vcf should be in /groups/${NGSGROUP}/${TMP_LFS}/Concordance/ngs/.
-array.vcf should be in /groups/${ARRAYGROUP}/${TMP_LFS}/Concordance/array/.
 
 Usage:
 
@@ -147,10 +145,10 @@ done
 # Make sure to use an account for cron jobs and *without* write access to prm storage.
 #
 
-#if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]
-#then
-#        log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
-#fi
+if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]
+then
+        log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
+fi
 
 
 module load HTSlib/1.3.2-foss-2015b
@@ -210,9 +208,9 @@ do
 	-o "${concordanceDir}/tmp/${concordanceCheckId}" \
 	-sva
 
-	echo "moving ${concordanceDir}/tmp/${concordanceCheckId}.sample to ${concordanceDir}/results/"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "moving ${concordanceDir}/tmp/${concordanceCheckId}.sample to ${concordanceDir}/results/"
 	mv "${concordanceDir}/tmp/${concordanceCheckId}.sample" "${concordanceDir}/results/"
-	echo "moving ${concordanceDir}/tmp/${concordanceCheckId}.variants to ${concordanceDir}/results/"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "moving ${concordanceDir}/tmp/${concordanceCheckId}.variants to ${concordanceDir}/results/"
 	mv "${concordanceDir}/tmp/${concordanceCheckId}.variants" "${concordanceDir}/results/"
 
 	echo "finished"

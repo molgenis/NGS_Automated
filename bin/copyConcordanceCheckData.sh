@@ -72,11 +72,6 @@ Options:
 	-n   Dry-run: Do not perform actual sync, but only list changes instead.
 	-l   Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
-	-r   Root dir on the server specified with -s and from where the raw data will be fetched (optional).
-		By default this is the SCR_ROOT_DIR variable, which is compiled from variables specified in the
-		<group>.cfg, <source_host>.cfg and sharedConfig.cfg config files (see below.)
-		You need to override SCR_ROOT_DIR when the data is to be fetched from a non default path,
-		which is for example the case when fetching data from another group.
 
 Config and dependencies:
 	This script needs 4 config files, which must be located in ${CFG_DIR}:
@@ -218,12 +213,18 @@ else
 		filePrefix="$(basename "${sampleSheet%%.*}")"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${filePrefix}..."
 		ngsVcfId=$(ssh ${DATA_MANAGER}@${HOSTNAME_TMP} "awk '{if (NR>1){print \$2}}' ${sampleSheet}")
-		touch ${PRM_ROOT_DIR}/concordance/logs/${ngsVcfId}.copyConcordanceCheckData.started
-		rsync -av ${DATA_MANAGER}@${HOSTNAME_TMP}:/${TMP_ROOT_DIAGNOSTICS_DIR}/concordance/results/${filePrefix}.* "${PRM_ROOT_DIR}/concordance/results/" 
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "removing ${PRM_ROOT_DIR}/concordance/ngs/${ngsVcfId}.final.vcf.gz and ${sampleSheet} from prm"
-		ssh ${DATA_MANAGER}@${HOSTNAME_TMP} "rm -f ${sampleSheet}"
-		rm -f "${PRM_ROOT_DIR}/concordance/ngs/${ngsVcfId}.final.vcf.gz"
-		mv "${PRM_ROOT_DIR}/concordance/logs/${ngsVcfId}.copyConcordanceCheckData."{started,finished}
+
+		if ssh ${DATA_MANAGER}@${HOSTNAME_TMP} test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/concordance/logs/${filePrefix}.ConcordanceCheck.finished"
+		then
+			touch ${PRM_ROOT_DIR}/concordance/logs/${ngsVcfId}.copyConcordanceCheckData.started
+			rsync -av ${DATA_MANAGER}@${HOSTNAME_TMP}:/${TMP_ROOT_DIAGNOSTICS_DIR}/concordance/results/${filePrefix}.* "${PRM_ROOT_DIR}/concordance/results/" 
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "removing ${PRM_ROOT_DIR}/concordance/ngs/${ngsVcfId}.final.vcf.gz and ${sampleSheet} from prm"
+			ssh ${DATA_MANAGER}@${HOSTNAME_TMP} "rm -f ${sampleSheet}"
+			rm -f "${PRM_ROOT_DIR}/concordance/ngs/${ngsVcfId}.final.vcf.gz"
+			mv "${PRM_ROOT_DIR}/concordance/logs/${ngsVcfId}.copyConcordanceCheckData."{started,finished}
+		else
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "concordanceCheck for ${filePrefix} not finished (yet)"
+		fi
 	done
 fi
 

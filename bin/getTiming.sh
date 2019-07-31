@@ -121,31 +121,26 @@ fi
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files..."
 declare -a configFiles=(
-        "${CFG_DIR}/${group}.cfg"
-        "${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
-        "${CFG_DIR}/sharedConfig.cfg"
+	"${CFG_DIR}/${group}.cfg"
+	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
+	"${CFG_DIR}/sharedConfig.cfg"
 	"${HOME}/molgenis.cfg"
 )
 for configFile in "${configFiles[@]}"; do
-        if [[ -f "${configFile}" && -r "${configFile}" ]]; then
-                log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config file ${configFile}..."
-                #
-                # In some Bash versions the source command does not work properly with process substitution.
-                # Therefore we source a first time with process substitution for proper error handling
-                # and a second time without just to make sure we can use the content from the sourced files.
-                #
-                mixed_stdouterr=$(source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot source ${configFile}."
-                source ${configFile}  # May seem redundant, but is a mandatory workaround for some Bash versions.
-        else
-            	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Config file ${configFile} missing or not accessible."
-        fi
+	if [[ -f "${configFile}" && -r "${configFile}" ]]; then
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config file ${configFile}..."
+		mixed_stdouterr=$(source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot source ${configFile}."
+		source ${configFile}  # May seem redundant, but is a mandatory workaround for some Bash versions.
+	else
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Config file ${configFile} missing or not accessible."
+	fi
 done
 
 #
 # Execution of this script requires ateambot account.
 #
 if [[ "${ROLE_USER}" != "${DATA_MANAGER}" ]]; then
-        log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${DATA_MANAGER}, but you are ${ROLE_USER} (${REAL_USER})."
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${DATA_MANAGER}, but you are ${ROLE_USER} (${REAL_USER})."
 fi
 
 

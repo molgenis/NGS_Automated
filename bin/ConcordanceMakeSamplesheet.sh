@@ -168,7 +168,6 @@ module load HTSlib/1.3.2-foss-2015b
 module load BEDTools/2.25.0-foss-2015b
 module list
 
-echo "hoi"
 concordanceDir="/groups/${NGSGROUP}/${TMP_LFS}/concordance/"
 ngsVcfDirPRM="/groups/${NGSGROUP}/${PRM_LFS}/concordance/ngs/"
 arrayVcfDirPRM="/groups/${ARRAYGROUP}/${PRM_LFS}/concordance/array/"
