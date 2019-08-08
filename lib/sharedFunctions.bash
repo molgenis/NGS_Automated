@@ -185,7 +185,7 @@ function trackAndTracePostFromFile() {
 			-F "file=@${_file}" \
 			-F "entityTypeId=${_entityTypeId}" \
 			-F "action=${_action}" \
-			-F "-FmetadataAction=ignore" \
+			-F "metadataAction=ignore" \
 			-F 'notify=false' \
 			https://${MOLGENISSERVER}/plugin/importwizard/importFile \
 		| grep -E '^HTTP/[0-9]+.[0-9]+ [0-9]{3}' \

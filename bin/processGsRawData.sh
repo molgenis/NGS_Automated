@@ -599,17 +599,16 @@ function processSamplesheetsAndMoveCovertedData() {
 	for _runDir in "${_runDirs[@]}"
 	do
 		#
-		# Move converted FastQs with accompanying samplesheets per sequencing run to .../runs/${_runDir}/results/
+		# Move converted FastQs with accompanying samplesheets per sequencing run to .../rawdata/ngs/${_runDir}/
 		#
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Moving ${TMP_ROOT_DIR}/${_batch}/${_runDir}/* -> ${TMP_ROOT_DIR}/runs/${_runDir}/results/ ..."
-		mkdir -p "${TMP_ROOT_DIR}/runs/${_runDir}/results/" \
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Moving ${TMP_ROOT_DIR}/${_batch}/${_runDir}/* -> ${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/ ..."
+		mkdir -p "${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/" \
 			>> "${_controlFileBaseForFunction}.started" 2>&1 \
-			&& mv -f -v "${TMP_ROOT_DIR}/${_batch}/${_runDir}/"* \
-			         "${TMP_ROOT_DIR}/runs/${_runDir}/results/" \
+			&& mv -f -v "${TMP_ROOT_DIR}/${_batch}/${_runDir}/"* "${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/" \
 			>> "${_controlFileBaseForFunction}.started" 2>&1 \
 			&& printf '%s\n' "Demultplex statistics not present. See external QC report." \
 			2>> "${_controlFileBaseForFunction}.started" \
-			> "${TMP_ROOT_DIR}/runs/${_runDir}/results/${_runDir}.log" \
+			> "${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/${_runDir}.log" \
 		|| {
 			log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" '0' "Failed to move ${_runDir}. See ${_controlFileBaseForFunction}.failed for details." \
 				2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
@@ -617,11 +616,21 @@ function processSamplesheetsAndMoveCovertedData() {
 			return
 		}
 		#
+		# Make symlinks from rawdata/ngs folder to ${TMP_ROOT_DIR}/runs/${_runDir}/results/
+		#
+		mkdir -p "${TMP_ROOT_DIR}/runs/${_runDir}/results/"
+		cd "${TMP_ROOT_DIR}/runs/${_runDir}/results/"
+		declare -a files=($(find "${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name "*.fq.gz" -o -name "*.fq.gz.md5" -o -name "*.log" -o -name "*.csv"))
+		for i in "${files[@]}"
+		do
+			ln -sf ${i}
+		done
+		
+		#
 		# Copy samplesheets per sequencing run to .../Samplesheets/ dir,
 		# so the next step of NGS_Automated will pick it up for further processing.
 		#
-		cp -v "${TMP_ROOT_DIR}/runs/${_runDir}/results/${_runDir}.${SAMPLESHEET_EXT}" \
-		      "${TMP_ROOT_DIR}/Samplesheets/" \
+		cp -v "${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/Samplesheets/" \
 			>> "${_controlFileBaseForFunction}.started" 2>&1 \
 		|| {
 			log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" '0' "Failed to copy sequencing run samplesheet to ${TMP_ROOT_DIR}/Samplesheets/. See ${_controlFileBaseForFunction}.failed for details." \

@@ -116,7 +116,7 @@ function generateScripts () {
 	_message="Creating directory: ${TMP_ROOT_DIR}/generatedscripts/${_project}/ ..."
 
 	echo "${_message}" >> "${JOB_CONTROLE_FILE_BASE}.started"
-
+	echo "started: $(date +%FT%T%z)" > "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.totalRuntime"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
 	mkdir -p "${TMP_ROOT_DIR}/generatedscripts/${_project}/"
 	_message="Copying ${_pathToPipeline}/templates/generate_template.sh to ${_generateShScript} ..."
