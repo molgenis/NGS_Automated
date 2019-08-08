@@ -82,7 +82,6 @@ EOH
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments..."
 declare group=''
 declare email='false'
-declare dryrun=''
 while getopts "g:l:h" opt; do
 	case $opt in
 		h)
@@ -111,10 +110,6 @@ done
 if [[ -z "${group:-}" ]]; then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
 fi
-if [[ -n "${dryrun:-}" ]]; then
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Enabled dryrun option for rsync.'
-fi
-
 
 #
 # Source config files.
@@ -147,7 +142,7 @@ fi
 workDir="${PRM_ROOT_DIR}"
 projectsDir="${workDir}/projects/"
 logsDir="${workDir}/logs/"
-logsDirSourceServer="/groups/umcg-gd/scr01/logs/"
+logsDirSourceServer="/groups/${GROUP}/${SCR_LFS}/logs/"
 
 cd "${projectsDir}"
 find * -nowarn -mtime -40 -type d -maxdepth 0 -exec ls -d {} \; > "${logsDir}/AllProjects40days.txt"
