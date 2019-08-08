@@ -133,10 +133,14 @@ function rsyncRuns() {
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_run} dir..."
 	echo "working on ${_run}" > "${PRM_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
 	
-	for i in ${COPYDATAARRAY}
+	for i in ${COPYDATAARRAY[@]}
 	do
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
+                                "making dir: ${PRM_ROOT_DIR}/rawdata/${i}/${filePrefix}"
+		
 		mkdir -m 2750 -p "${PRM_ROOT_DIR}/rawdata/${i}/${filePrefix}"
-
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
+                                "rsyncing ${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${i}/${_run} TO ${PRM_ROOT_DIR}/rawdata/${i}/ "
 
 		rsync -vrltDL --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
 			"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${i}/${_run}" \

@@ -206,7 +206,7 @@ function rsyncProjectRun() {
 				do
 					if [ "${_sampleType}" == 'GAP' ]
 					then
-						
+
 						sd=$(cat "${i}.sd")
 						if [[ "${sd}" < '0.2' ]]
 						then
@@ -215,6 +215,10 @@ function rsyncProjectRun() {
 							log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
                                                         "SD for ${i} is higher than 0.2, skipped"
 						fi
+					else
+						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
+                                                        "make symlinks for concordancecheck"
+						ln -sf "${i}"
 					fi
 				done
 				echo "removing symlink for project"
@@ -235,7 +239,7 @@ function rsyncProjectRun() {
 					if [ -d  "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/" ]
 					then
 						declare -a pennCNVFiles=($(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/" -name "*.txt"))
-						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${pennCNVFiles[@]}"
+						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "number of PennCNV files: ${#pennCNVFiles[@]}"
 						for pennCnv in ${pennCNVFiles[@]}
 						do
 							name=$(basename "${pennCnv}")
@@ -317,9 +321,9 @@ function rsyncProjectRun() {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' 'Ended up in unexpected state:'
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected either ${JOB_CONTROLE_FILE_BASE}.finished or ${JOB_CONTROLE_FILE_BASE}.failed, but both are absent."
 	fi
-	log4Bash 'DEBUG' ${LINENO} "${FUNCNAME:-main}" 0 \
-                "moving ${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT} ${PRM_ROOT_DIR}/Samplesheets/archive/"
-	mv "${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}" "${PRM_ROOT_DIR}/Samplesheets/archive/"
+	#log4Bash 'DEBUG' ${LINENO} "${FUNCNAME:-main}" 0 \
+        #        "moving ${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT} ${PRM_ROOT_DIR}/Samplesheets/archive/"
+	#mv "${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}" "${PRM_ROOT_DIR}/Samplesheets/archive/"
 	echo "finished: $(date +%FT%T%z)" >> "${JOB_CONTROLE_FILE_BASE}.totalRunTime"
 }
 
@@ -502,20 +506,26 @@ else
 			for ru in "${runs[@]}"
 			do
 				run=$(basename ${ru})
-				rsync -av  ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${project}/${run}/jobs/${project}.${SAMPLESHEET_EXT} ${PRM_ROOT_DIR}/Samplesheets/
-				sampleType=$(getSampleType ${PRM_ROOT_DIR}/Samplesheets/${project}.${SAMPLESHEET_EXT})
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sampleType =${sampleType}"
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/${run}..."
-
 				controlFileBase="${PRM_ROOT_DIR}/logs/${project}/${run}"
 				export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
 				calculateProjectMd5sFinishedFile="ssh ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${project}.calculateProjectMd5s.finished"
-
-				if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]] && [[ "${calculateProjectMd5sFinishedFile}" -ot "${JOB_CONTROLE_FILE_BASE}.finished" ]]
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${PRM_ROOT_DIR}/logs/${project}/"
+				mkdir -p "${PRM_ROOT_DIR}/logs/${project}/"
+				if ssh ${DATA_MANAGER}@${HOSTNAME_TMP} test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${run}.calculateProjectMd5s.finished"
 				then
-					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${project}/${run}."
+					if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]] && [[ "${calculateProjectMd5sFinishedFile}" -ot "${JOB_CONTROLE_FILE_BASE}.finished" ]]
+					then
+						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${project}/${run}."
+					else
+						rsync -av  ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${project}/${run}/jobs/${project}.${SAMPLESHEET_EXT} ${PRM_ROOT_DIR}/Samplesheets/
+						sampleType=$(getSampleType ${PRM_ROOT_DIR}/Samplesheets/${project}.${SAMPLESHEET_EXT})
+						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sampleType =${sampleType}"
+						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/${run}..."
+						rsyncProjectRun "${project}" "${run}" "${sampleType}"
+
+					fi
 				else
-					rsyncProjectRun "${project}" "${run}" "${sampleType}"
+					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${project}/${run} calculateProjectMd5s not yet finished"
 				fi
 			done
 		fi
