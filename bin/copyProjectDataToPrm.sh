@@ -231,10 +231,12 @@ function rsyncProjectRun() {
 					windowsPathDelimeter="\\"
 
 					callrate=$(ls "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/Callrates_${_project}.txt")
-					echo "\\zkh\appdata\medgen\leucinezipper\\${callrate//\//$windowsPathDelimeter}" > "Callrates_${_project}.txt"
+					echo "\\\\zkh\appdata\medgen\leucinezipper${callrate//\//$windowsPathDelimeter}" > "Callrates_${_project}.txt"
+					unix2dos "Callrates_${_project}.txt"
 
 					penncnvproject=$(ls "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/${_project}_PennCNV.txt")
-					echo "\\zkh\appdata\medgen\leucinezipper\\${penncnvproject//\//$windowsPathDelimeter}" > "${_project}_PennCNV.txt"
+					echo "\\\\zkh\appdata\medgen\leucinezipper${penncnvproject//\//$windowsPathDelimeter}" > "${_project}_PennCNV.txt"
+					unix2dos "${_project}_PennCNV.txt"
 					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/"
 					if [ -d  "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/" ]
 					then
@@ -244,7 +246,8 @@ function rsyncProjectRun() {
 						do
 							name=$(basename "${pennCnv}")
 							convertedPennCNV=${pennCnv//\//$windowsPathDelimeter}
-							echo "\\zkh\appdata\medgen\leucinezipper\\${pennCnv//\//$windowsPathDelimeter}" > "/groups/${GROUP}/${DAT_DISK}/DiagnosticOutput/perSample/${name}"
+							echo "\\\\zkh\appdata\medgen\leucinezipper${pennCnv//\//$windowsPathDelimeter}" > "/groups/${GROUP}/${DAT_DISK}/DiagnosticOutput/perSample/${name}"
+							unix2dos "/groups/${GROUP}/${DAT_DISK}/DiagnosticOutput/perSample/${name}"
 						done
 					fi
 					cd -
