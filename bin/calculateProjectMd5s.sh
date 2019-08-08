@@ -80,7 +80,7 @@ function calculateMd5(){
 	local _controlFileBase="${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}"
 	local _logFile="${_controlFileBase}.log"
 
-	if [ ! -f ${_controlFileBase}.finished ]
+	if [ ! -f "${_controlFileBase}.finished" ]
 	then
 		local _checksumVerification='unknown'
 		echo "checksum started" > "${_controlFileBase}.started"

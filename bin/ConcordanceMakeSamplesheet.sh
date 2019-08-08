@@ -172,12 +172,12 @@ concordanceDir="/groups/${NGSGROUP}/${TMP_LFS}/concordance/"
 ngsVcfDirPRM="/groups/${NGSGROUP}/${PRM_LFS}/concordance/ngs/"
 arrayVcfDirPRM="/groups/${ARRAYGROUP}/${PRM_LFS}/concordance/array/"
 
-for vcfFile in $(ssh ${HOSTNAME_PRM} "find ${ngsVcfDirPRM} \( -type f -o -type l \) -name *final.vcf.gz")
+for vcfFile in $(ssh "${HOSTNAME_PRM}" "find ${ngsVcfDirPRM} \( -type f -o -type l \) -name *final.vcf.gz")
 do
 
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "processing ngs-vcf ${vcfFile}"
-	ngsVcfId=$(basename "${vcfFile}" .final.vcf.gz)
-	ngsBarcode=$(ssh ${HOSTNAME_PRM} "zcat ${vcfFile} | grep \"##FastQ_Barcode=\" | awk 'BEGIN {FS=\"=\"}{OFS=\"_\"} {print _,$2}'")
+	ngsVcfId=$(basename "${vcfFile}" ".final.vcf.gz")
+	ngsBarcode=$(ssh "${HOSTNAME_PRM}" "zcat ${vcfFile} | grep \"##FastQ_Barcode=\" | awk 'BEGIN {FS=\"=\"}{OFS=\"_\"} {print _,$2}'")
 	ngsInfo=$(echo "${ngsVcfId}" | awk 'BEGIN {FS="_"}{OFS="_"}{print $3,$4,$5}')
 	ngsInfoList=$(echo "${ngsInfo}${ngsBarcode}")
 
@@ -185,7 +185,7 @@ do
 
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "info from ngs.vcf: ${ngsInfoList}"
 
-	checkArrayVcf=$(ssh ${HOSTNAME_PRM} "find ${arrayVcfDirPRM} \( -type f -o -type l \) -name '*DNA-"${dnaNo}"_*.FINAL.vcf' ")
+	checkArrayVcf=$(ssh "${HOSTNAME_PRM}" "find ${arrayVcfDirPRM} \( -type f -o -type l \) -name '*DNA-"${dnaNo}"_*.FINAL.vcf' ")
 
 	copyArrayFile="false"
 	cluster=""

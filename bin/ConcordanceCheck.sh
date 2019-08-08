@@ -122,6 +122,7 @@ declare -a configFiles=(
         "${CFG_DIR}/${GROUP}.cfg"
         "${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
         "${CFG_DIR}/sharedConfig.cfg"
+	"${CFG_DIR}/ConcordanceCheck.cfg"
         "${HOME}/molgenis.cfg"
 )
 
@@ -151,9 +152,9 @@ then
 fi
 
 
-module load HTSlib/1.3.2-foss-2015b
-module load CompareGenotypeCalls/1.8.1-Java-1.8.0_74
-module load BEDTools/2.25.0-foss-2015b
+module load "${htsLibVersion}"
+module load "${compareGenotypeCallsVersion}"
+module load "${bedToolsVersion}"
 module list
 
 
