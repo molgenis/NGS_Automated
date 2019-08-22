@@ -132,13 +132,13 @@ function rsyncRuns() {
 	local _transferSoFarSoGood='true'
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_run} dir..."
 	echo "working on ${_run}" > "${PRM_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
-	
-	for i in ${COPYDATAARRAY[@]}
+
+        for i in ${COPYDATAARRAY[@]}
 	do
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
-                                "making dir: ${PRM_ROOT_DIR}/rawdata/${i}/${filePrefix}"
-		
-		mkdir -m 2750 -p "${PRM_ROOT_DIR}/rawdata/${i}/${filePrefix}"
+                                "making dir: ${PRM_ROOT_DIR}/rawdata/${i}/${_run}"
+
+		mkdir -m 2750 -p "${PRM_ROOT_DIR}/rawdata/${i}/${_run}"
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
                                 "rsyncing ${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${i}/${_run} TO ${PRM_ROOT_DIR}/rawdata/${i}/ "
 
