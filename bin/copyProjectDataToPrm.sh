@@ -246,8 +246,8 @@ function rsyncProjectRun() {
 						do
 							name=$(basename "${pennCnv}")
 							convertedPennCNV=${pennCnv//\//$windowsPathDelimeter}
-							echo "\\\\zkh\appdata\medgen\leucinezipper${pennCnv//\//$windowsPathDelimeter}" > "/groups/${GROUP}/${DAT_DISK}/DiagnosticOutput/perSample/${name}"
-							unix2dos "/groups/${GROUP}/${DAT_DISK}/DiagnosticOutput/perSample/${name}"
+							echo "\\\\zkh\appdata\medgen\leucinezipper${pennCnv//\//$windowsPathDelimeter}" > "/groups/${GROUP}/${DAT_DISK}/DiagnosticOutput/${_project}/${name}"
+							unix2dos "/groups/${GROUP}/${DAT_DISK}/DiagnosticOutput/${_project}/${name}"
 						done
 					fi
 					cd -
