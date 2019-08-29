@@ -242,6 +242,8 @@ function rsyncProjectRun() {
 					then
 						declare -a pennCNVFiles=($(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/" -name "*.txt"))
 						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "number of PennCNV files: ${#pennCNVFiles[@]}"
+
+						mkdir -p "/groups/${GROUP}/${DAT_DISK}/DiagnosticOutput/${_project}/"
 						for pennCnv in ${pennCNVFiles[@]}
 						do
 							name=$(basename "${pennCnv}")
