@@ -232,7 +232,7 @@ do
 			CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
 			TOKEN=${CURLRESPONSE:10:32}
 
-			curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${SCR_ROOT_DIR}/logs/${project}/run01.uploading.csv" -FentityTypeId='status_overview' -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
+			curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${SCR_ROOT_DIR}/logs/${project}/run01.uploading.csv" -FentityTypeId='status_overview' -FmetadataAction=ignore -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
 
                 fi
 	fi
