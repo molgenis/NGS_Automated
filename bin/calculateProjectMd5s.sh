@@ -88,10 +88,9 @@ function calculateMd5(){
 			|| log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot access ${TMP_ROOT_DIR}/projects/${_project}/."
 		md5deep -r -j0 -o f -l "${_run}/" > "${_run}.md5" 2>> "${_logFile}" \
 			|| {
-                                echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details." \
-                                >> "${_controlFileBase}.failed"
-				log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot compute checksums with md5deep. See ${_logFile} for details."
-
+					echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details." \
+						>> "${_controlFileBase}.failed"
+					log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot compute checksums with md5deep. See ${_logFile} for details."
 			}
 		mv "${_controlFileBase}."{started,finished}
 	fi
@@ -102,7 +101,6 @@ function calculateMd5(){
 ### Main.
 ##
 #
-
 
 #
 # Get commandline arguments.
@@ -135,7 +133,6 @@ while getopts "g:l:he" opt; do
 	esac
 done
 
-
 #
 # Check commandline options.
 #
@@ -145,7 +142,6 @@ fi
 if [[ -n "${dryrun:-}" ]]; then
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Enabled dryrun option for rsync.'
 fi
-
 
 #
 # Source config files.
