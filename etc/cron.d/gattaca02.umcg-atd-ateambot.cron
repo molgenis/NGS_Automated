@@ -1,2 +1,2 @@
-*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.18-NGS_Demultiplexing-2.3.0; demultiplexing.sh -g umcg-atd -l WARN"
-*/15 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.18-bare; notifications.sh -g umcg-atd -e"
+*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/3.0.1-NGS_Demultiplexing-2.3.1; demultiplexing.sh -g umcg-atd -l WARN"
+*/15 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/3.0.1-bare; notifications.sh -g umcg-atd -e"
