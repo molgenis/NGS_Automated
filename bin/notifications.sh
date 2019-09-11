@@ -275,13 +275,6 @@ for configFile in "${configFiles[@]}"; do
 done
 
 #
-# Execution of this script requires ateambot account.
-#
-if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]; then
-	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
-fi
-
-#
 # Notify for specific colon separated combinations of "phase:state".
 #
 if [[ ! -z "${NOTIFY_FOR_PHASE_WITH_STATE[0]:-}" && "${#NOTIFY_FOR_PHASE_WITH_STATE[@]:-0}" -ge 1 ]]; then
