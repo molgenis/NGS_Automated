@@ -1,1 +1,5 @@
-*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.12-bare; copyRawDataToPrm.sh -g umcg-gd -s gattaca01.gcc.rug.nl -l WARN"
+*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/3.0.1-bare; copyRawDataToPrm.sh -g umcg-gd -s gattaca01.gcc.rug.nl -l WARN"
+0,15,30,45 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/3.0.1-bare; copyRawDataToPrmTiming.sh -g umcg-gd -s gattaca01.gcc.rug.nl -r /groups/umcg-gd/scr01/"
+10,25,40,55 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/3.0.1-bare; copyRawDataToPrmTiming.sh -g umcg-gd -s gattaca02.gcc.rug.nl -r /groups/umcg-gd/scr01/"
+0 7 * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/3.0.1-bare; copyConcordanceCheckData.sh -g umcg-gd"
+*/15 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/3.0.1-bare; copyProjectDataToPrm.sh -g umcg-gd"

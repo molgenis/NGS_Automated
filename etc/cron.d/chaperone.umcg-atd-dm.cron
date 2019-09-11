@@ -1,1 +1,3 @@
-*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/2.0.12-bare; copyRawDataToPrm.sh -g umcg-atd -s gattaca01.gcc.rug.nl > /groups/umcg-atd/prm06/logs/copyRawDataToPrm.log 2>&1"
+*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/beta; copyRawDataToPrm.sh -g umcg-atd -s gattaca01.gcc.rug.nl > /groups/umcg-atd/prm06/logs/copyRawDataToPrm.log 2>&1"
+0 7 * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/beta; copyConcordanceCheckData.sh -g umcg-atd"
+*/15 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/beta; copyProjectDataToPrm.sh -g umcg-atd"
