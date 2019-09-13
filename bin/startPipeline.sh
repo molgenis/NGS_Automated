@@ -389,7 +389,6 @@ do
 	mac2unix "${sampleSheet}"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing sample sheet: ${sampleSheet} ..."
 	project=$(basename "${sampleSheet}" ".${SAMPLESHEET_EXT}")
-	run='run01'
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing: ${project} ..."
 	if [[ ! -e "${TMP_ROOT_DIR}/logs/${project}" ]]
 	then
