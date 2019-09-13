@@ -63,21 +63,35 @@ See separate README_v1.md for details on the (deprecated) version
 ```
 flow gattaca01 (scr01) --> chaperone (prm06) --> leucine-zipper (tmp06) --> chaperone (prm06)
 
-#### gattaca01:
-###### umcg-gd-ateambot 
-module load NGS_Automated/2.0.12-NGS_Demultiplexing-2.2.12; demultiplexing.sh -g umcg-gd
+#### gattaca01
+##### umcg-gd-ateambot
+module load NGS_Automated/3.0.1-NGS_Demultiplexing-2.3.1 ; demultiplexing.sh -g umcg-gd
 
-#### chaperone:
+
+#### chaperone
 ###### umcg-gd-dm
-module load NGS_Automated/2.0.12-bare; copyRawDataToPrm.sh -g umcg-gd -s gattaca01.gcc.rug.nl
+module load NGS_Automated/3.0.1-bare ; copyRawDataToPrm.sh -g umcg-gd -s gattaca01.gcc.rug.nl
 
-#### leucine-zipper:
+#### leucine-zipper
 ###### umcg-gd-ateambot
-module load NGS_Automated/2.0.12-NGS_DNA-3.4.4; startPipeline.sh -g umcg-gd"
+module load NGS_Automated/3.0.1-NGS_DNA-3.5.5 ; startPipeline.sh -g umcg-gd
 
+#### leucine-zipper
+###### umcg-gd-ateambot
+module load NGS_Automated/3.0.1-NGS_DNA-3.5.5 ; calculateProjectMd5s.sh -g umcg-gd
+
+#### chaperone
 ###### umcg-gd-dm
-module load NGS_Automated/2.0.13-bare; copyProjectDataToPrm.sh -g umcg-gd
+module load NGS_Automated/3.0.1-bare ; copyProjectDataToPrm.sh -g umcg-gd
 
+#### leucine-zipper
+###### umcg-gd-ateambot 
+module load NGS_Automated/3.0.1-NGS_DNA-3.5.5 ; ConcordanceMakeSamplesheet.sh -g umcg-gd -a umcg-gap
+
+
+#### leucine-zipper
+###### umcg-gd-ateambot 
+module load NGS_Automated/3.0.1-NGS_DNA-3.5.5 ; ConcordanceCheck.sh -g umcg-gd
 
 ```
 
@@ -107,18 +121,18 @@ State is either ```started```, ```failed``` or ```finished```.
 touch ${sourceServer}:${SCR_ROOT_DIR}/logs/${run}_Demultiplexing.finished
 	||
 	\/
-CopyRawDataToPrm.sh -g GROUP -s GATTACA => ${cluster}:${TMP_ROOT_DIR}/logs/copyRawDataToPrm.lock
-                                           ${cluster}:${TMP_ROOT_DIR}/logs/${run}/${run}.copyRawDataToPrm.started
-                                           ${cluster}:${TMP_ROOT_DIR}/logs/${run}/${run}.copyRawDataToPrm.failed
-                                           ${cluster}:${TMP_ROOT_DIR}/logs/${run}/${run}.copyRawDataToPrm.failed.mailed
-                                           ${cluster}:${TMP_ROOT_DIR}/logs/${run}/${run}.copyRawDataToPrm.finished
-                                           ${cluster}:${TMP_ROOT_DIR}/logs/${run}/${run}.copyRawDataToPrm.finished.mailed
+CopyRawDataToPrm.sh -g GROUP -s GATTACA => ${cluster}:${PRM_ROOT_DIR}/logs/copyRawDataToPrm.lock
+                                           ${cluster}:${PRM_ROOT_DIR}/logs/${run}/${run}.copyRawDataToPrm.started
+                                           ${cluster}:${PRM_ROOT_DIR}/logs/${run}/${run}.copyRawDataToPrm.failed
+                                           ${cluster}:${PRM_ROOT_DIR}/logs/${run}/${run}.copyRawDataToPrm.failed.mailed
+                                           ${cluster}:${PRM_ROOT_DIR}/logs/${run}/${run}.copyRawDataToPrm.finished
+                                           ${cluster}:${PRM_ROOT_DIR}/logs/${run}/${run}.copyRawDataToPrm.finished.mailed
 
-                                           ${cluster}:${TMP_ROOT_DIR}/logs/${_run}.samplesheetSplittedPerProject"
+                                           ${cluster}:${PRM_ROOT_DIR}/logs/${_run}.samplesheetSplittedPerProject"
 
 ## COPYING ##
 
-Check which sample sheets feed into startPipeline! ${cluster}:${TMP_ROOT_DIR}/Samplesheets/project_${cluster}/${project}.csv
+Check which sample sheets feed into startPipeline! ${cluster}:${PRM_ROOT_DIR}/Samplesheets/project_${cluster}/${project}.csv
 	||
 	\/
 startPipeline.sh -g GROUP => ${project}.scriptsGenerated # Refactor to use *.${phase}.${state} syntax
@@ -129,14 +143,27 @@ startPipeline.sh -g GROUP => ${project}.scriptsGenerated # Refactor to use *.${p
 ${cluster}:${TMP_ROOT_DIR}/logs/${project}/${run}.pipeline.finished
 	||
 	\/
-copyProjectDataToPrm.sh -g GROUP => ${cluster}:${TMP_ROOT_DIR}/logs/copyProjectDataToPrm.lock
-                                    ${cluster}:${TMP_ROOT_DIR}/logs/${project}/${run}.copyProjectDataToPrm.started
-                                    ${cluster}:${TMP_ROOT_DIR}/logs/${project}/${run}.copyProjectDataToPrm.failed
-                                    ${cluster}:${TMP_ROOT_DIR}/logs/${project}/${run}.copyProjectDataToPrm.finished
+	
+calculateProjectMd5s.sh -g GROUP => 	${cluster}:${TMP_ROOT_DIR}/logs/${project}/${run}.calculateMd5s.started
+					${cluster}:${TMP_ROOT_DIR}/logs/${project}/${run}.calculateMd5s.failed
+					${cluster}:${TMP_ROOT_DIR}/logs/${project}/${run}.calculateMd5s.finished
+
+	||
+	\/
+copyProjectDataToPrm.sh -g GROUP => ${cluster}:${PRM_ROOT_DIR}/logs/copyProjectDataToPrm.lock
+                                    ${cluster}:${PRM_ROOT_DIR}/logs/${project}/${run}.copyProjectDataToPrm.started
+                                    ${cluster}:${PRM_ROOT_DIR}/logs/${project}/${run}.copyProjectDataToPrm.failed
+                                    ${cluster}:${PRM_ROOT_DIR}/logs/${project}/${run}.copyProjectDataToPrm.finished
 
 ## COPYING ##
 
 ${cluster}:${TMP_ROOT_DIR}/logs/${project}/${run}.copyProjectDataToPrm.finished
+
+ConcordanceMakeSamplesheet.sh -g GROUP => 
+
+
+ConcordanceCheck.sh -g GROUP => ${cluster}:${TMP_ROOT_DIR}/logs/${project}/${run}.ConcordanceCheck.started
+				${cluster}:${TMP_ROOT_DIR}/logs/${project}/${run}.ConcordanceCheck.finished
 
 ```
 
