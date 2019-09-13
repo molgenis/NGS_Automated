@@ -146,9 +146,9 @@ function generateScripts () {
 	#
 	cd "${TMP_ROOT_DIR}/generatedscripts/${_project}/"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigated to $(pwd)."
-	_message="Running: sh ${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh -p ${_project} -g ${group} >> ${JOB_CONTROLE_FILE_BASE}.started"
+	_message="Running: sh ${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh -p ${_project} -g ${group} -r ${_run} >> ${JOB_CONTROLE_FILE_BASE}.started"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
-	sh "${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh" -p "${_project}" -g ${group} >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
+	sh "${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh" -p "${_project}" -g ${group} -r ${_run} >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
 
 	cd scripts
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigated to $(pwd)."
@@ -214,12 +214,34 @@ function submitPipeline () {
 			prio="true"
 		fi
 	fi
+	if [[ ! -z "${sampleSheetColumnOffsets['sequencingStartDate']+isset}" ]]
+        then
+		sequencingStartDateIndex=$((${sampleSheetColumnOffsets['sequencingStartDate']} + 1))
+                sequencingStartDate="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v seqstart=${sequencingStartDateIndex} 'BEGIN {FS=","}{print $seqstart}')"
+	fi
+	if [[ ! -z "${sampleSheetColumnOffsets['sequencer']+isset}" ]]
+        then
+                sequencerIndex=$((${sampleSheetColumnOffsets['sequencer']} + 1))
+                sequencer="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v sequencer=${sequencerIndex} 'BEGIN {FS=","}{print $sequencer}')"
+        fi
+	if [[ ! -z "${sampleSheetColumnOffsets['run']+isset}" ]]
+        then
+                runIndex=$((${sampleSheetColumnOffsets['run']} + 1))
+                run="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v run=${runIndex} 'BEGIN {FS=","}{print $run}')"
+        fi
+	if [[ ! -z "${sampleSheetColumnOffsets['flowcell']+isset}" ]]
+        then
+                flowcellIndex=$((${sampleSheetColumnOffsets['flowcell']} + 1))
+                flowcell="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v flowcell=${flowcellIndex} 'BEGIN {FS=","}{print $flowcell}')"
+        fi
 	#
 	# Track and Trace: log that we will start running jobs on the cluster.
 	#
+	_filePrefix="${sequencingStartDate}_${sequencer}_${run}_${flowcell}"
+
 	local _url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
 	printf '%s\n' "project,run_id,pipeline,url,copy_results_prm,date"  > "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
-	printf '%s\n' "${_project},${_project},${_sampleType},${_url},,"  >> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
+	printf '%s\n' "${_project},${_filePrefix},${_sampleType},${_url},,"  >> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
 	trackAndTracePostFromFile 'status_projects' 'add'                    "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
 	#
 	_url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_samples&hideselect=true&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
@@ -284,7 +306,7 @@ while getopts "g:l:r:h" opt; do
 			group="${OPTARG}"
 			;;
 		r)
-			run="${OPTARG}"
+			pipelineRun="${OPTARG}"
 			;;
 		l)
 			l4b_log_level=${OPTARG^^}
@@ -307,9 +329,10 @@ then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
 fi
 
-if [[ -z "${run:-}" ]]
+if [[ -z "${pipelineRun:-}" ]]
 then
-	run="run01"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'no runID is given, default is taken (run01).'
+	pipelineRun="run01"
 fi
 #
 # Source config files.
@@ -438,14 +461,14 @@ do
 	#
 	# Generate scripts (per sample sheet).
 	#
-	generateScripts "${project}" "${run}" "${sampleType}"
+	generateScripts "${project}" "${pipelineRun}" "${sampleType}"
 	#
 	# Submit generated job scripts (per project).
 	#
-	if [[ -e "${TMP_ROOT_DIR}/logs/${project}/${run}.generateScripts.finished" ]]
+	if [[ -e "${TMP_ROOT_DIR}/logs/${project}/${pipelineRun}.generateScripts.finished" ]]
 	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project}..."
-		submitPipeline "${project}" "${run}" "${sampleType}"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project} with runnumber ${pipelineRun} and sampleType ${sampleType}"
+		submitPipeline "${project}" "${pipelineRun}" "${sampleType}"
 	fi
 done
 echo "done" > "${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
