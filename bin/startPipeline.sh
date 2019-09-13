@@ -56,6 +56,7 @@ Usage:
 Options:
 
     -h   Show this help.
+    -r   which runnumber/runID (default is run01)
     -g   Group.
     -l   Log level.
          Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
@@ -274,13 +275,16 @@ function submitPipeline () {
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments..."
 declare group=''
-while getopts "g:l:h" opt; do
+while getopts "g:l:r:h" opt; do
 	case $opt in
 		h)
 			showHelp
 			;;
 		g)
 			group="${OPTARG}"
+			;;
+		r)
+			run="${OPTARG}"
 			;;
 		l)
 			l4b_log_level=${OPTARG^^}
@@ -303,6 +307,10 @@ then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
 fi
 
+if [[ -z "${run:-}" ]]
+then
+	run="run01"
+fi
 #
 # Source config files.
 #

@@ -194,7 +194,12 @@ do
 	bgzip -c "${concordanceDir}/tmp/${concordanceCheckId}/${ngsId}.FINAL.vcf" > "${concordanceDir}/tmp/${concordanceCheckId}/${ngsId}.FINAL.vcf.gz"
 	tabix -p vcf "${concordanceDir}/tmp/${concordanceCheckId}/${ngsId}.FINAL.vcf.gz"
 
-	bedtools intersect -a "${arrayVcfDir}/${arrayVcf}" -b "${bedFile}" -header  > "${concordanceDir}/tmp/${concordanceCheckId}/${arrayId}.FINAL.ExonFiltered.vcf"
+	if bedtools intersect -a "${arrayVcfDir}/${arrayVcf}" -b "${bedFile}" -header  > "${concordanceDir}/tmp/${concordanceCheckId}/${arrayId}.FINAL.ExonFiltered.vcf"
+	then
+		echo ""
+	else
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "There is something wrong while running bedtools intersect"
+	fi
 
 	bgzip -c "${concordanceDir}/tmp/${concordanceCheckId}/${arrayId}.FINAL.ExonFiltered.vcf" > "${concordanceDir}/tmp/${concordanceCheckId}/${arrayId}.FINAL.ExonFiltered.vcf.gz"
 	tabix -p vcf "${concordanceDir}/tmp/${concordanceCheckId}/${arrayId}.FINAL.ExonFiltered.vcf.gz"
