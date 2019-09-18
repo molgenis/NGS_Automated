@@ -165,7 +165,7 @@ function generateScripts () {
 function submitPipeline () {
 	local _project="${1}"
 	local _run="${2}"
-	local _sampleType="${3}" ## DNA or RNA
+	local _sampleType="${3}" ## DNA, RNA, GAP
 	export JOB_CONTROLE_FILE_BASE="${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline"
 	echo "submitting pipeline for ${_project}" > "${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Starting submitPipeline part for project: ${_project}/${_run} ..."
@@ -214,30 +214,46 @@ function submitPipeline () {
 			prio="true"
 		fi
 	fi
-	if [[ ! -z "${sampleSheetColumnOffsets['sequencingStartDate']+isset}" ]]
-        then
-		sequencingStartDateIndex=$((${sampleSheetColumnOffsets['sequencingStartDate']} + 1))
-                sequencingStartDate="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v seqstart=${sequencingStartDateIndex} 'BEGIN {FS=","}{print $seqstart}')"
-	fi
-	if [[ ! -z "${sampleSheetColumnOffsets['sequencer']+isset}" ]]
-        then
-                sequencerIndex=$((${sampleSheetColumnOffsets['sequencer']} + 1))
-                sequencer="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v sequencer=${sequencerIndex} 'BEGIN {FS=","}{print $sequencer}')"
-        fi
-	if [[ ! -z "${sampleSheetColumnOffsets['run']+isset}" ]]
-        then
-                runIndex=$((${sampleSheetColumnOffsets['run']} + 1))
-                run="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v run=${runIndex} 'BEGIN {FS=","}{print $run}')"
-        fi
-	if [[ ! -z "${sampleSheetColumnOffsets['flowcell']+isset}" ]]
-        then
-                flowcellIndex=$((${sampleSheetColumnOffsets['flowcell']} + 1))
-                flowcell="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v flowcell=${flowcellIndex} 'BEGIN {FS=","}{print $flowcell}')"
-        fi
+	if [[ "${_sampleType}" == "DNA" || "${_sampleType}" == "RNA" ]] 
+	then
+		_filePrefix="${sequencingStartDate}_${sequencer}_${run}_${flowcell}"
+	
+		if [[ ! -z "${sampleSheetColumnOffsets['sequencingStartDate']+isset}" ]]
+		then
+			sequencingStartDateIndex=$((${sampleSheetColumnOffsets['sequencingStartDate']} + 1))
+			sequencingStartDate="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v seqstart=${sequencingStartDateIndex} 'BEGIN {FS=","}{print $seqstart}')"
+		fi
+		if [[ ! -z "${sampleSheetColumnOffsets['sequencer']+isset}" ]]
+		then
+			sequencerIndex=$((${sampleSheetColumnOffsets['sequencer']} + 1))
+			sequencer="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v sequencer=${sequencerIndex} 'BEGIN {FS=","}{print $sequencer}')"
+		fi
+		if [[ ! -z "${sampleSheetColumnOffsets['run']+isset}" ]]
+		then
+			runIndex=$((${sampleSheetColumnOffsets['run']} + 1))
+			run="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v run=${runIndex} 'BEGIN {FS=","}{print $run}')"
+		fi
+		if [[ ! -z "${sampleSheetColumnOffsets['flowcell']+isset}" ]]
+		then
+			flowcellIndex=$((${sampleSheetColumnOffsets['flowcell']} + 1))
+			flowcell="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v flowcell=${flowcellIndex} 'BEGIN {FS=","}{print $flowcell}')"
+		fi
 	#
 	# Track and Trace: log that we will start running jobs on the cluster.
 	#
-	_filePrefix="${sequencingStartDate}_${sequencer}_${run}_${flowcell}"
+	elif [ ${_sampleType} == "GAP" ] 
+	then
+		if [[ ! -z "${sampleSheetColumnOffsets['SentrixBarcode_A']+isset}" ]]
+                then
+                        sentrixBarcode_A_Index=$((${sampleSheetColumnOffsets['SentrixBarcode_A']} + 1))
+                        sentrixBarcodeA="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v sBA=${sentrixBarcode_A_Index} 'BEGIN {FS=","}{print $sBA}')"
+                fi
+		_filePrefix="${sentrixBarcodeA}"
+	else
+		echo "not a known sampleType"
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "not a known sampleType"
+
+	fi
 
 	local _url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
 	printf '%s\n' "project,run_id,pipeline,url,copy_results_prm,date"  > "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"

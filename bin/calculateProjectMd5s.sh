@@ -82,17 +82,22 @@ function calculateMd5(){
 
 	if [ ! -f "${_controlFileBase}.finished" ]
 	then
-		local _checksumVerification='unknown'
-		echo "checksum started" > "${_controlFileBase}.started"
-		cd "${TMP_ROOT_DIR}/projects/${_project}/" \
-			|| log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot access ${TMP_ROOT_DIR}/projects/${_project}/."
-		md5deep -r -j0 -o f -l "${_run}/" > "${_run}.md5" 2>> "${_logFile}" \
-			|| {
-					echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details." \
-						>> "${_controlFileBase}.failed"
-					log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot compute checksums with md5deep. See ${_logFile} for details."
-			}
-		mv "${_controlFileBase}."{started,finished}
+		if [ -f ${TMP_ROOT_DIR}/logs/${project}/${_run}.pipeline.finished ]
+		then
+			local _checksumVerification='unknown'
+			echo "checksum started" > "${_controlFileBase}.started"
+			cd "${TMP_ROOT_DIR}/projects/${_project}/" \
+				|| log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot access ${TMP_ROOT_DIR}/projects/${_project}/."
+			md5deep -r -j0 -o f -l "${_run}/" > "${_run}.md5" 2>> "${_logFile}" \
+				|| {
+						echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details." \
+							>> "${_controlFileBase}.failed"
+						log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot compute checksums with md5deep. See ${_logFile} for details."
+				}
+			mv "${_controlFileBase}."{started,finished}
+		else
+			log4Bash 'DEBUG' ${LINENO} "${FUNCNAME:-main}" '0' "project ${_project} not finished (yet)"
+		fi
 	fi
 }
 
