@@ -201,6 +201,8 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 declare -a sampleSheetsFromSourceServer=($(ssh ${DATA_MANAGER}@${HOSTNAME_TMP} "find ${TMP_ROOT_DIAGNOSTICS_DIR}/concordance/samplesheets/ -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name *.sampleId.txt"))
 
+mkdir -p "/groups/${GROUP}/${DAT_DISK}/ConcordanceCheckOutput/"
+
 if [[ "${#sampleSheetsFromSourceServer[@]:-0}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found at ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/concordance/samplesheets/*.sampleId.txt."
@@ -221,6 +223,20 @@ else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "removing ${PRM_ROOT_DIR}/concordance/ngs/${ngsVcfId}.final.vcf.gz and ${sampleSheet} from prm"
 			ssh ${DATA_MANAGER}@${HOSTNAME_TMP} "rm -f ${sampleSheet}"
 			rm -f "${PRM_ROOT_DIR}/concordance/ngs/${ngsVcfId}.final.vcf.gz"
+
+			
+			cd "/groups/${GROUP}/${DAT_DISK}/ConcordanceCheckOutput/"
+			windowsPathDelimeter="\\"
+			#
+			# Create link in file
+			#
+			for i in $(ls "${PRM_ROOT_DIR}/concordance/results/${filePrefix}."*)
+			do
+				fileName=$(basename ${i})
+				echo "\\\\zkh\appdata\medgen\leucinezipper${i//\//$windowsPathDelimeter}" > "${fileName}"
+				unix2dos "${fileName}"
+			done
+
 			mv "${PRM_ROOT_DIR}/concordance/logs/${ngsVcfId}.copyConcordanceCheckData."{started,finished}
 		else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "concordanceCheck for ${filePrefix} not finished (yet)"
