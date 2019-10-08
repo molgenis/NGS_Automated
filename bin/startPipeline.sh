@@ -214,10 +214,8 @@ function submitPipeline () {
 			prio="true"
 		fi
 	fi
-	if [[ "${_sampleType}" == "DNA" || "${_sampleType}" == "RNA" ]] 
+	if [[ "${_sampleType}" == "DNA" || "${_sampleType}" == "RNA" ]]
 	then
-		_filePrefix="${sequencingStartDate}_${sequencer}_${run}_${flowcell}"
-	
 		if [[ ! -z "${sampleSheetColumnOffsets['sequencingStartDate']+isset}" ]]
 		then
 			sequencingStartDateIndex=$((${sampleSheetColumnOffsets['sequencingStartDate']} + 1))
@@ -238,10 +236,11 @@ function submitPipeline () {
 			flowcellIndex=$((${sampleSheetColumnOffsets['flowcell']} + 1))
 			flowcell="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v flowcell=${flowcellIndex} 'BEGIN {FS=","}{print $flowcell}')"
 		fi
+	_filePrefix="${sequencingStartDate}_${sequencer}_${run}_${flowcell}"
 	#
 	# Track and Trace: log that we will start running jobs on the cluster.
 	#
-	elif [ ${_sampleType} == "GAP" ] 
+	elif [ ${_sampleType} == "GAP" ]
 	then
 		if [[ ! -z "${sampleSheetColumnOffsets['SentrixBarcode_A']+isset}" ]]
                 then
