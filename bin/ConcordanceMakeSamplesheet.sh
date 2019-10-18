@@ -234,7 +234,7 @@ do
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "the concordance between ${arrayInfoList} ${ngsInfoList} is being calculated"
 		continue
 	else
-		echo -e "data1Id\tdata2Id\tlocation1\tlocation2\n${arrayId}\t${ngsVcfId}\t${HOSTNAME_PRM}:${ngsVcfDirPRM}/${ngsVcfId}.final.vcf.gz\t${HOSTNAME_PRM}:${arrayVcfDirPRM}/${arrayId}.FINAL.vcf" > "${concordanceDir}/samplesheets/${arrayInfoList}_${ngsInfoList}.sampleId.txt"
+		echo -e "data1Id\tdata2Id\tlocation1\tlocation2\n${arrayId}\t${ngsVcfId}\t${HOSTNAME_PRM}:${arrayVcfDirPRM}/${arrayId}.FINAL.vcf\t${HOSTNAME_PRM}:${ngsVcfDirPRM}/${ngsVcfId}.final.vcf.gz" > "${concordanceDir}/samplesheets/${arrayInfoList}_${ngsInfoList}.sampleId.txt"
 	fi 
 
 done
