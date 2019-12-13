@@ -91,11 +91,9 @@ function rsyncRuns() {
 		# and check if ${_run}/run01.demultiplexing.finished is newer than *.dataCopiedToPrm,
 		# which indicates the run was re-demultiplexed and converted to FastQ files.
 		#
-
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${_run}/${STEPBEFOREFINISHEDFILE}  is newer than ${JOB_CONTROLE_FILE_BASE}.finished"
 		local _fileFinishedModTime=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} stat --printf='%Y' "${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${_run}/${STEPBEFOREFINISHEDFILE}")
 		local _myFinishedModTime=$(stat --printf='%Y' "${JOB_CONTROLE_FILE_BASE}.finished")
-
 		if [[ "${_fileFinishedModTime}" -gt "${_myFinishedModTime}" ]]
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}/${STEPBEFOREFINISHEDFILE} newer than ${JOB_CONTROLE_FILE_BASE}.finished."
@@ -132,16 +130,14 @@ function rsyncRuns() {
 	local _transferSoFarSoGood='true'
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_run} dir..."
 	echo "working on ${_run}" > "${PRM_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
-
-        for i in ${COPYDATAARRAY[@]}
+	for i in ${COPYDATAARRAY[@]}
 	do
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
-                                "making dir: ${PRM_ROOT_DIR}/rawdata/${i}/${_run}"
-
+			"Making dir: ${PRM_ROOT_DIR}/rawdata/${i}/${_run} ..."
 		mkdir -m 2750 -p "${PRM_ROOT_DIR}/rawdata/${i}/${_run}"
+		
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
-                                "rsyncing ${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${i}/${_run} TO ${PRM_ROOT_DIR}/rawdata/${i}/ "
-
+			"Rsyncing ${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${i}/${_run} to ${PRM_ROOT_DIR}/rawdata/${i}/ ..."
 		rsync -vrltDL --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
 			"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${i}/${_run}" \
 			"${PRM_ROOT_DIR}/rawdata/${i}/" \
@@ -176,16 +172,13 @@ function rsyncRuns() {
 				#
 				# Verify checksums on prm storage.
 				#
-
 				if [ ${i} == "array/IDAT" ]
 				then
 					_checksumVerification='PASS'
 				else
-
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
 						"Started verification of checksums by ${DATA_MANAGER}@${sourceServerFQDN} using checksums from ${PRM_ROOT_DIR}/rawdata/${i}/${_run}/*.md5." \
 						2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
-
 					_checksumVerification=$(cd ${PRM_ROOT_DIR}/rawdata/${i}/${_run}
 						if md5sum -c *.md5 > ${JOB_CONTROLE_FILE_BASE}.md5.log 2>&1
 						then
@@ -220,13 +213,11 @@ function rsyncRuns() {
 				echo "OK! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${JOB_CONTROLE_FILE_BASE}.md5.log for details." \
 					>>    "${JOB_CONTROLE_FILE_BASE}.failed" \
 					&& mv "${JOB_CONTROLE_FILE_BASE}."{failed,finished}
-
 				echo "finished: $(date +%FT%T%z)" >> "${JOB_CONTROLE_FILE_BASE}.totalRuntime"
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
 			fi
 		fi
 	done
-
 	#
 	# Sanity check and report status to track & trace.
 	#
@@ -256,7 +247,6 @@ function rsyncRuns() {
 function splitSamplesheetPerProject() {
 	local _run="${1}"
 	local _sampleSheet="${PRM_ROOT_DIR}/Samplesheets/archive/${_run}.${SAMPLESHEET_EXT}"
-	
 	#
 	# ToDo: change location of job control files back to ${TMP_ROOT_DIR} once we have a 
 	#       proper prm mount on the GD clusters and this script can run on a GD cluster
@@ -266,7 +256,6 @@ function splitSamplesheetPerProject() {
 	local _rsyncControlFileFinished="${PRM_ROOT_DIR}/logs/${_run}/run01.${SCRIPT_NAME}.finished"
 	local JOB_CONTROLE_FILE_BASE="${PRM_ROOT_DIR}/logs/${_run}/run01.splitSamplesheetPerProject"
 	local _logFile="${JOB_CONTROLE_FILE_BASE}.log"
-
 	#
 	#
 	# Rsync samplesheet to prm samplesheets folder.
@@ -280,8 +269,6 @@ function splitSamplesheetPerProject() {
 		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync of sample sheet failed. See ${JOB_CONTROLE_FILE_BASE}.failed for details." \
 			>> "${JOB_CONTROLE_FILE_BASE}.failed"
 	}
-
-
 	if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished -> Skipping ${_run}."
