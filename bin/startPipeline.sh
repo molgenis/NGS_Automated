@@ -241,7 +241,7 @@ function submitPipeline () {
 		if [ "${_sampleType}" == "DNA" ]
 		then
 			capturingKitIndex=$((${sampleSheetColumnOffsets['capturingKit']} + 1))
-                        capturingKit="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v capt=${capturingKitIndex} 'BEGIN {FS=","}{print $capt}' | awk 'BEGIN{FS="/"}{print $2}' | head -1)"
+			capturingKit="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v capt=${capturingKitIndex} 'BEGIN {FS=","}{print $capt}' | awk 'BEGIN{FS="/"}{print $2}' | head -1)"
 		fi
 	#
 	# Track and Trace: log that we will start running jobs on the cluster.
