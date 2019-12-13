@@ -214,29 +214,35 @@ function submitPipeline () {
 			prio="true"
 		fi
 	fi
+	capturingKit="None"
 	if [[ "${_sampleType}" == "DNA" || "${_sampleType}" == "RNA" ]]
 	then
 		if [[ ! -z "${sampleSheetColumnOffsets['sequencingStartDate']+isset}" ]]
 		then
 			sequencingStartDateIndex=$((${sampleSheetColumnOffsets['sequencingStartDate']} + 1))
-			sequencingStartDate="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v seqstart=${sequencingStartDateIndex} 'BEGIN {FS=","}{print $seqstart}')"
+			sequencingStartDate="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v seqstart=${sequencingStartDateIndex} 'BEGIN {FS=","}{print $seqstart}' | head -1)"
 		fi
 		if [[ ! -z "${sampleSheetColumnOffsets['sequencer']+isset}" ]]
 		then
 			sequencerIndex=$((${sampleSheetColumnOffsets['sequencer']} + 1))
-			sequencer="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v sequencer=${sequencerIndex} 'BEGIN {FS=","}{print $sequencer}')"
+			sequencer="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v sequencer=${sequencerIndex} 'BEGIN {FS=","}{print $sequencer}' | head -1)"
 		fi
 		if [[ ! -z "${sampleSheetColumnOffsets['run']+isset}" ]]
 		then
 			runIndex=$((${sampleSheetColumnOffsets['run']} + 1))
-			run="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v run=${runIndex} 'BEGIN {FS=","}{print $run}')"
+			run="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v run=${runIndex} 'BEGIN {FS=","}{print $run}' | head -1)"
 		fi
 		if [[ ! -z "${sampleSheetColumnOffsets['flowcell']+isset}" ]]
 		then
 			flowcellIndex=$((${sampleSheetColumnOffsets['flowcell']} + 1))
-			flowcell="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v flowcell=${flowcellIndex} 'BEGIN {FS=","}{print $flowcell}')"
+			flowcell="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v flowcell=${flowcellIndex} 'BEGIN {FS=","}{print $flowcell}' | head -1)"
 		fi
-	_filePrefix="${sequencingStartDate}_${sequencer}_${run}_${flowcell}"
+		_filePrefix="${sequencingStartDate}_${sequencer}_${run}_${flowcell}"
+		if [ "${_sampleType}" == "DNA" ]
+		then
+			capturingKitIndex=$((${sampleSheetColumnOffsets['capturingKit']} + 1))
+                        capturingKit="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v capt=${capturingKitIndex} 'BEGIN {FS=","}{print $capt}' | awk 'BEGIN{FS="/"}{print $2}' | head -1)"
+		fi
 	#
 	# Track and Trace: log that we will start running jobs on the cluster.
 	#
@@ -255,9 +261,10 @@ function submitPipeline () {
 	fi
 
 	local _url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
-	printf '%s\n' "project,run_id,pipeline,url,copy_results_prm,date"  > "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
-	printf '%s\n' "${_project},${_filePrefix},${_sampleType},${_url},,"  >> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
-	trackAndTracePostFromFile 'status_projects' 'add'                    "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
+	printf '%s\n' "project,run_id,pipeline,url,capturingKit,message,copy_results_prm,finishedDate"  > "${JOB_CONTROLE_FILE_BASE}.trackAndTrace_projects.csv"
+	printf '%s\n' "${_project},${_filePrefix},${_sampleType},${_url},${capturingKit},,,"  >> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace_projects.csv"
+	trackAndTracePostFromFile 'status_projects' 'add_update_existing'                    "${JOB_CONTROLE_FILE_BASE}.trackAndTrace_projects.csv"
+	
 	#
 	_url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_samples&hideselect=true&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
 	printf '%s\n' "project_job,job,project,started_date,finished_date,status,url,step"  > "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"

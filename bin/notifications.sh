@@ -144,11 +144,16 @@ function notification() {
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No resubmitted jobs and the project is also not finished yet."
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Going to resubmit jobs for: ${_project}"
-
+					cd ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/
 					bash "submit.sh" > "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted"
+					cd -
+					timeOfResubmit=$(date -r "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted")
+					trackAndTracePut 'status_projects' "${_project}" "message" "'pipeline has been resubmitted on ${timeOfResubmit}'"
 				else
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted"
 					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping: ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted. Jobs were already resubmitted for state ${_state}."
+					timeOfPipelineFail=$(date -r "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.failed")
+					trackAndTracePut 'status_projects' "${_project}" "message" "'pipeline crashed again (even after a resubmit) on ${timeOfPipelineFail}'"
 				fi
 			fi
 
@@ -258,6 +263,7 @@ declare -a configFiles=(
 	"${CFG_DIR}/${group}.cfg"
 	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
 	"${CFG_DIR}/sharedConfig.cfg"
+	"${HOME}/molgenis.cfg"
 )
 for configFile in "${configFiles[@]}"; do
 	if [[ -f "${configFile}" && -r "${configFile}" ]]; then
