@@ -108,7 +108,8 @@ function rsyncRuns() {
 	#
 	# Track and Trace: log that we will start rsyncing to prm.
 	#
-############## FIX THIS FOR GAP
+	# ToDo: FIX THIS FOR GAP.
+	#
 	touch "${JOB_CONTROLE_FILE_BASE}.started"
 	echo "started: $(date +%FT%T%z)" > "${JOB_CONTROLE_FILE_BASE}.totalRuntime"
 	printf '%s\n' "run_id,group,demultiplexing,copy_raw_prm,projects,date"  > "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
@@ -130,20 +131,21 @@ function rsyncRuns() {
 	local _transferSoFarSoGood='true'
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_run} dir..."
 	echo "working on ${_run}" > "${PRM_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
-	for i in ${COPYDATAARRAY[@]}
+	local _rawDataType
+	for _rawDataType in "${RAWDATATYPES[@]}"
 	do
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
-			"Making dir: ${PRM_ROOT_DIR}/rawdata/${i}/${_run} ..."
-		mkdir -m 2750 -p "${PRM_ROOT_DIR}/rawdata/${i}/${_run}"
+			"Making dir: ${PRM_ROOT_DIR}/rawdata/${_rawDataType}/${_run} ..."
+		mkdir -m 2750 -p "${PRM_ROOT_DIR}/rawdata/${_rawDataType}/${_run}"
 		
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
-			"Rsyncing ${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${i}/${_run} to ${PRM_ROOT_DIR}/rawdata/${i}/ ..."
+			"Rsyncing ${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${_rawDataType}/${_run} to ${PRM_ROOT_DIR}/rawdata/${_rawDataType}/ ..."
 		rsync -vrltDL --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
-			"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${i}/${_run}" \
-			"${PRM_ROOT_DIR}/rawdata/${i}/" \
+			"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${_rawDataType}/${_run}" \
+			"${PRM_ROOT_DIR}/rawdata/${_rawDataType}/" \
 		|| {
 			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-			log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${i}/${_run}/ dir. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
+			log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${_rawDataType}/${_run}/ dir. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
 			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync of sequence run dir failed. See ${JOB_CONTROLE_FILE_BASE}.failed for details." \
 				>> "${JOB_CONTROLE_FILE_BASE}.failed"
 			_transferSoFarSoGood='false'
@@ -156,8 +158,8 @@ function rsyncRuns() {
 		#  2. Secondly verify checksums on the destination.
 		#
 		if [[ "${_transferSoFarSoGood}" == 'true' ]];then
-			local _countFilesRunDirScr=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} "find ${SCR_ROOT_DIR}/rawdata/${i}/${_run}/* -type f | wc -l")
-			local _countFilesRunDirPrm=$(find "${PRM_ROOT_DIR}/rawdata/${i}/${_run}/"* -type f | wc -l)
+			local _countFilesRunDirScr=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} "find ${SCR_ROOT_DIR}/rawdata/${_rawDataType}/${_run}/* -type f | wc -l")
+			local _countFilesRunDirPrm=$(find "${PRM_ROOT_DIR}/rawdata/${_rawDataType}/${_run}/"* -type f | wc -l)
 			local _checksumVerification='unknown'
 			if [[ ${_countFilesRunDirScr} -ne ${_countFilesRunDirPrm} ]]; then
 				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
@@ -172,14 +174,14 @@ function rsyncRuns() {
 				#
 				# Verify checksums on prm storage.
 				#
-				if [ ${i} == "array/IDAT" ]
+				if [[ "${_rawDataType}" == 'array/IDAT' ]]
 				then
 					_checksumVerification='PASS'
 				else
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
-						"Started verification of checksums by ${DATA_MANAGER}@${sourceServerFQDN} using checksums from ${PRM_ROOT_DIR}/rawdata/${i}/${_run}/*.md5." \
+						"Started verification of checksums by ${DATA_MANAGER}@${sourceServerFQDN} using checksums from ${PRM_ROOT_DIR}/rawdata/${_rawDataType}/${_run}/*.md5." \
 						2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
-					_checksumVerification=$(cd ${PRM_ROOT_DIR}/rawdata/${i}/${_run}
+					_checksumVerification=$(cd ${PRM_ROOT_DIR}/rawdata/${_rawDataType}/${_run}
 						if md5sum -c *.md5 > ${JOB_CONTROLE_FILE_BASE}.md5.log 2>&1
 						then
 							echo 'PASS'
@@ -206,9 +208,9 @@ function rsyncRuns() {
 				# when enabled in <group>.cfg for use by notifications.sh)
 				#
 				echo "The results can be found in: ${PRM_ROOT_DIR}." > "${JOB_CONTROLE_FILE_BASE}.failed"
-				if ls "${PRM_ROOT_DIR}/rawdata/${i}/${_run}/${_run}"*.log 1>/dev/null 2>&1
+				if ls "${PRM_ROOT_DIR}/rawdata/${_rawDataType}/${_run}/${_run}"*.log 1>/dev/null 2>&1
 				then
-					cat "${PRM_ROOT_DIR}/rawdata/${i}/${_run}/${_run}"*.log >> "${JOB_CONTROLE_FILE_BASE}.failed"
+					cat "${PRM_ROOT_DIR}/rawdata/${_rawDataType}/${_run}/${_run}"*.log >> "${JOB_CONTROLE_FILE_BASE}.failed"
 				fi
 				echo "OK! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${JOB_CONTROLE_FILE_BASE}.md5.log for details." \
 					>>    "${JOB_CONTROLE_FILE_BASE}.failed" \
@@ -241,7 +243,6 @@ function rsyncRuns() {
 	then
 		touch "${PRM_ROOT_DIR}/logs/${filePrefix}/run01.${SCRIPT_NAME}.finished"
 	fi
-
 }
 
 function splitSamplesheetPerProject() {
