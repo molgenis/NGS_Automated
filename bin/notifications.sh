@@ -148,12 +148,12 @@ function notification() {
 					bash "submit.sh" > "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted"
 					cd -
 					timeOfResubmit=$(date -r "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted")
-					trackAndTracePut 'status_projects' "${_project}" "message" "'pipeline has been resubmitted on ${timeOfResubmit}'"
+					trackAndTracePut 'status_projects' "${_project}" 'message' "'pipeline has been resubmitted on ${timeOfResubmit}'"
 				else
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted"
 					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping: ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted. Jobs were already resubmitted for state ${_state}."
 					timeOfPipelineFail=$(date -r "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.failed")
-					trackAndTracePut 'status_projects' "${_project}" "message" "'pipeline crashed again (even after a resubmit) on ${timeOfPipelineFail}'"
+					trackAndTracePut 'status_projects' "${_project}" 'message' "'pipeline crashed again (even after a resubmit) on ${timeOfPipelineFail}'"
 				fi
 			fi
 

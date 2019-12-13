@@ -113,11 +113,8 @@ function rsyncRuns() {
 ############## FIX THIS FOR GAP
 	touch "${JOB_CONTROLE_FILE_BASE}.started"
 	echo "started: $(date +%FT%T%z)" > "${JOB_CONTROLE_FILE_BASE}.totalRuntime"
-#	printf '%s\n' "run_id,group,demultiplexing,copy_raw_prm,projects,date"  > "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
-#	printf '%s\n' "${_run},${group},finished,started,,"                    >> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
-	trackAndTracePut 'status_overview' "${_run}" "copy_raw_prm" "started"
+	trackAndTracePut 'status_overview' "${_run}" 'copy_raw_prm' 'started'
 	
-#	trackAndTracePostFromFile 'status_overview' 'update'                      "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
 	#
 	# Perform rsync.
 	#  1. For ${_run} dir: recursively with "default" archive (-a),
@@ -235,17 +232,11 @@ function rsyncRuns() {
 	if [[ -e "${JOB_CONTROLE_FILE_BASE}.failed" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.failed. Setting track & trace state to failed :(."
-		#printf '%s\n' "run_id,group,demultiplexing,copy_raw_prm,projects,date"  > "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
-		#printf '%s\n' "${_run},${group},finished,failed,,"                     >> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
-		#trackAndTracePostFromFile 'status_overview' 'update'                      "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
-		trackAndTracePut 'status_overview' "${_run}" "copy_raw_prm" "failed"
+		trackAndTracePut 'status_overview' "${_run}" 'copy_raw_prm' 'failed'
 	elif [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished. Setting track & trace state to finished :)."
-	#	printf '%s\n' "run_id,group,demultiplexing,copy_raw_prm,projects,date"  > "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
-	#	printf '%s\n' "${_run},${group},finished,finished,,"                   >> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
-	#	trackAndTracePostFromFile 'status_overview' 'update'                      "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
-		trackAndTracePut 'status_overview' "${_run}" "copy_raw_prm" "finished"
+		trackAndTracePut 'status_overview' "${_run}" 'copy_raw_prm' 'finished'
 	else
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' 'Ended up in unexpected state:'
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected either ${JOB_CONTROLE_FILE_BASE}.finished or ${JOB_CONTROLE_FILE_BASE}.failed, but both are absent."
@@ -420,7 +411,7 @@ function splitSamplesheetPerProject() {
 	IFS="$OLD_IFS"
 
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "ALLPROJECTS:${allProjects}" 
-	trackAndTracePut 'status_overview' "${_run}" "projects" "'${allProjects}'"
+	trackAndTracePut 'status_overview' "${_run}" 'projects' "'${allProjects}'"
 
 	#
 	# Move samplesheet to archive on sourceServerFQDN
