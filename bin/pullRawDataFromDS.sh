@@ -29,13 +29,6 @@ REAL_USER="$(logname 2>/dev/null || echo 'no login name')"
 
 #
 ##
-### ToDo: move vars below to config file.
-##
-#
-DATA_STAGING_HOST='cher-ami.hpc.rug.nl'
-
-#
-##
 ### Functions.
 ##
 #
@@ -190,33 +183,33 @@ export JOB_CONTROLE_FILE_BASE="${logDir}/${logTimeStamp}.${SCRIPT_NAME}"
 # * first rsync everything, but with an exclude pattern for '*.finished' and
 # * then do a second rsync for only '*.finished' files.
 #
-log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pulling data from data staging server ${DATA_STAGING_HOST%%.*} using rsync to /groups/${GROUP}/${TMP_LFS}/ ..."
-log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "See /groups/${GROUP}/${TMP_LFS}/rsync-from-${DATA_STAGING_HOST%%.*}.log for details..."
+log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pulling data from data staging server ${HOSTNAME_DATA_STAGING%%.*} using rsync to /groups/${GROUP}/${TMP_LFS}/ ..."
+log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "See ${logDir}/rsync-from-${HOSTNAME_DATA_STAGING%%.*}.log for details..."
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Rsyncing everything except the .finished files ...'
 /usr/bin/rsync -vrltD \
-	--log-file="${logDir}/rsync-from-${DATA_STAGING_HOST%%.*}.log" \
+	--log-file="${logDir}/rsync-from-${HOSTNAME_DATA_STAGING%%.*}.log" \
 	--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
 	--omit-dir-times \
 	--omit-link-times \
 	--exclude='*.finished' \
-	"${DATA_STAGING_HOST}:/groups/${GROUP}/${SCR_LFS}/*" \
+	"${HOSTNAME_DATA_STAGING}:/groups/${GROUP}/${SCR_LFS}/*" \
 	"/groups/${GROUP}/${TMP_LFS}/"
 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Rsyncing only the .finished files ...'
 /usr/bin/rsync -vrltD \
-	--log-file="${logDir}/rsync-from-${DATA_STAGING_HOST%%.*}.log" \
+	--log-file="${logDir}/rsync-from-${HOSTNAME_DATA_STAGING%%.*}.log" \
 	--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
 	--omit-dir-times \
 	--omit-link-times \
 	--relative \
-	"${DATA_STAGING_HOST}:/groups/${GROUP}/${SCR_LFS}/./*/*.finished" \
+	"${HOSTNAME_DATA_STAGING}:/groups/${GROUP}/${SCR_LFS}/./*/*.finished" \
 	"/groups/${GROUP}/${TMP_LFS}/"
 
 #
 # Cleanup old data if data transfer with rsync finished successfully (and hence did not crash this script).
 #
-log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting data older than 14 days from ${DATA_STAGING_HOST%%.*}:/groups/${GROUP}/${SCR_LFS}/ ..."
-/usr/bin/ssh "${DATA_STAGING_HOST}" "/bin/find /groups/${GROUP}/${SCR_LFS}/ -mtime +14 -ignore_readdir_race -delete"
+log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting data older than 14 days from ${HOSTNAME_DATA_STAGING%%.*}:/groups/${GROUP}/${SCR_LFS}/ ..."
+/usr/bin/ssh "${HOSTNAME_DATA_STAGING}" "/bin/find /groups/${GROUP}/${SCR_LFS}/ -mtime +14 -ignore_readdir_race -delete"
 
 #
 # Clean exit.
