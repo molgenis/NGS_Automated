@@ -812,7 +812,7 @@ declare -A requiredSamplesheetColumns=(
 # Get a list of all GenomeScan batch directories.
 #
 declare -a gsBatchDirs=($(find "${TMP_ROOT_DIR}/" -maxdepth 1 -mindepth 1 -type d -name "[0-9]*-[0-9]*"))
-log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found gsBatchDirs: ${gsBatchDirs[@]}"
+log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found gsBatchDirs: ${gsBatchDirs[@]:-}"
 
 if [[ "${#gsBatchDirs[@]:-0}" -eq '0' ]]
 then
