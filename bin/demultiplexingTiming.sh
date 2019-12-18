@@ -176,14 +176,13 @@ do
 	## check if there is a sequence run corresponding to the samplesheet.
 	if [[ ! -d "${SCR_ROOT_DIR}/runs/${sequenceRun}/" ]]
 	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no data corresponding to run:${sequenceRun}, check if the samplesheet is correct"
-		printf '%b\n' "A demutiplexingTiming error. There is no data corresponding to run:${sequenceRun}, check if the samplesheet is correct." | mail -s "Please check if samplesheet ${sequenceRun} is correct."  "hpc.helpdesk@umcg.nl"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no data corresponding to run:${sequenceRun}, check if the samplesheet is correct"
 		continue
 	fi
 	## check if the sequencer is ready.
 	if [[ ! -d "${SCR_ROOT_DIR}/logs/${sequenceRun}/" ]]
 	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer is not finished yet for run ${sequenceRun}"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer is not finished yet for run ${sequenceRun}"
 		continue
 	fi
 	

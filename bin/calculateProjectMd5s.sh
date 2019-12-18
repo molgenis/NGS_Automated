@@ -179,6 +179,11 @@ if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]; then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
 fi
 
+lockFile="${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
+thereShallBeOnlyOne "${lockFile}"
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile}..."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${TMP_ROOT_DIR}/logs..."
+
 module load hashdeep/${HASHDEEP_VERSION} || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} 'Failed to load hashdeep module.'
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "$(module list)"
 
@@ -190,6 +195,7 @@ else
 	for project in "${projects[@]}"
 	do
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project}..."
+		echo "working on ${_project}" > "${lockFile}"
 		declare -a runs=($(find "${TMP_ROOT_DIR}/projects/${project}/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${TMP_ROOT_DIR}/projects/${project}/||"))
 		if [[ "${#runs[@]:-0}" -eq '0' ]]
 		then
@@ -205,6 +211,6 @@ else
 fi
 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished successfully!'
-
+echo "" > "${lockFile}"
 trap - EXIT
 exit 0
