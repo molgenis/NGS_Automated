@@ -247,31 +247,25 @@ function sanityChecking() {
 	do
 		#
 		# ToDo: change location of sample sheet per project back to ${TMP_ROOT_DIR} once we have a 
-		#       proper prm mount on the GD clusters and this script can run a GD cluster
-		#       instead of on a research cluster.
+		#       proper prm mount on the GD clusters and this script can run a GD cluster.
 		#
 		local _sampleSheet="${TMP_ROOT_DIR}/Samplesheets/new/${_project}.${SAMPLESHEET_EXT}"
+		local _archivedSampleSheet="${TMP_ROOT_DIR}/Samplesheets/archive/${_project}.${SAMPLESHEET_EXT}"
 		if [[ -f "${_sampleSheet}" && -r "${_sampleSheet}" ]]
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} is present."
+		elif [[ -f "${_archivedSampleSheet}" && -r "${_archivedSampleSheet}" ]]
+		then
 			#
-			# Make sure
-			#  1. The last line ends with a line end character.
-			#  2. We have the right line end character: convert any carriage return (\r) to newline (\n).
-			#  3. We remove empty lines: lines containing only white space and/or field separators are considered empty too.
+			# This project was sequenced before, but most likely the yield was not high enough
+			# or there were other QC issues and the samples were re-sequenced;
+			# Check if we have a samplesheet from the previous sequence run in the archive.
 			#
-			cp "${_sampleSheet}"{,.converted} \
+			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "Samplesheet for project ${_project} is missing from .../Samplesheets/new/, but we have one in .../Samplesheets/archive/ and will re-use that one."
+			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "Moving ${_archivedSampleSheet} to ${_sampleSheet} ..."
+			mv "${_archivedSampleSheet}" "${_sampleSheet}" \
 				2>> "${_controlFileBaseForFunction}.started" \
-				&& printf '\n' \
-				2>> "${_controlFileBaseForFunction}.started" \
-				>> "${_sampleSheet}.converted" \
-				&& sed -i 's/\r/\n/g' "${_sampleSheet}.converted" \
-				2>> "${_controlFileBaseForFunction}.started" \
-				&& sed -i "/^[\s${SAMPLESHEET_SEP}]*$/d" "${_sampleSheet}.converted" \
-				2>> "${_controlFileBaseForFunction}.started" \
-				&& mv -f "${_sampleSheet}"{.converted,} \
-				2>> "${_controlFileBaseForFunction}.started" \
-			|| { log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" '0' "Failed to convert line end characters and/or remove empty lines for ${_sampleSheet}." \
+			|| { log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" '0' "Failed to move ${_archivedSampleSheet} to ${_sampleSheet}." \
 					2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
 					&& mv "${_controlFileBaseForFunction}."{started,failed}
 				return
@@ -282,6 +276,28 @@ function sanityChecking() {
 				&& mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		fi
+		#
+		# Make sure
+		#  1. The last line ends with a line end character.
+		#  2. We have the right line end character: convert any carriage return (\r) to newline (\n).
+		#  3. We remove empty lines: lines containing only white space and/or field separators are considered empty too.
+		#
+		cp "${_sampleSheet}"{,.converted} \
+			2>> "${_controlFileBaseForFunction}.started" \
+			&& printf '\n' \
+			2>> "${_controlFileBaseForFunction}.started" \
+			>> "${_sampleSheet}.converted" \
+			&& sed -i 's/\r/\n/g' "${_sampleSheet}.converted" \
+			2>> "${_controlFileBaseForFunction}.started" \
+			&& sed -i "/^[\s${SAMPLESHEET_SEP}]*$/d" "${_sampleSheet}.converted" \
+			2>> "${_controlFileBaseForFunction}.started" \
+			&& mv -f "${_sampleSheet}"{.converted,} \
+			2>> "${_controlFileBaseForFunction}.started" \
+		|| { log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" '0' "Failed to convert line end characters and/or remove empty lines for ${_sampleSheet}." \
+				2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
+				&& mv "${_controlFileBaseForFunction}."{started,failed}
+			return
+		}
 		#
 		# Get fields (columns) from samplesheet.
 		#
@@ -803,9 +819,9 @@ declare -A requiredSamplesheetColumns=(
 	['barcode2']='present'
 	['barcodeType']='present'
 	['sequencer']='empty'
-	['run']='empy'
-	['flowcell']='empy'
-	['lane']='empy'
+	['run']='empty'
+	['flowcell']='empty'
+	['lane']='empty'
 )
 
 #
