@@ -76,14 +76,6 @@ function rsyncRuns() {
 	#
 	# Check if production of raw data @ sourceServer has finished.
 	#
-	if ssh ${DATA_MANAGER}@${sourceServerFQDN} test -e "${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${_run}/${STEPBEFOREFINISHEDFILE}"
-	then
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${_run}/${STEPBEFOREFINISHEDFILE} present."
-	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${_run}/${STEPBEFOREFINISHEDFILE} absent."
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}."
-		return
-	fi
 	if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 	then
 		#
@@ -635,11 +627,26 @@ else
 			mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${barcode}/"
 			mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${filePrefix}/"
 			mkdir -m 2750 -p "${PRM_ROOT_DIR}/Samplesheets/archive/"
-			count=$((count+1))
 			echo "counting: ${count} of ${numberOfBarcodes}" 
-			rsyncRuns "${barcode}" "${count}" "${numberOfBarcodes}"
+
+			if ssh ${DATA_MANAGER}@${sourceServerFQDN} test -e "${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${barcode}/${STEPBEFOREFINISHEDFILE}"
+			then
+				count=$((count+1))
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${barcode}/${STEPBEFOREFINISHEDFILE} present."
+				rsyncRuns "${barcode}" "${count}" "${numberOfBarcodes}"
+
+			else
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${barcode}/${STEPBEFOREFINISHEDFILE} absent."
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${barcode}."
+			fi
 		done
-		splitSamplesheetPerProject "${filePrefix}"
+	
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${count} ${numberOfBarcodes}"
+		if [ "${count}" == "${numberOfBarcodes}" ]
+		then
+			touch "${PRM_ROOT_DIR}/logs/${filePrefix}/run01.${SCRIPT_NAME}.finished"
+			splitSamplesheetPerProject "${filePrefix}"
+		fi
 
 	done
 fi

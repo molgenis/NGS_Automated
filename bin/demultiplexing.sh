@@ -226,8 +226,9 @@ do
 			bash submit.sh
                         echo "jobs submitted, pipeline is running" >> "${JOB_CONTROLE_FILE_BASE}.started"
 
-			printf "run_id,group,demultiplexing,copy_raw_prm,projects,date\n" > "${SCR_ROOT_DIR}/logs/${project}/run01.uploading.csv"
-			printf "${project},${GROUP},started,,," >> "${SCR_ROOT_DIR}/logs/${project}/run01.uploading.csv"
+			printf "run_id,group,demultiplexing,copy_raw_prm,projects,startDate\n" > "${SCR_ROOT_DIR}/logs/${project}/run01.uploading.csv"
+			nowDate=$(date +%FT%T%z)
+			printf "${project},${GROUP},started,,,${nowDate}" >> "${SCR_ROOT_DIR}/logs/${project}/run01.uploading.csv"
 
 			CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
 			TOKEN=${CURLRESPONSE:10:32}
