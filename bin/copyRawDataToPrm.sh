@@ -76,6 +76,14 @@ function rsyncRuns() {
 	#
 	# Check if production of raw data @ sourceServer has finished.
 	#
+	if ssh ${DATA_MANAGER}@${sourceServerFQDN} test -e "${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${_run}/${STEPBEFOREFINISHEDFILE}"
+	then
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${_run}/${STEPBEFOREFINISHEDFILE} present."
+	else
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${_run}/${STEPBEFOREFINISHEDFILE} absent."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}."
+		return
+	fi
 	if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 	then
 		#
@@ -83,11 +91,9 @@ function rsyncRuns() {
 		# and check if ${_run}/run01.demultiplexing.finished is newer than *.dataCopiedToPrm,
 		# which indicates the run was re-demultiplexed and converted to FastQ files.
 		#
-
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${_run}/${STEPBEFOREFINISHEDFILE}  is newer than ${JOB_CONTROLE_FILE_BASE}.finished"
 		local _fileFinishedModTime=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} stat --printf='%Y' "${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${_run}/${STEPBEFOREFINISHEDFILE}")
 		local _myFinishedModTime=$(stat --printf='%Y' "${JOB_CONTROLE_FILE_BASE}.finished")
-
 		if [[ "${_fileFinishedModTime}" -gt "${_myFinishedModTime}" ]]
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}/${STEPBEFOREFINISHEDFILE} newer than ${JOB_CONTROLE_FILE_BASE}.finished."
@@ -102,7 +108,8 @@ function rsyncRuns() {
 	#
 	# Track and Trace: log that we will start rsyncing to prm.
 	#
-############## FIX THIS FOR GAP
+	# ToDo: FIX THIS FOR GAP.
+	#
 	touch "${JOB_CONTROLE_FILE_BASE}.started"
 	echo "started: $(date +%FT%T%z)" > "${JOB_CONTROLE_FILE_BASE}.totalRuntime"
 	trackAndTracePut 'status_overview' "${_run}" 'copy_raw_prm' 'started'
@@ -123,22 +130,21 @@ function rsyncRuns() {
 	local _transferSoFarSoGood='true'
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_run} dir..."
 	echo "working on ${_run}" > "${PRM_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
-
-        for i in ${COPYDATAARRAY[@]}
+	local _rawDataType
+	for _rawDataType in "${RAWDATATYPES[@]}"
 	do
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
-                                "making dir: ${PRM_ROOT_DIR}/rawdata/${i}/${_run}"
-
-		mkdir -m 2750 -p "${PRM_ROOT_DIR}/rawdata/${i}/${_run}"
+			"Making dir: ${PRM_ROOT_DIR}/rawdata/${_rawDataType}/${_run} ..."
+		mkdir -m 2750 -p "${PRM_ROOT_DIR}/rawdata/${_rawDataType}/${_run}"
+		
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
-                                "rsyncing ${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${i}/${_run} TO ${PRM_ROOT_DIR}/rawdata/${i}/ "
-
+			"Rsyncing ${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${_rawDataType}/${_run} to ${PRM_ROOT_DIR}/rawdata/${_rawDataType}/ ..."
 		rsync -vrltDL --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
-			"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${i}/${_run}" \
-			"${PRM_ROOT_DIR}/rawdata/${i}/" \
+			"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${_rawDataType}/${_run}" \
+			"${PRM_ROOT_DIR}/rawdata/${_rawDataType}/" \
 		|| {
 			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-			log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${i}/${_run}/ dir. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
+			log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${_rawDataType}/${_run}/ dir. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
 			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync of sequence run dir failed. See ${JOB_CONTROLE_FILE_BASE}.failed for details." \
 				>> "${JOB_CONTROLE_FILE_BASE}.failed"
 			_transferSoFarSoGood='false'
@@ -151,8 +157,8 @@ function rsyncRuns() {
 		#  2. Secondly verify checksums on the destination.
 		#
 		if [[ "${_transferSoFarSoGood}" == 'true' ]];then
-			local _countFilesRunDirScr=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} "find ${SCR_ROOT_DIR}/rawdata/${i}/${_run}/* -type f | wc -l")
-			local _countFilesRunDirPrm=$(find "${PRM_ROOT_DIR}/rawdata/${i}/${_run}/"* -type f | wc -l)
+			local _countFilesRunDirScr=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} "find ${SCR_ROOT_DIR}/rawdata/${_rawDataType}/${_run}/* -type f | wc -l")
+			local _countFilesRunDirPrm=$(find "${PRM_ROOT_DIR}/rawdata/${_rawDataType}/${_run}/"* -type f | wc -l)
 			local _checksumVerification='unknown'
 			if [[ ${_countFilesRunDirScr} -ne ${_countFilesRunDirPrm} ]]; then
 				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
@@ -167,17 +173,14 @@ function rsyncRuns() {
 				#
 				# Verify checksums on prm storage.
 				#
-
-				if [ ${i} == "array/IDAT" ]
+				if [[ "${_rawDataType}" == 'array/IDAT' ]]
 				then
 					_checksumVerification='PASS'
 				else
-
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
-						"Started verification of checksums by ${DATA_MANAGER}@${sourceServerFQDN} using checksums from ${PRM_ROOT_DIR}/rawdata/${i}/${_run}/*.md5." \
+						"Started verification of checksums by ${DATA_MANAGER}@${sourceServerFQDN} using checksums from ${PRM_ROOT_DIR}/rawdata/${_rawDataType}/${_run}/*.md5." \
 						2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
-
-					_checksumVerification=$(cd ${PRM_ROOT_DIR}/rawdata/${i}/${_run}
+					_checksumVerification=$(cd ${PRM_ROOT_DIR}/rawdata/${_rawDataType}/${_run}
 						if md5sum -c *.md5 > ${JOB_CONTROLE_FILE_BASE}.md5.log 2>&1
 						then
 							echo 'PASS'
@@ -204,20 +207,18 @@ function rsyncRuns() {
 				# when enabled in <group>.cfg for use by notifications.sh)
 				#
 				echo "The results can be found in: ${PRM_ROOT_DIR}." > "${JOB_CONTROLE_FILE_BASE}.failed"
-				if ls "${PRM_ROOT_DIR}/rawdata/${i}/${_run}/${_run}"*.log 1>/dev/null 2>&1
+				if ls "${PRM_ROOT_DIR}/rawdata/${_rawDataType}/${_run}/${_run}"*.log 1>/dev/null 2>&1
 				then
-					cat "${PRM_ROOT_DIR}/rawdata/${i}/${_run}/${_run}"*.log >> "${JOB_CONTROLE_FILE_BASE}.failed"
+					cat "${PRM_ROOT_DIR}/rawdata/${_rawDataType}/${_run}/${_run}"*.log >> "${JOB_CONTROLE_FILE_BASE}.failed"
 				fi
 				echo "OK! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${JOB_CONTROLE_FILE_BASE}.md5.log for details." \
 					>>    "${JOB_CONTROLE_FILE_BASE}.failed" \
 					&& mv "${JOB_CONTROLE_FILE_BASE}."{failed,finished}
-
 				echo "finished: $(date +%FT%T%z)" >> "${JOB_CONTROLE_FILE_BASE}.totalRuntime"
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
 			fi
 		fi
 	done
-
 	#
 	# Sanity check and report status to track & trace.
 	#
@@ -233,14 +234,15 @@ function rsyncRuns() {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' 'Ended up in unexpected state:'
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected either ${JOB_CONTROLE_FILE_BASE}.finished or ${JOB_CONTROLE_FILE_BASE}.failed, but both are absent."
 	fi
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "count=${count} --- totalCount=${totalCount}"
-
+	if [ "${count}" == "${totalCount}" ]
+	then
+		touch "${PRM_ROOT_DIR}/logs/${filePrefix}/run01.${SCRIPT_NAME}.finished"
+	fi
 }
 
 function splitSamplesheetPerProject() {
 	local _run="${1}"
 	local _sampleSheet="${PRM_ROOT_DIR}/Samplesheets/archive/${_run}.${SAMPLESHEET_EXT}"
-
 	#
 	# ToDo: change location of job control files back to ${TMP_ROOT_DIR} once we have a 
 	#       proper prm mount on the GD clusters and this script can run on a GD cluster
@@ -250,7 +252,6 @@ function splitSamplesheetPerProject() {
 	local _rsyncControlFileFinished="${PRM_ROOT_DIR}/logs/${_run}/run01.${SCRIPT_NAME}.finished"
 	local JOB_CONTROLE_FILE_BASE="${PRM_ROOT_DIR}/logs/${_run}/run01.splitSamplesheetPerProject"
 	local _logFile="${JOB_CONTROLE_FILE_BASE}.log"
-
 	#
 	#
 	# Rsync samplesheet to prm samplesheets folder.
@@ -264,8 +265,6 @@ function splitSamplesheetPerProject() {
 		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync of sample sheet failed. See ${JOB_CONTROLE_FILE_BASE}.failed for details." \
 			>> "${JOB_CONTROLE_FILE_BASE}.failed"
 	}
-
-
 	if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished -> Skipping ${_run}."
@@ -601,7 +600,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #	1. loop over their analysis ("run") sub dirs and check if there are any we need to rsync.
 #	2. split the sample sheets per project and the data was rsynced.
 #
-declare -a sampleSheetsFromSourceServer=($(ssh ${DATA_MANAGER}@${sourceServerFQDN} "find ${SCR_ROOT_DIR}/Samplesheets/ -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name *.${SAMPLESHEET_EXT}"))
+declare -a sampleSheetsFromSourceServer=($(ssh ${DATA_MANAGER}@${sourceServerFQDN} "find ${SCR_ROOT_DIR}/Samplesheets/ -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name '*.${SAMPLESHEET_EXT}'"))
 
 if [[ "${#sampleSheetsFromSourceServer[@]:-0}" -eq '0' ]]
 then
@@ -636,26 +635,11 @@ else
 			mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${barcode}/"
 			mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${filePrefix}/"
 			mkdir -m 2750 -p "${PRM_ROOT_DIR}/Samplesheets/archive/"
+			count=$((count+1))
 			echo "counting: ${count} of ${numberOfBarcodes}" 
-
-			if ssh ${DATA_MANAGER}@${sourceServerFQDN} test -e "${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${barcode}/${STEPBEFOREFINISHEDFILE}"
-			then
-				count=$((count+1))
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${barcode}/${STEPBEFOREFINISHEDFILE} present."
-				rsyncRuns "${barcode}" "${count}" "${numberOfBarcodes}"
-
-			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${barcode}/${STEPBEFOREFINISHEDFILE} absent."
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${barcode}."
-			fi
+			rsyncRuns "${barcode}" "${count}" "${numberOfBarcodes}"
 		done
-	
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${count} ${numberOfBarcodes}"
-		if [ "${count}" == "${numberOfBarcodes}" ]
-		then
-			touch "${PRM_ROOT_DIR}/logs/${filePrefix}/run01.${SCRIPT_NAME}.finished"
-			splitSamplesheetPerProject "${filePrefix}"
-		fi
+		splitSamplesheetPerProject "${filePrefix}"
 
 	done
 fi
