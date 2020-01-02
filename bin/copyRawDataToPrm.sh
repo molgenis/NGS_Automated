@@ -76,14 +76,6 @@ function rsyncRuns() {
 	#
 	# Check if production of raw data @ sourceServer has finished.
 	#
-	if ssh ${DATA_MANAGER}@${sourceServerFQDN} test -e "${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${_run}/${STEPBEFOREFINISHEDFILE}"
-	then
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${_run}/${STEPBEFOREFINISHEDFILE} present."
-	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${_run}/${STEPBEFOREFINISHEDFILE} absent."
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}."
-		return
-	fi
 	if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 	then
 		#
@@ -241,17 +233,14 @@ function rsyncRuns() {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' 'Ended up in unexpected state:'
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected either ${JOB_CONTROLE_FILE_BASE}.finished or ${JOB_CONTROLE_FILE_BASE}.failed, but both are absent."
 	fi
-	if [ "${count}" == "${totalCount}" ]
-	then
-		touch "${PRM_ROOT_DIR}/logs/${filePrefix}/run01.${SCRIPT_NAME}.finished"
-	fi
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "count=${count} --- totalCount=${totalCount}"
 
 }
 
 function splitSamplesheetPerProject() {
 	local _run="${1}"
 	local _sampleSheet="${PRM_ROOT_DIR}/Samplesheets/archive/${_run}.${SAMPLESHEET_EXT}"
-	
+
 	#
 	# ToDo: change location of job control files back to ${TMP_ROOT_DIR} once we have a 
 	#       proper prm mount on the GD clusters and this script can run on a GD cluster
@@ -647,11 +636,26 @@ else
 			mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${barcode}/"
 			mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${filePrefix}/"
 			mkdir -m 2750 -p "${PRM_ROOT_DIR}/Samplesheets/archive/"
-			count=$((count+1))
 			echo "counting: ${count} of ${numberOfBarcodes}" 
-			rsyncRuns "${barcode}" "${count}" "${numberOfBarcodes}"
+
+			if ssh ${DATA_MANAGER}@${sourceServerFQDN} test -e "${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${barcode}/${STEPBEFOREFINISHEDFILE}"
+			then
+				count=$((count+1))
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${barcode}/${STEPBEFOREFINISHEDFILE} present."
+				rsyncRuns "${barcode}" "${count}" "${numberOfBarcodes}"
+
+			else
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${barcode}/${STEPBEFOREFINISHEDFILE} absent."
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${barcode}."
+			fi
 		done
-		splitSamplesheetPerProject "${filePrefix}"
+	
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${count} ${numberOfBarcodes}"
+		if [ "${count}" == "${numberOfBarcodes}" ]
+		then
+			touch "${PRM_ROOT_DIR}/logs/${filePrefix}/run01.${SCRIPT_NAME}.finished"
+			splitSamplesheetPerProject "${filePrefix}"
+		fi
 
 	done
 fi
