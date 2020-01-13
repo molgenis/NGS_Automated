@@ -473,7 +473,7 @@ function renameFastQs() {
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
 }
 
-function processSamplesheetsAndMoveCovertedData() {
+function processSamplesheetsAndMoveConvertedData() {
 	local _batch="${1}"
 	local _controlFileBase="${2}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME}"
@@ -883,22 +883,22 @@ else
 			if [[ -e "${controlFileBase}.renameFastQs.finished" ]]
 			then
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.renameFastQs.finished present -> renameFastQs completed; let's mergeSamplesheetPerProject for batch ${gsBatch}..."
-				processSamplesheetsAndMoveCovertedData "${gsBatch}" "${controlFileBase}"
+				processSamplesheetsAndMoveConvertedData "${gsBatch}" "${controlFileBase}"
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.renameFastQs.finished absent -> renameFastQs failed."
 			fi
 			#
 			# Signal success or failure for complete process.
 			#
-			if [[ -e "${controlFileBase}.processSamplesheetsAndMoveCovertedData.finished" ]]
+			if [[ -e "${controlFileBase}.processSamplesheetsAndMoveConvertedData.finished" ]]
 			then
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.processSamplesheetsAndMoveCovertedData.finished present -> processing completed for batch ${gsBatch}..."
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.processSamplesheetsAndMoveConvertedData.finished present -> processing completed for batch ${gsBatch}..."
 				rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Finished processing batch ${gsBatch}." \
 					2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.processSamplesheetsAndMoveCovertedData.finished absent -> processing failed for batch ${gsBatch}."
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.processSamplesheetsAndMoveConvertedData.finished absent -> processing failed for batch ${gsBatch}."
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to process batch ${gsBatch}." \
 					2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
