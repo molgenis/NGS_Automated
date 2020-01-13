@@ -360,9 +360,12 @@ function splitSamplesheetPerProject() {
 	#
 	for _project in "${_projects[@]}"
 	do
-		printf '%s\n' "project,run_id,pipeline,url,capturingKit,message,copy_results_prm,finishedDate"  > "${JOB_CONTROLE_FILE_BASE}.trackAndTrace_projects.csv"
-		printf '%s\n' "${_project},${_run},,,,,,"  >> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace_projects.csv"
-		trackAndTracePostFromFile 'status_projects' 'add'                    "${JOB_CONTROLE_FILE_BASE}.trackAndTrace_projects.csv"
+		printf '%s\n' "project,run_id,pipeline,url,capturingKit,message,copy_results_prm,finishedDate" \
+			> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace_projects.csv"
+		printf '%s\n' "${_project},${_run},,,,,," \
+			>> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace_projects.csv"
+		trackAndTracePostFromFile 'status_projects' 'add' \
+			"${JOB_CONTROLE_FILE_BASE}.trackAndTrace_projects.csv"
 		
 		#
 		# Skip project if demultiplexing only.
