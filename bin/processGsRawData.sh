@@ -35,7 +35,7 @@ REAL_USER="$(logname 2>/dev/null || echo 'no login name')"
 
 if [[ -f "${LIB_DIR}/sharedFunctions.bash" && -r "${LIB_DIR}/sharedFunctions.bash" ]]
 then
-	# shellcheck source=../lib/sharedFunctions.bash
+	# shellcheck source=lib/sharedFunctions.bash
 	source "${LIB_DIR}/sharedFunctions.bash"
 else
 	printf '%s\n' "FATAL: cannot find or cannot access sharedFunctions.bash"
@@ -53,7 +53,7 @@ function sanityChecking() {
 	#
 	local _batch="${1}"
 	local _controlFileBase="${2}"
-	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME}"
+	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
 	#
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing batch ${_batch}..."
 	#
@@ -410,7 +410,7 @@ function sanityChecking() {
 function renameFastQs() {
 	local _batch="${1}"
 	local _controlFileBase="${2}"
-	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME}"
+	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
 	local _batchDir="${TMP_ROOT_DIR}/${_batch}/"
 	#
 	# Check if function previously finished successfully for this data.
@@ -476,7 +476,7 @@ function renameFastQs() {
 function processSamplesheetsAndMoveConvertedData() {
 	local _batch="${1}"
 	local _controlFileBase="${2}"
-	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME}"
+	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
 	local _logFile="${_controlFileBaseForFunction}.log"
 	#
 	# Check if function previously finished successfully for this data.
