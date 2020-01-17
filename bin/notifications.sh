@@ -18,7 +18,7 @@ umask 0027
 
 # Env vars.
 export TMPDIR="${TMPDIR:-/tmp}" # Default to /tmp if $TMPDIR was not defined.
-SCRIPT_NAME="$(basename ${0})"
+SCRIPT_NAME="$(basename "${0}")"
 SCRIPT_NAME="${SCRIPT_NAME%.*sh}"
 INSTALLATION_DIR="$(cd -P "$(dirname "${0}")/.." && pwd)"
 LIB_DIR="${INSTALLATION_DIR}/lib"
@@ -32,7 +32,9 @@ REAL_USER="$(logname 2>/dev/null || echo 'no login name')"
 ### Functions.
 ##
 #
-if [[ -f "${LIB_DIR}/sharedFunctions.bash" && -r "${LIB_DIR}/sharedFunctions.bash" ]]; then
+if [[ -f "${LIB_DIR}/sharedFunctions.bash" && -r "${LIB_DIR}/sharedFunctions.bash" ]]
+then
+	# shellcheck source=lib/sharedFunctions.bash
 	source "${LIB_DIR}/sharedFunctions.bash"
 else
 	printf '%s\n' "FATAL: cannot find or cannot access sharedFunctions.bash"

@@ -5,10 +5,10 @@
 ### Environment and Bash sanity.
 ##
 #
-if [[ "${BASH_VERSINFO}" -lt 4 || "${BASH_VERSINFO[0]}" -lt 4 ]]
+if [[ "${BASH_VERSINFO[0]}" -lt 4 ]]
 then
-    echo "Sorry, you need at least bash 4.x to use ${0}." >&2
-    exit 1
+	echo "Sorry, you need at least bash 4.x to use ${0}." >&2
+	exit 1
 fi
 
 set -e # Exit if any subcommand or pipeline returns a non-zero exit status.
@@ -19,7 +19,7 @@ umask 0027
 
 # Env vars.
 export TMPDIR="${TMPDIR:-/tmp}" # Default to /tmp if $TMPDIR was not defined.
-SCRIPT_NAME="$(basename ${0})"
+SCRIPT_NAME="$(basename "${0}")"
 SCRIPT_NAME="${SCRIPT_NAME%.*sh}"
 INSTALLATION_DIR="$(cd -P "$(dirname "${0}")/.." && pwd)"
 LIB_DIR="${INSTALLATION_DIR}/lib"
@@ -35,44 +35,45 @@ REAL_USER="$(logname 2>/dev/null || echo 'no login name')"
 #
 if [[ -f "${LIB_DIR}/sharedFunctions.bash" && -r "${LIB_DIR}/sharedFunctions.bash" ]]
 then
-    source "${LIB_DIR}/sharedFunctions.bash"
+	# shellcheck source=lib/sharedFunctions.bash
+	source "${LIB_DIR}/sharedFunctions.bash"
 else
-    printf '%s\n' "FATAL: cannot find or cannot access sharedFunctions.bash"
-    exit 1
+	printf '%s\n' "FATAL: cannot find or cannot access sharedFunctions.bash"
+	exit 1
 fi
 
 function showHelp() {
-    #
-    # Display commandline help on STDOUT.
-    #
-    cat <<EOH
+	#
+	# Display commandline help on STDOUT.
+	#
+	cat <<EOH
 ===============================================================================================================
 Script to stage data from prm to tmp and then start automagically the pipeline
 
 Usage:
 
-    $(basename $0) OPTIONS
+	$(basename $0) OPTIONS
 
 Options:
 
-    -h   Show this help.
-    -r   which runnumber/runID (default is run01)
-    -g   Group.
-    -l   Log level.
-         Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
+	-h	Show this help.
+	-r	Run number / runID (default is run01)
+	-g	Group.
+	-l	Log level.
+		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
 Config and dependencies:
 
-    This script needs 3 config files, which must be located in ${CFG_DIR}:
-     1. <group>.cfg       for the group specified with -g
-     2. <host>.cfg        for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
-     3. sharedConfig.cfg  for all groups and all servers.
-    In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
+	This script needs 3 config files, which must be located in ${CFG_DIR}:
+		1. <group>.cfg       for the group specified with -g
+		2. <host>.cfg        for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
+		3. sharedConfig.cfg  for all groups and all servers.
+	In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
 ===============================================================================================================
 
 EOH
-    trap - EXIT
-    exit 0
+	trap - EXIT
+	exit 0
 }
 
 function generateScripts () {

@@ -5,7 +5,8 @@
 ### Environment and Bash sanity.
 ##
 #
-if [[ "${BASH_VERSINFO}" -lt 4 || "${BASH_VERSINFO[0]}" -lt 4 ]]; then
+if [[ "${BASH_VERSINFO[0]}" -lt 4 ]]
+then
 	echo "Sorry, you need at least bash 4.x to use ${0}." >&2
 	exit 1
 fi
@@ -18,7 +19,7 @@ umask 0027
 
 # Env vars.
 export TMPDIR="${TMPDIR:-/tmp}" # Default to /tmp if $TMPDIR was not defined.
-SCRIPT_NAME="$(basename ${0})"
+SCRIPT_NAME="$(basename "${0}")"
 SCRIPT_NAME="${SCRIPT_NAME%.*sh}"
 INSTALLATION_DIR="$(cd -P "$(dirname "${0}")/.." && pwd)"
 LIB_DIR="${INSTALLATION_DIR}/lib"
@@ -32,7 +33,10 @@ REAL_USER="$(logname 2>/dev/null || echo 'no login name')"
 ### Functions.
 ##
 #
-if [[ -f "${LIB_DIR}/sharedFunctions.bash" && -r "${LIB_DIR}/sharedFunctions.bash" ]]; then
+
+if [[ -f "${LIB_DIR}/sharedFunctions.bash" && -r "${LIB_DIR}/sharedFunctions.bash" ]]
+then
+	# shellcheck source=lib/sharedFunctions.bash
 	source "${LIB_DIR}/sharedFunctions.bash"
 else
 	printf '%s\n' "FATAL: cannot find or cannot access sharedFunctions.bash"
@@ -73,7 +77,7 @@ EOH
 #
 # Check for status and email notification
 #
-function calculateMd5(){
+function calculateMd5() {
 	local _project="${1}"
 	local _run="${2}"
 
@@ -114,7 +118,8 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline argume
 declare group=''
 declare email='false'
 declare dryrun=''
-while getopts "g:l:he" opt; do
+while getopts "g:l:he" opt
+do
 	case $opt in
 		h)
 			showHelp
@@ -141,10 +146,12 @@ done
 #
 # Check commandline options.
 #
-if [[ -z "${group:-}" ]]; then
+if [[ -z "${group:-}" ]]
+then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
 fi
-if [[ -n "${dryrun:-}" ]]; then
+if [[ -n "${dryrun:-}" ]]
+then
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Enabled dryrun option for rsync.'
 fi
 
@@ -157,8 +164,10 @@ declare -a configFiles=(
 	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
 	"${CFG_DIR}/sharedConfig.cfg"
 )
-for configFile in "${configFiles[@]}"; do
-	if [[ -f "${configFile}" && -r "${configFile}" ]]; then
+for configFile in "${configFiles[@]}"
+do
+	if [[ -f "${configFile}" && -r "${configFile}" ]]
+	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config file ${configFile}..."
 		#
 		# In some Bash versions the source command does not work properly with process substitution.
@@ -175,7 +184,8 @@ done
 #
 # Execution of this script requires ateambot account.
 #
-if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]; then
+if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]
+then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
 fi
 

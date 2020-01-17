@@ -5,7 +5,8 @@
 ### Environment and Bash sanity.
 ##
 #
-if [[ "${BASH_VERSINFO}" -lt 4 || "${BASH_VERSINFO[0]}" -lt 4 ]]; then
+if [[ "${BASH_VERSINFO[0]}" -lt 4 ]]
+then
 	echo "Sorry, you need at least bash 4.x to use ${0}." >&2
 	exit 1
 fi
@@ -33,6 +34,7 @@ REAL_USER="$(logname 2>/dev/null || echo 'no login name')"
 ##
 #
 if [[ -f "${LIB_DIR}/sharedFunctions.bash" && -r "${LIB_DIR}/sharedFunctions.bash" ]]; then
+	# shellcheck source=lib/sharedFunctions.bash
 	source "${LIB_DIR}/sharedFunctions.bash"
 else
 	printf '%s\n' "FATAL: cannot find or cannot access sharedFunctions.bash"
@@ -50,11 +52,11 @@ Script to check the status of the pipeline and emails notification
 Usage:
 	$(basename $0) OPTIONS
 Options:
-	-h   Show this help.
-	-g   Group.
-	-n   Dry-run: Do not perform actual removal, but only print the remove commands instead.
-	-e   Enable email notification. (Disabled by default.)
-	-l   Log level.
+	-h	Show this help.
+	-g	Group.
+	-n	Dry-run: Do not perform actual removal, but only print the remove commands instead.
+	-e	Enable email notification. (Disabled by default.)
+	-l	Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 Config and dependencies:
 	This script needs 3 config files, which must be located in ${CFG_DIR}:
