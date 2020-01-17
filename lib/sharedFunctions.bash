@@ -56,7 +56,8 @@ function log4Bash() {
 	#
 	# Validate params.
 	#
-	if [ ! ${#} -eq 5 ]; then
+	if [[ ! "${#}" -eq 5 ]]
+	then
 		echo "WARN: should have passed 5 arguments to ${FUNCNAME[0]}: log_level, LINENO, FUNCNAME, (Exit) STATUS and log_message."
 	fi
 	
@@ -70,7 +71,8 @@ function log4Bash() {
 	#
 	# Log message if prio exceeds threshold.
 	#
-	if [ ${_log_level_prio} -ge ${l4b_log_level_prio} ]; then
+	if [[ "${_log_level_prio}" -ge "${l4b_log_level_prio}" ]]
+	then
 		local _problematic_line="${2:-'?'}"
 		local _problematic_function="${3:-'main'}"
 		local _log_message="${5:-'No custom message.'}"
@@ -79,7 +81,8 @@ function log4Bash() {
 		# Some signals erroneously report $LINENO = 1,
 		# but that line contains the shebang and cannot be the one causing problems.
 		#
-		if [ "${_problematic_line}" -eq 1 ]; then
+		if [[ "${_problematic_line}" -eq 1 ]]
+		then
 			_problematic_line='?'
 		fi
 		
@@ -89,17 +92,20 @@ function log4Bash() {
 		local _log_timestamp=$(date "+%Y-%m-%dT%H:%M:%S") # Creates ISO 8601 compatible timestamp.
 		local _log_line_prefix=$(printf "%-s %-s %-5s @ L%-s(%-s)>" "${SCRIPT_NAME}" "${_log_timestamp}" "${_log_level}" "${_problematic_line}" "${_problematic_function}")
 		local _log_line="${_log_line_prefix} ${_log_message}"
-		if [ ! -z "${mixed_stdouterr:-}" ]; then
+		if [[ ! -z "${mixed_stdouterr:-}" ]]
+		then
 			_log_line="${_log_line} STD[OUT+ERR]: ${mixed_stdouterr}"
 		fi
-		if [ ${_status} -ne 0 ]; then
+		if [[ "${_status}" -ne 0 ]]
+		then
 			_log_line="${_log_line} (Exit status = ${_status})"
 		fi
 		
 		#
 		# Log to STDOUT (low prio <= 'WARN') or STDERR (high prio >= 'ERROR').
 		#
-		if [[ ${_log_level_prio} -ge ${l4b_log_levels['ERROR']} || ${_status} -ne 0 ]]; then
+		if [[ "${_log_level_prio}" -ge "${l4b_log_levels['ERROR']}" || "${_status}" -ne 0 ]]
+		then
 			printf '%s\n' "${_log_line}" 1>&2
 		else
 			printf '%s\n' "${_log_line}"
@@ -109,11 +115,12 @@ function log4Bash() {
 	#
 	# Exit if this was a FATAL error.
 	#
-	if [ ${_log_level_prio} -ge ${l4b_log_levels['FATAL']} ]; then
+	if [[ "${_log_level_prio}" -ge "${l4b_log_levels['FATAL']}" ]]
+	then
 		#
 		# Create ${JOB_CONTROLE_FILE_BASE}.failed if script defined the path to a job control file.
 		#
-		if [[ -n ${JOB_CONTROLE_FILE_BASE:-} ]]
+		if [[ -n "${JOB_CONTROLE_FILE_BASE:-}" ]]
 		then
 			if [[ -f "${JOB_CONTROLE_FILE_BASE}.started" && -w "${JOB_CONTROLE_FILE_BASE}.started" ]]
 			then
@@ -127,8 +134,9 @@ function log4Bash() {
 		# Reset trap and exit.
 		#
 		trap - EXIT
-		if [ ${_status} -ne 0 ]; then
-			exit ${_status}
+		if [[ "${_status}" -ne 0 ]]
+		then
+			exit "${_status}"
 		else
 			exit 1
 		fi
