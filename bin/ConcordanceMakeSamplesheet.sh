@@ -151,9 +151,9 @@ do
 		#
 		# Disable shellcheck code syntax checking for config files.
 		# shellcheck source=/dev/null
-		mixed_stdouterr=$(source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME[0]:-main}" ${?} "Cannot source ${configFile}."
+		mixed_stdouterr=$(source "${configFile}" 2>&1) || log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" "${?}" "Cannot source ${configFile}."
 		# shellcheck source=/dev/null
-		source ${configFile}  # May seem redundant, but is a mandatory workaround for some Bash versions.
+		source "${configFile}"  # May seem redundant, but is a mandatory workaround for some Bash versions.
 	else
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Config file ${configFile} missing or not accessible."
 	fi

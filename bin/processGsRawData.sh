@@ -94,7 +94,7 @@ function sanityChecking() {
 			2>> "${_controlFileBaseForFunction}.started" \
 			&& mv -f "${_gsSampleSheet}"{.converted,} \
 			2>> "${_controlFileBaseForFunction}.started" \
-		|| { log4Bash 'ERROR' ${LINENO} "${FUNCNAME[0]:-main}" '0' "Failed to convert line end characters and/or remove empty lines for ${_gsSampleSheet}." \
+		|| { log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to convert line end characters and/or remove empty lines for ${_gsSampleSheet}." \
 				2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
 				&& mv "${_controlFileBaseForFunction}."{started,failed}
 			return
@@ -265,7 +265,7 @@ function sanityChecking() {
 			log4Bash 'WARN' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Moving ${_archivedSampleSheet} to ${_sampleSheet} ..."
 			mv "${_archivedSampleSheet}" "${_sampleSheet}" \
 				2>> "${_controlFileBaseForFunction}.started" \
-			|| { log4Bash 'ERROR' ${LINENO} "${FUNCNAME[0]:-main}" '0' "Failed to move ${_archivedSampleSheet} to ${_sampleSheet}." \
+			|| { log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to move ${_archivedSampleSheet} to ${_sampleSheet}." \
 					2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
 					&& mv "${_controlFileBaseForFunction}."{started,failed}
 				return
@@ -293,7 +293,7 @@ function sanityChecking() {
 			2>> "${_controlFileBaseForFunction}.started" \
 			&& mv -f "${_sampleSheet}"{.converted,} \
 			2>> "${_controlFileBaseForFunction}.started" \
-		|| { log4Bash 'ERROR' ${LINENO} "${FUNCNAME[0]:-main}" '0' "Failed to convert line end characters and/or remove empty lines for ${_sampleSheet}." \
+		|| { log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to convert line end characters and/or remove empty lines for ${_sampleSheet}." \
 				2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
 				&& mv "${_controlFileBaseForFunction}."{started,failed}
 			return
@@ -446,7 +446,7 @@ function renameFastQs() {
 		&& module list \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
-		log4Bash 'ERROR' ${LINENO} "${FUNCNAME[0]:-main}" '0' "Cannot load ngs-utils/${NGS_UTILS_VERSION}. See ${_controlFileBaseForFunction}.failed for details." \
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Cannot load ngs-utils/${NGS_UTILS_VERSION}. See ${_controlFileBaseForFunction}.failed for details." \
 			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
 			&& mv "${_controlFileBaseForFunction}."{started,failed}
 		return
@@ -461,7 +461,7 @@ function renameFastQs() {
 		-f "${_batchDir}/"'*_'"${_batch}"'-*.fastq.gz' \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
-		log4Bash 'ERROR' ${LINENO} "${FUNCNAME[0]:-main}" '0' "renameFastQs failed. See ${_controlFileBaseForFunction}.failed for details." \
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "renameFastQs failed. See ${_controlFileBaseForFunction}.failed for details." \
 			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
 			&& mv "${_controlFileBaseForFunction}."{started,failed}
 		return
@@ -516,7 +516,7 @@ function processSamplesheetsAndMoveConvertedData() {
 		--logLevel "${_pythonLogLevel}" \
 		>> "${_logFile}" 2>&1 \
 	|| {
-		log4Bash 'ERROR' ${LINENO} "${FUNCNAME[0]:-main}" '0' "createInhouseSamplesheetFromGS.py failed. See ${_logFile} for details." \
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "createInhouseSamplesheetFromGS.py failed. See ${_logFile} for details." \
 			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
 			&& mv "${_controlFileBaseForFunction}."{started,failed}
 		return
@@ -626,7 +626,7 @@ function processSamplesheetsAndMoveConvertedData() {
 			2>> "${_controlFileBaseForFunction}.started" \
 			> "${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/${_runDir}.log" \
 		|| {
-			log4Bash 'ERROR' ${LINENO} "${FUNCNAME[0]:-main}" '0' "Failed to move ${_runDir}. See ${_controlFileBaseForFunction}.failed for details." \
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to move ${_runDir}. See ${_controlFileBaseForFunction}.failed for details." \
 				2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
 				&& mv "${_controlFileBaseForFunction}."{started,failed}
 			return
@@ -649,7 +649,7 @@ function processSamplesheetsAndMoveConvertedData() {
 		cp -v "${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/Samplesheets/" \
 			>> "${_controlFileBaseForFunction}.started" 2>&1 \
 		|| {
-			log4Bash 'ERROR' ${LINENO} "${FUNCNAME[0]:-main}" '0' "Failed to copy sequencing run samplesheet to ${TMP_ROOT_DIR}/Samplesheets/. See ${_controlFileBaseForFunction}.failed for details." \
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to copy sequencing run samplesheet to ${TMP_ROOT_DIR}/Samplesheets/. See ${_controlFileBaseForFunction}.failed for details." \
 				2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
 				&& mv "${_controlFileBaseForFunction}."{started,failed}
 			return
@@ -658,7 +658,7 @@ function processSamplesheetsAndMoveConvertedData() {
 			&& touch "${TMP_ROOT_DIR}/logs/${_runDir}/run01.demultiplexing.finished" \
 			>> "${_controlFileBaseForFunction}.started" 2>&1 \
 		|| {
-			log4Bash 'ERROR' ${LINENO} "${FUNCNAME[0]:-main}" '0' "Failed to touch ${TMP_ROOT_DIR}/logs/${_runDir}_Demultiplexing.finished. See ${_controlFileBaseForFunction}.failed for details." \
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to touch ${TMP_ROOT_DIR}/logs/${_runDir}_Demultiplexing.finished. See ${_controlFileBaseForFunction}.failed for details." \
 				2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
 				&& mv "${_controlFileBaseForFunction}."{started,failed}
 			return
@@ -773,9 +773,9 @@ do
 		#
 		# Disable shellcheck code syntax checking for config files.
 		# shellcheck source=/dev/null
-		mixed_stdouterr=$(source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME[0]:-main}" ${?} "Cannot source ${configFile}."
+		mixed_stdouterr=$(source "${configFile}" 2>&1) || log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" "${?}" "Cannot source ${configFile}."
 		# shellcheck source=/dev/null
-		source ${configFile}  # May seem redundant, but is a mandatory workaround for some Bash versions.
+		source "${configFile}"  # May seem redundant, but is a mandatory workaround for some Bash versions.
 	else
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Config file ${configFile} missing or not accessible."
 	fi

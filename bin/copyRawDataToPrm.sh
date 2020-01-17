@@ -137,7 +137,7 @@ function rsyncRuns() {
 			"${PRM_ROOT_DIR}/rawdata/${_rawDataType}/" \
 		|| {
 			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-			log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${_rawDataType}/${_run}/ dir. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Failed to rsync ${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${_rawDataType}/${_run}/ dir. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
 			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync of sequence run dir failed. See ${JOB_CONTROLE_FILE_BASE}.failed for details." \
 				>> "${JOB_CONTROLE_FILE_BASE}.failed"
 			_transferSoFarSoGood='false'
@@ -254,7 +254,7 @@ function splitSamplesheetPerProject() {
 		"${PRM_ROOT_DIR}/Samplesheets/archive/" \
 	|| {
 		mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-		log4Bash 'ERROR' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to rsync ${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Failed to rsync ${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
 		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync of sample sheet failed. See ${JOB_CONTROLE_FILE_BASE}.failed for details." \
 			>> "${JOB_CONTROLE_FILE_BASE}.failed"
 	}
@@ -535,9 +535,9 @@ do
 		#
 		# Disable shellcheck code syntax checking for config files.
 		# shellcheck source=/dev/null
-		mixed_stdouterr=$(source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME[0]:-main}" ${?} "Cannot source ${configFile}."
+		mixed_stdouterr=$(source "${configFile}" 2>&1) || log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" "${?}" "Cannot source ${configFile}."
 		# shellcheck source=/dev/null
-		source ${configFile}  # May seem redundant, but is a mandatory workaround for some Bash versions.
+		source "${configFile}"  # May seem redundant, but is a mandatory workaround for some Bash versions.
 	else
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Config file ${configFile} missing or not accessible."
 	fi

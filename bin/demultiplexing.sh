@@ -136,9 +136,9 @@ do
 		#
 		# Disable shellcheck code syntax checking for config files.
 		# shellcheck source=/dev/null
-		mixed_stdouterr=$(source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot source ${configFile}."
+		mixed_stdouterr=$(source "${configFile}" 2>&1) || log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Cannot source ${configFile}."
 		# shellcheck source=/dev/null
-		source ${configFile}  # May seem redundant, but is a mandatory workaround for some Bash versions.
+		source "${configFile}"  # May seem redundant, but is a mandatory workaround for some Bash versions.
 	else
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Config file ${configFile} missing or not accessible."
 	fi
@@ -233,12 +233,13 @@ do
 	#
 	# Track and Trace.
 	#
-	printf "run_id,group,demultiplexing,copy_raw_prm,projects,startDate\n" > "${SCR_ROOT_DIR}/logs/${project}/run01.uploading.csv"
-	nowDate=$(date +%FT%T%z)
-	printf "${project},${group},started,,,${nowDate}" >> "${SCR_ROOT_DIR}/logs/${project}/run01.uploading.csv"
-	CURLRESPONSE=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
-	TOKEN=${CURLRESPONSE:10:32}
-	curl -H "x-molgenis-token:${TOKEN}" -X POST -F"file=@${SCR_ROOT_DIR}/logs/${project}/run01.uploading.csv" -FentityTypeId='status_overview' -FmetadataAction=ignore -Faction=add -Fnotify=false https://${MOLGENISSERVER}/plugin/importwizard/importFile
+	timeStamp="$(date +%FT%T%z)"
+	printf '%s\n' 'run_id,group,demultiplexing,copy_raw_prm,projects,startDate' \
+		> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace_overview.csv"
+	printf '%s\n' "${project},${group},started,,,${timeStamp}" \
+		>> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace_overview.csv"
+	trackAndTracePostFromFile 'status_overview' 'add' \
+		"${JOB_CONTROLE_FILE_BASE}.trackAndTrace_overview.csv"
 done
 
 trap - EXIT

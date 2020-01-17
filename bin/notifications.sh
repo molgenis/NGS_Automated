@@ -116,7 +116,7 @@ function notification() {
 		if $(ls "${_LFS_ROOT_DIR}/logs/"*"/"*".${_phase}.${_state}" 1> /dev/null 2>&1)
 		then
 			_project_state_files=($(ls -1 "${_LFS_ROOT_DIR}/logs/"*"/"*".${_phase}.${_state}")) \
-				|| log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Failed to create a list of ${_LFS_ROOT_DIR}/logs/*/*.${_phase}.${_state} files."
+				|| log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" $? "Failed to create a list of ${_LFS_ROOT_DIR}/logs/*/*.${_phase}.${_state} files."
 		else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No *.${_phase}.${_state} files present in ${_LFS_ROOT_DIR}/logs/*/."
 			continue
@@ -279,9 +279,9 @@ do
 		#
 		# Disable shellcheck code syntax checking for config files.
 		# shellcheck source=/dev/null
-		mixed_stdouterr=$(source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME[0]:-main}" ${?} "Cannot source ${configFile}."
+		mixed_stdouterr=$(source "${configFile}" 2>&1) || log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" "${?}" "Cannot source ${configFile}."
 		# shellcheck source=/dev/null
-		source ${configFile}  # May seem redundant, but is a mandatory workaround for some Bash versions.
+		source "${configFile}"  # May seem redundant, but is a mandatory workaround for some Bash versions.
 	else
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Config file ${configFile} missing or not accessible."
 	fi

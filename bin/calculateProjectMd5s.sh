@@ -91,16 +91,16 @@ function calculateMd5() {
 			local _checksumVerification='unknown'
 			echo "checksum started" > "${_controlFileBase}.started"
 			cd "${TMP_ROOT_DIR}/projects/${_project}/" \
-				|| log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot access ${TMP_ROOT_DIR}/projects/${_project}/."
+				|| log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Cannot access ${TMP_ROOT_DIR}/projects/${_project}/."
 			md5deep -r -j0 -o f -l "${_run}/" > "${_run}.md5" 2>> "${_logFile}" \
 				|| {
 						echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details." \
 							>> "${_controlFileBase}.failed"
-						log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot compute checksums with md5deep. See ${_logFile} for details."
+						log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Cannot compute checksums with md5deep. See ${_logFile} for details."
 				}
 			mv "${_controlFileBase}."{started,finished}
 		else
-			log4Bash 'DEBUG' ${LINENO} "${FUNCNAME:-main}" '0' "project ${_project} not finished (yet)"
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "project ${_project} not finished (yet)"
 		fi
 	fi
 }
@@ -176,9 +176,9 @@ do
 		#
 		# Disable shellcheck code syntax checking for config files.
 		# shellcheck source=/dev/null
-		mixed_stdouterr=$(source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot source ${configFile}."
+		mixed_stdouterr=$(source "${configFile}" 2>&1) || log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Cannot source ${configFile}."
 		# shellcheck source=/dev/null
-		source ${configFile}  # May seem redundant, but is a mandatory workaround for some Bash versions.
+		source "${configFile}"  # May seem redundant, but is a mandatory workaround for some Bash versions.
 	else
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Config file ${configFile} missing or not accessible."
 	fi
@@ -197,7 +197,7 @@ thereShallBeOnlyOne "${lockFile}"
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile}..."
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${TMP_ROOT_DIR}/logs..."
 
-module load hashdeep/${HASHDEEP_VERSION} || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} 'Failed to load hashdeep module.'
+module load hashdeep/${HASHDEEP_VERSION} || log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" "${?}" 'Failed to load hashdeep module.'
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "$(module list)"
 
 declare -a projects=($(find "${TMP_ROOT_DIR}/projects/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${TMP_ROOT_DIR}/projects/||"))
