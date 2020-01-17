@@ -29,35 +29,35 @@ function trapHandler() {
 #
 # Trap all exit signals: HUP(1), INT(2), QUIT(3), TERM(15), ERR.
 #
-trapSig 'trapHandler' '${LINENO}' '${FUNCNAME:-main}' '$?' HUP INT QUIT TERM EXIT ERR
+trapSig 'trapHandler' '${LINENO}' '${FUNCNAME[0]:-main}' '$?' HUP INT QUIT TERM EXIT ERR
 
 #
 # Catch all function for logging using log levels like in Log4j.
 #
 # Requires 5 ARGS:
-#  1. log_level     Defined explicitly by programmer.
-#  2. ${LINENO}     Bash env var indicating the active line number in the executing script.
-#  3. ${FUNCNAME}   Bash env var indicating the active function in the executing script.
-#  4. (Exit) STATUS Either defined explicitly by programmer or use Bash env var ${?} for the exit status of the last command.
-#  5  log_message   Defined explicitly by programmer.
+#  1. log_level        Defined explicitly by programmer.
+#  2. ${LINENO}        Bash env var indicating the active line number in the executing script.
+#  3. ${FUNCNAME[0]}   Bash env var indicating the active function in the executing script.
+#  4. (Exit) STATUS    Either defined explicitly by programmer or use Bash env var ${?} for the exit status of the last command.
+#  5  log_message      Defined explicitly by programmer.
 #
 # When log_level == FATAL the script will be terminated.
 #
 # Example of debug log line (should use EXIT_STATUS = 0 = 'OK'):
-#    log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'We managed to get this far.'
+#    log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' 'We managed to get this far.'
 #
 # Example of FATAL error with explicit exit status 1 defined by the script: 
-#    log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" '1' 'We cannot continue because of ....'
+#    log4Bash 'FATAL' ${LINENO} "${FUNCNAME[0]:-main}" '1' 'We cannot continue because of ....'
 #
 # Example of executing a command and logging failure with the EXIT_STATUS of that command (= ${?}):
-#    someCommand || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} 'Failed to execute someCommand.'
+#    someCommand || log4Bash 'FATAL' ${LINENO} "${FUNCNAME[0]:-main}" ${?} 'Failed to execute someCommand.'
 #
 function log4Bash() {
 	#
 	# Validate params.
 	#
 	if [ ! ${#} -eq 5 ]; then
-		echo "WARN: should have passed 5 arguments to ${FUNCNAME}: log_level, LINENO, FUNCNAME, (Exit) STATUS and log_message."
+		echo "WARN: should have passed 5 arguments to ${FUNCNAME[0]}: log_level, LINENO, FUNCNAME, (Exit) STATUS and log_message."
 	fi
 	
 	#
@@ -157,11 +157,11 @@ mixed_stdouterr='' # global variable to capture output from commands for reporti
 function thereShallBeOnlyOne() {
 	local _lock_file="${1}"
 	local _lock_dir="$(dirname "${_lock_file}")"
-	mkdir -p "${_lock_dir}"  || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to create dir for lock file @ ${_lock_dir}."
-	exec 200>"${_lock_file}" || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Failed to create FD 200>${_lock_file} for locking."
+	mkdir -p "${_lock_dir}"  || log4Bash 'FATAL' ${LINENO} "${FUNCNAME[0]:-main}" ${?} "Failed to create dir for lock file @ ${_lock_dir}."
+	exec 200>"${_lock_file}" || log4Bash 'FATAL' ${LINENO} "${FUNCNAME[0]:-main}" ${?} "Failed to create FD 200>${_lock_file} for locking."
 	if ! flock -n 200; then
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Lockfile ${_lock_file} already claimed by another instance of $(basename ${0})."
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Another instance is already running and there shall be only one.'
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Lockfile ${_lock_file} already claimed by another instance of $(basename ${0})."
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' 'Another instance is already running and there shall be only one.'
 		# No need for explicit exit here: log4Bash with log level FATAL will make sure we exit.
 	fi
 }
@@ -171,13 +171,13 @@ function trackAndTracePostFromFile() {
 	local _action="${2}"
 	local _file="${3}"
 
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Trying to get a token for REST API @ https://${MOLGENISSERVER}/api/v1/login..."
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Trying to get a token for REST API @ https://${MOLGENISSERVER}/api/v1/login..."
 	if curl -f -s -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login
 	then
 		local _curlResponse=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
 		local _token=${_curlResponse:10:32}
 	
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Trying to POST track&trace info using action ${_action} for entityTypeId=${_entityTypeId} from file=${_file} to https://${MOLGENISSERVER}/plugin/importwizard/importFile..."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Trying to POST track&trace info using action ${_action} for entityTypeId=${_entityTypeId} from file=${_file} to https://${MOLGENISSERVER}/plugin/importwizard/importFile..."
 
 		local _lastHttpResponseStatus=$(curl -i \
 			-H "x-molgenis-token:${_token}" \
@@ -197,14 +197,14 @@ function trackAndTracePostFromFile() {
 			local _statusCode="${BASH_REMATCH[1]}"
 			if [[ ${_statusCode} -ge 400 ]]
 			then
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "HTTP response status was ${_lastHttpResponseStatus}."
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to POST track&trace info using action ${_action} for entityTypeId=${_entityTypeId} from file=${_file} to https://${MOLGENISSERVER}/plugin/importwizard/importFile"
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "HTTP response status was ${_lastHttpResponseStatus}."
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to POST track&trace info using action ${_action} for entityTypeId=${_entityTypeId} from file=${_file} to https://${MOLGENISSERVER}/plugin/importwizard/importFile"
 			else
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully POSTed track&trace info. HTTP response status was ${_lastHttpResponseStatus}."
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully POSTed track&trace info. HTTP response status was ${_lastHttpResponseStatus}."
 			fi
 		else
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to parse status code number from HTTP response status ${_lastHttpResponseStatus}."
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to POST track&trace info using action ${_action} for entityTypeId=${_entityTypeId} from file=${_file} to https://${MOLGENISSERVER}/plugin/importwizard/importFile"
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to parse status code number from HTTP response status ${_lastHttpResponseStatus}."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to POST track&trace info using action ${_action} for entityTypeId=${_entityTypeId} from file=${_file} to https://${MOLGENISSERVER}/plugin/importwizard/importFile"
 		fi
 	else
 		echo "could not connect to a molgenis server: ${MOLGENISSERVER}"
@@ -217,13 +217,13 @@ function trackAndTracePut() {
 	local _jobID="${2}"
 	local _field="${3}"
 	local _content="${4}"
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Trying to get a token for REST API @ https://${MOLGENISSERVER}/api/v1/login..."
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Trying to get a token for REST API @ https://${MOLGENISSERVER}/api/v1/login..."
 	if curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login
 	then
 		local _curlResponse=$(curl -H "Content-Type: application/json" -X POST -d "{"username"="${USERNAME}", "password"="${PASSWORD}"}" https://${MOLGENISSERVER}/api/v1/login)
 		local _token=${_curlResponse:10:32}
 
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Trying to set status ${_content} for field ${_field} in entityTypeId=${_entityTypeId} with jobID ${_jobID}"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Trying to set status ${_content} for field ${_field} in entityTypeId=${_entityTypeId} with jobID ${_jobID}"
 		echo "curl -i -H \"x-molgenis-token:${_token}\" -X PUT -d \"${_content}\" https://${MOLGENISSERVER}/api/v1/${_entityTypeId}/${_jobID}/${_field}"
 		local _lastHttpResponseStatus=$(curl -i \
 			-H "Content-Type:application/json" \
@@ -240,14 +240,14 @@ function trackAndTracePut() {
 			local _statusCode="${BASH_REMATCH[1]}"
 			if [[ ${_statusCode} -ge 400 ]]
 			then
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "HTTP response status was ${_lastHttpResponseStatus}."
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to set status ${_content} for field ${_field} in entityTypeId=${_entityTypeId} with jobID ${_jobID}"
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "HTTP response status was ${_lastHttpResponseStatus}."
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to set status ${_content} for field ${_field} in entityTypeId=${_entityTypeId} with jobID ${_jobID}"
 			else
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully PUTted track&trace info. HTTP response status was ${_lastHttpResponseStatus}."
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully PUTted track&trace info. HTTP response status was ${_lastHttpResponseStatus}."
 			fi
 		else
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to parse status code number from HTTP response status ${_lastHttpResponseStatus}."
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to set status ${_content} for field ${_field} in entityTypeId=${_entityTypeId} with jobID ${_jobID}"
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to parse status code number from HTTP response status ${_lastHttpResponseStatus}."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to set status ${_content} for field ${_field} in entityTypeId=${_entityTypeId} with jobID ${_jobID}"
 		fi
 	else
 		echo "could not upload to a molgenis server: ${MOLGENISSERVER}"
