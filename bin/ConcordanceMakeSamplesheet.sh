@@ -53,7 +53,7 @@ array.vcf should be in /groups/${ARRAYGROUP}/${PRM_LFS}/concordance/array/.
 
 Usage:
 
-	$(basename $0) OPTIONS
+	$(basename "${0}") OPTIONS
 
 Options:
 
@@ -92,27 +92,27 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline argume
 declare group=''
 while getopts "g:a:l:h" opt
 do
-        case $opt in
-                h)
-                        showHelp
-                        ;;
-                g)
-                        NGSGROUP="${OPTARG}"
-                        ;;
-                a)
-                        ARRAYGROUP="${OPTARG}"
-                        ;;
-                l)
-                        l4b_log_level=${OPTARG^^}
-                        l4b_log_level_prio=${l4b_log_levels[${l4b_log_level}]}
-                        ;;
-                \?)
-                        log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Invalid option -${OPTARG}. Try $(basename $0) -h for help."
-                        ;;
-                :)
-                        log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Option -${OPTARG} requires an argument. Try $(basename $0) -h for help."
-                        ;;
-        esac
+	case $opt in
+		h)
+			showHelp
+			;;
+		g)
+			NGSGROUP="${OPTARG}"
+			;;
+		a)
+			ARRAYGROUP="${OPTARG}"
+			;;
+		l)
+			l4b_log_level="${OPTARG^^}"
+			l4b_log_level_prio="${l4b_log_levels[${l4b_log_level}]}"
+			;;
+		\?)
+			log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Invalid option -${OPTARG}. Try $(basename "${0}") -h for help."
+			;;
+		:)
+			log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Option -${OPTARG} requires an argument. Try $(basename "${0}") -h for help."
+			;;
+	esac
 done
 
 #
@@ -120,39 +120,43 @@ done
 #
 if [[ -z "${NGSGROUP:-}" ]]
 then
-        log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a ngs-group with -g. For the ngs.vcf files'
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a ngs-group with -g. For the ngs.vcf files'
 fi
 
 if [[ -z "${ARRAYGROUP:-}" ]]
 then
-        log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify an array-group with -a. for the array.vcf files'
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify an array-group with -a. for the array.vcf files'
 fi
 #
 # Source config files.
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files..."
 declare -a configFiles=(
-        "${CFG_DIR}/${NGSGROUP}.cfg"
-        "${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
-        "${CFG_DIR}/sharedConfig.cfg"
+	"${CFG_DIR}/${NGSGROUP}.cfg"
+	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
+	"${CFG_DIR}/sharedConfig.cfg"
 	"${CFG_DIR}/ConcordanceCheck.cfg"
-        "${HOME}/molgenis.cfg"
+	"${HOME}/molgenis.cfg"
 )
 
-for configFile in "${configFiles[@]}"; do 
-        if [[ -f "${configFile}" && -r "${configFile}" ]]
-        then
-                log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config file ${configFile}..."
-                #
-                # In some Bash versions the source command does not work properly with process substitution.
-                # Therefore we source a first time with process substitution for proper error handling
-                # and a second time without just to make sure we can use the content from the sourced files.
-                #
-                mixed_stdouterr=$(source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot source ${configFile}."
-                source ${configFile}  # May seem redundant, but is a mandatory workaround for some Bash versions.
-        else
-                log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Config file ${configFile} missing or not accessible."
-        fi
+for configFile in "${configFiles[@]}"
+do
+	if [[ -f "${configFile}" && -r "${configFile}" ]]
+	then
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Sourcing config file ${configFile}..."
+		#
+		# In some Bash versions the source command does not work properly with process substitution.
+		# Therefore we source a first time with process substitution for proper error handling
+		# and a second time without just to make sure we can use the content from the sourced files.
+		#
+		# Disable shellcheck code syntax checking for config files.
+		# shellcheck source=/dev/null
+		mixed_stdouterr=$(source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME[0]:-main}" ${?} "Cannot source ${configFile}."
+		# shellcheck source=/dev/null
+		source ${configFile}  # May seem redundant, but is a mandatory workaround for some Bash versions.
+	else
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Config file ${configFile} missing or not accessible."
+	fi
 done
 
 #
@@ -161,7 +165,7 @@ done
 
 if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]
 then
-        log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
 fi
 
 

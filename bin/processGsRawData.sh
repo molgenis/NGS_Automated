@@ -690,7 +690,7 @@ Script to process GenomeScan data:
 	1. Convert FastQ files to format required by NGS_DNA / NGS_RNA piplines.
 	2. Supplement samplesheets with meta-data from the sequencing experiment.
 Usage:
-	$(basename $0) OPTIONS
+	$(basename "${0}") OPTIONS
 Options:
 	-h	Show this help.
 	-g	Group.
@@ -734,10 +734,10 @@ do
 			l4b_log_level_prio="${l4b_log_levels[${l4b_log_level}]}"
 			;;
 		\?)
-			log4Bash "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Invalid option -${OPTARG}. Try $(basename $0) -h for help."
+			log4Bash "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Invalid option -${OPTARG}. Try $(basename "${0}") -h for help."
 			;;
 		:)
-			log4Bash "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Option -${OPTARG} requires an argument. Try $(basename $0) -h for help."
+			log4Bash "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Option -${OPTARG} requires an argument. Try $(basename "${0}") -h for help."
 			;;
 	esac
 done

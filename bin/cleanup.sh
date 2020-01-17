@@ -50,7 +50,7 @@ function showHelp() {
 ===============================================================================================================
 Script to check the status of the pipeline and emails notification
 Usage:
-	$(basename $0) OPTIONS
+	$(basename "${0}") OPTIONS
 Options:
 	-h	Show this help.
 	-g	Group.
@@ -99,10 +99,10 @@ while getopts "g:l:nh" opt; do
 			l4b_log_level_prio=${l4b_log_levels[${l4b_log_level}]}
 			;;
 		\?)
-			log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Invalid option -${OPTARG}. Try $(basename $0) -h for help."
+			log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Invalid option -${OPTARG}. Try $(basename "${0}") -h for help."
 			;;
 		:)
-			log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Option -${OPTARG} requires an argument. Try $(basename $0) -h for help."
+			log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Option -${OPTARG} requires an argument. Try $(basename "${0}") -h for help."
 			;;
 	esac
 done
@@ -141,7 +141,10 @@ for configFile in "${configFiles[@]}"; do
 		# Therefore we source a first time with process substitution for proper error handling
 		# and a second time without just to make sure we can use the content from the sourced files.
 		#
+		# Disable shellcheck code syntax checking for config files.
+		# shellcheck source=/dev/null
 		mixed_stdouterr=$(source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot source ${configFile}."
+		# shellcheck source=/dev/null
 		source ${configFile}  # May seem redundant, but is a mandatory workaround for some Bash versions.
 	else
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Config file ${configFile} missing or not accessible."
