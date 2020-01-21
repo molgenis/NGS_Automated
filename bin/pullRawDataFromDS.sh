@@ -180,6 +180,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 logTimeStamp="$(date "+%Y-%m-%d")"
 logDir="${TMP_ROOT_DIR}/logs/${logTimeStamp}/"
+# shellcheck disable=SC2174
 mkdir -m 2770 -p "${logDir}"
 touch "${logDir}"
 export JOB_CONTROLE_FILE_BASE="${logDir}/${logTimeStamp}.${SCRIPT_NAME}"
@@ -189,6 +190,7 @@ export JOB_CONTROLE_FILE_BASE="${logDir}/${logTimeStamp}.${SCRIPT_NAME}"
 # * first rsync everything, but with an exclude pattern for '*.finished' and
 # * then do a second rsync for only '*.finished' files.
 #
+# shellcheck disable=SC2153
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pulling data from data staging server ${HOSTNAME_DATA_STAGING%%.*} using rsync to /groups/${GROUP}/${TMP_LFS}/ ..."
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "See ${logDir}/rsync-from-${HOSTNAME_DATA_STAGING%%.*}.log for details ..."
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Rsyncing everything except the .finished files ...'
@@ -215,6 +217,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Rsyncing only the .finishe
 # Cleanup old data if data transfer with rsync finished successfully (and hence did not crash this script).
 #
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting data older than 14 days from ${HOSTNAME_DATA_STAGING%%.*}:/groups/${GROUP}/${SCR_LFS}/ ..."
+# shellcheck disable=SC2029
 /usr/bin/ssh "${HOSTNAME_DATA_STAGING}" "/bin/find /groups/${GROUP}/${SCR_LFS}/ -mtime +14 -ignore_readdir_race -delete"
 
 #
