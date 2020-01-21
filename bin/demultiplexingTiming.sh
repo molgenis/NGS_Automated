@@ -87,11 +87,11 @@ EOH
 #
 # Get commandline arguments.
 #
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments..."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
 while getopts "g:l:h" opt
 do
-	case $opt in
+	case "${opt}" in
 		h)
 			showHelp
 			;;
@@ -99,16 +99,18 @@ do
 			GROUP="${OPTARG}"
 			;;
 		l)
-			l4b_log_level=${OPTARG^^}
-			l4b_log_level_prio=${l4b_log_levels[${l4b_log_level}]}
+			l4b_log_level="${OPTARG^^}"
+			l4b_log_level_prio="${l4b_log_levels["${l4b_log_level}"]}"
 			;;
 		\?)
-			log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Invalid option -${OPTARG}. Try $(basename "${0}") -h for help."
+			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Invalid option -${OPTARG}. Try $(basename "${0}") -h for help."
 			;;
 		:)
-			log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Option -${OPTARG} requires an argument. Try $(basename "${0}") -h for help."
+			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Option -${OPTARG} requires an argument. Try $(basename "${0}") -h for help."
 			;;
-	esac
+		*)
+			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Unhandled option. Try $(basename "${0}") -h for help."
+			;;	esac
 done
 
 #
@@ -122,7 +124,7 @@ fi
 #
 # Source config files.
 #
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files..."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files ..."
 declare -a configFiles=(
 	"${CFG_DIR}/${GROUP}.cfg"
 	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
@@ -134,7 +136,7 @@ for configFile in "${configFiles[@]}"
 do
 	if [[ -f "${configFile}" && -r "${configFile}" ]]
 	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Sourcing config file ${configFile}..."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Sourcing config file ${configFile} ..."
 		#
 		# In some Bash versions the source command does not work properly with process substitution.
 		# Therefore we source a first time with process substitution for proper error handling

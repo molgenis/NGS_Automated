@@ -97,13 +97,13 @@ EOH
 #
 # Get commandline arguments.
 #
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments..."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
 declare email='false'
 declare dryrun=''
 while getopts "g:l:hn" opt
 do
-	case $opt in
+	case "${opt}" in
 		h)
 			showHelp
 			;;
@@ -115,15 +115,17 @@ do
 			;;
 		l)
 			l4b_log_level="${OPTARG^^}"
-			l4b_log_level_prio="${l4b_log_levels[${l4b_log_level}]}"
+			l4b_log_level_prio="${l4b_log_levels["${l4b_log_level}"]}"
 			;;
 		\?)
-			log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Invalid option -${OPTARG}. Try $(basename "${0}") -h for help."
+			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Invalid option -${OPTARG}. Try $(basename "${0}") -h for help."
 			;;
 		:)
-			log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Option -${OPTARG} requires an argument. Try $(basename "${0}") -h for help."
+			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Option -${OPTARG} requires an argument. Try $(basename "${0}") -h for help."
 			;;
-	esac
+		*)
+			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Unhandled option. Try $(basename "${0}") -h for help."
+			;;	esac
 done
 
 #
@@ -141,7 +143,7 @@ fi
 #
 # Source config files.
 #
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files..."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files ..."
 declare -a configFiles=(
 	"${CFG_DIR}/${group}.cfg"
 	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
@@ -152,7 +154,7 @@ for configFile in "${configFiles[@]}"
 do
 	if [[ -f "${configFile}" && -r "${configFile}" ]]
 	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Sourcing config file ${configFile}..."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Sourcing config file ${configFile} ..."
 		#
 		# In some Bash versions the source command does not work properly with process substitution.
 		# Therefore we source a first time with process substitution for proper error handling
@@ -187,8 +189,8 @@ fi
 #
 lockFile="${PRM_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
 thereShallBeOnlyOne "${lockFile}"
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile}..."
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${PRM_ROOT_DIR}/logs..."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile} ..."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${PRM_ROOT_DIR}/logs ..."
 
 #
 # Use multiplexing to reduce the amount of SSH connections created
@@ -218,7 +220,7 @@ else
 		# Process this sample sheet / run.
 		#
 		filePrefix="$(basename "${sampleSheet%%.*}")"
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${filePrefix}..."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${filePrefix} ..."
 		ngsVcfId=$(ssh ${DATA_MANAGER}@${HOSTNAME_TMP} "awk '{if (NR>1){print \$2}}' ${sampleSheet}")
 
 		if ssh "${DATA_MANAGER}@${HOSTNAME_TMP}" test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/concordance/logs/${filePrefix}.ConcordanceCheck.finished"

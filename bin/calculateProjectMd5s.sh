@@ -54,10 +54,9 @@ Script to calculate the checksums of the project
 Usage:
 	$(basename "${0}") OPTIONS
 Options:
-	-h   Show this help.
-	-g   Group.
-	-e   Enable email notification. (Disabled by default.)
-	-l   Log level.
+	-h	Show this help.
+	-g	Group.
+	-l	Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
 Config and dependencies:
@@ -75,34 +74,55 @@ EOH
 
 
 #
-# Check for status and email notification
+# Compute checksums recursively for a given project folder.
 #
 function calculateMd5() {
-	local _project="${1}"
-	local _run="${2}"
-
-	local _controlFileBase="${TMP_ROOT_DIR}/logs/${_project}/${_run}.${SCRIPT_NAME}"
-	local _logFile="${_controlFileBase}.log"
-
-	if [ ! -f "${_controlFileBase}.finished" ]
+	local _project
+	local _run
+	local _controlFileBase
+	_project="${1}"
+	_run="${2}"
+	_controlFileBase="${TMP_ROOT_DIR}/logs/${_project}/${_run}"
+	#
+	export JOB_CONTROLE_FILE_BASE="${_controlFileBase}.${SCRIPT_NAME}"
+	#
+	# Check if we should create checksums for this run of this project .
+	#
+	if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 	then
-		if [ -f ${TMP_ROOT_DIR}/logs/${project}/${_run}.pipeline.finished ]
-		then
-			local _checksumVerification='unknown'
-			echo "checksum started" > "${_controlFileBase}.started"
-			cd "${TMP_ROOT_DIR}/projects/${_project}/" \
-				|| log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Cannot access ${TMP_ROOT_DIR}/projects/${_project}/."
-			md5deep -r -j0 -o f -l "${_run}/" > "${_run}.md5" 2>> "${_logFile}" \
-				|| {
-						echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${TMP_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details." \
-							>> "${_controlFileBase}.failed"
-						log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Cannot compute checksums with md5deep. See ${_logFile} for details."
-				}
-			mv "${_controlFileBase}."{started,finished}
-		else
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "project ${_project} not finished (yet)"
-		fi
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
+			"Found ${JOB_CONTROLE_FILE_BASE}.finished: skipping ${_project}/${_run}/ ... "
+		return
 	fi
+	if [[ ! -e "${_controlFileBase}.pipeline.finished" ]]
+	then
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
+			"Cannot find ${_controlFileBase}.pipeline.finished: skipping ${_project}/${_run}/ ... "
+		return
+	fi
+	#
+	# All checks passed: start computing checksums.
+	#
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
+		"Creating checksums for ${TMP_ROOT_DIR}/projects/${_project}/${_run}/ ... " \
+		2>&1 | tee "${JOB_CONTROLE_FILE_BASE}.started"
+	cd "${TMP_ROOT_DIR}/projects/${_project}/" \
+		|| {
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" \
+				"Cannot access ${TMP_ROOT_DIR}/projects/${_project}/." \
+				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
+				&& mv "${JOB_CONTROLE_FILE_BASE}."{started,failed} \
+				&& return
+		}
+	md5deep -r -j0 -o f -l "${_run}/" > "${_run}.md5" 2>> "${JOB_CONTROLE_FILE_BASE}.started" \
+		|| {
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" \
+				"Checksum verification failed. See ${JOB_CONTROLE_FILE_BASE}.failed for details." \
+				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
+				&& mv "${JOB_CONTROLE_FILE_BASE}."{started,failed} \
+				&& return
+		}
+	mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 }
 
 #
@@ -114,31 +134,29 @@ function calculateMd5() {
 #
 # Get commandline arguments.
 #
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments..."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
-declare email='false'
-declare dryrun=''
-while getopts "g:l:he" opt
+while getopts "g:l:h" opt
 do
-	case $opt in
+	case ${opt} in
 		h)
 			showHelp
 			;;
 		g)
 			group="${OPTARG}"
 			;;
-		e)
-			email='true'
-			;;
 		l)
-			l4b_log_level=${OPTARG^^}
-			l4b_log_level_prio=${l4b_log_levels[${l4b_log_level}]}
+			l4b_log_level="${OPTARG^^}"
+			l4b_log_level_prio="${l4b_log_levels["${l4b_log_level}"]}"
 			;;
 		\?)
-			log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Invalid option -${OPTARG}. Try $(basename "${0}") -h for help."
+			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Invalid option -${OPTARG}. Try $(basename "${0}") -h for help."
 			;;
 		:)
-			log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Option -${OPTARG} requires an argument. Try $(basename "${0}") -h for help."
+			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Option -${OPTARG} requires an argument. Try $(basename "${0}") -h for help."
+			;;
+		*)
+			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Unhandled option. Try $(basename "${0}") -h for help."
 			;;
 	esac
 done
@@ -150,15 +168,11 @@ if [[ -z "${group:-}" ]]
 then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
 fi
-if [[ -n "${dryrun:-}" ]]
-then
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Enabled dryrun option for rsync.'
-fi
 
 #
 # Source config files.
 #
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files..."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files ..."
 declare -a configFiles=(
 	"${CFG_DIR}/${group}.cfg"
 	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
@@ -168,7 +182,7 @@ for configFile in "${configFiles[@]}"
 do
 	if [[ -f "${configFile}" && -r "${configFile}" ]]
 	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config file ${configFile}..."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config file ${configFile} ..."
 		#
 		# In some Bash versions the source command does not work properly with process substitution.
 		# Therefore we source a first time with process substitution for proper error handling
@@ -194,29 +208,29 @@ fi
 
 lockFile="${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
 thereShallBeOnlyOne "${lockFile}"
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile}..."
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${TMP_ROOT_DIR}/logs..."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile} ..."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${TMP_ROOT_DIR}/logs ..."
 
-module load hashdeep/${HASHDEEP_VERSION} || log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" "${?}" 'Failed to load hashdeep module.'
+module load "hashdeep/${HASHDEEP_VERSION}" || log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" "${?}" 'Failed to load hashdeep module.'
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "$(module list)"
 
-declare -a projects=($(find "${TMP_ROOT_DIR}/projects/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${TMP_ROOT_DIR}/projects/||"))
+readarray -t projects < <(find "${TMP_ROOT_DIR}/projects/test" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${TMP_ROOT_DIR}/projects/||")
 if [[ "${#projects[@]:-0}" -eq '0' ]]
 then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${TMP_ROOT_DIR}/projects."
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${TMP_ROOT_DIR}/projects/."
 else
 	for project in "${projects[@]}"
 	do
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project}..."
-		echo "working on ${_project}" > "${lockFile}"
-		declare -a runs=($(find "${TMP_ROOT_DIR}/projects/${project}/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${TMP_ROOT_DIR}/projects/${project}/||"))
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project} ..."
+		echo "Working on ${project}" > "${lockFile}"
+		readarray -t runs < <(find "${TMP_ROOT_DIR}/projects/${project}/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${TMP_ROOT_DIR}/projects/${project}/||")
 		if [[ "${#runs[@]:-0}" -eq '0' ]]
 		then
 			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found for project ${project}."
 		else
 			for run in "${runs[@]}"
 			do
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/${run}..."
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/${run} ..."
 				calculateMd5 "${project}" "${run}"
 			done
 		fi
