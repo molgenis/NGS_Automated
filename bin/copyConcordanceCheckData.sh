@@ -208,7 +208,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 declare -a sampleSheetsFromSourceServer=($(ssh ${DATA_MANAGER}@${HOSTNAME_TMP} "find ${TMP_ROOT_DIAGNOSTICS_DIR}/concordance/samplesheets/ -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name *.sampleId.txt"))
 
-mkdir -p "/groups/${GROUP}/${DAT_DISK}/ConcordanceCheckOutput/"
+mkdir -p "/groups/${GROUP}/${DAT_LFS}/ConcordanceCheckOutput/"
 
 if [[ "${#sampleSheetsFromSourceServer[@]:-0}" -eq '0' ]]
 then
@@ -232,7 +232,7 @@ else
 			rm -f "${PRM_ROOT_DIR}/concordance/ngs/${ngsVcfId}.final.vcf.gz"
 
 			
-			cd "/groups/${GROUP}/${DAT_DISK}/ConcordanceCheckOutput/"
+			cd "/groups/${GROUP}/${DAT_LFS}/ConcordanceCheckOutput/"
 			windowsPathDelimeter="\\"
 			#
 			# Create link in file

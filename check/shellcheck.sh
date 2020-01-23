@@ -74,6 +74,11 @@ which shellcheck 2>&1 >/dev/null \
 if [[ -n "${WORKSPACE:-}" ]]
 then
 	#
+	# Exclude SC2154 (warning for variables that are referenced but not assigned),
+	# because we cannot easily resolve variables sourced from etc/*.cfg config files.
+	#
+	export SHELLCHECK_OPTS="${SHELLCHECK_OPTS} -e SC2004"
+	#
 	# ShellCheck for Jenkins.
 	#
 	shellcheck -a -x -o all -f checkstyle "${WORKSPACE}"/bin/*.sh | tee checkstyle-result.xml

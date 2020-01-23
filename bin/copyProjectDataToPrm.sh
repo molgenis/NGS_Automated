@@ -223,7 +223,7 @@ function rsyncProjectRun() {
 				if [[ "${_sampleType}" == 'GAP' ]]
 				then
 					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "_sampleType is GAF. Making symlinks for DiagnosticOutput folder."
-					cd "/groups/${GROUP}/${DAT_DISK}/DiagnosticOutput/"
+					cd "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/"
 					windowsPathDelimeter="\\"
 					#
 					# Create symlink for PennCNV project file (old style).
@@ -239,13 +239,13 @@ function rsyncProjectRun() {
 					then
 						declare -a pennCNVFiles=($(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/" -name "*.txt"))
 						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Number of PennCNV files: ${#pennCNVFiles[@]}."
-						mkdir -p "/groups/${GROUP}/${DAT_DISK}/DiagnosticOutput/${_project}/"
+						mkdir -p "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/${_project}/"
 						for pennCNV in "${pennCNVFiles[@]}"
 						do
 							name=$(basename "${pennCNV}")
 							convertedPennCNV=${pennCNV//\//$windowsPathDelimeter}
-							echo "\\\\zkh\appdata\medgen\leucinezipper${pennCNV//\//$windowsPathDelimeter}" > "/groups/${GROUP}/${DAT_DISK}/DiagnosticOutput/${_project}/${name}"
-							unix2dos "/groups/${GROUP}/${DAT_DISK}/DiagnosticOutput/${_project}/${name}"
+							echo "\\\\zkh\appdata\medgen\leucinezipper${pennCNV//\//$windowsPathDelimeter}" > "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/${_project}/${name}"
+							unix2dos "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/${_project}/${name}"
 						done
 					fi
 					#

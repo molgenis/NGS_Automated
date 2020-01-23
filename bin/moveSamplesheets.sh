@@ -170,7 +170,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 # Define timestamp per day for a log file per day.
 #
-# We pull all data in one go and not per batch/experiment/sample/project,
+# We move all data in one go and not per batch/experiment/sample/project,
 # so we cannot create a log file per batch/experiment/sample/project to signal *.finished or *.failed.
 # Using a single log file for this script, would mean we would only get an email notification for *.failed once,
 # which would not get cleaned up / reset during the next attempt to rsync data.
@@ -186,9 +186,44 @@ touch "${logDir}"
 export JOB_CONTROLE_FILE_BASE="${logDir}/${logTimeStamp}.${SCRIPT_NAME}"
 
 #
-# To make sure a *.finished file is not rsynced before a corresponding data upload is complete, we
-# * first rsync everything, but with an exclude pattern for '*.finished' and
-# * then do a second rsync for only '*.finished' files.
+# Determine location where the samplesheets should be moved to.
+#
+if [[ "${LAB}" == 'internal' ]]
+then
+	samplesheetDestination="${HOSTNAME_PREPROCESSING_INTERNAL}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/new/"
+elif [[ "${LAB}" == 'external' ]]
+then
+	samplesheetDestination="${HOSTNAME_PREPROCESSING_EXTERNAL}:/groups/${GROUP}/${TMP_LFS}/Samplesheets/new/"
+else
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Unhandled value for \${LAB}: ${LAB}. Expected either internal or external. Please fix ${CFG_DIR}/${group}.cfg"
+fi
+
+#
+# Move samplesheets with rsync
+#
+readarray -t samplesheets < <(find "${DAT_ROOT_DIR}/samplesheets/new/" -maxdepth 1 -mindepth 1 -type f -name "*.${SAMPLESHEET_EXT}")
+if [[ ]] check if any samplesheets were found.
+then
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pushing samplesheets using rsync to ${samplesheetDestination} ..."
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'See ${logDir}/rsync.log for details ...'
+	for samplesheet in "${samplsheets[@]}"
+	do
+		/usr/bin/rsync -vt \
+			--log-file="${logDir}/rsync.log" \
+			--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
+			--omit-dir-times \
+			--omit-link-times \
+			"${samplesheet}" \
+			"${samplesheetDestination}" \
+		&& rm "${samplesheet}" \
+		|| {
+			log error
+		}
+	done
+else
+	log no sheets found
+fi
+
 #
 # shellcheck disable=SC2153
 #log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pulling data from data staging server ${HOSTNAME_DATA_STAGING%%.*} using rsync to /groups/${GROUP}/${TMP_LFS}/ ..."
@@ -203,15 +238,6 @@ export JOB_CONTROLE_FILE_BASE="${logDir}/${logTimeStamp}.${SCRIPT_NAME}"
 #	"${HOSTNAME_DATA_STAGING}:/groups/${GROUP}/${SCR_LFS}/*" \
 #	"/groups/${GROUP}/${TMP_LFS}/"
 #
-#log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Rsyncing only the .finished files ...'
-#/usr/bin/rsync -vrltD \
-#	--log-file="${logDir}/rsync-from-${HOSTNAME_DATA_STAGING%%.*}.log" \
-#	--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
-#	--omit-dir-times \
-#	--omit-link-times \
-#	--relative \
-#	"${HOSTNAME_DATA_STAGING}:/groups/${GROUP}/${SCR_LFS}/./*/*.finished" \
-#	"/groups/${GROUP}/${TMP_LFS}/"
 #
 #
 # Cleanup old data if data transfer with rsync finished successfully (and hence did not crash this script).
