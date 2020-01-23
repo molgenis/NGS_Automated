@@ -77,7 +77,7 @@ then
 	# Exclude SC2154 (warning for variables that are referenced but not assigned),
 	# because we cannot easily resolve variables sourced from etc/*.cfg config files.
 	#
-	export SHELLCHECK_OPTS="${SHELLCHECK_OPTS} -e SC2004"
+	export SHELLCHECK_OPTS="${SHELLCHECK_OPTS} -e SC2154"
 	#
 	# ShellCheck for Jenkins.
 	#
