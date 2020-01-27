@@ -48,6 +48,15 @@ trapSig HUP INT QUIT TERM EXIT ERR
 #    someCommand || log4Bash 'FATAL' ${LINENO} "${FUNCNAME[0]:-main}" ${?} 'Failed to execute someCommand.'
 #
 function log4Bash() {
+	local _log_level
+	local _log_level_prio
+	local _status
+	local _problematic_line
+	local _problematic_function
+	local _log_message
+	local _log_timestamp
+	local _log_line_prefix
+	local _log_line
 	#
 	# Validate params.
 	#
@@ -55,29 +64,20 @@ function log4Bash() {
 	then
 		echo "WARN: should have passed 5 arguments to ${FUNCNAME[0]}: log_level, LINENO, FUNCNAME, (Exit) STATUS and log_message."
 	fi
-	
 	#
 	# Determine prio.
 	#
-	local _log_level
-	local _log_level_prio
-	local _status
 	_log_level="${1}"
 	_log_level_prio="${l4b_log_levels["${_log_level}"]}"
 	_status="${4:-$?}"
-	
 	#
 	# Log message if prio exceeds threshold.
 	#
 	if [[ "${_log_level_prio}" -ge "${l4b_log_level_prio}" ]]
 	then
-		local _problematic_line
-		local _problematic_function
-		local _log_message=
 		_problematic_line="${2:-'?'}"
 		_problematic_function="${3:-'main'}"
 		_log_message="${5:-'No custom message.'}"
-		
 		#
 		# Some signals erroneously report $LINENO = 1,
 		# but that line contains the shebang and cannot be the one causing problems.
@@ -86,13 +86,9 @@ function log4Bash() {
 		then
 			_problematic_line='?'
 		fi
-		
 		#
 		# Format message.
 		#
-		local _log_timestamp
-		local _log_line_prefix
-		local _log_line
 		_log_timestamp=$(date "+%Y-%m-%dT%H:%M:%S") # Creates ISO 8601 compatible timestamp.
 		_log_line_prefix=$(printf "%-s %-s %-5s @ L%-s(%-s)>" "${SCRIPT_NAME}" "${_log_timestamp}" "${_log_level}" "${_problematic_line}" "${_problematic_function}")
 		_log_line="${_log_line_prefix} ${_log_message}"
@@ -104,7 +100,6 @@ function log4Bash() {
 		then
 			_log_line="${_log_line} (Exit status = ${_status})"
 		fi
-		
 		#
 		# Log to STDOUT (low prio <= 'WARN') or STDERR (high prio >= 'ERROR').
 		#
@@ -114,8 +109,17 @@ function log4Bash() {
 		else
 			printf '%s\n' "${_log_line}"
 		fi
+		#
+		# Use job control file for logging when defined.
+		#
+		if [[ -n "${JOB_CONTROLE_FILE_BASE:-}" ]]
+		then
+			if [[ -f "${JOB_CONTROLE_FILE_BASE}.started" && -w "${JOB_CONTROLE_FILE_BASE}.started" ]]
+			then
+				printf '%s\n' "${_log_line}" >> "${JOB_CONTROLE_FILE_BASE}.started"
+			fi
+		fi
 	fi
-	
 	#
 	# Exit if this was a FATAL error.
 	#
@@ -133,7 +137,6 @@ function log4Bash() {
 				touch "${JOB_CONTROLE_FILE_BASE}.failed"
 			fi
 		fi
-		
 		#
 		# Reset trap and exit.
 		#

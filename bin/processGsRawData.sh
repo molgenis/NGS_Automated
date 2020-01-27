@@ -95,22 +95,20 @@ function sanityChecking() {
 			2>> "${_controlFileBaseForFunction}.started" \
 			&& mv -f "${_gsSampleSheet}"{.converted,} \
 			2>> "${_controlFileBaseForFunction}.started" \
-		|| { log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to convert line end characters and/or remove empty lines for ${_gsSampleSheet}." \
-				2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-				&& mv "${_controlFileBaseForFunction}."{started,failed}
+		|| {
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to convert line end characters and/or remove empty lines for ${_gsSampleSheet}."
+			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		}
 	elif [[ "${_numberOfSamplesheets}" -gt 1 ]]
 	then
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "More than one CSV_UMCG_*.${SAMPLESHEET_EXT} GS samplesheet present in ${TMP_ROOT_DIR}/${_batch}/." \
-			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-			&& mv "${_controlFileBaseForFunction}."{started,failed}
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "More than one CSV_UMCG_*.${SAMPLESHEET_EXT} GS samplesheet present in ${TMP_ROOT_DIR}/${_batch}/."
+		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	elif [[ "${_numberOfSamplesheets}" -lt 1 ]]
 	then
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No GS samplesheet present in ${TMP_ROOT_DIR}/${_batch}/." \
-			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-			&& mv "${_controlFileBaseForFunction}."{started,failed}
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No GS samplesheet present in ${TMP_ROOT_DIR}/${_batch}/."
+		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	fi
 	#
@@ -122,9 +120,8 @@ function sanityChecking() {
 	_countFastQ2FilesOnDisk=$(find "${TMP_ROOT_DIR}/${_batch}/" -maxdepth 1 -mindepth 1 -name '*_R2.fastq.gz' | wc -l)
 	if [[ "${_countFastQ1FilesOnDisk}" -ne "${_countFastQ2FilesOnDisk}" ]]
 	then
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Amount of R1 FastQ files (${_countFastQ1FilesOnDisk}) is not the same as R2 FastQ files (${_countFastQ2FilesOnDisk})." \
-			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-			&& mv "${_controlFileBaseForFunction}."{started,failed}
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Amount of R1 FastQ files (${_countFastQ1FilesOnDisk}) is not the same as R2 FastQ files (${_countFastQ2FilesOnDisk})."
+		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	fi
 	#
@@ -142,17 +139,15 @@ function sanityChecking() {
 		if [[ "${_countFastQFilesInChecksumFile}" -ne "$((${_countFastQ1FilesOnDisk} + ${_countFastQ2FilesOnDisk}))" ]]
 		then
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' \
-				"Mismatch: found ${_countFastQFilesInChecksumFile} FastQ files in checksum file, but ${_countFastQ1FilesOnDisk} *_R1.fastq.gz and ${_countFastQ2FilesOnDisk} *_R2.fastq.gz files on disk." \
-				2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-				&& mv "${_controlFileBaseForFunction}."{started,failed}
+				"Mismatch: found ${_countFastQFilesInChecksumFile} FastQ files in checksum file, but ${_countFastQ1FilesOnDisk} *_R1.fastq.gz and ${_countFastQ2FilesOnDisk} *_R2.fastq.gz files on disk."
+			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Amount of FastQ files in checksum file and amount of *_R[1|2].fastq.gz files on disk is the same for ${_batch}: ${_countFastQFilesInChecksumFile}."
 		fi
 	else
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No ${_checksumFile} file present in ${TMP_ROOT_DIR}/${_batch}/." \
-			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-			&& mv "${_controlFileBaseForFunction}."{started,failed}
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No ${_checksumFile} file present in ${TMP_ROOT_DIR}/${_batch}/."
+		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	fi
 	#
@@ -166,9 +161,8 @@ function sanityChecking() {
 	if [[ -n "${_insane_samples:-}" ]]
 	then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' \
-			"Mismatch: sample(s) ${_insaneSamples} are either present in the samplesheet, but missing on disk or vice versa." \
-			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-			&& mv "${_controlFileBaseForFunction}."{started,failed}
+			"Mismatch: sample(s) ${_insaneSamples} are either present in the samplesheet, but missing on disk or vice versa."
+		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "All samples present in the samplesheet are also present on disk and vice versa."
@@ -198,9 +192,8 @@ function sanityChecking() {
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "_checksumVerification = ${_checksumVerification}"
 	if [[ "${_checksumVerification}" != 'PASS' ]]
 	then
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Checksum verification failed. See ${_controlFileBaseForFunction}.failed for details." \
-			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-			&& mv "${_controlFileBaseForFunction}."{started,failed}
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Checksum verification failed. See ${_controlFileBaseForFunction}.failed for details."
+		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	fi
 	#
@@ -224,15 +217,13 @@ function sanityChecking() {
 		readarray -t _projects < <(tail -n +2 "${_gsSampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_projectFieldIndex}" | sort | uniq)
 		if [[ "${#_projects[@]:-0}" -lt '1' ]]
 		then
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_gsSampleSheet} does not contain at least one project value." \
-				2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-				&& mv "${_controlFileBaseForFunction}."{started,failed}
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_gsSampleSheet} does not contain at least one project value."
+			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		fi
 	else
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "project column missing in ${_gsSampleSheet}." \
-			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-			&& mv "${_controlFileBaseForFunction}."{started,failed}
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "project column missing in ${_gsSampleSheet}."
+		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	fi
 	#
@@ -274,15 +265,14 @@ function sanityChecking() {
 			log4Bash 'WARN' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Moving ${_archivedSampleSheet} to ${_sampleSheet} ..."
 			mv "${_archivedSampleSheet}" "${_sampleSheet}" \
 				2>> "${_controlFileBaseForFunction}.started" \
-			|| { log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to move ${_archivedSampleSheet} to ${_sampleSheet}." \
-					2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-					&& mv "${_controlFileBaseForFunction}."{started,failed}
+			|| {
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to move ${_archivedSampleSheet} to ${_sampleSheet}."
+				mv "${_controlFileBaseForFunction}."{started,failed}
 				return
 			}
 		else
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_sampleSheet} is missing or not accessible." \
-				2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-				&& mv "${_controlFileBaseForFunction}."{started,failed}
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_sampleSheet} is missing or not accessible."
+			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		fi
 		#
@@ -302,9 +292,9 @@ function sanityChecking() {
 			2>> "${_controlFileBaseForFunction}.started" \
 			&& mv -f "${_sampleSheet}"{.converted,} \
 			2>> "${_controlFileBaseForFunction}.started" \
-		|| { log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to convert line end characters and/or remove empty lines for ${_sampleSheet}." \
-				2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-				&& mv "${_controlFileBaseForFunction}."{started,failed}
+		|| {
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to convert line end characters and/or remove empty lines for ${_sampleSheet}."
+			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		}
 		#
@@ -335,9 +325,8 @@ function sanityChecking() {
 			_requiredColumnValueState="${requiredSamplesheetColumns[${_requiredColumnName}]}"
 			if [[ -z "${_sampleSheetColumnOffsets[${_requiredColumnName}]+isset}" ]]
 			then
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Required column ${_requiredColumnName} missing in ${_sampleSheet} -> Skipping ${_batch} due to error in samplesheet." \
-					2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-					&& mv "${_controlFileBaseForFunction}."{started,failed}
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Required column ${_requiredColumnName} missing in ${_sampleSheet} -> Skipping ${_batch} due to error in samplesheet."
+				mv "${_controlFileBaseForFunction}."{started,failed}
 				return
 			else
 				_requiredColumnIndex=$((${_sampleSheetColumnOffsets["${_requiredColumnName}"]} + 1))
@@ -346,9 +335,8 @@ function sanityChecking() {
 					readarray -t _requiredColumnValues < <(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_requiredColumnIndex}")
 					if [[ "${#_requiredColumnValues[@]:-0}" -ne "${_sampleSheetNumberOfRows}" ]]
 					then
-						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Column ${_requiredColumnName} in ${_sampleSheet} does NOT contain the expected amount of values: ${_sampleSheetNumberOfRows}." \
-							2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-							&& mv "${_controlFileBaseForFunction}."{started,failed}
+						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Column ${_requiredColumnName} in ${_sampleSheet} does NOT contain the expected amount of values: ${_sampleSheetNumberOfRows}."
+						mv "${_controlFileBaseForFunction}."{started,failed}
 						return
 					else
 						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Column ${_requiredColumnName} contains the right amount of values: ${_sampleSheetNumberOfRows}."
@@ -358,9 +346,8 @@ function sanityChecking() {
 					readarray -t _requiredColumnValues < <(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_requiredColumnIndex}" | sort | uniq )
 					if [[ "${#_requiredColumnValues[@]:-0}" -ne '1' ]]
 					then
-						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Column ${_requiredColumnName} in ${_sampleSheet} must contain the same value for all samples/rows." \
-							2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-							&& mv "${_controlFileBaseForFunction}."{started,failed}
+						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Column ${_requiredColumnName} in ${_sampleSheet} must contain the same value for all samples/rows."
+						mv "${_controlFileBaseForFunction}."{started,failed}
 						return
 					else
 						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Column ${_requiredColumnName} contains the right amount of values: 1."
@@ -371,9 +358,8 @@ function sanityChecking() {
 					readarray -t _requiredColumnValues < <(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_requiredColumnIndex}")
 					if [[ "${#_requiredColumnValues[@]:-0}" -ne '0' ]]
 					then
-						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Column ${_requiredColumnName} in ${_sampleSheet} must be empty for all samples/rows." \
-							2>&1 | tee -a "${_controlFileBaseForFunction}.started"
-							mv "${_controlFileBaseForFunction}."{started,failed}
+						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Column ${_requiredColumnName} in ${_sampleSheet} must be empty for all samples/rows."
+						mv "${_controlFileBaseForFunction}."{started,failed}
 						return
 					else
 						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Column ${_requiredColumnName} contains the right amount of values: 0."
@@ -398,9 +384,8 @@ function sanityChecking() {
 		date -d "@$(stat -c '%Y' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished")" +'%y%m%d' > "${_sequencingStartDateFile}"
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Fetched sequencingStartDate from last modification time stamp of ${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished."
 	else
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished is missing or not accessible." \
-			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-			&& mv "${_controlFileBaseForFunction}."{started,failed}
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished is missing or not accessible."
+		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	fi
 	#
@@ -411,7 +396,6 @@ function sanityChecking() {
 	# when enabled in <group>.cfg for use by notifications.sh)
 	#
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for batch ${_batch}. See ${_controlFileBaseForFunction}.finished for details." \
-		2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
 		&& rm -f "${_controlFileBaseForFunction}.failed" \
 		&& mv -v "${_controlFileBaseForFunction}."{started,finished}
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
@@ -449,9 +433,8 @@ function renameFastQs() {
 		_sequencingStartDate="$(<"${_sequencingStartDateFile}")"
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Parsed ${_sequencingStartDateFile} and found _sequencingStartDate: ${_sequencingStartDate}."
 	else
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_sequencingStartDateFile} is missing or not accessible." \
-			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-			&& mv "${_controlFileBaseForFunction}."{started,failed}
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_sequencingStartDateFile} is missing or not accessible."
+		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	fi
 	#
@@ -462,9 +445,8 @@ function renameFastQs() {
 		&& module list \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Cannot load ngs-utils/${NGS_UTILS_VERSION}. See ${_controlFileBaseForFunction}.failed for details." \
-			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-			&& mv "${_controlFileBaseForFunction}."{started,failed}
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Cannot load ngs-utils/${NGS_UTILS_VERSION}. See ${_controlFileBaseForFunction}.failed for details."
+		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	}
 	#
@@ -477,13 +459,11 @@ function renameFastQs() {
 		-f "${_batchDir}/"'*_'"${_batch}"'-*.fastq.gz' \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "renameFastQs failed. See ${_controlFileBaseForFunction}.failed for details." \
-			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-			&& mv "${_controlFileBaseForFunction}."{started,failed}
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "renameFastQs failed. See ${_controlFileBaseForFunction}.failed for details."
+		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	}
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for batch ${_batch}. See ${_controlFileBaseForFunction}.finished for details." \
-		2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
 		&& rm -f "${_controlFileBaseForFunction}.failed" \
 		&& mv -v "${_controlFileBaseForFunction}."{started,finished}
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
@@ -493,11 +473,9 @@ function processSamplesheetsAndMoveConvertedData() {
 	local _batch
 	local _controlFileBase
 	local _controlFileBaseForFunction
-	local _logFile
 	_batch="${1}"
 	_controlFileBase="${2}"
 	_controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
-	_logFile="${_controlFileBaseForFunction}.log"
 	#
 	# Check if function previously finished successfully for this data.
 	#
@@ -535,11 +513,10 @@ function processSamplesheetsAndMoveConvertedData() {
 		--inhouseSamplesheetsInputDir "${TMP_ROOT_DIR}/Samplesheets/new/" \
 		--samplesheetsOutputDir "${TMP_ROOT_DIR}/${_batch}/" \
 		--logLevel "${_pythonLogLevel}" \
-		>> "${_logFile}" 2>&1 \
+		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "createInhouseSamplesheetFromGS.py failed. See ${_logFile} for details." \
-			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-			&& mv "${_controlFileBaseForFunction}."{started,failed}
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "createInhouseSamplesheetFromGS.py failed."
+		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	}
 	#
@@ -564,9 +541,8 @@ function processSamplesheetsAndMoveConvertedData() {
 	readarray -t _runDirs < <(cd "${TMP_ROOT_DIR}/${_batch}/" && find ./ -maxdepth 1 -mindepth 1 -type d -name '*[0-9][0-9]*_[A-Z0-9][A-Z0-9]*_[0-9][0-9]*_[A-Z0-9][A-Z0-9]*' -exec basename {} \;)
 	if [[ "${#_runDirs[@]:-0}" -lt '1' ]]
 	then
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Did not find any sequence run dirs in ${TMP_ROOT_DIR}/${_batch}/." \
-			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-			&& mv "${_controlFileBaseForFunction}."{started,failed}
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Did not find any sequence run dirs in ${TMP_ROOT_DIR}/${_batch}/."
+		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Found ${#_runDirs[@]} sequence run dirs."
@@ -590,7 +566,6 @@ function processSamplesheetsAndMoveConvertedData() {
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Found flowcell ${_flowcell} in sequence run dir ${_runDir}."
 		else
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to parse flowcell from sequence run dir ${_runDir}." \
-				2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
 				&& mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		fi
@@ -627,9 +602,8 @@ function processSamplesheetsAndMoveConvertedData() {
 	if [[ "${_flowcellLaneBarcodeLinesRuns}" -lt "${_sampleLinesGS}" ]]
 	then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' \
-			"Number of flowcell+lane+barcode lines in the samplesheets per sequencing run (${_flowcellLaneBarcodeLinesRuns}) is too low for the number of samples in the GenomeScan samplesheet (${_sampleLinesGS})." \
-			2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-			&& mv "${_controlFileBaseForFunction}."{started,failed}
+			"Number of flowcell+lane+barcode lines in the samplesheets per sequencing run (${_flowcellLaneBarcodeLinesRuns}) is too low for the number of samples in the GenomeScan samplesheet (${_sampleLinesGS})."
+		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Found ${_flowcellLaneBarcodeLinesRuns} flowcell+lane+barcode lines in the samplesheets per sequencing run for ${_sampleLinesGS} samples in the GenomeScan samplesheet."
@@ -651,9 +625,8 @@ function processSamplesheetsAndMoveConvertedData() {
 			2>> "${_controlFileBaseForFunction}.started" \
 			> "${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/${_runDir}.log" \
 		|| {
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to move ${_runDir}. See ${_controlFileBaseForFunction}.failed for details." \
-				2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-				&& mv "${_controlFileBaseForFunction}."{started,failed}
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to move ${_runDir}. See ${_controlFileBaseForFunction}.failed for details."
+			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		}
 		#
@@ -674,18 +647,16 @@ function processSamplesheetsAndMoveConvertedData() {
 		cp -v "${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/Samplesheets/" \
 			>> "${_controlFileBaseForFunction}.started" 2>&1 \
 		|| {
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to copy sequencing run samplesheet to ${TMP_ROOT_DIR}/Samplesheets/. See ${_controlFileBaseForFunction}.failed for details." \
-				2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-				&& mv "${_controlFileBaseForFunction}."{started,failed}
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to copy sequencing run samplesheet to ${TMP_ROOT_DIR}/Samplesheets/. See ${_controlFileBaseForFunction}.failed for details."
+			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		}
 		mkdir -p "${TMP_ROOT_DIR}/logs/${_runDir}" \
 			&& touch "${TMP_ROOT_DIR}/logs/${_runDir}/run01.demultiplexing.finished" \
 			>> "${_controlFileBaseForFunction}.started" 2>&1 \
 		|| {
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to touch ${TMP_ROOT_DIR}/logs/${_runDir}_Demultiplexing.finished. See ${_controlFileBaseForFunction}.failed for details." \
-				2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
-				&& mv "${_controlFileBaseForFunction}."{started,failed}
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to touch ${TMP_ROOT_DIR}/logs/${_runDir}_Demultiplexing.finished. See ${_controlFileBaseForFunction}.failed for details."
+			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		}
 	done
@@ -699,7 +670,6 @@ function processSamplesheetsAndMoveConvertedData() {
 		mv -v "${TMP_ROOT_DIR}/Samplesheets/new/${_project}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/Samplesheets/archive/"
 	done
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for batch ${_batch}. See ${_controlFileBaseForFunction}.finished for details." \
-		2>&1 | tee -a "${_controlFileBaseForFunction}.started" \
 		&& rm -f "${_controlFileBaseForFunction}.failed" \
 		&& mv -v "${_controlFileBaseForFunction}."{started,finished}
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
@@ -878,62 +848,60 @@ else
 		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping already processed batch ${gsBatch}."
+			continue
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing batch ${gsBatch}..."
-			# shellcheck disable=SC2174
-			mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/"
-			# shellcheck disable=SC2174
-			mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${gsBatch}/"
-			printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
-			#
-			# Step 1: Sanity Check if transfer of raw data has finished.
-			#
-			if [[ -e "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished" ]]
-			then
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished present -> Data transfer completed; let's process batch ${gsBatch}..."
-				sanityChecking "${gsBatch}" "${controlFileBase}"
-			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished absent -> Data transfer not yet completed; skipping batch ${gsBatch}."
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Data transfer not yet completed; skipping batch ${gsBatch}." \
-					2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
-				continue
-			fi
-			#
-			# Step 2: Rename FastQs if Sanity check has finished.
-			#
-			if [[ -e "${controlFileBase}.sanityChecking.finished" ]]
-			then
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.sanityChecking.finished present -> sanityChecking completed; let's renameFastQs for batch ${gsBatch}..."
-				renameFastQs "${gsBatch}" "${controlFileBase}"
-			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.sanityChecking.finished absent -> sanityChecking failed."
-			fi
-			#
-			# Step 3: Process samplesheets and move converted data if renaming of FastQs has finished.
-			#
-			if [[ -e "${controlFileBase}.renameFastQs.finished" ]]
-			then
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.renameFastQs.finished present -> renameFastQs completed; let's mergeSamplesheetPerProject for batch ${gsBatch}..."
-				processSamplesheetsAndMoveConvertedData "${gsBatch}" "${controlFileBase}"
-			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.renameFastQs.finished absent -> renameFastQs failed."
-			fi
-			#
-			# Signal success or failure for complete process.
-			#
-			if [[ -e "${controlFileBase}.processSamplesheetsAndMoveConvertedData.finished" ]]
-			then
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.processSamplesheetsAndMoveConvertedData.finished present -> processing completed for batch ${gsBatch}..."
-				rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing batch ${gsBatch}." \
-					2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
-				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
-			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.processSamplesheetsAndMoveConvertedData.finished absent -> processing failed for batch ${gsBatch}."
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process batch ${gsBatch}." \
-					2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
-				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-			fi
+		fi
+		# shellcheck disable=SC2174
+		mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/"
+		# shellcheck disable=SC2174
+		mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${gsBatch}/"
+		printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
+		#
+		# Step 1: Sanity Check if transfer of raw data has finished.
+		#
+		if [[ -e "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished" ]]
+		then
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished present -> Data transfer completed; let's process batch ${gsBatch}..."
+			sanityChecking "${gsBatch}" "${controlFileBase}"
+		else
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished absent -> Data transfer not yet completed; skipping batch ${gsBatch}."
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Data transfer not yet completed; skipping batch ${gsBatch}."
+			continue
+		fi
+		#
+		# Step 2: Rename FastQs if Sanity check has finished.
+		#
+		if [[ -e "${controlFileBase}.sanityChecking.finished" ]]
+		then
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.sanityChecking.finished present -> sanityChecking completed; let's renameFastQs for batch ${gsBatch}..."
+			renameFastQs "${gsBatch}" "${controlFileBase}"
+		else
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.sanityChecking.finished absent -> sanityChecking failed."
+		fi
+		#
+		# Step 3: Process samplesheets and move converted data if renaming of FastQs has finished.
+		#
+		if [[ -e "${controlFileBase}.renameFastQs.finished" ]]
+		then
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.renameFastQs.finished present -> renameFastQs completed; let's mergeSamplesheetPerProject for batch ${gsBatch}..."
+			processSamplesheetsAndMoveConvertedData "${gsBatch}" "${controlFileBase}"
+		else
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.renameFastQs.finished absent -> renameFastQs failed."
+		fi
+		#
+		# Signal success or failure for complete process.
+		#
+		if [[ -e "${controlFileBase}.processSamplesheetsAndMoveConvertedData.finished" ]]
+		then
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.processSamplesheetsAndMoveConvertedData.finished present -> processing completed for batch ${gsBatch}..."
+			rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing batch ${gsBatch}."
+			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+		else
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.processSamplesheetsAndMoveConvertedData.finished absent -> processing failed for batch ${gsBatch}."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process batch ${gsBatch}."
+			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 		fi
 	done
 fi

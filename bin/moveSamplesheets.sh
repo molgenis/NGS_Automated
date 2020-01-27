@@ -162,10 +162,10 @@ fi
 # * and parsing commandline arguments,
 # but before doing the actual data transfers.
 #
-lockFile="${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
+lockFile="${DAT_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
 thereShallBeOnlyOne "${lockFile}"
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile} ..."
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${TMP_ROOT_DIR}/logs ..."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${DAT_ROOT_DIR}/logs ..."
 
 #
 # Define timestamp per day for a log file per day.
@@ -176,79 +176,75 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 # which would not get cleaned up / reset during the next attempt to rsync data.
 # Therefore we define a JOB_CONTROLE_FILE_BASE per day, which will ensure we get notified once a day if something goes wrong.
 #
-# Note: this script will only create a *.failed using the log4Bash() function from lib/sharedFunctions.sh.
-#
 logTimeStamp="$(date "+%Y-%m-%d")"
-logDir="${TMP_ROOT_DIR}/logs/${logTimeStamp}/"
+logDir="${DAT_ROOT_DIR}/logs/${logTimeStamp}/"
 # shellcheck disable=SC2174
 mkdir -m 2770 -p "${logDir}"
 touch "${logDir}"
 export JOB_CONTROLE_FILE_BASE="${logDir}/${logTimeStamp}.${SCRIPT_NAME}"
+printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 
 #
-# Determine location where the samplesheets should be moved to.
+# Determine source and destination location for the samplesheets.
 #
+samplesheetsSource="${DAT_ROOT_DIR}/samplesheets/new/"
 if [[ "${LAB}" == 'internal' ]]
 then
-	samplesheetDestination="${HOSTNAME_PREPROCESSING_INTERNAL}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/new/"
+	# shellcheck disable=SC2153
+	sampleheetsDestination="${HOSTNAME_PREPROCESSING_INTERNAL}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/new/"
 elif [[ "${LAB}" == 'external' ]]
 then
-	samplesheetDestination="${HOSTNAME_PREPROCESSING_EXTERNAL}:/groups/${GROUP}/${TMP_LFS}/Samplesheets/new/"
+	sampleheetsDestination="${HOSTNAME_PREPROCESSING_EXTERNAL}:/groups/${GROUP}/${TMP_LFS}/Samplesheets/new/"
 else
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Unhandled value for \${LAB}: ${LAB}. Expected either internal or external. Please fix ${CFG_DIR}/${group}.cfg"
 fi
 
 #
-# Move samplesheets with rsync
+# Find samplesheets.
 #
-readarray -t samplesheets < <(find "${DAT_ROOT_DIR}/samplesheets/new/" -maxdepth 1 -mindepth 1 -type f -name "*.${SAMPLESHEET_EXT}")
-if [[ ]] check if any samplesheets were found.
+readarray -t samplesheets < <(find "${samplesheetsSource}" -maxdepth 1 -mindepth 1 -type f -name "*.${SAMPLESHEET_EXT}")
+if [[ "${#samplesheets[@]:-0}" -eq '0' ]]
 then
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pushing samplesheets using rsync to ${samplesheetDestination} ..."
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'See ${logDir}/rsync.log for details ...'
-	for samplesheet in "${samplsheets[@]}"
-	do
-		/usr/bin/rsync -vt \
-			--log-file="${logDir}/rsync.log" \
-			--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
-			--omit-dir-times \
-			--omit-link-times \
-			"${samplesheet}" \
-			"${samplesheetDestination}" \
-		&& rm "${samplesheet}" \
-		|| {
-			log error
-		}
-	done
-else
-	log no sheets found
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No samplesheets found in ${samplesheetsSource}."
+	mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+	trap - EXIT
+	exit 0
 fi
 
 #
-# shellcheck disable=SC2153
-#log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pulling data from data staging server ${HOSTNAME_DATA_STAGING%%.*} using rsync to /groups/${GROUP}/${TMP_LFS}/ ..."
-#log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "See ${logDir}/rsync-from-${HOSTNAME_DATA_STAGING%%.*}.log for details ..."
-#log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Rsyncing everything except the .finished files ...'
-#/usr/bin/rsync -vrltD \
-#	--log-file="${logDir}/rsync-from-${HOSTNAME_DATA_STAGING%%.*}.log" \
-#	--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
-#	--omit-dir-times \
-#	--omit-link-times \
-#	--exclude='*.finished' \
-#	"${HOSTNAME_DATA_STAGING}:/groups/${GROUP}/${SCR_LFS}/*" \
-#	"/groups/${GROUP}/${TMP_LFS}/"
+# Move samplesheets with rsync
 #
-#
-#
-# Cleanup old data if data transfer with rsync finished successfully (and hence did not crash this script).
-#
-#log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting data older than 14 days from ${HOSTNAME_DATA_STAGING%%.*}:/groups/${GROUP}/${SCR_LFS}/ ..."
-# shellcheck disable=SC2029
-#/usr/bin/ssh "${HOSTNAME_DATA_STAGING}" "/bin/find /groups/${GROUP}/${SCR_LFS}/ -mtime +14 -ignore_readdir_race -delete"
+log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pushing samplesheets using rsync to ${sampleheetsDestination} ..."
+log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "See ${logDir}/rsync.log for details ..."
+transactionStatus='Ok'
+for samplesheet in "${samplesheets[@]}"
+do
+	/usr/bin/rsync -vt \
+		--log-file="${logDir}/rsync.log" \
+		--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
+		--omit-dir-times \
+		--omit-link-times \
+		"${samplesheet}" \
+		"${sampleheetsDestination}" \
+	&& rm -v "${samplesheet}" >> "${JOB_CONTROLE_FILE_BASE}.started" \
+	|| {
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to move ${samplesheet}."
+		transactionStatus='Failed'
+	}
+done
+if [[ "${transactionStatus}" == 'Ok' ]]
+then
+	rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
+	mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+	
+else
+	rm -f "${JOB_CONTROLE_FILE_BASE}.finished"
+	mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+fi
 
 #
 # Clean exit.
 #
-log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Finished successfully."
+log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Finished."
 trap - EXIT
 exit 0
