@@ -105,7 +105,7 @@ function notification() {
 	#	${run}     = the incremental 'analysis run number'. Starts with run01 and incremented in case of re-analysis.
 	#
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing projects with phase ${_phase} in state: ${_state} ..."
-	declare -a _lfs_root_dirs=("${TMP_ROOT_DIR:-}" "${SCR_ROOT_DIR:-}" "${PRM_ROOT_DIR:-}")
+	declare -a _lfs_root_dirs=("${TMP_ROOT_DIR:-}" "${SCR_ROOT_DIR:-}" "${PRM_ROOT_DIR:-}" "${DAT_ROOT_DIR:-}")
 	for _lfs_root_dir in "${_lfs_root_dirs[@]}"
 	do
 		readarray -t _project_state_files < <(find "${_lfs_root_dir}/logs/" -maxdepth 2 -mindepth 2 -type f -name "*.${_phase}.${_state}")
