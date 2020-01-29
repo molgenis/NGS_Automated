@@ -219,7 +219,7 @@ else
 		#
 		# Process this sample sheet / run.
 		#
-		filePrefix="$(basename "${sampleSheet%%.*}")"
+		filePrefix="$(basename "${sampleSheet%.sampleId.txt}")"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${filePrefix} ..."
 		ngsVcfId=$(ssh ${DATA_MANAGER}@${HOSTNAME_TMP} "awk '{if (NR>1){print \$2}}' ${sampleSheet}")
 
