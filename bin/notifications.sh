@@ -5,7 +5,7 @@
 ### Environment and Bash sanity.
 ##
 #
-if [[ "${BASH_VERSINFO}" -lt 4 || "${BASH_VERSINFO[0]}" -lt 4 ]]; then
+if [[ "${BASH_VERSINFO[0]}" -lt 4 ]]; then
 	echo "Sorry, you need at least bash 4.x to use ${0}." >&2
 	exit 1
 fi
@@ -18,21 +18,23 @@ umask 0027
 
 # Env vars.
 export TMPDIR="${TMPDIR:-/tmp}" # Default to /tmp if $TMPDIR was not defined.
-SCRIPT_NAME="$(basename ${0})"
+SCRIPT_NAME="$(basename "${0}")"
 SCRIPT_NAME="${SCRIPT_NAME%.*sh}"
 INSTALLATION_DIR="$(cd -P "$(dirname "${0}")/.." && pwd)"
 LIB_DIR="${INSTALLATION_DIR}/lib"
 CFG_DIR="${INSTALLATION_DIR}/etc"
 HOSTNAME_SHORT="$(hostname -s)"
-ROLE_USER="$(whoami)"
-REAL_USER="$(logname 2>/dev/null || echo 'no login name')"
+#ROLE_USER="$(whoami)"
+#REAL_USER="$(logname 2>/dev/null || echo 'no login name')"
 
 #
 ##
 ### Functions.
 ##
 #
-if [[ -f "${LIB_DIR}/sharedFunctions.bash" && -r "${LIB_DIR}/sharedFunctions.bash" ]]; then
+if [[ -f "${LIB_DIR}/sharedFunctions.bash" && -r "${LIB_DIR}/sharedFunctions.bash" ]]
+then
+	# shellcheck source=lib/sharedFunctions.bash
 	source "${LIB_DIR}/sharedFunctions.bash"
 else
 	printf '%s\n' "FATAL: cannot find or cannot access sharedFunctions.bash"
@@ -48,7 +50,7 @@ function showHelp() {
 ===============================================================================================================
 Script to check the status of the pipeline and emails notification
 Usage:
-	$(basename $0) OPTIONS
+	$(basename "${0}") OPTIONS
 Options:
 	-h   Show this help.
 	-g   Group.
@@ -74,21 +76,19 @@ EOH
 # Check for status and email notification
 #
 function notification() {
-
+	#
+	# Declare local vars.
+	#
 	local    _phase="${1%:*}"
 	local    _state="${1#*:}"
 	local -a _project_state_files=()
-	local    _file
 	local    _timestamp
 	local    _project
 	local    _run
-	local    _header
 	local    _subject
 	local    _body
 	local    _email_to
-
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing projects with phase ${_phase} in state: ${_state} ..."
-
+	local    _lfs_root_dir
 	#
 	# The path to phase state files must be:
 	#	"${TMP_ROOT_DIR}/logs/${project}/${run}.${_phase}.${_state}"
@@ -104,84 +104,102 @@ function notification() {
 	#	${project} = the 'project' name as specified in the sample sheet.
 	#	${run}     = the incremental 'analysis run number'. Starts with run01 and incremented in case of re-analysis.
 	#
-
-	declare -a _LFS_ROOT_DIRS=("${TMP_ROOT_DIR:-}" "${SCR_ROOT_DIR:-}" "${PRM_ROOT_DIR:-}")
-
-	for _LFS_ROOT_DIR in ${_LFS_ROOT_DIRS[@]}
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing projects with phase ${_phase} in state: ${_state} ..."
+	declare -a _lfs_root_dirs=("${TMP_ROOT_DIR:-}" "${SCR_ROOT_DIR:-}" "${PRM_ROOT_DIR:-}" "${DAT_ROOT_DIR:-}")
+	for _lfs_root_dir in "${_lfs_root_dirs[@]}"
 	do
-		_project_state_files=()
-
-		if $(ls "${_LFS_ROOT_DIR}/logs/"*"/"*".${_phase}.${_state}" 1> /dev/null 2>&1)
+		readarray -t _project_state_files < <(find "${_lfs_root_dir}/logs/" -maxdepth 2 -mindepth 2 -type f -name "*.${_phase}.${_state}")
+		if [[ "${#_project_state_files[@]:-0}" -eq '0' ]]
 		then
-			_project_state_files=($(ls -1 "${_LFS_ROOT_DIR}/logs/"*"/"*".${_phase}.${_state}")) \
-				|| log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" $? "Failed to create a list of ${_LFS_ROOT_DIR}/logs/*/*.${_phase}.${_state} files."
-		else
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No *.${_phase}.${_state} files present in ${_LFS_ROOT_DIR}/logs/*/."
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No *.${_phase}.${_state} files present in ${_lfs_root_dir}/logs/*/."
 			continue
-		fi
-
-		if [[ -r "${_LFS_ROOT_DIR}/logs/${_phase}.mailinglist" ]]
-		then
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_LFS_ROOT_DIR}/logs/${_phase}.mailinglist."
-			_email_to="$(cat "${_LFS_ROOT_DIR}/logs/${_phase}.mailinglist" | tr '\n' ' ')"
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsed ${_phase}.mailinglist and will send mail to: ${_email_to}."
 		else
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Missing ${_LFS_ROOT_DIR}/logs/${_phase}.mailinglist"
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found project state files: ${_project_state_files[*]}."
+		fi
+		#
+		# Check if we have email addresses for the recipients of the notifications.
+		# Must be
+		#   * either a "course" grained mailinglist with the same email recipients for all states of the same phase
+		#     located at: ${_lfs_root_dir}/logs/${_phase}.mailinglist
+		#   * or a "fine" grained mailinglist with the email recipients for a specific state of a phase
+		#     located at: ${_lfs_root_dir}/logs/${_phase}.{_state}.mailinglist
+		# The latter will overrule the former when both are found.
+		#
+		if [[ -r "${_lfs_root_dir}/logs/${_phase}.mailinglist" ]]
+		then
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_lfs_root_dir}/logs/${_phase}.mailinglist."
+			_email_to="$(< "${_lfs_root_dir}/logs/${_phase}.mailinglist" tr '\n' ' ')"
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsed ${_phase}.mailinglist and will send mail to: ${_email_to}."
+		fi
+		if [[ -r "${_lfs_root_dir}/logs/${_phase}.{_state}.mailinglist" ]]
+		then
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_lfs_root_dir}/logs/${_phase}.{_state}.mailinglist for more fine grained control over recipients for state {_state}."
+			_email_to="$(< "${_lfs_root_dir}/logs/${_phase}.{_state}.mailinglist" tr '\n' ' ')"
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsed ${_phase}.mailinglist and will send mail to: ${_email_to}."
+		fi
+		if [[ -z "${_email_to:-}" ]]
+		then
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Cannot parse recipients from ${_lfs_root_dir}/logs/${_phase}.mailinglist nor from ${_lfs_root_dir}/logs/${_phase}.${_phase}.mailinglist."
 			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Cannot send notifications by mail. I'm giving up, bye bye."
 		fi
-
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "PROJECT_STATE_FILES=${_project_state_files}"
-
-		for _project_state_file in ${_project_state_files[@]}
+		#
+		# Create notifications.
+		#
+		for _project_state_file in "${_project_state_files[@]}"
 		do
-			_file=$(basename "${_project_state_file}")
-			_project=$(basename $(dirname "${_project_state_file}"))
-			_run="${_file%%.*}"
-
-			if [ "${_project_state_file}" == "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.failed" ]
+			#
+			# Get project, run and timestamp from state file name/path.
+			#
+			local _project
+			local _project_state_file_name
+			local _run
+			local _timestamp
+			_project="$(basename "$(dirname "${_project_state_file}")")"
+			_project_state_file_name="$(basename "${_project_state_file}")"
+			_run="${_project_state_file_name%%.*}"
+			_timestamp="$(date --date="$(LC_DATE=C stat --printf='%y' "${_project_state_file}" | cut -d ' ' -f1,2)" "+%Y-%m-%dT%H:%M:%S")"
+			#
+			# Check is we should automatically resubmit jobs for a failed analysis pipeline.
+			#
+			if [[ "${_state}" == 'pipeline' && "${_state}" == 'failed' ]]
 			then
-				if [[ ! -e "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted" ]]
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Pipeline has state failed; checking if we should resubmit jobs ..."
+				
+				if [[ ! -e "${_project_state_file%failed}resubmitted" ]]
 				then
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "No resubmitted jobs and the project is also not finished yet."
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Going to resubmit jobs for: ${_project}"
-					cd ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/
-					bash "submit.sh" > "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted"
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Project ${_project} was not resubmitted before -> resubmitting jobs ..."
+					cd "${_lfs_root_dir}/projects/${_project}/${_run}/jobs/"
+					bash "submit.sh" > "${_project_state_file%failed}resubmitted"
 					cd -
-					timeOfResubmit=$(date -r "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted")
-					trackAndTracePut 'status_projects' "${_project}" 'message' "'pipeline has been resubmitted on ${timeOfResubmit}'"
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing ${_project_state_file} and ${_project_state_file}.mailed."
+					rm -f "${_project_state_file}" "${_project_state_file}.mailed"
+					trackAndTracePut 'status_projects' "${_project}" 'message' "Jobs have been resubmitted on $(date -r "${_project_state_file%failed}resubmitted")."
+					continue
 				else
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted"
-					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping: ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted. Jobs were already resubmitted for state ${_state}."
-					timeOfPipelineFail=$(date -r "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.failed")
-					trackAndTracePut 'status_projects' "${_project}" 'message' "'pipeline crashed again (even after a resubmit) on ${timeOfPipelineFail}'"
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_project_state_file%failed}resubmitted"
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Project ${_project} failed again -> will not resubmit jobs."
+					trackAndTracePut 'status_projects' "${_project}" 'message' "Pipeline crashed again (even after a resubmit) on ${_timestamp}"
 				fi
 			fi
-
+			#
+			# Check if email was already send.
+			#
 			if [[ -e "${_project_state_file}.mailed" ]]
 			then
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_project_state_file}.mailed"
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping: ${_project}/${_run}. Email was already sent for state ${_state}."
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping: ${_project}/${_run}. Email was already sent for state ${_state} of phase ${_phase}."
 				continue
 			fi
-
-			_timestamp="$(date --date="$(LC_DATE=C stat --printf='%y' "${_project_state_file}" | cut -d ' ' -f1,2)" "+%Y-%m-%dT%H:%M:%S")"
-
-			if [[ -e "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted" && ! -e "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted.mailed" ]]
-			then
-				_subject="The jobs from project ${_project}/${_run} were resubmitted for phase ${_phase} on ${HOSTNAME_SHORT} at ${_timestamp}."
-				_body="$(cat "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted")"
-				_email_to="$(cat "${TMP_ROOT_DIR}/logs/resubmit.mailinglist" | tr '\n' ' ')"
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${TMP_ROOT_DIR}/logs/resubmit.mailinglist."
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsed resubmit.mailinglist and will send mail to: ${_email_to}."
-			else
-				_subject="Project ${_project}/${_run} has ${_state} for phase ${_phase} on ${HOSTNAME_SHORT} at ${_timestamp}."
-				_body="$(cat "${_project_state_file}")"
-			fi
-
+			#
+			# Compile message.
+			#
+			_subject="Project ${_project}/${_run} has ${_state} for phase ${_phase} on ${HOSTNAME_SHORT} at ${_timestamp}."
+			_body="$(cat "${_project_state_file}")"
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Email subject: ${_subject}"
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Email body   : ${_body}"
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "EMAILSTATUS = ${email}"
-
+			#
+			# Send message.
+			#
 			if [[ "${email}" == 'true' ]]
 			then
 				printf '%s\n' "${_body}" \
@@ -190,16 +208,6 @@ function notification() {
 				touch "${_project_state_file}.mailed"
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Email disabled and not creating file: ${_project_state_file}.mailed"
-			fi
-
-			if [[ -e "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted" && ! -e "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted.mailed" ]]
-			then
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating file: ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted.mailed"
-				touch "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.resubmitted.mailed"
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing file: ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.failed."
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing file: ${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.failed.mailed"
-				rm -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.failed"
-				rm -f "${TMP_ROOT_DIR}/logs/${_project}/${_run}.${_phase}.failed.mailed"
 			fi
 		done
 	done
@@ -211,16 +219,14 @@ function notification() {
 ##
 #
 
-
 #
 # Get commandline arguments.
 #
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments..."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
 declare email='false'
-declare dryrun=''
 while getopts "g:l:he" opt; do
-	case $opt in
+	case "${opt}" in
 		h)
 			showHelp
 			;;
@@ -231,18 +237,19 @@ while getopts "g:l:he" opt; do
 			email='true'
 			;;
 		l)
-			l4b_log_level=${OPTARG^^}
-			l4b_log_level_prio=${l4b_log_levels[${l4b_log_level}]}
+			l4b_log_level="${OPTARG^^}"
+			l4b_log_level_prio="${l4b_log_levels["${l4b_log_level}"]}"
 			;;
 		\?)
-			log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Invalid option -${OPTARG}. Try $(basename $0) -h for help."
+			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Invalid option -${OPTARG}. Try $(basename "${0}") -h for help."
 			;;
 		:)
-			log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Option -${OPTARG} requires an argument. Try $(basename $0) -h for help."
+			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Option -${OPTARG} requires an argument. Try $(basename "${0}") -h for help."
 			;;
-	esac
+		*)
+			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Unhandled option. Try $(basename "${0}") -h for help."
+			;;	esac
 done
-
 
 #
 # Check commandline options.
@@ -250,41 +257,47 @@ done
 if [[ -z "${group:-}" ]]; then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
 fi
-if [[ -n "${dryrun:-}" ]]; then
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Enabled dryrun option for rsync.'
+if [[ -n "${email:-}" ]]; then
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Email option enabled: will try to send emails.'
+else
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Email option option not enabled: will log for debugging on stdout.'
 fi
-
 
 #
 # Source config files.
 #
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files..."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files ..."
 declare -a configFiles=(
 	"${CFG_DIR}/${group}.cfg"
 	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
 	"${CFG_DIR}/sharedConfig.cfg"
 	"${HOME}/molgenis.cfg"
 )
-for configFile in "${configFiles[@]}"; do
-	if [[ -f "${configFile}" && -r "${configFile}" ]]; then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config file ${configFile}..."
+for configFile in "${configFiles[@]}"
+do
+	if [[ -f "${configFile}" && -r "${configFile}" ]]
+	then
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Sourcing config file ${configFile} ..."
 		#
 		# In some Bash versions the source command does not work properly with process substitution.
 		# Therefore we source a first time with process substitution for proper error handling
 		# and a second time without just to make sure we can use the content from the sourced files.
 		#
-		mixed_stdouterr=$(source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot source ${configFile}."
-		source ${configFile}  # May seem redundant, but is a mandatory workaround for some Bash versions.
+		# Disable shellcheck code syntax checking for config files.
+		# shellcheck source=/dev/null
+		mixed_stdouterr=$(source "${configFile}" 2>&1) || log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" "${?}" "Cannot source ${configFile}."
+		# shellcheck source=/dev/null
+		source "${configFile}"  # May seem redundant, but is a mandatory workaround for some Bash versions.
 	else
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Config file ${configFile} missing or not accessible."
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Config file ${configFile} missing or not accessible."
 	fi
 done
 
 #
 # Notify for specific colon separated combinations of "phase:state".
 #
-if [[ ! -z "${NOTIFY_FOR_PHASE_WITH_STATE[0]:-}" && "${#NOTIFY_FOR_PHASE_WITH_STATE[@]:-0}" -ge 1 ]]; then
-	for phase_with_state in ${NOTIFY_FOR_PHASE_WITH_STATE[@]}
+if [[ -n "${NOTIFY_FOR_PHASE_WITH_STATE[0]:-}" && "${#NOTIFY_FOR_PHASE_WITH_STATE[@]:-0}" -ge 1 ]]; then
+	for phase_with_state in "${NOTIFY_FOR_PHASE_WITH_STATE[@]}"
 	do
 		notification "${phase_with_state}"
 	done
@@ -293,8 +306,7 @@ else
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "No 'phase:state' combinations for which notifications must be sent specified."
 fi
 
-
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished successfully!'
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished.'
 
 trap - EXIT
 exit 0
