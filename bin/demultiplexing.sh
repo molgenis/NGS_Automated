@@ -182,10 +182,14 @@ do
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished: Skipping finished ${project}."
 		continue
-	elif [[ ! -f "${JOB_CONTROLE_FILE_BASE}.started" ]]
+	elif [[ -f "${JOB_CONTROLE_FILE_BASE}.started" ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.started: Skipping ${project}, which is already getting processed."
 		continue
+	elif [[ ! -f "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" ]]
+	then
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheet found: skipping ${project}."
+                continue
 	fi
 	#
 	# Create log dir with job control file for sequence run.
@@ -194,14 +198,7 @@ do
 	then
 		mkdir "${SCR_ROOT_DIR}/logs/${project}/"
 	fi
-	#
-	# Check if we have a samplesheet.
-	#
-	if [[ ! -f "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" ]]
-	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheet found: skipping ${project}."
-		continue
-	fi
+
 	#
 	# Check if the run has already completed.
 	#

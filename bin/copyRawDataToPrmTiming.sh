@@ -228,6 +228,12 @@ do
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using run number: ${run}"
 	fi
 
+	if [ -e "${PRM_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.finished" ]
+	then
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${sequenceRun}/${run}.${SCRIPT_NAME} completely done"
+		continue
+	fi
+
 	touch "${PRM_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
 
 	echo -e "moment of checking run time: $(date)\nsequenceRun: ${sequenceRun}\nproject: ${project}" > "${PRM_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"

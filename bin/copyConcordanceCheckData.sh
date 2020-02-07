@@ -225,10 +225,9 @@ else
 
 		if ssh "${DATA_MANAGER}@${HOSTNAME_TMP}" test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/concordance/logs/${filePrefix}.ConcordanceCheck.finished"
 		then
-			touch "${PRM_ROOT_DIR}/concordance/logs/${ngsVcfId}.copyConcordanceCheckData.started"
+			touch "${PRM_ROOT_DIR}/concordance/logs/${filePrefix}.copyConcordanceCheckData.started"
 			rsync -av ${DATA_MANAGER}@${HOSTNAME_TMP}:/${TMP_ROOT_DIAGNOSTICS_DIR}/concordance/results/${filePrefix}.* "${PRM_ROOT_DIR}/concordance/results/" 
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "removing ${PRM_ROOT_DIR}/concordance/ngs/${ngsVcfId}.final.vcf.gz and ${sampleSheet} from prm"
-			ssh ${DATA_MANAGER}@${HOSTNAME_TMP} "rm -f ${sampleSheet}"
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "removing ${PRM_ROOT_DIR}/concordance/ngs/${ngsVcfId}.final.vcf.gz"
 			rm -f "${PRM_ROOT_DIR}/concordance/ngs/${ngsVcfId}.final.vcf.gz"
 
 			
@@ -243,8 +242,9 @@ else
 				echo "\\\\zkh\appdata\medgen\leucinezipper${i//\//$windowsPathDelimeter}" > "${fileName}"
 				unix2dos "${fileName}"
 			done
+			ssh ${DATA_MANAGER}@${HOSTNAME_TMP} "mv ${sampleSheet} ${TMP_ROOT_DIAGNOSTICS_DIR}/concordance/samplesheets/archive/"
+			mv "${PRM_ROOT_DIR}/concordance/logs/${filePrefix}.copyConcordanceCheckData."{started,finished}
 
-			mv "${PRM_ROOT_DIR}/concordance/logs/${ngsVcfId}.copyConcordanceCheckData."{started,finished}
 		else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "concordanceCheck for ${filePrefix} not finished (yet)"
 		fi
