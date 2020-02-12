@@ -179,6 +179,9 @@ for sampleSheet in $(find "${concordanceDir}/samplesheets/" -type f -iname "*sam
 do
 	echo "______________________________________________________________________________" ## remove when script is finished
 	concordanceCheckId=$(basename "${sampleSheet}" .sampleId.txt)
+if [ ! -f "${concordanceDir}/jobs/${concordanceCheckId}.sh" ]
+then
+
 	touch "${concordanceDir}/logs/${concordanceCheckId}.ConcordanceCheck.started"
 	arrayId=$(sed 1d "${sampleSheet}" | awk 'BEGIN {FS="\t"}{print $1}')
 	arrayVcf=$(echo "${arrayId}.FINAL.vcf")
@@ -212,7 +215,20 @@ do
 	else
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "There is something wrong while running bedtools intersect"
 	fi
-
+cat << EOH > "${concordanceDir}/jobs/${concordanceCheckId}.sh"
+#!/bin/bash
+#SBATCH --job-name=Concordance_${arrayId}
+#SBATCH --output=${concordanceDir}/jobs/${arrayId}.out
+#SBATCH --error=${concordanceDir}/jobs/${arrayId}.err
+#SBATCH --time=05:59:00
+#SBATCH --cpus-per-task 1
+#SBATCH --mem 10gb
+#SBATCH --open-mode=append
+#SBATCH --export=NONE
+#SBATCH --get-user-env=60L
+	module load "${htsLibVersion}"
+	module load "${compareGenotypeCallsVersion}"
+	module load "${bedToolsVersion}"
 	bgzip -c "${concordanceDir}/tmp/${concordanceCheckId}/${arrayId}.FINAL.ExonFiltered.vcf" > "${concordanceDir}/tmp/${concordanceCheckId}/${arrayId}.FINAL.ExonFiltered.vcf.gz"
 	tabix -p vcf "${concordanceDir}/tmp/${concordanceCheckId}/${arrayId}.FINAL.ExonFiltered.vcf.gz"
 
@@ -233,9 +249,15 @@ do
 
 	echo "finished"
 	mv "/groups/${GROUP}/${TMP_LFS}/concordance/logs/${concordanceCheckId}.ConcordanceCheck."{started,finished}
-
+	mv "${concordanceDir}/jobs/${concordanceCheckId}.sh."{started,finished} 
+EOH
+fi
+if [[ ! -f "${concordanceDir}/jobs/${concordanceCheckId}.sh.started" ]] && [[ ! -f "${concordanceDir}/jobs/${concordanceCheckId}.sh.finished" ]]
+then
+	sbatch "${concordanceDir}/jobs/${concordanceCheckId}.sh"
+	touch "${concordanceDir}/jobs/${concordanceCheckId}.sh.started"
+fi
 done
-
 trap - EXIT
 exit 0
 
