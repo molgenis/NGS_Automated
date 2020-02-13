@@ -176,7 +176,7 @@ module load "${bedToolsVersion}"
 module list
 
 concordanceDir="/groups/${NGSGROUP}/${TMP_LFS}/concordance/"
-ngsVcfDirPRM="/groups/${NGSGROUP}/${PRM_LFS}/concordance/ngs/"
+ngsVcfDirPRM="/groups/${NGSGROUP}/prm0*/concordance/ngs/"
 arrayVcfDirPRM="/groups/${ARRAYGROUP}/${PRM_LFS}/concordance/array/"
 
 for vcfFile in $(ssh "${HOSTNAME_PRM}" "find ${ngsVcfDirPRM} \( -type f -o -type l \) -name *final.vcf.gz")
