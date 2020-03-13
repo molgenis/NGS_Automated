@@ -211,10 +211,15 @@ function sanityChecking() {
 	#
 	# Check if GS samplesheet contains required project column.
 	#
-	if [[ -n "${_sampleSheetColumnOffsets['Sample_ID']+isset}" ]]
+	if [[ -n "${_sampleSheetColumnOffsets['ID']+isset}" ]]
 	then
-		_projectFieldIndex=$((${_sampleSheetColumnOffsets['Sample_ID']} + 1))
-		readarray -t _projects < <(tail -n +2 "${_gsSampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_projectFieldIndex}" | sort | uniq)
+		_projectFieldIndex=$((${_sampleSheetColumnOffsets['ID']} + 1))
+		#
+		# The values in the 'ÍD' column are a combination of the project and sampleProcessStepID.
+		# E.g. GS_2A-Exoom_v3-835385.
+		# The 835385 is the sampleProcessStepID, which has to be removed to get the project value.
+		#
+		readarray -t _projects < <(tail -n +2 "${_gsSampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_projectFieldIndex}" | sed 's/-[0-9][0-9]*$//' | sort | uniq)
 		if [[ "${#_projects[@]:-0}" -lt '1' ]]
 		then
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_gsSampleSheet} does not contain at least one project value."
@@ -532,8 +537,8 @@ function processSamplesheetsAndMoveConvertedData() {
 	do
 		_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
 	done
-	_projectFieldIndex=$((${_sampleSheetColumnOffsets['Sample_ID']} + 1))
-	readarray -t _projects < <(tail -n +2 "${_gsSampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_projectFieldIndex}" | sort | uniq )
+	_projectFieldIndex=$((${_sampleSheetColumnOffsets['ID']} + 1))
+	readarray -t _projects < <(tail -n +2 "${_gsSampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_projectFieldIndex}" | sed 's/-[0-9][0-9]*$//' | sort | uniq )
 	#
 	# Get a list of sequencing run dirs (created by renameFastQs.bash)
 	# and in format ${sequencingStartdate}_${sequencer}_${run}_${flowcell}
@@ -813,13 +818,14 @@ declare -A requiredSamplesheetColumns=(
 	['seqType']='present'
 	['prepKit']='present'
 	['capturingKit']='present'
-	['barcode']='present'
-	['barcode2']='present'
-	['barcodeType']='present'
+	#['barcode']='present'
+	#['barcode2']='present'
+	#['barcodeType']='present'
 	['sequencer']='empty'
 	['run']='empty'
 	['flowcell']='empty'
 	['lane']='empty'
+	['sampleProcessStepID']='present'
 )
 
 #
