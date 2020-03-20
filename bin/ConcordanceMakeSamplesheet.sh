@@ -184,11 +184,16 @@ do
 
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "processing ngs-vcf ${vcfFile}"
 	ngsVcfId=$(basename "${vcfFile}" ".final.vcf.gz")
-	ngsBarcodeTmp=$(ssh "${HOSTNAME_PRM}" "zcat ${vcfFile} | grep \"##FastQ_Barcode=\"")
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "ngsBarcodeTmp=${ngsBarcodeTmp}"
+	if ssh "${HOSTNAME_PRM}" "zcat ${vcfFile} | grep \"##FastQ_Barcode=\""
+	then
+		ngsBarcodeTmp=$(ssh "${HOSTNAME_PRM}" "zcat ${vcfFile} | grep \"##FastQ_Barcode=\"")
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "ngsBarcodeTmp=${ngsBarcodeTmp}"
 
-	ngsBarcode=$(echo "${ngsBarcodeTmp}" | awk 'BEGIN {FS="="}{print "_"$2}')
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "ngsBarcode=${ngsBarcode}"
+		ngsBarcode=$(echo "${ngsBarcodeTmp}" | awk 'BEGIN {FS="="}{print "_"$2}')
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "ngsBarcode=${ngsBarcode}"
+	else
+		ngsBarcode=""
+	fi
 
 	ngsInfo=$(echo "${ngsVcfId}" | awk 'BEGIN {FS="_"}{OFS="_"}{print $3,$4,$5}')
 	ngsInfoList=$(echo "${ngsInfo}${ngsBarcode}")
