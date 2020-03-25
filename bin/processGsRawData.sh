@@ -360,7 +360,7 @@ function sanityChecking() {
 					fi
 				elif [[ "${_requiredColumnValueState}" == 'empty' ]]
 				then
-					readarray -t _requiredColumnValues < <(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_requiredColumnIndex}")
+					readarray -t _requiredColumnValues < <(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_requiredColumnIndex}" | sed '/^$/d')
 					if [[ "${#_requiredColumnValues[@]:-0}" -ne '0' ]]
 					then
 						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Column ${_requiredColumnName} in ${_sampleSheet} must be empty for all samples/rows."
