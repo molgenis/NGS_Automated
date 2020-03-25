@@ -183,6 +183,7 @@ for vcfFile in $(ssh "${HOSTNAME_PRM}" "find ${ngsVcfDirPRM} \( -type f -o -type
 do
 
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "processing ngs-vcf ${vcfFile}"
+	ngsFolderPrm="$(dirname "${vcfFile}")"
 	ngsVcfId=$(basename "${vcfFile}" ".final.vcf.gz")
 	if ssh "${HOSTNAME_PRM}" "zcat ${vcfFile} | grep \"##FastQ_Barcode=\""
 	then
@@ -244,8 +245,14 @@ do
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "the concordance between ${arrayInfoList} ${ngsInfoList} is being calculated"
 		continue
+	elif [ -f "${concordanceDir}/logs/${arrayInfoList}_${ngsInfo}.ConcordanceMakeSamplesheet.finished" ]
+        then
+                log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "the samplesheet is already processed between ${arrayInfoList} ${ngsInfo}"
+                continue
+
 	else
-		echo -e "data1Id\tdata2Id\tlocation1\tlocation2\n${arrayId}\t${ngsVcfId}\t${HOSTNAME_PRM}:${arrayVcfDirPRM}/${arrayId}.FINAL.vcf\t${HOSTNAME_PRM}:${ngsVcfDirPRM}/${ngsVcfId}.final.vcf.gz" > "${concordanceDir}/samplesheets/${arrayInfoList}_${ngsInfoList}.sampleId.txt"
+		echo -e "data1Id\tdata2Id\tlocation1\tlocation2\n${arrayId}\t${ngsVcfId}\t${HOSTNAME_PRM}:${arrayVcfDirPRM}/${arrayId}.FINAL.vcf\t${HOSTNAME_PRM}:${ngsFolderPrm}/${ngsVcfId}.final.vcf.gz" > "${concordanceDir}/samplesheets/${arrayInfoList}_${ngsInfoList}.sampleId.txt"
+		touch "${concordanceDir}/logs/${arrayInfoList}_${ngsInfo}.ConcordanceMakeSamplesheet.finished"
 	fi 
 
 done
