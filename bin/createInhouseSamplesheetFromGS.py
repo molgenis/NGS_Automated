@@ -34,7 +34,7 @@ def printNewSamplesheet(_projectSamplesheetPath, _gsSamplesheetDataHashmap, _sam
         _potentiallyMissingColumns = ['barcode', 'barcode1', 'barcode2', 'GS_ID']
         for _potentiallyMissingColumn in _potentiallyMissingColumns:
             if not _potentiallyMissingColumn in _headers:
-                headers.append(_potentiallyMissingColumn)
+                _headers.append(_potentiallyMissingColumn)
         #
         # Parse sample from inhouse samplesheet.
         #
