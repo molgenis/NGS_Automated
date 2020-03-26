@@ -85,7 +85,7 @@ def printNewSamplesheet(_projectSamplesheetPath, _gsSamplesheetDataHashmap, _sam
                             elif _header == 'barcode':
                                 _newRowValues.append(FastQ['barcodes'])
                             elif _header == 'GS_ID':
-                                _newRowValues.append(_gsSamplesheetDataHashmap[_barcodesProject]['GS_ID'])
+                                _newRowValues.append(_gsSamplesheetDataHashmap[_sampleProcessStepID]['GS_ID'])
                             else:
                                 #
                                 # Copy other, unmodified columns + their values from the original samplesheet to the new row.
@@ -96,10 +96,10 @@ def printNewSamplesheet(_projectSamplesheetPath, _gsSamplesheetDataHashmap, _sam
                         #
                         _newRows.append(_newRowValues)
                 else:
-                    logging.critical('Project name for the sample (_barcodesProject=' + _barcodesProject + ') from inhouse sample sheet and from GenomeScan sample sheet is not the same project.')
+                    logging.critical('Project name for the sample with sampleProcessStepID ' + sampleProcessStepID + ' from inhouse sample sheet and from GenomeScan sample sheet is not the same project.')
                     sys.exit('FATAL ERROR!')
             except:
-                logging.critical('Failed to supplement sample (barcode_project=' + _barcodesProject + ') with meta-data from GenomeScan sample sheet.')
+                logging.critical('Failed to supplement sample with sampleProcessStepID ' + sampleProcessStepID + ' with meta-data from GenomeScan sample sheet.')
                 sys.exit('FATAL ERROR!')
         _f1.close()
     #
