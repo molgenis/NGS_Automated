@@ -302,7 +302,7 @@ for row in gsReader:
         #
         gsSamplesheetDataHashmap[gsSampleProcessStepID] = {
             'project': gsProject, 'GS_ID': gsGenomeScanID,
-            'FastQs': gsFilenameDataHashmap[gsBarcodesGenomeScanID]
+            'FastQs': gsFilenameDataHashmap[gsBarcodesAndGenomeScanID]
         }
         # For debugging data structure only:
         #import pprint
