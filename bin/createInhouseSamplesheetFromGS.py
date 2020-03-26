@@ -225,9 +225,14 @@ gsFilenameDataHashmap = makeOriginalFilenameHashmap(checksumsFilePath)
 
 #
 # Combine GS samplesheet with original filename information form gsFilenameDataHashmap.
-# GS samplesheet filestructure:
+#
+# GS samplesheet filestructure for samples prepped not at GenomeScan and send in as pools:
 #          GS_ID,         Sample_ID, Pool,   Index1,   Index2
 # 103473-011-001, QXTR_222-Exoom_v1,    1, CGAGGCTG, AGGCTTAG
+#
+## GS samplesheet filestructure for samples prepped at GenomeScan:
+#          GS_ID,                    ID, positie, geslacht, Pool,   Index1,   Index2
+# 103473-011-001, GS_1A-Exoom_v3-123456,     A01,        V,    1, CGAGGCTG, AGGCTTAG
 #
 gsSamplesheetFileHandle = open(gsSamplesheetFile,'r')
 gsReader = csv.DictReader(gsSamplesheetFileHandle)
