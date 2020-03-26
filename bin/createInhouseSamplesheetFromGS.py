@@ -319,7 +319,7 @@ gsSamplesheetFileHandle.close()
 uniqProjects =(sorted(set(gsProjects)))
 projectCounts={}
 for uniqProject in (uniqProjects):
-    projectCounts[uniqProject]=projects.count(uniqProject)
+    projectCounts[uniqProject]=gsProjects.count(uniqProject)
 #
 # Parse sample sheets per project.
 #
