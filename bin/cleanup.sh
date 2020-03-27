@@ -49,20 +49,26 @@ function showHelp() {
 	cat <<EOH
 ===============================================================================================================
 Script to check the status of the pipeline and emails notification
+
 Usage:
+
 	$(basename "${0}") OPTIONS
+
 Options:
+
 	-h	Show this help.
 	-g	Group.
 	-n	Dry-run: Do not perform actual removal, but only print the remove commands instead.
 	-e	Enable email notification. (Disabled by default.)
 	-l	Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
+
 Config and dependencies:
+
 	This script needs 3 config files, which must be located in ${CFG_DIR}:
-	1. <group>.cfg       for the group specified with -g
-	2. <host>.cfg        for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
-	3. sharedConfig.cfg  for all groups and all servers.
+		1. <group>.cfg       for the group specified with -g
+		2. <host>.cfg        for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
+		3. sharedConfig.cfg  for all groups and all servers.
 	In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
 ===============================================================================================================
 EOH
@@ -83,7 +89,7 @@ EOH
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
 declare dryrun=''
-while getopts "g:l:nh" opt; do
+while getopts ":g:l:nh" opt; do
 	case "${opt}" in
 		h)
 			showHelp
@@ -166,15 +172,14 @@ then
 		do
 			fileName=$(basename "${i}")
 			name=${fileName%%.*}
-
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
-			"rm -rf ${TMP_ROOT_DIR}/tmp/Gavin_${name}/ \nrm -rf ${TMP_ROOT_DIR}/generatedscripts/Gavin_${name}\nrm -rf ${TMP_ROOT_DIR}/projects/Gavin_${name}/"
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${TMP_ROOT_DIR}/tmp/Gavin_${name}/"
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "     and ${TMP_ROOT_DIR}/generatedscripts/Gavin_${name}"
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "     and ${TMP_ROOT_DIR}/projects/Gavin_${name}/"
 			if [ "${dryrun}" == "no" ]
 			then
 				rm -rf "${TMP_ROOT_DIR}/tmp/Gavin_${name}/"
 				rm -rf "${TMP_ROOT_DIR}/generatedscripts/Gavin_${name}/"
 				rm -rf "${TMP_ROOT_DIR}/projects/Gavin_${name}/"
-
 				touch "${i}.cleaned"
 			fi
 		done
@@ -189,13 +194,11 @@ fi
 for i in $(find "${TMP_ROOT_DIR}/projects/" -maxdepth 1 -type d -mtime +30 -exec ls -d {} \;)
 do
 	project=$(basename $i)
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
-	"check ${project}"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "check ${project}"
 	if [ -f "${TMP_ROOT_DIR}/logs/${project}/${project}.projectDataCopiedToPrm" ]
 	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
-			"rm -rf ${GROUP_HOME}/projects/${project}/ \nrm -rf ${GROUP_HOME}/tmp/${project}/"
-
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${GROUP_HOME}/projects/${project}/"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "     and ${GROUP_HOME}/tmp/${project}/ ..."
 		if [ "${dryrun}" == "no" ]
 		then
 			rm -rf "${GROUP_HOME}/projects/${project}"
@@ -208,25 +211,20 @@ done
 for i in $(find "${TMP_ROOT_DIR}/rawdata/ngs/" -maxdepth 1 -type d -mtime +30 -exec ls -d {} \;) 
 do
 	run=$(basename $i)
-
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
-	"check ${run}"
-
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "check ${run}"
 	if [ -f "${TMP_ROOT_DIR}/logs/${run}/${run}.dataCopiedToPrm" ]
-        then
+	then
 		countPrm=$(ssh calculon.hpc.rug.nl "ls ${PRM_ROOT_DIR}/rawdata/ngs/${run}/${run}*.fq.gz* | wc -l")
 		countTmp=$(ls ${TMP_ROOT_DIR}/rawdata/ngs/${run}/${run}*.fq.gz* | wc -l)
 		if [ "${countPrm}" == "${countTmp}" ]
 		then
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
-				"rm -rf ${TMP_ROOT_DIR}/rawdata/ngs/${run}"
-
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${TMP_ROOT_DIR}/rawdata/ngs/${run} ..."
 			if [ "${dryrun}" == "no" ]
-                        then
+			then
 				rm -rf "${TMP_ROOT_DIR}/rawdata/ngs/${run}"
 			fi
 		fi
-        fi
+	fi
 done
 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished successfully!'
