@@ -59,8 +59,9 @@ function contains() {
 
 function rsyncRuns() {
 	local _run="${1}"
-	local count="${2}"
-	local totalCount="${3}"
+	local _filePrefix="${2}"
+	local count="${3}"
+	local totalCount="${4}"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_run} ..."
 	#
 	# ToDo: change location of job control files back to ${TMP_ROOT_DIR} once we have a 
@@ -85,7 +86,7 @@ function rsyncRuns() {
 		# which indicates the run was re-demultiplexed and converted to FastQ files.
 		#
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${_run}/${STEPBEFOREFINISHEDFILE}  is newer than ${JOB_CONTROLE_FILE_BASE}.finished"
-		local _fileFinishedModTime=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} stat --printf='%Y' "${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${_run}/${STEPBEFOREFINISHEDFILE}")
+		local _fileFinishedModTime=$(ssh ${DATA_MANAGER}@${sourceServerFQDN} stat --printf='%Y' "${SCR_ROOT_DIR}/logs/${_filePrefix}/${STEPBEFOREFINISHEDFILE}")
 		local _myFinishedModTime=$(stat --printf='%Y' "${JOB_CONTROLE_FILE_BASE}.finished")
 		if [[ "${_fileFinishedModTime}" -gt "${_myFinishedModTime}" ]]
 		then
@@ -626,42 +627,39 @@ else
 		fi
 		numberOfBarcodes=${#barcodes[@]}
 		count=0
-		for barcode in "${barcodes[@]}"
-		do
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${barcode} ..."
-			mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${barcode}/"
-			mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${filePrefix}/"
-			mkdir -m 2750 -p "${PRM_ROOT_DIR}/Samplesheets/archive/"
-			echo "counting: ${count} of ${numberOfBarcodes}" 
+		if ssh ${DATA_MANAGER}@${sourceServerFQDN} test -e "${SCR_ROOT_DIR}/logs/${filePrefix}/${STEPBEFOREFINISHEDFILE}"
+		then
+			for barcode in "${barcodes[@]}"
+			do
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${barcode} ..."
+				mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${barcode}/"
+				mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${filePrefix}/"
+				mkdir -m 2750 -p "${PRM_ROOT_DIR}/Samplesheets/archive/"
+				echo "counting: ${count} of ${numberOfBarcodes}" 
 
-			if ssh ${DATA_MANAGER}@${sourceServerFQDN} test -e "${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${barcode}/${STEPBEFOREFINISHEDFILE}"
-			then
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${barcode}/${STEPBEFOREFINISHEDFILE} present."
-				rsyncRuns "${barcode}" "${count}" "${numberOfBarcodes}"
-			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/${STEPBEFOREFINISHEDFILEPATH}/${barcode}/${STEPBEFOREFINISHEDFILE} absent."
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${barcode}."
-			fi
+				rsyncRuns "${barcode}" "${filePrefix}" "${count}" "${numberOfBarcodes}"
 
-			if [ -e "${PRM_ROOT_DIR}/logs/${barcode}/run01.${SCRIPT_NAME}.finished" ]
-			then
-				count=$((count+1))
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "counted:${count}, total: ${numberOfBarcodes}"
-				# if count and numberOfBarcodes is the same all the data has been transferred and we need a ${filePrefix} run01.copyRawDataPrm.finished 
-				if [ "${count}" == "${numberOfBarcodes}" ]
+				if [ -e "${PRM_ROOT_DIR}/logs/${barcode}/run01.${SCRIPT_NAME}.finished" ]
 				then
-					if [ "${filePrefix}" == "${barcode}" ]
+					count=$((count+1))
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "counted:${count}, total: ${numberOfBarcodes}"
+					# if count and numberOfBarcodes is the same all the data has been transferred and we need a ${filePrefix} run01.copyRawDataPrm.finished 
+					if [ "${count}" == "${numberOfBarcodes}" ]
 					then
-						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "filePrefix and barcode are the same, it is not necessary to touch ${PRM_ROOT_DIR}/logs/${filePrefix}/run01.${SCRIPT_NAME}.finished again"
-					else
-						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${filePrefix} != ${barcode}, TOUCH ${PRM_ROOT_DIR}/logs/${filePrefix}/run01.${SCRIPT_NAME}.finished"
-						touch "${PRM_ROOT_DIR}/logs/${filePrefix}/run01.${SCRIPT_NAME}.finished"
+						if [ "${filePrefix}" == "${barcode}" ]
+						then
+							log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "filePrefix and barcode are the same, it is not necessary to touch ${PRM_ROOT_DIR}/logs/${filePrefix}/run01.${SCRIPT_NAME}.finished again"
+						else
+							log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${filePrefix} != ${barcode}, TOUCH ${PRM_ROOT_DIR}/logs/${filePrefix}/run01.${SCRIPT_NAME}.finished"
+							touch "${PRM_ROOT_DIR}/logs/${filePrefix}/run01.${SCRIPT_NAME}.finished"
+						fi
 					fi
 				fi
-			fi
+			done
+		else
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/logs/${filePrefix}/${STEPBEFOREFINISHEDFILE} absent."
+		fi
 
-		done
-	
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "INFO: ${count} ${numberOfBarcodes}"
 		splitSamplesheetPerProject "${filePrefix}"
 
