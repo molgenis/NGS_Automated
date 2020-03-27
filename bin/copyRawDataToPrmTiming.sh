@@ -12,8 +12,8 @@ set -u
 ####	If there is no .finished file, it will check if there is a .started file and if this file is older than 6h (last time it was modified).
 ###		If the .started is not older than 6h, no worries the pipeline is probably still running.
 ##		If the .started file is older than 6h, it will generate a copyRawDataToPrmTiming.failed. 
-#	
- 
+#
+
 
 if [[ "${BASH_VERSINFO[0]}" -lt 4 ]]
 then
