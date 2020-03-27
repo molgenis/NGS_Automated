@@ -818,9 +818,16 @@ declare -A requiredSamplesheetColumns=(
 	['seqType']='present'
 	['prepKit']='present'
 	['capturingKit']='present'
+	#
+	# Barcodes may now be absent when samples were prepped at GenomeScan.
+	# Barcode columns will be added automatically when missing and
+	# the barcodes from the GenomeScan samplesheet will be used no matter 
+	# what is listed in the barcode columns from the in-house samplesheet.
+	#
 	#['barcode']='present'
+	#['barcode1']='present'
 	#['barcode2']='present'
-	#['barcodeType']='present'
+	['barcodeType']='present'
 	['sequencer']='empty'
 	['run']='empty'
 	['flowcell']='empty'
