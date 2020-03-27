@@ -459,7 +459,7 @@ declare group=''
 declare dryrun=''
 declare sourceServerFQDN=''
 declare sourceServerRootDir=''
-while getopts "g:l:s:r:hn" opt
+while getopts ":g:l:s:r:hn" opt
 do
 	case "${opt}" in
 		h)

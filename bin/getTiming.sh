@@ -87,7 +87,7 @@ EOH
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
 declare email='false'
-while getopts "g:l:h" opt
+while getopts ":g:l:h" opt
 do
 	case "${opt}" in
 		h)

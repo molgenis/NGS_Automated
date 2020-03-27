@@ -319,7 +319,7 @@ function submitPipeline () {
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
-while getopts "g:l:r:h" opt; do
+while getopts ":g:l:r:h" opt; do
 	case "${opt}" in
 		h)
 			showHelp

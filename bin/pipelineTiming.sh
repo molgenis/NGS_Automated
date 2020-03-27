@@ -105,7 +105,7 @@ declare group=''
 declare sourceServerFQDN=''
 declare sourceServerRootDir=''
 
-while getopts "g:l:s:r:h" opt
+while getopts ":g:l:s:r:h" opt
 do
 	case "${opt}" in
 		h)
