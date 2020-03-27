@@ -57,11 +57,11 @@ Usage:
 
 Options:
 
-	-h   Show this help.
-	-g   ngsgroup (the group which runs the script and countains the ngs.vcf files, umcg-gd).
-	-a   arraygroup (the group where the array.vcf files are, umcg-gap )
-	-l   Log level.
-	     Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
+	-h	Show this help.
+	-g	ngsgroup (the group which runs the script and countains the ngs.vcf files, umcg-gd).
+	-a	arraygroup (the group where the array.vcf files are, umcg-gap )
+	-l	Log level.
+		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
 Config and dependencies:
 
@@ -70,7 +70,6 @@ Config and dependencies:
 		2. <host>.cfg        for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
 		3. sharedConfig.cfg  for all groups and all servers.
 	In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
-
 ======================================================================================================================
 
 EOH
@@ -90,7 +89,7 @@ EOH
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
-while getopts "g:a:l:h" opt
+while getopts ":g:a:l:h" opt
 do
 	case "${opt}" in
 		h)
@@ -215,7 +214,7 @@ do
 		#for otherPRM in ${ARRAY_OTHER_PRM_LFS_ISILON[@]}
 		#do
 		#	checkArrayVcf=$(ssh ${HOSTNAMEPRM_ISOLON} "find /groups/${ARRAYGROUP}/${otherPRM}/concordance/array/ -type f -o -type l -iname DNA-${dnaNo}_*.FINAL.vcf")
-
+		#
 		#done
 		#if [[ -z "${checkArrayVcf}" ]]
 		#then
@@ -228,7 +227,7 @@ do
 		copyArrayFile="true"
 		cluster="${HOSTNAME_PRM}"
 	fi
-
+	
 	if [ "${copyArrayFile}" == "true" ]
 	then
 		#rsync --copy-links ${HOSTNAME_PRM}:${arrayVcfDirPRM}/DNA-${dnaNo}_*.FINAL.vcf "${concordanceDir}/array/"
@@ -239,17 +238,16 @@ do
 		arrayInfoList=$(echo "${arrayId}" | awk 'BEGIN {FS="_"}{OFS="_"}{print $1,$2,$3,$5,$6}')
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "processing array vcf ${arrayFile}"
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "info from array.vcf: ${arrayInfoList}"
-
 	fi
+	
 	if [ -f "${concordanceDir}/logs/${arrayInfoList}_${ngsInfoList}.ConcordanceCheck.finished" ]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "the concordance between ${arrayInfoList} ${ngsInfoList} is being calculated"
 		continue
 	elif [ -f "${concordanceDir}/logs/${arrayInfoList}_${ngsInfo}.ConcordanceMakeSamplesheet.finished" ]
-        then
-                log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "the samplesheet is already processed between ${arrayInfoList} ${ngsInfo}"
-                continue
-
+	then
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "the samplesheet is already processed between ${arrayInfoList} ${ngsInfo}"
+		continue
 	else
 		echo -e "data1Id\tdata2Id\tlocation1\tlocation2\n${arrayId}\t${ngsVcfId}\t${HOSTNAME_PRM}:${arrayVcfDirPRM}/${arrayId}.FINAL.vcf\t${HOSTNAME_PRM}:${ngsFolderPrm}/${ngsVcfId}.final.vcf.gz" > "${concordanceDir}/samplesheets/${arrayInfoList}_${ngsInfoList}.sampleId.txt"
 		touch "${concordanceDir}/logs/${arrayInfoList}_${ngsInfo}.ConcordanceMakeSamplesheet.finished"

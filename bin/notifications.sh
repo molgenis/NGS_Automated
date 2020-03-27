@@ -225,7 +225,7 @@ function notification() {
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
 declare email='false'
-while getopts "g:l:he" opt; do
+while getopts ":g:l:he" opt; do
 	case "${opt}" in
 		h)
 			showHelp

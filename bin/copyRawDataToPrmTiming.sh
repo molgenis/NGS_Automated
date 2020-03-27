@@ -77,13 +77,12 @@ Options:
 		which is for example the case when fetching data from another group.
 Config and dependencies:
 
-This script needs 3 config files, which must be located in ${CFG_DIR}:
- 1. <group>.cfg	for the group specified with -g
- 2. <this_host>.cfg	for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
- 3. <source_host>.cfg	for the source server. E.g.: "<hostname>.cfg" (Short name without domain)
- 4. sharedConfig.cfg	for all groups and all servers.
-In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
-
+	This script needs 3 config files, which must be located in ${CFG_DIR}:
+		1. <group>.cfg	for the group specified with -g
+		2. <this_host>.cfg	for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
+		3. <source_host>.cfg	for the source server. E.g.: "<hostname>.cfg" (Short name without domain)
+		4. sharedConfig.cfg	for all groups and all servers.
+	In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
 ======================================================================================================================
 
 EOH
@@ -106,7 +105,7 @@ declare group=''
 declare sourceServerFQDN=''
 declare sourceServerRootDir=''
 
-while getopts "g:l:s:r:h" opt
+while getopts ":g:l:s:r:h" opt
 do
 	case "${opt}" in
 		h)

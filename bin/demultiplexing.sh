@@ -62,9 +62,9 @@ Options:
 
 Config and dependencies:
 	This script needs 4 config files, which must be located in ${CFG_DIR}:
-	1. <group>.cfg       for the group specified with -g
-	2. <this_host>.cfg   for this server. E.g.: "${HOSTNAME_SHORT}.cfg"
-	3. sharedConfig.cfg  for all groups and all servers.
+		1. <group>.cfg       for the group specified with -g
+		2. <this_host>.cfg   for this server. E.g.: "${HOSTNAME_SHORT}.cfg"
+		3. sharedConfig.cfg  for all groups and all servers.
 	In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
 ===============================================================================================================
 EOH
@@ -83,7 +83,7 @@ EOH
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
-while getopts "g:l:h" opt
+while getopts ":g:l:h" opt
 do
 	case "${opt}" in
 		h)
@@ -189,7 +189,7 @@ do
 	elif [[ ! -f "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheet found: skipping ${project}."
-                continue
+		continue
 	fi
 	#
 	# Create log dir with job control file for sequence run.
@@ -198,7 +198,6 @@ do
 	then
 		mkdir "${SCR_ROOT_DIR}/logs/${project}/"
 	fi
-
 	#
 	# Check if the run has already completed.
 	#

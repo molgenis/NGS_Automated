@@ -51,27 +51,31 @@ function showHelp() {
 	cat <<EOH
 ===============================================================================================================
 Script to get the running times of the complete pipeline
+
 Usage:
 	$(basename "${0}") OPTIONS
+
 Options:
-        -h   Show this help.
-        -g   Group.
-        -l   Log level.
-                Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
+	-h	Show this help.
+	-g	Group.
+	-l	Log level.
+		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
 Config and dependencies:
 
-        This script needs 3 config files, which must be located in ${CFG_DIR}:
-        1. <group>.cfg       for the group specified with -g
-        2. <host>.cfg        for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
-        3. sharedConfig.cfg  for all groups and all servers.
-        In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
+	This script needs 3 config files, which must be located in ${CFG_DIR}:
+		1. <group>.cfg       for the group specified with -g
+		2. <host>.cfg        for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
+		3. sharedConfig.cfg  for all groups and all servers.
+	In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
 ===============================================================================================================
 EOH
 	trap - EXIT
-        exit 0
+	exit 0
 }
 
+#
+##
 ### Main.
 ##
 #
@@ -83,7 +87,7 @@ EOH
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
 declare email='false'
-while getopts "g:l:h" opt
+while getopts ":g:l:h" opt
 do
 	case "${opt}" in
 		h)
@@ -162,31 +166,27 @@ cd "${projectsDir}"
 find * -nowarn -mtime -40 -type d -maxdepth 0 -exec ls -d {} \; > "${logsDir}/AllProjects40days.txt"
 SAMPLESHEET_SEP=","
 echo -e "unique_id,rawdataname,project,total_min,total_hours,machine,numberofSamples,startTime,finishedTime,copyRawDataToPrmDuration,pipelineDuration,copyProjectDataToPrmTiming,demultiplexingDuration" > ${logsDir}/status_timing.csv
-while read project 
+while read project
 do
 	echo "start"
 	declare -a sampleSheetColumnNames=()
-        declare -A sampleSheetColumnOffsets=()
+	declare -A sampleSheetColumnOffsets=()
 	numberOfSamples=$(ls ${projectsDir}/${project}/run01/results/variants/*.final.vcf.gz | wc -l)
 	sampleSheet="${projectsDir}/${project}/run01/results/${project}.csv"
-
 	IFS="," sampleSheetColumnNames=($(head -1 "${sampleSheet}"))
 	for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]:-0} ; offset++ ))
-        do
+	do
 		columnName="${sampleSheetColumnNames[${offset}]}"
-                sampleSheetColumnOffsets["${columnName}"]="${offset}"
-        done
-
+		sampleSheetColumnOffsets["${columnName}"]="${offset}"
+	done
 	sequencingStartDateIndex=$((${sampleSheetColumnOffsets['sequencingStartDate']} + 1))
 	sequencerIndex=$((${sampleSheetColumnOffsets['sequencer']} + 1))
 	runIDIndex=$((${sampleSheetColumnOffsets['run']} + 1))
 	flowcellIndex=$((${sampleSheetColumnOffsets['flowcell']} + 1))
-
 	sequencingStartDate=$(tail -n 1 "${sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f ${sequencingStartDateIndex})
 	sequencer=$(tail -n 1 "${sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f ${sequencerIndex})
 	runID=$(tail -n 1 "${sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f ${runIDIndex})
 	flowcell=$(tail -n 1 "${sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f ${flowcellIndex})
-
 	echo "${sequencingStartDate}_${sequencer}_${runID}_${flowcell}"
 	filePrefix="${sequencingStartDate}_${sequencer}_${runID}_${flowcell}"
 	if [[ ${sequencer} == N* || ${sequencer} == M* ]]
@@ -200,7 +200,6 @@ do
 			then
 				start=$(ssh -n ${sourceServerFQDNsecondary} stat -c '%Y'  "${logsDirSourceServer}/${filePrefix}/run01.demultiplexing.finished")
 				machine="${sourceServerFQDNsecondary}"
-
 			else
 				echo "no StartTime found for ${filePrefix}"
 				start="2000-00-00 00:00:00"
@@ -211,9 +210,8 @@ do
 		then
 			machine="${HOSTNAME_TMP}"
 			start=$(ssh -n ${genomeScanCluster} stat -c '%Y' "/groups/umcg-genomescan/${genomeScanClusterTmp}/runs/${filePrefix}/results/${filePrefix}.csv")
-
 		fi
-	fi	
+	fi
 	startDateEpoch=$(echo "${start}")
 	startCopyingEpoch=$(stat -c '%Y' ${logsDir}/${filePrefix}/run01.copyRawDataToPrm.started)
 	finishedCopyingEpoch=$(stat -c '%Y' ${logsDir}/${filePrefix}/run01.copyRawDataToPrm.finished)
@@ -224,19 +222,14 @@ do
 	totalDurationInHr=$(((finishedProjectDataToPrmEpoch-startDateEpoch)/ 3600))
 	copyRawDataToPrmDuration=$(((finishedCopyingEpoch-startCopyingEpoch)/ 60))
 	pipelineDuration=$(((finishedPipelineEpoch-startPipelineEpoch)/ 60))
-
 	copyProjectDataToPrmDuration=$(((finishedProjectDataToPrmEpoch-finishedPipelineEpoch)/ 60))
-
 	startDate=$(date -d "@${start}" +'%FT%T%z')
 	finishedDate=$(date -d "@${finishedProjectDataToPrmEpoch}" +'%FT%T%z')
-
 	echo -e "${filePrefix}-${project},${filePrefix},${project},${totalDurationInMin},${totalDurationInHr},${machine},${numberOfSamples},${startDate},${finishedDate},${copyRawDataToPrmDuration},${pipelineDuration},${copyProjectDataToPrmDuration}," >> ${logsDir}/status_timing.csv
 	trackAndTracePostFromFile 'status_timing' 'add_update_existing' "${logsDir}/status_timing.csv"
 	echo "Sequencing run id ${filePrefix} started on ${startDate} on ${machine}. It contains project: ${project} and it has ${numberOfSamples} samples."
 	echo "The copying of the project data to prm finished at ${finishedDate}, in total this was ${totalDurationInMin} minutes (approx. ${totalDurationInHr} hours)"
-
-
-done<"${logsDir}/AllProjects40days.txt"
+done < "${logsDir}/AllProjects40days.txt"
 
 trap - EXIT
 exit 0

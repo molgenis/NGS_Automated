@@ -390,7 +390,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline argume
 declare group=''
 declare email='false'
 declare dryrun=''
-while getopts "g:l:hn" opt
+while getopts ":g:l:hn" opt
 do
 	case "${opt}" in
 		h)

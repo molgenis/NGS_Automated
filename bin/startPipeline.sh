@@ -250,15 +250,14 @@ function submitPipeline () {
 	elif [ ${_sampleType} == "GAP" ]
 	then
 		if [[ ! -z "${sampleSheetColumnOffsets['SentrixBarcode_A']+isset}" ]]
-                then
-                        sentrixBarcode_A_Index=$((${sampleSheetColumnOffsets['SentrixBarcode_A']} + 1))
-                        sentrixBarcodeA="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v sBA=${sentrixBarcode_A_Index} 'BEGIN {FS=","}{print $sBA}')"
-                fi
+		then
+			sentrixBarcode_A_Index=$((${sampleSheetColumnOffsets['SentrixBarcode_A']} + 1))
+			sentrixBarcodeA="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v sBA=${sentrixBarcode_A_Index} 'BEGIN {FS=","}{print $sBA}')"
+		fi
 		_filePrefix="${sentrixBarcodeA}"
 	else
 		echo "not a known sampleType"
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "not a known sampleType"
-
 	fi
 
 	local _url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
@@ -320,7 +319,7 @@ function submitPipeline () {
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
-while getopts "g:l:r:h" opt; do
+while getopts ":g:l:r:h" opt; do
 	case "${opt}" in
 		h)
 			showHelp
