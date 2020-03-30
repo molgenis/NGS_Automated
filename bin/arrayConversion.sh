@@ -216,9 +216,7 @@ else
 
 		if [ "${count}" == "${numberOfBarcodes}" ]
 		then
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Generating and submitting jobs for ${project} ..." \
-
-				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Generating and submitting jobs for ${project} ..." | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 			echo "started: $(date +%FT%T%z)" > "${SCR_ROOT_DIR}/logs/${project}/run01.arrayConversion.totalRuntime"
 			mkdir -v -p "${SCR_ROOT_DIR}/generatedscripts/${project}/" >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
 
@@ -229,7 +227,6 @@ else
 
 			bash generate_template.sh  >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
 
-			
 			cd "${SCR_ROOT_DIR}/projects/${project}/run01/jobs"
 			bash submit.sh >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "jobs submitted"
