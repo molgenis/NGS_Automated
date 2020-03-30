@@ -173,7 +173,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 # Looping through sub dirs to see if all files.
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "find ${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}"
-readarray -t sampleSheets< <($(find "${SCR_ROOT_DIR}/Samplesheets/" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name '*.csv'))
+readarray -t sampleSheets< <(find "${SCR_ROOT_DIR}/Samplesheets/" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name '*.csv')
 ########for i in $() PER samplesheet er door heen lopen? en dan kijken of alle glaasjes gefinished zijn en dan pas processing?
 
 ####
@@ -198,7 +198,7 @@ else
 		head -1 "${sampleSheet}"
 		colnum=$(head -1 "${sampleSheet}" | sed 's/,/\n/g'| nl | grep 'SentrixBarcode_A$' | grep -o '[0-9][0-9]*')
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found SentrixBarcode_A in column number ${colnum}."
-		readarray -t barcodes< <($(tail -n +2 "${sampleSheet}" | cut -d , -f "${colnum}" | sort | uniq))
+		readarray -t barcodes< <(tail -n +2 "${sampleSheet}" | cut -d , -f "${colnum}" | sort | uniq)
 		count=0
 		numberOfBarcodes=${#barcodes[@]}
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "total number of barcodes: ${numberOfBarcodes}"
