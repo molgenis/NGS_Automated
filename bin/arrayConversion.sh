@@ -223,7 +223,7 @@ else
 			cd "${SCR_ROOT_DIR}/generatedscripts/${project}/"
 			cp -v "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" "${project}.csv" >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "copying ${EBROOTAGCT}/templates/generate_template.sh to ${SCR_ROOT_DIR}/generatedscripts/${project}/"
-			cp -v "${EBROOTAGCT}/templates/generate_template.sh" ${SCR_ROOT_DIR}/generatedscripts/${project}/  >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
+			cp -v "${EBROOTAGCT}/templates/generate_template.sh" "${SCR_ROOT_DIR}/generatedscripts/${project}/"  >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
 
 			bash generate_template.sh  >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
 
