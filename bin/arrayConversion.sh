@@ -173,7 +173,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 # Looping through sub dirs to see if all files.
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "find ${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}"
-declare -a sampleSheets=($(find "${SCR_ROOT_DIR}/Samplesheets/" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name '*.csv'))
+readarray -t sampleSheets< <(find "${SCR_ROOT_DIR}/Samplesheets/" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name '*.csv')
 ########for i in $() PER samplesheet er door heen lopen? en dan kijken of alle glaasjes gefinished zijn en dan pas processing?
 
 ####
@@ -198,8 +198,7 @@ else
 		head -1 "${sampleSheet}"
 		colnum=$(head -1 "${sampleSheet}" | sed 's/,/\n/g'| nl | grep 'SentrixBarcode_A$' | grep -o '[0-9][0-9]*')
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found SentrixBarcode_A in column number ${colnum}."
-
-		barcodes=($(tail -n +2 "${sampleSheet}" | cut -d , -f "${colnum}" | sort | uniq))
+		readarray -t barcodes< <(tail -n +2 "${sampleSheet}" | cut -d , -f "${colnum}" | sort | uniq)
 		count=0
 		numberOfBarcodes=${#barcodes[@]}
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "total number of barcodes: ${numberOfBarcodes}"
@@ -216,20 +215,17 @@ else
 
 		if [ "${count}" == "${numberOfBarcodes}" ]
 		then
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Generating and submitting jobs for ${project} ..." \
-
-				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Generating and submitting jobs for ${project} ..." | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 			echo "started: $(date +%FT%T%z)" > "${SCR_ROOT_DIR}/logs/${project}/run01.arrayConversion.totalRuntime"
 			mkdir -v -p "${SCR_ROOT_DIR}/generatedscripts/${project}/" >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
 
 			cd "${SCR_ROOT_DIR}/generatedscripts/${project}/"
 			cp -v "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" "${project}.csv" >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "copying ${EBROOTAGCT}/templates/generate_template.sh to ${SCR_ROOT_DIR}/generatedscripts/${project}/"
-			cp -v "${EBROOTAGCT}/templates/generate_template.sh" ${SCR_ROOT_DIR}/generatedscripts/${project}/  >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
+			cp -v "${EBROOTAGCT}/templates/generate_template.sh" "${SCR_ROOT_DIR}/generatedscripts/${project}/"  >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
 
 			bash generate_template.sh  >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
 
-			
 			cd "${SCR_ROOT_DIR}/projects/${project}/run01/jobs"
 			bash submit.sh >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "jobs submitted"
