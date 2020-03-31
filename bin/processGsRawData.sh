@@ -644,7 +644,6 @@ function processSamplesheetsAndMoveConvertedData() {
 		do
 			ln -sf "${i}" './'
 		done
-		
 		#
 		# Copy samplesheets per sequencing run to .../Samplesheets/ dir,
 		# so the next step of NGS_Automated will pick it up for further processing.
