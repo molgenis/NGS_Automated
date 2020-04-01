@@ -173,47 +173,47 @@ concordanceDir="/groups/${GROUP}/${TMP_LFS}/concordance/"
 ngsVcfDir="${concordanceDir}/ngs/"
 arrayVcfDir="${concordanceDir}/array/"
 
-
-for sampleSheet in $(find "${concordanceDir}/samplesheets/" -type f -iname "*sampleId.txt")
+while IFS= read -r -d '' sampleSheet
 do
 	echo "______________________________________________________________________________" ## remove when script is finished
 	concordanceCheckId=$(basename "${sampleSheet}" .sampleId.txt)
-if [ ! -f "${concordanceDir}/jobs/${concordanceCheckId}.sh" ]
-then
-
-	touch "${concordanceDir}/logs/${concordanceCheckId}.ConcordanceCheck.started"
-	arrayId=$(sed 1d "${sampleSheet}" | awk 'BEGIN {FS="\t"}{print $1}')
-	arrayVcf=$(echo "${arrayId}.FINAL.vcf")
-	arrayFileLocation=$(sed 1d "${sampleSheet}" | awk 'BEGIN {FS="\t"}{print $3}')
-	rsync -av --copy-links "${arrayFileLocation}" "${arrayVcfDir}"
-	ngsId=$(sed 1d "${sampleSheet}" | awk 'BEGIN {FS="\t"}{print $2}')
-	ngsVcf=$(echo "${ngsId}.final.vcf.gz")
-	ngsFileLocation=$(sed 1d "${sampleSheet}" | awk 'BEGIN {FS="\t"}{print $4}')
-	rsync -av --copy-links "${ngsFileLocation}" "${ngsVcfDir}"
-
-	bedType="$(zcat "${ngsVcfDir}/${ngsVcf}" | grep -m 1 -o -P 'intervals=\[[^\]]*.bed\]' | cut -d [ -f2 | cut -d ] -f1)"
-	bedDir="$(dirname "${bedType}")"
-	bedFile="${bedDir}/captured.merged.bed"
-
-	mkdir -p "${concordanceDir}/tmp/${concordanceCheckId}/"
-
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Calculating concordance over ${ngsVcf} compared to ${arrayVcf}"
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Using ${bedFile} to intersect the array vcf file"
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Output file name: ${concordanceCheckId}"
-
-	##remove indel-calls from ngs-vcf
-	zcat "${ngsVcfDir}/${ngsVcf}" | grep '^#' > "${concordanceDir}/tmp/${concordanceCheckId}/${ngsId}.FINAL.vcf"
-	zcat "${ngsVcfDir}/${ngsVcf}" | grep -v '^#' | awk '{if (length($4)<2 && length($5)<2 ){print $0}}' >> "${concordanceDir}/tmp/${concordanceCheckId}/${ngsId}.FINAL.vcf"
-
-	bgzip -c "${concordanceDir}/tmp/${concordanceCheckId}/${ngsId}.FINAL.vcf" > "${concordanceDir}/tmp/${concordanceCheckId}/${ngsId}.FINAL.vcf.gz"
-	tabix -p vcf "${concordanceDir}/tmp/${concordanceCheckId}/${ngsId}.FINAL.vcf.gz"
-
-	if bedtools intersect -a "${arrayVcfDir}/${arrayVcf}" -b "${bedFile}" -header  > "${concordanceDir}/tmp/${concordanceCheckId}/${arrayId}.FINAL.ExonFiltered.vcf"
+	if [ ! -f "${concordanceDir}/jobs/${concordanceCheckId}.sh" ]
 	then
-		echo ""
-	else
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "There is something wrong while running bedtools intersect"
-	fi
+
+		touch "${concordanceDir}/logs/${concordanceCheckId}.ConcordanceCheck.started"
+		arrayId=$(sed 1d "${sampleSheet}" | awk 'BEGIN {FS="\t"}{print $1}')
+		arrayVcf="${arrayId}.FINAL.vcf"
+		arrayFileLocation=$(sed 1d "${sampleSheet}" | awk 'BEGIN {FS="\t"}{print $3}')
+		rsync -av --copy-links "${arrayFileLocation}" "${arrayVcfDir}"
+		ngsId=$(sed 1d "${sampleSheet}" | awk 'BEGIN {FS="\t"}{print $2}')
+		ngsVcf="${ngsId}.final.vcf.gz"
+		ngsFileLocation=$(sed 1d "${sampleSheet}" | awk 'BEGIN {FS="\t"}{print $4}')
+		rsync -av --copy-links "${ngsFileLocation}" "${ngsVcfDir}"
+
+		bedType="$(zcat "${ngsVcfDir}/${ngsVcf}" | grep -m 1 -o -P 'intervals=\[[^\]]*.bed\]' | cut -d [ -f2 | cut -d ] -f1)"
+		bedDir="$(dirname "${bedType}")"
+		bedFile="${bedDir}/captured.merged.bed"
+
+		mkdir -p "${concordanceDir}/tmp/${concordanceCheckId}/"
+
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Calculating concordance over ${ngsVcf} compared to ${arrayVcf}"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Using ${bedFile} to intersect the array vcf file"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Output file name: ${concordanceCheckId}"
+
+		##remove indel-calls from ngs-vcf
+		zcat "${ngsVcfDir}/${ngsVcf}" | grep '^#' > "${concordanceDir}/tmp/${concordanceCheckId}/${ngsId}.FINAL.vcf"
+		zcat "${ngsVcfDir}/${ngsVcf}" | grep -v '^#' | awk '{if (length($4)<2 && length($5)<2 ){print $0}}' >> "${concordanceDir}/tmp/${concordanceCheckId}/${ngsId}.FINAL.vcf"
+
+		bgzip -c "${concordanceDir}/tmp/${concordanceCheckId}/${ngsId}.FINAL.vcf" > "${concordanceDir}/tmp/${concordanceCheckId}/${ngsId}.FINAL.vcf.gz"
+		tabix -p vcf "${concordanceDir}/tmp/${concordanceCheckId}/${ngsId}.FINAL.vcf.gz"
+
+		if bedtools intersect -a "${arrayVcfDir}/${arrayVcf}" -b "${bedFile}" -header  > "${concordanceDir}/tmp/${concordanceCheckId}/${arrayId}.FINAL.ExonFiltered.vcf"
+		then
+			echo ""
+		else
+			'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "There is something wrong while running bedtools intersect"
+		fi
+		
 cat << EOH > "${concordanceDir}/jobs/${concordanceCheckId}.sh"
 #!/bin/bash
 #SBATCH --job-name=Concordance_${arrayId}
@@ -250,13 +250,14 @@ cat << EOH > "${concordanceDir}/jobs/${concordanceCheckId}.sh"
 	mv "/groups/${GROUP}/${TMP_LFS}/concordance/logs/${concordanceCheckId}.ConcordanceCheck."{started,finished}
 	mv "${concordanceDir}/jobs/${concordanceCheckId}.sh."{started,finished} 
 EOH
-fi
-if [[ ! -f "${concordanceDir}/jobs/${concordanceCheckId}.sh.started" ]] && [[ ! -f "${concordanceDir}/jobs/${concordanceCheckId}.sh.finished" ]]
-then
-	sbatch "${concordanceDir}/jobs/${concordanceCheckId}.sh"
-	touch "${concordanceDir}/jobs/${concordanceCheckId}.sh.started"
-fi
-done
+	fi
+	
+	if [[ ! -f "${concordanceDir}/jobs/${concordanceCheckId}.sh.started" ]] && [[ ! -f "${concordanceDir}/jobs/${concordanceCheckId}.sh.finished" ]]
+	then
+		sbatch "${concordanceDir}/jobs/${concordanceCheckId}.sh"
+		touch "${concordanceDir}/jobs/${concordanceCheckId}.sh.started"
+	fi
+done < <(find "${concordanceDir}/samplesheets/" -type f -iname "*sampleId.txt") 
 trap - EXIT
 exit 0
 
