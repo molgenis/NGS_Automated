@@ -86,8 +86,7 @@ EOH
 # Get commandline arguments.
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
-declare group=''
-while getopts ":g:l:h" opt
+while getopts ":g:l:	h" opt
 do
 	case "${opt}" in
 		h)
@@ -186,14 +185,14 @@ then
 	arrayId=$(sed 1d "${sampleSheet}" | awk 'BEGIN {FS="\t"}{print $1}')
 	arrayVcf=$(echo "${arrayId}.FINAL.vcf")
 	arrayFileLocation=$(sed 1d "${sampleSheet}" | awk 'BEGIN {FS="\t"}{print $3}')
-	rsync -av --copy-links ${arrayFileLocation} "${arrayVcfDir}"
+	rsync -av --copy-links "${arrayFileLocation}" "${arrayVcfDir}"
 	ngsId=$(sed 1d "${sampleSheet}" | awk 'BEGIN {FS="\t"}{print $2}')
 	ngsVcf=$(echo "${ngsId}.final.vcf.gz")
 	ngsFileLocation=$(sed 1d "${sampleSheet}" | awk 'BEGIN {FS="\t"}{print $4}')
-	rsync -av --copy-links ${ngsFileLocation} "${ngsVcfDir}"
+	rsync -av --copy-links "${ngsFileLocation}" "${ngsVcfDir}"
 
 	bedType="$(zcat "${ngsVcfDir}/${ngsVcf}" | grep -m 1 -o -P 'intervals=\[[^\]]*.bed\]' | cut -d [ -f2 | cut -d ] -f1)"
-	bedDir="$(dirname ${bedType})"
+	bedDir="$(dirname "${bedType}")"
 	bedFile="${bedDir}/captured.merged.bed"
 
 	mkdir -p "${concordanceDir}/tmp/${concordanceCheckId}/"
