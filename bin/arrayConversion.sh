@@ -179,10 +179,10 @@ readarray -t sampleSheets< <(find "${SCR_ROOT_DIR}/Samplesheets/" -mindepth 1 -m
 ####
 if [[ "${#sampleSheets[@]:-0}" -eq '0' ]]
 then
-        log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found at ${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}."
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found at ${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}."
 else
-        for sampleSheet in "${sampleSheets[@]}"
-        do
+	for sampleSheet in "${sampleSheets[@]}"
+	do
 		echo "${sampleSheet}!!!!!"
 		project="$(basename "${sampleSheet}" ".csv")"
 		#
