@@ -211,7 +211,7 @@ do
 			start=$(ssh -n "${genomeScanCluster}" stat -c '%Y' "/groups/umcg-genomescan/${genomeScanClusterTmp}/runs/${filePrefix}/results/${filePrefix}.csv")
 		fi
 	fi
-	startDateEpoch=$(echo "${start}")
+	startDateEpoch="${start}"
 	startCopyingEpoch=$(stat -c '%Y' "${logsDir}/${filePrefix}/run01.copyRawDataToPrm.started")
 	finishedCopyingEpoch=$(stat -c '%Y' "${logsDir}/${filePrefix}/run01.copyRawDataToPrm.finished")
 	startPipelineEpoch=$(stat -c '%Y' "${projectsDir}/${project}/run01/jobs/submit.sh")
