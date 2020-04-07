@@ -208,10 +208,9 @@ do
 		if ssh "${genomeScanCluster}" -n test -e "/groups/umcg-genomescan/${genomeScanClusterTmp}/runs/${filePrefix}/results/${filePrefix}.csv"
 		then
 			machine="${HOSTNAME_TMP}"
-			start=$(ssh -n "${genomeScanCluster}" stat -c '%Y' "/groups/umcg-genomescan/${genomeScanClusterTmp}/runs/${filePrefix}/results/${filePrefix}.csv")
+			startDateEpoch=$(ssh -n "${genomeScanCluster}" stat -c '%Y' "/groups/umcg-genomescan/${genomeScanClusterTmp}/runs/${filePrefix}/results/${filePrefix}.csv")
 		fi
 	fi
-	startDateEpoch="${start}"
 	startCopyingEpoch=$(stat -c '%Y' "${logsDir}/${filePrefix}/run01.copyRawDataToPrm.started")
 	finishedCopyingEpoch=$(stat -c '%Y' "${logsDir}/${filePrefix}/run01.copyRawDataToPrm.finished")
 	startPipelineEpoch=$(stat -c '%Y' "${projectsDir}/${project}/run01/jobs/submit.sh")
