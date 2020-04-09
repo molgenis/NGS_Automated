@@ -162,7 +162,7 @@ logsDir="${workDir}/logs/"
 logsDirSourceServer="/groups/${group}/${SCR_LFS}/logs/"
 
 cd "${projectsDir}"
-find ./* -nowarn -mtime -40 -type d -maxdepth 0 -exec ls -d {} \; > "${logsDir}/AllProjects40days.txt"
+find ./ -nowarn -mtime -40 -type d -maxdepth 0 -exec ls -d {} \; > "${logsDir}/AllProjects40days.txt"
 SAMPLESHEET_SEP=","
 echo -e "unique_id,rawdataname,project,total_min,total_hours,machine,numberofSamples,startTime,finishedTime,copyRawDataToPrmDuration,pipelineDuration,copyProjectDataToPrmTiming,demultiplexingDuration" > "${logsDir}/status_timing.csv"
 while read -r project
@@ -170,7 +170,7 @@ do
 	echo "start"
 	declare -a sampleSheetColumnNames=()
 	declare -A sampleSheetColumnOffsets=()
-	numberOfSamples=$(find "${projectsDir}/${project}/run01/results/variants/" -name "*.final.vcf.gz" | wc -l)
+	numberOfSamples=$(find "${projectsDir}/${project}/run01/results/variants/" -name '*.final.vcf.gz' | wc -l)
 	sampleSheet="${projectsDir}/${project}/run01/results/${project}.csv"
 	IFS="," sampleSheetColumnNames=( "$(head -1 "${sampleSheet}")" )
 	for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]:-0} ; offset++ ))
