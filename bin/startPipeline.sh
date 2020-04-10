@@ -149,7 +149,7 @@ function generateScripts () {
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigated to $(pwd)."
 	_message="Running: sh ${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh -p ${_project} -g ${group} -r ${_run} >> ${JOB_CONTROLE_FILE_BASE}.started"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
-	sh "${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh" -p "${_project}" -g ${group} -r ${_run} >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
+	sh "${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh" -p "${_project}" -g "${group}" -r "${_run}" >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
 
 	cd scripts
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigated to $(pwd)."
@@ -188,7 +188,7 @@ function submitPipeline () {
 	declare -a sampleSheetColumnNames=()
 	declare -A sampleSheetColumnOffsets=()
 	declare    sampleTypeFieldIndex
-	IFS="${SAMPLESHEET_SEP}" sampleSheetColumnNames=($(head -1 "${project}.${SAMPLESHEET_EXT}"))
+	IFS="${SAMPLESHEET_SEP}" sampleSheetColumnNames=( "$(head -1 "${project}.${SAMPLESHEET_EXT}")" )
 	for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]:-0} ; offset++ ))
 	do
 		#
@@ -202,13 +202,13 @@ function submitPipeline () {
 			columnName="${sampleSheetColumnNames[${offset}]}"
 		fi
 		sampleSheetColumnOffsets["${columnName}"]="${offset}"
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${columnName} and sampleSheetColumnOffsets["${columnName}"] offset ${offset} "
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${columnName} and sampleSheetColumnOffsets [${columnName}] offset ${offset} "
 	done
 	prio="false"
-	if [[ ! -z "${sampleSheetColumnOffsets['FirstPriority']+isset}" ]]
+	if [[ -n "${sampleSheetColumnOffsets['FirstPriority']+isset}" ]]
 	then
 		priorityFieldIndex=$((${sampleSheetColumnOffsets['FirstPriority']} + 1))
-		priority="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v prio=${priorityFieldIndex} 'BEGIN {FS=","}{print $prio}')"
+		priority=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v prio="${priorityFieldIndex}" 'BEGIN {FS=","}{print "$prio"}')
 		if [[ "${priority^^}" == *"TRUE"* ]]
 		then
 			echo "should submit this in prio queue"
@@ -218,41 +218,41 @@ function submitPipeline () {
 	capturingKit="None"
 	if [[ "${_sampleType}" == "DNA" || "${_sampleType}" == "RNA" ]]
 	then
-		if [[ ! -z "${sampleSheetColumnOffsets['sequencingStartDate']+isset}" ]]
+		if [[ -n "${sampleSheetColumnOffsets['sequencingStartDate']+isset}" ]]
 		then
 			sequencingStartDateIndex=$((${sampleSheetColumnOffsets['sequencingStartDate']} + 1))
-			sequencingStartDate="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v seqstart=${sequencingStartDateIndex} 'BEGIN {FS=","}{print $seqstart}' | head -1)"
+			sequencingStartDate=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v seqstart="${sequencingStartDateIndex}" 'BEGIN {FS=","}{print "$seqstart"}' | head -1)
 		fi
-		if [[ ! -z "${sampleSheetColumnOffsets['sequencer']+isset}" ]]
+		if [[ -n "${sampleSheetColumnOffsets['sequencer']+isset}" ]]
 		then
 			sequencerIndex=$((${sampleSheetColumnOffsets['sequencer']} + 1))
-			sequencer="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v sequencer=${sequencerIndex} 'BEGIN {FS=","}{print $sequencer}' | head -1)"
+			sequencer=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v sequencer="${sequencerIndex}" 'BEGIN {FS=","}{print "$sequencer"}' | head -1)
 		fi
-		if [[ ! -z "${sampleSheetColumnOffsets['run']+isset}" ]]
+		if [[ -n "${sampleSheetColumnOffsets['run']+isset}" ]]
 		then
 			runIndex=$((${sampleSheetColumnOffsets['run']} + 1))
-			run="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v run=${runIndex} 'BEGIN {FS=","}{print $run}' | head -1)"
+			run=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v run="${runIndex}" 'BEGIN {FS=","}{print "$run"}' | head -1)
 		fi
-		if [[ ! -z "${sampleSheetColumnOffsets['flowcell']+isset}" ]]
+		if [[ -n "${sampleSheetColumnOffsets['flowcell']+isset}" ]]
 		then
 			flowcellIndex=$((${sampleSheetColumnOffsets['flowcell']} + 1))
-			flowcell="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v flowcell=${flowcellIndex} 'BEGIN {FS=","}{print $flowcell}' | head -1)"
+			flowcell=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v flowcell="${flowcellIndex}" 'BEGIN {FS=","}{print "$flowcell"}' | head -1)
 		fi
 		_filePrefix="${sequencingStartDate}_${sequencer}_${run}_${flowcell}"
 		if [ "${_sampleType}" == "DNA" ]
 		then
 			capturingKitIndex=$((${sampleSheetColumnOffsets['capturingKit']} + 1))
-			capturingKit="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v capt=${capturingKitIndex} 'BEGIN {FS=","}{print $capt}' | awk 'BEGIN{FS="/"}{print $2}' | head -1)"
+			capturingKit=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v capt="${capturingKitIndex}" 'BEGIN {FS=","}{print "$capt"}' | awk 'BEGIN{FS="/"}{print "$2"}' | head -1)
 		fi
 	#
 	# Track and Trace: log that we will start running jobs on the cluster.
 	#
-	elif [ ${_sampleType} == "GAP" ]
+	elif [ "${_sampleType}" == "GAP" ]
 	then
-		if [[ ! -z "${sampleSheetColumnOffsets['SentrixBarcode_A']+isset}" ]]
+		if [[ -n "${sampleSheetColumnOffsets['SentrixBarcode_A']+isset}" ]]
 		then
 			sentrixBarcode_A_Index=$((${sampleSheetColumnOffsets['SentrixBarcode_A']} + 1))
-			sentrixBarcodeA="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v sBA=${sentrixBarcode_A_Index} 'BEGIN {FS=","}{print $sBA}')"
+			sentrixBarcodeA=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v sBA="${sentrixBarcode_A_Index}" 'BEGIN {FS=","}{print "$sBA"}')
 		fi
 		_filePrefix="${sentrixBarcodeA}"
 	else
@@ -268,7 +268,7 @@ function submitPipeline () {
 	#
 	_url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_samples&hideselect=true&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
 	printf '%s\n' "project_job,job,project,started_date,finished_date,status,url,step"  > "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
-	grep '^processJob' submit.sh | tr '"' ' ' | awk -v pro=${_project} -v url=${_url} '{OFS=","} {print pro"_"$2,$2,pro,"","","",url}' \
+	grep '^processJob' submit.sh | tr '"' ' ' | awk -v pro="${_project}" -v url="${_url}" '{OFS=","} {print pro"_"$2,$2,pro,"","","",url}' \
 		>> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
 	awk '{FS=","}{if (NR==1){print $0}else{split($2,a,"_"); print $0","a[1]"_"a[2]}}' "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"\
 		> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv.tmp"
@@ -304,11 +304,12 @@ function submitPipeline () {
 				}
 	fi
 	touch "${JOB_CONTROLE_FILE_BASE}.started"
+	local _message
 	if [ "${prio}" == "true" ]
 	then
-		local _message="Jobs were submitted to the scheduler on in the prio queue on ${HOSTNAME_SHORT} by ${ROLE_USER} for ${_project}/${_run} on $(date '+%Y-%m-%d-T%H%M')."
+		_message="Jobs were submitted to the scheduler on in the prio queue on ${HOSTNAME_SHORT} by ${ROLE_USER} for ${_project}/${_run} on $(date '+%Y-%m-%d-T%H%M')."
 	else
-		local _message="Jobs were submitted to the scheduler on ${HOSTNAME_SHORT} by ${ROLE_USER} for ${_project}/${_run} on $(date '+%Y-%m-%d-T%H%M')."
+		_message="Jobs were submitted to the scheduler on ${HOSTNAME_SHORT} by ${ROLE_USER} for ${_project}/${_run} on $(date '+%Y-%m-%d-T%H%M')."
 	fi
 	echo "${_message}" >> "${JOB_CONTROLE_FILE_BASE}.started"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
@@ -419,7 +420,9 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #       that created the sample sheet per project can run a GD cluster
 #       instead of on a research cluster to create them directly on tmp.
 #
-declare -a sampleSheets=($(ssh ${HOSTNAME_PRM} "find ${PRM_ROOT_DIR}/Samplesheets/ -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name *.${SAMPLESHEET_EXT}"))
+declare -a sampleSheets
+# shellcheck disable=SC2029
+sampleSheets=( "$(ssh "${HOSTNAME_PRM}" "find \"${PRM_ROOT_DIR}/Samplesheets/\" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name '*.${SAMPLESHEET_EXT}'")" )
 if [[ "${#sampleSheets[@]:-0}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found @ ${PRM_ROOT_DIR}/Samplesheets/: There is nothing to do."
@@ -435,7 +438,7 @@ fi
 #
 # Parse sample sheets.
 #
-sampleSheets=($(ls -1 "${TMP_ROOT_DIR}/Samplesheets/"*".${SAMPLESHEET_EXT}"))
+sampleSheets=( "$(ls -1 "${TMP_ROOT_DIR}/Samplesheets/"*".${SAMPLESHEET_EXT}")" )
 for sampleSheet in "${sampleSheets[@]}"
 do
 	mac2unix "${sampleSheet}"
@@ -453,7 +456,7 @@ do
 	declare -A sampleSheetColumnOffsets=()
 	declare    sampleTypeFieldIndex
 	sampleType='DNA'
-	IFS="${SAMPLESHEET_SEP}" sampleSheetColumnNames=($(head -1 "${sampleSheet}"))
+	IFS="${SAMPLESHEET_SEP}" sampleSheetColumnNames=( "$(head -1 "${sampleSheet}")" )
 	#
 	# Backwards compatibility for "Sample Type" including - the horror - a space and optionally quotes :o.
 	#
@@ -467,17 +470,17 @@ do
 			columnName="${sampleSheetColumnNames[${offset}]}"
 		fi
 		sampleSheetColumnOffsets["${columnName}"]="${offset}"
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${columnName} and sampleSheetColumnOffsets["${columnName}"] offset ${offset} "
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${columnName} and sampleSheetColumnOffsets[${columnName}] offset ${offset} "
 	done
 	#
 	# Get sampleType from sample sheet and check if all samples are of the same type.
 	#
-	if [[ ! -z "${sampleSheetColumnOffsets['sampleType']+isset}" ]]; then
+	if [[ -n "${sampleSheetColumnOffsets['sampleType']+isset}" ]]; then
 		sampleTypeFieldIndex=$((${sampleSheetColumnOffsets['sampleType']} + 1))
-		sampleTypesCount=$(tail -n +2 "${sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f ${sampleTypeFieldIndex} | sort | uniq | wc -l)
+		sampleTypesCount=$(tail -n +2 "${sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${sampleTypeFieldIndex}" | sort | uniq | wc -l)
 		if [[ "${sampleTypesCount}" -eq '1' ]]
 		then
-			sampleType=$(tail -n 1 "${sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f ${sampleTypeFieldIndex})
+			sampleType=$(tail -n 1 "${sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${sampleTypeFieldIndex}")
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found sampleType: ${sampleType}."
 		else
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${sampleSheet} contains multiple different sampleType values."
