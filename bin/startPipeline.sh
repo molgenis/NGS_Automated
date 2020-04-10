@@ -470,7 +470,7 @@ do
 			columnName="${sampleSheetColumnNames[${offset}]}"
 		fi
 		sampleSheetColumnOffsets["${columnName}"]="${offset}"
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${columnName} and sampleSheetColumnOffsets[${columnName}] offset ${offset} "
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${columnName} and sampleSheetColumnOffsets[${columnName}] offset ${offset}"
 	done
 	#
 	# Get sampleType from sample sheet and check if all samples are of the same type.
