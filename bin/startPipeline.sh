@@ -188,8 +188,7 @@ function submitPipeline () {
 	declare -a sampleSheetColumnNames=()
 	declare -A sampleSheetColumnOffsets=()
 	declare    sampleTypeFieldIndex
-	IFS="${SAMPLESHEET_SEP}"
-	mapfile -t sampleSheetColumnNames < <(head -1 "${project}.${SAMPLESHEET_EXT}")
+	IFS="${SAMPLESHEET_SEP}" mapfile -t sampleSheetColumnNames < <(head -1 "${project}.${SAMPLESHEET_EXT}")
 	#sampleSheetColumnNames=($(head -1 "${project}.${SAMPLESHEET_EXT}"))
 	for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]:-0} ; offset++ ))
 	do
