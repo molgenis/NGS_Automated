@@ -208,7 +208,7 @@ function submitPipeline () {
 	if [[ -n "${sampleSheetColumnOffsets['FirstPriority']+isset}" ]]
 	then
 		priorityFieldIndex=$((${sampleSheetColumnOffsets['FirstPriority']} + 1))
-		priority="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v prio=${priorityFieldIndex} 'BEGIN {FS=","}{print $prio}')"
+		priority=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v prio="${priorityFieldIndex}" 'BEGIN {FS=","}{print "$prio"}')
 		if [[ "${priority^^}" == *"TRUE"* ]]
 		then
 			echo "should submit this in prio queue"
@@ -221,7 +221,7 @@ function submitPipeline () {
 		if [[ -n "${sampleSheetColumnOffsets['sequencingStartDate']+isset}" ]]
 		then
 			sequencingStartDateIndex=$((${sampleSheetColumnOffsets['sequencingStartDate']} + 1))
-			sequencingStartDate="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v seqstart=${sequencingStartDateIndex} 'BEGIN {FS=","}{print $seqstart}' | head -1)"
+			sequencingStartDate=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v seqstart="${sequencingStartDateIndex}" 'BEGIN {FS=","}{print "$seqstart"}' | head -1)
 		fi
 		if [[ -n "${sampleSheetColumnOffsets['sequencer']+isset}" ]]
 		then
