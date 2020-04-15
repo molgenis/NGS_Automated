@@ -456,7 +456,6 @@ do
 	declare -A sampleSheetColumnOffsets=()
 	declare    sampleTypeFieldIndex
 	sampleType='DNA'
-	#IFS="${SAMPLESHEET_SEP}" sampleSheetColumnNames=( "$(head -1 "${sampleSheet}")" )
 	IFS="${SAMPLESHEET_SEP}" read -r -a sampleSheetColumnNames <<< "$(head -1 "${sampleSheet}")"
 	#
 	# Backwards compatibility for "Sample Type" including - the horror - a space and optionally quotes :o.
