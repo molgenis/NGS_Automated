@@ -208,7 +208,7 @@ function submitPipeline () {
 	if [[ -n "${sampleSheetColumnOffsets['FirstPriority']+isset}" ]]
 	then
 		priorityFieldIndex=$((${sampleSheetColumnOffsets['FirstPriority']} + 1))
-		priority=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v prio="${priorityFieldIndex}" 'BEGIN {FS=","}{print "$prio"}')
+		priority="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v prio=${priorityFieldIndex} 'BEGIN {FS=","}{print $prio}')"
 		if [[ "${priority^^}" == *"TRUE"* ]]
 		then
 			echo "should submit this in prio queue"
@@ -221,28 +221,28 @@ function submitPipeline () {
 		if [[ -n "${sampleSheetColumnOffsets['sequencingStartDate']+isset}" ]]
 		then
 			sequencingStartDateIndex=$((${sampleSheetColumnOffsets['sequencingStartDate']} + 1))
-			sequencingStartDate=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v seqstart="${sequencingStartDateIndex}" 'BEGIN {FS=","}{print "$seqstart"}' | head -1)
+			sequencingStartDate="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v seqstart=${sequencingStartDateIndex} 'BEGIN {FS=","}{print $seqstart}' | head -1)"
 		fi
 		if [[ -n "${sampleSheetColumnOffsets['sequencer']+isset}" ]]
 		then
 			sequencerIndex=$((${sampleSheetColumnOffsets['sequencer']} + 1))
-			sequencer=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v sequencer="${sequencerIndex}" 'BEGIN {FS=","}{print "$sequencer"}' | head -1)
+			sequencer="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v sequencer=${sequencerIndex} 'BEGIN {FS=","}{print $sequencer}' | head -1)"
 		fi
 		if [[ -n "${sampleSheetColumnOffsets['run']+isset}" ]]
 		then
 			runIndex=$((${sampleSheetColumnOffsets['run']} + 1))
-			run=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v run="${runIndex}" 'BEGIN {FS=","}{print "$run"}' | head -1)
+			run="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v run=${runIndex} 'BEGIN {FS=","}{print $run}' | head -1)"
 		fi
 		if [[ -n "${sampleSheetColumnOffsets['flowcell']+isset}" ]]
 		then
 			flowcellIndex=$((${sampleSheetColumnOffsets['flowcell']} + 1))
-			flowcell=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v flowcell="${flowcellIndex}" 'BEGIN {FS=","}{print "$flowcell"}' | head -1)
+			flowcell="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v flowcell=${flowcellIndex} 'BEGIN {FS=","}{print $flowcell}' | head -1)"
 		fi
 		_filePrefix="${sequencingStartDate}_${sequencer}_${run}_${flowcell}"
 		if [ "${_sampleType}" == "DNA" ]
 		then
 			capturingKitIndex=$((${sampleSheetColumnOffsets['capturingKit']} + 1))
-			capturingKit=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v capt="${capturingKitIndex}" 'BEGIN {FS=","}{print "$capt"}' | awk 'BEGIN{FS="/"}{print "$2"}' | head -1)
+			capturingKit="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v capt=${capturingKitIndex} 'BEGIN {FS=","}{print $capt}' | awk 'BEGIN{FS="/"}{print $2}' | head -1)"
 		fi
 	#
 	# Track and Trace: log that we will start running jobs on the cluster.
@@ -252,7 +252,7 @@ function submitPipeline () {
 		if [[ -n "${sampleSheetColumnOffsets['SentrixBarcode_A']+isset}" ]]
 		then
 			sentrixBarcode_A_Index=$((${sampleSheetColumnOffsets['SentrixBarcode_A']} + 1))
-			sentrixBarcodeA=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v sBA="${sentrixBarcode_A_Index}" 'BEGIN {FS=","}{print "$sBA"}')
+			sentrixBarcodeA="$(tail -n +2 ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT} | awk -v sBA=${sentrixBarcode_A_Index} 'BEGIN {FS=","}{print $sBA}')"
 		fi
 		_filePrefix="${sentrixBarcodeA}"
 	else
