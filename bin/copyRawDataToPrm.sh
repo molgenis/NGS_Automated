@@ -541,7 +541,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 declare -a sampleSheetsFromSourceServer
 # shellcheck disable=SC2029
-readarray -t sampleSheetsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${SCR_ROOT_DIR}/Samplesheets/\" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name '*.${SAMPLESHEET_EXT}'")
+readarray -t sampleSheetsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${SCR_ROOT_DIR}/Samplesheets/\" -mindepth 1 -maxdepth 1 -type f -name '*.${SAMPLESHEET_EXT}'")
 
 if [[ "${#sampleSheetsFromSourceServer[@]:-0}" -eq '0' ]]
 then
@@ -605,7 +605,7 @@ else
 			if [[ -e "${controlFileBase}/${rawDataItem}.rsyncRuns.finished" ]]
 			then
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}/${rawDataItem}.rsyncRuns.finished present."
-				processedRawDataItems=$((${processedRawDataItems}+1))
+				processedRawDataItems=$((processedRawDataItems+1))
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}/${rawDataItem}.rsyncRuns.finished absent -> rsyncRuns failed."
 			fi
