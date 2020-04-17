@@ -554,7 +554,7 @@ else
 		#
 		filePrefix="$(basename "${sampleSheet%."${SAMPLESHEET_EXT}"}")"
 		controlFileBase="${PRM_ROOT_DIR}/logs/${filePrefix}/"
-		export JOB_CONTROLE_FILE_BASE="${controlFileBase}/run01.${SCRIPT_NAME}"
+		export JOB_CONTROLE_FILE_BASE="${controlFileBase}/${filePrefix}.${SCRIPT_NAME}"
 		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping already processed run ${filePrefix}."
@@ -616,7 +616,7 @@ else
 		if [[ "${processedRawDataItems}" == "${totalRawDataItems}" ]]
 		then
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "All raw data items (${processedRawDataItems}/${totalRawDataItems}) were copied to prm."
-			splitSamplesheetPerProject "${PRM_ROOT_DIR}/Samplesheets/archive/${filePrefix}.${SAMPLESHEET_EXT}" "${filePrefix}" "${controlFileBase}/${filePrefix}"
+			splitSamplesheetPerProject "${PRM_ROOT_DIR}/Samplesheets/archive/${_run}.${SAMPLESHEET_EXT}" "${filePrefix}" "${controlFileBase}/${filePrefix}"
 		fi
 		#
 		# Signal success or failure for complete process.
