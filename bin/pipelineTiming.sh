@@ -313,7 +313,7 @@ do
 
 	echo -e "The complete pipeline is finished for project ${project}" >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The complete pipeline is finished for project ${project}"
-
+	#shellcheck disable=SC2029
 	ssh "${sourceServerFQDN}" "mv \"${SCR_ROOT_DIR}/logs/Timestamp/${project}.csv\" \"${SCR_ROOT_DIR}/logs/Timestamp/archive/\""
 	mv "${projectStartDir}/${project}.csv" "${projectStartDir}/archive/"
 done
