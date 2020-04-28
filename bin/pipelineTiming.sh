@@ -231,7 +231,7 @@ do
 		return
 	elif [[ "${#_generateScriptsFinished[@]:-0}" -lt '1' ]]
 	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping using existing scripts for ${project} because there are none."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping because runnumber can't be determined using existing scripts for project ${project}."
 		return
 	elif [[ "${#_generateScriptsStarted[@]:-0}" -eq '1' ]]
 	then
@@ -243,7 +243,7 @@ do
 		return
 	elif [[ "${#_generateScriptsStarted[@]:-0}" -lt '1' ]]
 	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping using existing scripts for ${project} because there are none."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping because runnumber can't be determined using existing scripts for project ${project}."
 		return
 	fi
 
