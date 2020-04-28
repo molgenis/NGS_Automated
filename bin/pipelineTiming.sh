@@ -215,15 +215,17 @@ projectSheets=$(find "${projectStartDir}/" -name '*.csv' -type f)
 for projectSheet in "${projectSheets[@]}"
 do 
 	project=$(basename "${projectSheet}" .csv)
-
+	declare -a _generateScriptsFinished
+	declare -a _generateScriptsStarted
 	## determine run number.
 	
-	_generateScriptsFinished=$(find "${logsDir}/${project}/" -name '*.generateScripts.finished')
-	_generateScriptsStarted=$(find "${logsDir}/${project}/" -name "*.generateScripts.started")
+	#_generateScriptsFinished=($(find "${logsDir}/${project}/" -name '*.generateScripts.finished'))
+	mapfile -t _generateScriptsFinished < <(find "${logsDir}/${project}/" -name '*.generateScripts.finished')
+	mapfile -t _generateScriptsStarted < <(find "${logsDir}/${project}/" -name "*.generateScripts.started")
 	
 	if [[ "${#_generateScriptsFinished[@]:-0}" -eq '1' ]]
 	then
-		run=$(basename "${_generateScriptsFinished}" .generateScripts.finished)
+		run=$(basename "${_generateScriptsFinished[0]}" .generateScripts.finished)
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using run number: ${run}"
 	elif [[ "${#_generateScriptsFinished[@]:-0}" -gt '1' ]]
 	then
@@ -235,7 +237,7 @@ do
 		return
 	elif [[ "${#_generateScriptsStarted[@]:-0}" -eq '1' ]]
 	then
-		run=$(basename "${_generateScriptsStarted}" .generateScripts.started)
+		run=$(basename "${_generateScriptsStarted[0]}" .generateScripts.started)
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using run number: ${run}"
 	elif [[ "${#_generateScriptsStarted[@]:-0}" -gt '1' ]]
 	then
