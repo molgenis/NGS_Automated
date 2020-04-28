@@ -221,31 +221,29 @@ do
 	_generateScriptsFinished=$(find "${logsDir}/${project}/" -name '*.generateScripts.finished')
 	_generateScriptsStarted=$(find "${logsDir}/${project}/" -name "*.generateScripts.started")
 	
-	if [[ "${#_generateScriptsFinished[@]:-0}" = '1' ]]
+	if [[ "${#_generateScriptsFinished[@]:-0}" -eq '1' ]]
 	then
 		run=$(basename "${_generateScriptsFinished}" .generateScripts.finished)
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using run number: ${run}"
-		return
 	elif [[ "${#_generateScriptsFinished[@]:-0}" -gt '1' ]]
 	then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${project} due to multiple generateScriptFinished files."
 		return
 	elif [[ "${#_generateScriptsFinished[@]:-0}" -lt '1' ]]
 	then
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping using existing scripts for ${project} because there are none."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping using existing scripts for ${project} because there are none."
 		return
-	elif [[ "${#_generateScriptsStarted[@]:-0}" = '1' ]]
+	elif [[ "${#_generateScriptsStarted[@]:-0}" -eq '1' ]]
 	then
 		run=$(basename "${_generateScriptsStarted}" .generateScripts.started)
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using run number: ${run}"
-		return
 	elif [[ "${#_generateScriptsStarted[@]:-0}" -gt '1' ]]
 	then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${project} due to multiple generateScriptStarted files."
 		return
 	elif [[ "${#_generateScriptsStarted[@]:-0}" -lt '1' ]]
 	then
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping using existing scripts for ${project} because there are none."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping using existing scripts for ${project} because there are none."
 		return
 	fi
 
