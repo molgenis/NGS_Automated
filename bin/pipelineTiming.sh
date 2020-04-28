@@ -217,13 +217,17 @@ do
 	project=$(basename "${projectSheet}" .csv)
 
 	## determine run number.
-	if [[ -e "${logsDir}/${project}/"*".generateScripts.finished" ]]
+	
+	generateScriptsFinished=$(find "${logsDir}/${project}/" -name "*.generateScripts.finished")
+		
+	if [[ -e "${generateScriptsFinished}" ]]
 	then
-		run=$(basename "${logsDir}/${project}/"*".generateScripts.finished" .generateScripts.finished)
+		run=$(basename "${generateScriptsFinished}" .generateScripts.finished)
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using run number: ${run}"
-	elif [ -e "${logsDir}/${project}/"*".generateScripts.started"  ]
+	generateScriptsStarted=$(find "${logsDir}/${project}/" -name "*.generateScripts.started")
+	elif [ -e "${generateScriptsStarted}" ]
 	then
-		run=$(basename "${logsDir}/${project}/"*".generateScripts.started" .generateScripts.started)
+		run=$(basename "${generateScriptsStarted}" .generateScripts.started)
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using run number: ${run}"
 	fi
 
