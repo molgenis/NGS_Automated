@@ -218,17 +218,35 @@ do
 
 	## determine run number.
 	
-	generateScriptsFinished=$(find "${logsDir}/${project}/" -name "*.generateScripts.finished")
-		
-	if [[ -e "${generateScriptsFinished}" ]]
+	_generateScriptsFinished=$(find "${logsDir}/${project}/" -name '*.generateScripts.finished')
+	_generateScriptsStarted=$(find "${logsDir}/${project}/" -name "*.generateScripts.started")
+	
+	if [[ "${#_generateScriptsFinished[@]:-0}" = '1' ]]
 	then
-		run=$(basename "${generateScriptsFinished}" .generateScripts.finished)
+		run=$(basename "${_generateScriptsFinished}" .generateScripts.finished)
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using run number: ${run}"
-	generateScriptsStarted=$(find "${logsDir}/${project}/" -name "*.generateScripts.started")
-	elif [ -e "${generateScriptsStarted}" ]
+		return
+	elif [[ "${#_generateScriptsFinished[@]:-0}" -gt '1' ]]
 	then
-		run=$(basename "${generateScriptsStarted}" .generateScripts.started)
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${project} due to multiple generateScriptFinished files."
+		return
+	elif [[ "${#_generateScriptsFinished[@]:-0}" -lt '1' ]]
+	then
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping using existing scripts for ${project} because there are none."
+		return
+	elif [[ "${#_generateScriptsStarted[@]:-0}" = '1' ]]
+	then
+		run=$(basename "${_generateScriptsStarted}" .generateScripts.started)
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using run number: ${run}"
+		return
+	elif [[ "${#_generateScriptsStarted[@]:-0}" -gt '1' ]]
+	then
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${project} due to multiple generateScriptStarted files."
+		return
+	elif [[ "${#_generateScriptsStarted[@]:-0}" -lt '1' ]]
+	then
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping using existing scripts for ${project} because there are none."
+		return
 	fi
 
 	if [[ ! -d "${logsDir}/${project}/" ]]
@@ -242,7 +260,7 @@ do
 	fi
 	
 
-	## step 1, checks the generatedScirps
+	## step 1, checks the generatedScripts
 	if [ -e "${logsDir}/${project}/${run}.generateScripts.finished" ]
 	then
 		echo -e "generatedScripts finished for project ${project}" >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
