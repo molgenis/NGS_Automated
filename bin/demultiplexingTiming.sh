@@ -87,7 +87,6 @@ EOH
 # Get commandline arguments.
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
-declare group=''
 while getopts ":g:l:h" opt
 do
 	case "${opt}" in
@@ -179,7 +178,7 @@ then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "All runs are processed, no new sample sheet available"
 fi
 
-for sampleSheet in $(ls "${SCR_ROOT_DIR}/Samplesheets/"*".csv")
+for sampleSheet in "${checkSampleSheet[@]}"
 do 
 	sequenceRun=$(basename "${sampleSheet}" .csv)
 	## check if there is a sequence run corresponding to the samplesheet.
@@ -196,16 +195,37 @@ do
 	fi
 	
 	## determine run number.
-	if [ -e "${SCR_ROOT_DIR}/logs/${sequenceRun}/"*".demultiplexing.finished" ]
+	declare -a _demultiplexingFinished
+	declare -a _demultiplexingStarted
+	mapfile -t _demultiplexingFinished < <(find "${SCR_ROOT_DIR}/logs/${sequenceRun}/" -name '*.demultiplexing.finished')
+	mapfile -t _demultiplexingStarted < <(find "${SCR_ROOT_DIR}/logs/${sequenceRun}/" -name '*.demultiplexing.started')
+	
+	if [[ "${#_demultiplexingFinished[@]:-0}" -eq '1' ]]
 	then
-		run=$(basename "${SCR_ROOT_DIR}/logs/${sequenceRun}/"*".demultiplexing.finished" .demultiplexing.finished)
+		run=$(basename "${_demultiplexingFinished[0]}" .demultiplexing.finished)
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using run number: ${run}"
-	elif [ -e "${SCR_ROOT_DIR}/logs/${sequenceRun}/"*".demultiplexing.started" ]
+	elif [[ "${#_demultiplexingFinished[@]:-0}" -gt '1' ]]
 	then
-		run=$(basename "${SCR_ROOT_DIR}/logs/${sequenceRun}/"*".demultiplexing.started" .demultiplexing.started)
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${sequenceRun} due to multiple demultiplexing.finished files."
+		return
+	elif [[ "${#_demultiplexingFinished[@]:-0}" -lt '1' ]]
+	then
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping because runnumber can't be determined using existing scripts for sequenceRun ${sequenceRun}."
+		return
+	elif [[ "${#_demultiplexingStarted[@]:-0}" -eq '1' ]]
+	then
+		run=$(basename "${_demultiplexingStarted[0]}" .demultiplexing.finished)
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using run number: ${run}"
+	elif [[ "${#_demultiplexingStarted[@]:-0}" -gt '1' ]]
+	then
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${sequenceRun} due to multiple demultiplexing.finished files."
+		return
+	elif [[ "${#_demultiplexingStarted[@]:-0}" -lt '1' ]]
+	then
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping because runnumber can't be determined using existing scripts for sequenceRun ${sequenceRun}."
+		return
 	fi
-
+	
 	touch "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
 	echo -e "moment of checking run time: $(date)\nsamplesheet: ${sampleSheet}\n" > "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using sampleSheet: ${sampleSheet}"
@@ -218,17 +238,18 @@ do
 		declare -A sampleSheetColumnOffsets=()
 		declare -a projects=()
 		
-		IFS="," sampleSheetColumnNames=($(head -1 "${sampleSheet}"))
+		IFS="," read -r -a sampleSheetColumnNames <<< "$(head -1 "${sampleSheet}")"
 		
 		for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]:-0} ; offset++ ))
 		do
 			sampleSheetColumnOffsets["${sampleSheetColumnNames[${offset}]}"]="${offset}"
 		done
 
-		if [[ ! -z "${sampleSheetColumnOffsets['project']+isset}" ]] 
+		if [[ -n "${sampleSheetColumnOffsets['project']+isset}" ]] 
 		then
 			projectFieldIndex=$((${sampleSheetColumnOffsets['project']} + 1))
-			IFS=$'\n' projects=($(tail -n +2 "${sampleSheet}" | cut -d "," -f "${projectFieldIndex}" | sort | uniq ))
+			IFS=$'\n' read -r -a projects <<< "$(tail -n +2 "${sampleSheet}" | cut -d "," -f "${projectFieldIndex}" | sort | uniq )"
+			
 		fi
 
 		for project in "${projects[@]}"
@@ -255,7 +276,7 @@ do
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing is running for sequence run ${sequenceRun}"
 		else
 			echo -e "demultiplexing.started file is OLDER than 1 hour.\ntime ${run}.demultiplexing.started was last modified:" \
-			$(stat -c %y "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.demultiplexing.started") >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
+			"$(stat -c %y "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.demultiplexing.started")" >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
 			
 			touch "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.failed"
 			echo -e "Dear HPC helpdesk,\n\nPlease check if there is something wrong with the demultiplexing pipeline.\nThe demultiplexing of run ${sequenceRun} is not finished after 1h.\n\nKind regards\nHPC" > "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.failed"
