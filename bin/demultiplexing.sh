@@ -174,7 +174,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "ls -1 -d ${SEQ_DIR}/*/"
 projects=$(find "${SEQ_DIR}/" -type d)
-for i in "${projects}"[@]
+for i in "${projects[@]}"
 do
 	project=$(basename "${i}")
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking ${project} ..."
