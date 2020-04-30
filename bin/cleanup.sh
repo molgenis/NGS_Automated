@@ -19,14 +19,12 @@ umask 0027
 
 # Env vars.
 export TMPDIR="${TMPDIR:-/tmp}" # Default to /tmp if $TMPDIR was not defined.
-SCRIPT_NAME="$(basename ${0})"
+SCRIPT_NAME="$(basename "${0}")"
 SCRIPT_NAME="${SCRIPT_NAME%.*sh}"
 INSTALLATION_DIR="$(cd -P "$(dirname "${0}")/.." && pwd)"
 LIB_DIR="${INSTALLATION_DIR}/lib"
 CFG_DIR="${INSTALLATION_DIR}/etc"
 HOSTNAME_SHORT="$(hostname -s)"
-ROLE_USER="$(whoami)"
-REAL_USER="$(logname 2>/dev/null || echo 'no login name')"
 
 #
 ##
@@ -165,10 +163,11 @@ HOMEDIRGAVIN="${TMP_ROOT_DIR}/GavinStandAlone/"
 
 if [ -d "${HOMEDIRGAVIN}" ]
 then
-	find "${HOMEDIRGAVIN}/input/" -name *.cleaned -type f -mtime +7 -exec rm {} \;
-	if ls ${HOMEDIRGAVIN}/input/*.vcf.finished 1> /dev/null 2>&1
+	find "${HOMEDIRGAVIN}/input/" -name '*.cleaned' -type f -mtime +7 -exec rm -- {} \;
+	if ls "${HOMEDIRGAVIN}/input/"*.vcf.finished 1> /dev/null 2>&1
 	then
-		for i in $(ls ${HOMEDIRGAVIN}/input/*.vcf.finished)
+		finishedFiles="$(find "${HOMEDIRGAVIN}/input/"*.vcf.finished -type f)"
+		for i in "${finishedFiles[@]}"
 		do
 			fileName=$(basename "${i}")
 			name=${fileName%%.*}
@@ -191,9 +190,11 @@ fi
 
 ##cleaning up files older than 30 days in PROJECTS and TMP when files are copied
 
-for i in $(find "${TMP_ROOT_DIR}/projects/" -maxdepth 1 -type d -mtime +30 -exec ls -d {} \;)
+projects="$(find "${TMP_ROOT_DIR}/projects/" -maxdepth 1 -type d -mtime +30 -exec ls -d {} \;)"
+
+for i in "${projects[@]}"
 do
-	project=$(basename $i)
+	project=$(basename "${i}")
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "check ${project}"
 	if [ -f "${TMP_ROOT_DIR}/logs/${project}/${project}.projectDataCopiedToPrm" ]
 	then
@@ -208,14 +209,17 @@ do
 	fi
 done
 ##cleaning up files older than 30 days in RAWDATA when files are copied
-for i in $(find "${TMP_ROOT_DIR}/rawdata/ngs/" -maxdepth 1 -type d -mtime +30 -exec ls -d {} \;) 
+
+ngsRuns="$(find "${TMP_ROOT_DIR}/rawdata/ngs/" -maxdepth 1 -type d -mtime +30 -exec ls -d {} \;)"
+
+for i in "${ngsRuns[@]}"
 do
-	run=$(basename $i)
+	run=$(basename "${i}")
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "check ${run}"
 	if [ -f "${TMP_ROOT_DIR}/logs/${run}/${run}.dataCopiedToPrm" ]
 	then
-		countPrm=$(ssh calculon.hpc.rug.nl "ls ${PRM_ROOT_DIR}/rawdata/ngs/${run}/${run}*.fq.gz* | wc -l")
-		countTmp=$(ls ${TMP_ROOT_DIR}/rawdata/ngs/${run}/${run}*.fq.gz* | wc -l)
+		countPrm=$(ssh calculon.hpc.rug.nl 'ls ${PRM_ROOT_DIR}/rawdata/ngs/${run}/${run}*.fq.gz* | wc -l')
+		countTmp="$(find "${TMP_ROOT_DIR}/rawdata/ngs/${run}/${run}" -name '*.fq.gz*' -type f | wc -l)"
 		if [ "${countPrm}" == "${countTmp}" ]
 		then
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${TMP_ROOT_DIR}/rawdata/ngs/${run} ..."
