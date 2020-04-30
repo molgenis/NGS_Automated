@@ -238,7 +238,7 @@ do
 		declare -A sampleSheetColumnOffsets=()
 		declare -a projects=()
 		
-		IFS="," read -r -a sampleSheetColumnNames <<< "$(head -1 "${sampleSheet}")"
+		IFS="${SAMPLESHEET_SEP}" read -r -a sampleSheetColumnNames <<< "$(head -1 "${sampleSheet}")"
 		
 		for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]:-0} ; offset++ ))
 		do
