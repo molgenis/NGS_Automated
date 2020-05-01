@@ -138,7 +138,7 @@ function rsyncProjectRun() {
 	echo "working on ${_project}/${_run}" > "${lockFile}"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run} dir ..." \
 	2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" 
-	rsync -av --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' "${dryrun:-}" \
+	rsync -av --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' "${dryrun:---progress}" \
 		"${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}" \
 		"${PRM_ROOT_DIR}/projects/${_project}/" \
 	|| {
@@ -150,7 +150,7 @@ function rsyncProjectRun() {
 		}
 	
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run}.md5 checksums ..."
-	rsync -acv --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' "${dryrun:-}" \
+	rsync -acv --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' "${dryrun:---progress}" \
 		"${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}.md5" \
 		"${PRM_ROOT_DIR}/projects/${_project}/" \
 	|| {
@@ -192,8 +192,6 @@ function rsyncProjectRun() {
 			#
 			# Verify checksums on prm storage.
 			#
-			local _checksumVerification
-			_checksumVerification='unknown'
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
 				"Started verification of checksums by using checksums from ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5."
 			cd "${PRM_ROOT_DIR}/projects/${_project}/"
