@@ -118,7 +118,7 @@ function rsyncProjectRun() {
 	# Track and Trace: log that we will start rsyncing to prm.
 	#
 	local _url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
-	trackAndTracePut 'status_projects' "${_project}" 'copy_results_prm' 'started'
+#	trackAndTracePut 'status_projects' "${_project}" 'copy_results_prm' 'started'
 	
 	#
 	# Count the number of all files produced in this analysis run.
@@ -280,16 +280,17 @@ function rsyncProjectRun() {
 	#
 	if [[ -e "${JOB_CONTROLE_FILE_BASE}.failed" ]]; then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.failed. Setting track & trace state to failed :(."
-		trackAndTracePut 'status_projects' "${_project}" 'copy_results_prm' 'failed'
+#		trackAndTracePut 'status_projects' "${_project}" 'copy_results_prm' 'failed'
 
 	elif [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]; then
 		echo "Project/run ${_project}/${_run} is ready. The data is available at ${PRM_ROOT_DIR}/projects/." \
 			>> "${JOB_CONTROLE_FILE_BASE}.finished"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished. Setting track & trace state to finished :)."
 
-		trackAndTracePut 'status_projects' "${_project}" 'copy_results_prm' 'finished'
+		#trackAndTracePut 'status_projects' "${_project}" 'copy_results_prm' 'finished'
 		dateFinished=$(date +%FT%T%z -r "${JOB_CONTROLE_FILE_BASE}.finished")
-		trackAndTracePut 'status_projects' "${_project}" 'finishedDate' "'${dateFinished}'"
+		echo "\"${dateFinished}\"" > "${JOB_CONTROLE_FILE_BASE}.trace_putFromFile_projects.csv"
+		#trackAndTracePut 'status_projects' "${_project}" 'finishedDate' "'${dateFinished}'"
 
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/multiqc_data/${_project}.run_date_info.csv"
 		#if [[ -e "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/multiqc_data/${_project}.run_date_info.csv" ]]; then
@@ -310,18 +311,7 @@ function rsyncProjectRun() {
 		#
 		#	echo "${_project}: panel: ${_panel} stored to Chronqc database." >> "${JOB_CONTROLE_FILE_BASE}.finished"
 		#fi
-		#
-		# Set all the jobs to finished.
-		#
-		#grep '^processJob' ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/submit.sh \
-		#	| tr '"' ' ' \
-		#	| awk -v pro=${_project} '{OFS=","} {print pro"_"$2}' \
-		#	>> "${JOB_CONTROLE_FILE_BASE}.trackAndTraceJobIDs.csv"
-		#
-		#while read line
-		#do
-		#	trackAndTracePut 'status_jobs' "${line}" "status" "finished"
-		#done<"${JOB_CONTROLE_FILE_BASE}.trackAndTraceJobIDs.csv"	
+
 	else
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' 'Ended up in unexpected state:'
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected either ${JOB_CONTROLE_FILE_BASE}.finished or ${JOB_CONTROLE_FILE_BASE}.failed, but both are absent."

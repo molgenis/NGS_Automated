@@ -221,29 +221,30 @@ function submitPipeline () {
 		if [[ -n "${sampleSheetColumnOffsets['sequencingStartDate']+isset}" ]]
 		then
 			sequencingStartDateIndex=$((${sampleSheetColumnOffsets['sequencingStartDate']} + 1))
-			sequencingStartDate=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v seqstart="${sequencingStartDateIndex}" 'BEGIN {FS=","}{print "$seqstart"}' | head -1)
+			sequencingStartDate=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v seqstart="${sequencingStartDateIndex}" 'BEGIN {FS=","}{print $seqstart}' | head -1)
 		fi
 		if [[ -n "${sampleSheetColumnOffsets['sequencer']+isset}" ]]
 		then
 			sequencerIndex=$((${sampleSheetColumnOffsets['sequencer']} + 1))
-			sequencer=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v sequencer="${sequencerIndex}" 'BEGIN {FS=","}{print "$sequencer"}' | head -1)
+			sequencer=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v sequencer="${sequencerIndex}" 'BEGIN {FS=","}{print $sequencer}' | head -1)
 		fi
 		if [[ -n "${sampleSheetColumnOffsets['run']+isset}" ]]
 		then
 			runIndex=$((${sampleSheetColumnOffsets['run']} + 1))
-			run=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v run="${runIndex}" 'BEGIN {FS=","}{print "$run"}' | head -1)
+			run=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v run="${runIndex}" 'BEGIN {FS=","}{print $run}' | head -1)
 		fi
 		if [[ -n "${sampleSheetColumnOffsets['flowcell']+isset}" ]]
 		then
 			flowcellIndex=$((${sampleSheetColumnOffsets['flowcell']} + 1))
-			flowcell=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v flowcell="${flowcellIndex}" 'BEGIN {FS=","}{print "$flowcell"}' | head -1)
+			flowcell=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v flowcell="${flowcellIndex}" 'BEGIN {FS=","}{print $flowcell}' | head -1)
 		fi
-		_filePrefix="${sequencingStartDate}_${sequencer}_${run}_${flowcell}"
+		
 		if [ "${_sampleType}" == "DNA" ]
 		then
 			capturingKitIndex=$((${sampleSheetColumnOffsets['capturingKit']} + 1))
-			capturingKit=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v capt="${capturingKitIndex}" 'BEGIN {FS=","}{print "$capt"}' | awk 'BEGIN{FS="/"}{print "$2"}' | head -1)
+			capturingKit=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v capt="${capturingKitIndex}" 'BEGIN {FS=","}{print $capt}' | awk 'BEGIN{FS="/"}{print $2}' | head -1)
 		fi
+		filePrefix="${sequencingStartDate}_${sequencer}_${run}_${flowcell}"
 	#
 	# Track and Trace: log that we will start running jobs on the cluster.
 	#
@@ -254,26 +255,26 @@ function submitPipeline () {
 			sentrixBarcode_A_Index=$((${sampleSheetColumnOffsets['SentrixBarcode_A']} + 1))
 			sentrixBarcodeA=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v sBA="${sentrixBarcode_A_Index}" 'BEGIN {FS=","}{print $"sBA"}')
 		fi
-		_filePrefix="${sentrixBarcodeA}"
+		filePrefix="${sentrixBarcodeA}"
 	else
 		echo "not a known sampleType"
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "not a known sampleType"
 	fi
-
 	local _url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
-	printf '%s\n' "project,run_id,pipeline,url,capturingKit,message,copy_results_prm,finishedDate"  > "${JOB_CONTROLE_FILE_BASE}.trackAndTrace_projects.csv"
-	printf '%s\n' "${_project},${_filePrefix},${_sampleType},${_url},${capturingKit},,,"  >> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace_projects.csv"
-	trackAndTracePostFromFile 'status_projects' 'add_update_existing'                    "${JOB_CONTROLE_FILE_BASE}.trackAndTrace_projects.csv"
+	echo -e "project,run_id,pipeline,url,capturingKit,message,copy_results_prm,finishedDate"  > "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
+	echo -e "${_project},${filePrefix},${_sampleType},${_url},${capturingKit},,,"  >> "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
+#	trackAndTracePostFromFile 'status_projects' 'add_update_existing'                    "${JOB_CONTROLE_FILE_BASE}.trackAndTrace_projects.csv"
 	
 	#
 	_url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_samples&hideselect=true&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
-	printf '%s\n' "project_job,job,project,started_date,finished_date,status,url,step"  > "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
+	printf '%s\n' "project_job,job,project,started_date,finished_date,status,url,step"  > "${JOB_CONTROLE_FILE_BASE}.trace_post_jobs.csv.tmp"
 	grep '^processJob' submit.sh | tr '"' ' ' | awk -v pro="${_project}" -v url="${_url}" '{OFS=","} {print pro"_"$2,$2,pro,"","","",url}' \
-		>> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
-	awk '{FS=","}{if (NR==1){print $0}else{split($2,a,"_"); print $0","a[1]"_"a[2]}}' "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"\
-		> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv.tmp"
-	mv "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv.tmp" "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
-	trackAndTracePostFromFile 'status_jobs' 'add' "${JOB_CONTROLE_FILE_BASE}.trackAndTrace.csv"
+		>> "${JOB_CONTROLE_FILE_BASE}.trace_post_jobs.csv.tmp"
+	awk '{FS=","}{if (NR==1){print $0}else{split($2,a,"_"); print $0","a[1]"_"a[2]}}' "${JOB_CONTROLE_FILE_BASE}.trace_post_jobs.csv.tmp"\
+		> "${JOB_CONTROLE_FILE_BASE}.trace_post_jobs.csv.tmp2"
+	mv "${JOB_CONTROLE_FILE_BASE}.trace_post_jobs.csv.tmp2" "${JOB_CONTROLE_FILE_BASE}.trace_post_jobs.csv"
+	rm -f "${JOB_CONTROLE_FILE_BASE}.trace_post_jobs.csv.tmp"
+
 	#
 	# Submit jobs to scheduler.
 	#

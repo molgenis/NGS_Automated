@@ -236,12 +236,12 @@ do
 	# Track and Trace.
 	#
 	timeStamp="$(date +%FT%T%z)"
-	printf '%s\n' 'run_id,group,demultiplexing,copy_raw_prm,projects,startDate' \
-		> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace_overview.csv"
+	printf '%s\n' 'run_id,group,process_raw_data,copy_raw_prm,projects,date' \
+		> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
 	printf '%s\n' "${project},${group},started,,,${timeStamp}" \
 		>> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace_overview.csv"
 	trackAndTracePostFromFile 'status_overview' 'add' \
-		"${JOB_CONTROLE_FILE_BASE}.trackAndTrace_overview.csv"
+		"${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
 done
 
 trap - EXIT

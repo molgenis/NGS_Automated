@@ -183,7 +183,6 @@ then
 else
 	for sampleSheet in "${sampleSheets[@]}"
 	do
-		echo "${sampleSheet}!!!!!"
 		project="$(basename "${sampleSheet}" ".csv")"
 		#
 		# Create log dir with job control file for sequence run.

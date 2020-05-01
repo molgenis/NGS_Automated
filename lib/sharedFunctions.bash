@@ -198,19 +198,22 @@ function trackAndTracePostFromFile() {
 	#
 	# Get token from login.
 	#
+	
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Trying to login and to get a token for REST API @ https://${MOLGENISSERVER}/api/v1/login ..."
 	_curlResponse=$(curl -f -s -H 'Content-Type: application/json' -X POST -d "{\"username\":\"${USERNAME}\", \"password\":\"${PASSWORD}\"}" "https://${MOLGENISSERVER}/api/v1/login") \
 		|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to login at ${MOLGENISSERVER}." \
-				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
-				&& mv "${JOB_CONTROLE_FILE_BASE}."{started,failed} \
+				2>&1 | tee -a "${TRACE_FAILED}" \
 				&& return
 	}
 	_token="${_curlResponse:10:32}"
 	#
 	# Upload file.
 	#
+
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "TRACE_FAILED file: ${TRACE_FAILED}"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Trying to POST track&trace info using action ${_action} for entityTypeId=${_entityTypeId} from file=${_file} to https://${MOLGENISSERVER}/plugin/importwizard/importFile ..."
+	
 	_lastHttpResponseStatus=$(curl -i \
 			-H "x-molgenis-token:${_token}" \
 			-X POST \
@@ -226,26 +229,25 @@ function trackAndTracePostFromFile() {
 	# Check HTTP response status.
 	#
 	_regex='^HTTP/[0-9]+.[0-9]+ ([0-9]{3})'
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "LASTHttpResponseStatus: ${_lastHttpResponseStatus}"
 	if [[ "${_lastHttpResponseStatus}" =~ ${_regex} ]]
 	then
 		_statusCode="${BASH_REMATCH[1]}"
 		if [[ "${_statusCode}" -ge 400 ]]
 		then
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "HTTP response status was ${_lastHttpResponseStatus}." \
-				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
+				2>&1 | tee -a "${TRACE_FAILED}" \
 				&& log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to POST track&trace info using action ${_action} for entityTypeId=${_entityTypeId} from file=${_file} to https://${MOLGENISSERVER}/plugin/importwizard/importFile" \
-				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
-				&& mv "${JOB_CONTROLE_FILE_BASE}."{started,failed} \
+				2>&1 | tee -a "${TRACE_FAILED}" \
 				&& return
 		else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully POSTed track&trace info. HTTP response status was ${_lastHttpResponseStatus}."
 		fi
 	else
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to parse status code number from HTTP response status ${_lastHttpResponseStatus}." \
-			2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
+			2>&1 | tee -a "${TRACE_FAILED}" \
 			&& log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to POST track&trace info using action ${_action} for entityTypeId=${_entityTypeId} from file=${_file} to https://${MOLGENISSERVER}/plugin/importwizard/importFile" \
-			2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
-			&& mv "${JOB_CONTROLE_FILE_BASE}."{started,failed} \
+			2>&1 | tee -a "${TRACE_FAILED}" \
 			&& return
 	fi
 }
@@ -271,8 +273,7 @@ function trackAndTracePut() {
 	_curlResponse=$(curl -f -s -H 'Content-Type: application/json' -X POST -d "{\"username\":\"${USERNAME}\", \"password\":\"${PASSWORD}\"}" "https://${MOLGENISSERVER}/api/v1/login") \
 		|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to login at ${MOLGENISSERVER}." \
-				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
-				&& mv "${JOB_CONTROLE_FILE_BASE}."{started,failed} \
+				2>&1 | tee -a "${TRACE_FAILED}" \
 				&& return
 	}
 	_token="${_curlResponse:10:32}"
@@ -298,20 +299,25 @@ function trackAndTracePut() {
 		if [[ "${_statusCode}" -ge 400 ]]
 		then
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "HTTP response status was ${_lastHttpResponseStatus}." \
-				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
+				2>&1 | tee -a "${TRACE_FAILED}" \
 				&& log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to PUT value ${_content} using REST API at https://${MOLGENISSERVER}/api/v1/${_entityTypeId}/${_jobID}/${_field}." \
-				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
-				&& mv "${JOB_CONTROLE_FILE_BASE}."{started,failed} \
+				2>&1 | tee -a "${TRACE_FAILED}" \
 				&& return
 		else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully PUT track&trace info. HTTP response status was ${_lastHttpResponseStatus}."
 		fi
 	else
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to parse status code number from HTTP response status ${_lastHttpResponseStatus}." \
-			2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
+			2>&1 | tee -a "${TRACE_FAILED}" \
 			&& log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to PUT value ${_content} using REST API at https://${MOLGENISSERVER}/api/v1/${_entityTypeId}/${_jobID}/${_field}." \
-			2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
-			&& mv "${JOB_CONTROLE_FILE_BASE}."{started,failed} \
+			2>&1 | tee -a "${TRACE_FAILED}" \
 			&& return
 	fi
+}
+
+function trackAndTracePutFromFile() {
+	input="$(<"${4}")"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "trackAndTracePutFromFile: Input of the file is:<${input}>, with entityTypeId: ${1} jobId:${2} field:${3}"
+	
+	trackAndTracePut "${1}" "${2}" "${3}" "${input}"
 }
