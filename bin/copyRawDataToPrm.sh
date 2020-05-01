@@ -310,7 +310,7 @@ function splitSamplesheetPerProject() {
 	for _project in "${_projects[@]}"
 	do
 		printf '%s\n' "project,run_id,pipeline,url,capturingKit,message,copy_results_prm,finishedDate" \
-			> "${_controlFileBaseForFunction}.trace_post.csv"
+			> "${_controlFileBaseForFunction}.trace_post_projects.csv"
 		printf '%s\n' "${_project},${_run},,,,,," \
 			>> "${_controlFileBaseForFunction}.trace_post_projects.csv"
 
@@ -336,8 +336,7 @@ function splitSamplesheetPerProject() {
 	local _allProjects
 	_allProjects="${_projects[*]}"
 	_allProjects="${_allProjects// /,}"
-	echo "${_allProjects}" > "${JOB_CONTROLE_FILE_BASE}.trace_putFromFile_overview.csv" 
-#	trackAndTracePut 'status_overview' "${_run}" 'projects' "'${_allProjects}'"
+	printf '%s\n' "${_allProjects}" > "${JOB_CONTROLE_FILE_BASE}.trace_putFromFile_overview.csv" 
 	
 	#
 	# Move samplesheet to archive on sourceServerFQDN
@@ -568,7 +567,6 @@ else
 		mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/"
 		# shellcheck disable=SC2174
 		mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${filePrefix}/"
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "FILEPREFIX: ${PRM_ROOT_DIR}/logs/${filePrefix}/"
 		printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 		# shellcheck disable=SC2174
 		mkdir -m 2750 -p "${PRM_ROOT_DIR}/Samplesheets/"
@@ -608,7 +606,7 @@ else
 			if [[ -e "${controlFileBase}/${rawDataItem}.rsyncRuns.finished" ]]
 			then
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}/${rawDataItem}.rsyncRuns.finished present."
-				processedRawDataItems=$((processedRawDataItems+1))
+				processedRawDataItems=$((${processedRawDataItems}+1))
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}/${rawDataItem}.rsyncRuns.finished absent -> rsyncRuns failed."
 			fi

@@ -113,10 +113,9 @@ function notification() {
 	for _lfs_root_dir in "${_lfs_root_dirs[@]}"
 	do
 		
-
 		if [[ -z "${_lfs_root_dir}" ]] || [[ ! -e "${_lfs_root_dir}" ]]
 		then
-			echo "_lfs_root_dir<${_lfs_root_dir}> is not set or does not exist "
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' '%s\n' "_lfs_root_dir<${_lfs_root_dir}> is not set or does not exist "
 			continue
 		fi
 		readarray -t _project_state_files < <(find "${_lfs_root_dir}/logs/" -maxdepth 2 -mindepth 2 -type f -name "*.${_phase}.${_state}*")
