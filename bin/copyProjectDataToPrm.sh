@@ -91,10 +91,9 @@ function rsyncProjectRun() {
 	#        in addition to "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished"
 	# for backwards compatibility with old NGS_Automated 1.x.
 	#
-	local _pipelineFinished='false'
 	local _rsyncRequired='false'
 	mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${_project}/"
-	if ssh ${DATA_MANAGER}@${HOSTNAME_TMP} test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${_project}/${_run}.calculateProjectMd5s.finished"
+	if ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${_project}/${_run}.calculateProjectMd5s.finished"
 	then
 		_rsyncRequired='true'
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run}"
@@ -115,14 +114,10 @@ function rsyncProjectRun() {
 	fi
 	
 	#
-	# Track and Trace: log that we will start rsyncing to prm.
-	#
-	local _url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
-	
-	#
 	# Count the number of all files produced in this analysis run.
 	#
-	local _countFilesProjectRunDirTmp=$(ssh ${DATA_MANAGER}@${HOSTNAME_TMP} "find ${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}/results/* -type f -o -type l | wc -l")
+	local _countFilesProjectRunDirTmp
+	_countFilesProjectRunDirTmp=$(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find ${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}/results/* -type f -o -type l | wc -l")
 	
 	# Perform rsync.
 	#  1. For ${_run} dir: recursively with "default" archive (-a),
@@ -136,7 +131,8 @@ function rsyncProjectRun() {
 	# ToDo: Do we need to add --delete to get rid of files that should no longer be there 
 	#       if an analysis run got updated?
 	#
-	local _transferSoFarSoGood='true'
+	local _transferSoFarSoGood
+	_transferSoFarSoGood='true'
 	echo "working on ${_project}/${_run}" > "${lockFile}"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run} dir ..." \
 	2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" 
