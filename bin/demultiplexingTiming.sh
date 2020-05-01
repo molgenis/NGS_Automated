@@ -160,8 +160,6 @@ then
 fi
 
 
-for sampleSheet in "${sampleSheets[@]}"
-do
 
 
 #
@@ -173,17 +171,18 @@ do
 timeStampDir="${SCR_ROOT_DIR}/logs/Timestamp/"
 
 ## check if there are samplesheet available for run time checking.
-declare -a sampleSheets
-sampleSheets=$(find "${SCR_ROOT_DIR}/Samplesheets/" -maxdepth 1 -type f -name "*.csv")
 
-if [[ -z "${sampleSheets}" ]]
+declare -a _checkSampleSheet
+mapfile -t _checkSampleSheet < <(find "${SCR_ROOT_DIR}/Samplesheets" -maxdepth 1 -type f -name '*.csv')
+
+if [[ "${#_checkSampleSheet[@]:-0}" -lt '1' ]]
 then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "All runs are processed, no new sample sheet available"
 fi
 
-for sampleSheet in "${sampleSheets[@]}"
+for sampleSheet in "${_checkSampleSheet[@]}"
 do 
-	sequenceRun=$(basename "${sampleSheets}" .csv)
+	sequenceRun=$(basename "${sampleSheet}" .csv)
 	## check if there is a sequence run corresponding to the samplesheet.
 	if [[ ! -d "${SCR_ROOT_DIR}/runs/${sequenceRun}/" ]]
 	then
