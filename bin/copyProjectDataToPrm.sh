@@ -245,6 +245,7 @@ function rsyncProjectRun() {
 						for pennCNV in "${pennCNVFiles[@]}"
 						do
 							name=$(basename "${pennCNV}")	
+							#shellcheck disable=SC2250
 							echo "\\\\zkh\appdata\medgen\leucinezipper${pennCNV//\//$windowsPathDelimeter}" > "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/${_project}/${name}"
 							unix2dos "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/${_project}/${name}"
 						done
@@ -254,6 +255,7 @@ function rsyncProjectRun() {
 					# If any data is (still) missing after creating this symlink, processing will fail.
 					#
 					callrate=$(ls "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/Callrates_${_project}.txt")
+					#shellcheck disable=SC2250
 					echo "\\\\zkh\appdata\medgen\leucinezipper${callrate//\//$windowsPathDelimeter}" > "Callrates_${_project}.txt"
 					unix2dos "Callrates_${_project}.txt"
 					#
@@ -323,7 +325,7 @@ function getSampleType(){
 	declare -A sampleSheetColumnOffsets=()
 	declare    sampleType='DNA' # Default when not specified in sample sheet.
 	declare    sampleTypeFieldIndex
-	IFS="${SAMPLESHEET_SEP}" sampleSheetColumnNames=($(head -1 "${_sampleSheet}"))
+	IFS="${SAMPLESHEET_SEP}"  read -r -a sampleSheetColumnNames <<<(head -1 "${_sampleSheet}")
 	for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]:-0} ; offset++ ))
 	do
 		#
@@ -340,7 +342,7 @@ function getSampleType(){
 	#	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${columnName} and sampleSheetColumnOffsets["${columnName}"] offset ${offset} "
 	done
 	
-	if [[ ! -z "${sampleSheetColumnOffsets['sampleType']+isset}" ]]; then
+	if [[ -n "${sampleSheetColumnOffsets['sampleType']+isset}" ]]; then
 		#
 		# Get sampleType from sample sheet and check if all samples are of the same type.
 		#
@@ -350,15 +352,15 @@ function getSampleType(){
 		then
 			sampleType=$(tail -n 1 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${sampleTypeFieldIndex}")
 	#		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found sampleType: ${sampleType}."
-			echo ${sampleType}
+			echo "${sampleType}"
 		else
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} contains multiple different sampleType values."
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${project} due to error in sample sheet."
-			continue
+			return
 		fi
 	else
 	#	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sampleType column missing in sample sheet; will use default value: ${sampleType}."
-		echo ${sampleType}
+		echo "${sampleType}"
 	fi
 }
 
@@ -373,7 +375,6 @@ function getSampleType(){
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
-declare email='false'
 declare dryrun=''
 while getopts ":g:l:hn" opt
 do
@@ -484,7 +485,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 # Get a list of all projects for this group, loop over their run analysis ("run") sub dirs and check if there are any we need to rsync.
 #
-declare -a projects=($(ssh ${DATA_MANAGER}@${HOSTNAME_TMP} "find ${TMP_ROOT_DIAGNOSTICS_DIR}/projects/ -maxdepth 1 -mindepth 1 -type d"))
+mapfile -t projects < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find "${TMP_ROOT_DIAGNOSTICS_DIR}/projects/" -maxdepth 1 -mindepth 1 -type d")
 if [[ "${#projects[@]:-0}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${TMP_ROOT_DIAGNOSTICS_DIR}/projects."
@@ -493,7 +494,7 @@ else
 	do
 		project=$(basename "${project}")
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project} ..."
-		declare -a runs=($(ssh ${DATA_MANAGER}@${HOSTNAME_TMP} "find "${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${project}/" -maxdepth 1 -mindepth 1 -type d"))
+		mapfile -t runs < <(ssh ${DATA_MANAGER}@${HOSTNAME_TMP} "find "${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${project}/" -maxdepth 1 -mindepth 1 -type d")
 		if [[ "${#runs[@]:-0}" -eq '0' ]]
 		then
 			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found for project ${project}."
