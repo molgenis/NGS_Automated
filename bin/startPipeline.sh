@@ -271,8 +271,8 @@ function submitPipeline () {
 		then
 			_sentrixBarcode_AIndex=$((${sampleSheetColumnOffsets['SentrixBarcode_A']} + 1))
 			_sentrixBarcodeA=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v sBA="${_sentrixBarcode_AIndex}" 'BEGIN {FS=","}{print $"sBA"}')
+			_filePrefix="${_sentrixBarcode_A}"
 		fi
-		_filePrefix="${_sentrixBarcode_A}"
 	else
 		echo "not a known sampleType"
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "not a known sampleType"
