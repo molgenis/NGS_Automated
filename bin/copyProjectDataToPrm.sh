@@ -207,13 +207,13 @@ function rsyncProjectRun() {
 						_belowSDThreshold=$(awk -v sd="${sd}" '{if (sd <0.2){print "True"}{else print "False"}}')
 						if [[ "${_belowSDThreshold}" == 'True' ]]
 						then
-							ln -sf "${i}"
+							ln -sf "${i}" .
 						else
 							log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "SD for ${i} is higher than 0.2; skipped"
 						fi
 					else
 						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Making symlinks for concordance check."
-						ln -sf "${i}"
+						ln -sf "${i}" .
 					fi
 				done
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing symlink for project VCF."
@@ -222,12 +222,14 @@ function rsyncProjectRun() {
 				if [[ "${_sampleType}" == 'GAP' ]]
 				then
 					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "_sampleType is GAF. Making symlinks for DiagnosticOutput folder."
+					#shellcheck disable=SC2153
 					cd "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/"
 					windowsPathDelimeter="\\"
 					#
 					# Create symlink for PennCNV project file (old style).
 					#
 					penncnvproject=$(ls "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/${_project}_PennCNV.txt")
+					#shellcheck disable=SC2250
 					echo "\\\\zkh\appdata\medgen\leucinezipper${penncnvproject//\//$windowsPathDelimeter}" > "${_project}_PennCNV.txt"
 					unix2dos "${_project}_PennCNV.txt"
 					#
@@ -236,13 +238,13 @@ function rsyncProjectRun() {
 					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/ folder exists ..."
 					if [[ -d "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/" ]]
 					then
-						declare -a pennCNVFiles=($(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/" -name "*.txt"))
+						mapfile -t pennCNVFiles < <(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/" -name "*.txt")
+#						declare -a pennCNVFiles=($(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/" -name "*.txt"))
 						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Number of PennCNV files: ${#pennCNVFiles[@]}."
 						mkdir -p "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/${_project}/"
 						for pennCNV in "${pennCNVFiles[@]}"
 						do
 							name=$(basename "${pennCNV}")
-							convertedPennCNV=${pennCNV//\//$windowsPathDelimeter}
 							echo "\\\\zkh\appdata\medgen\leucinezipper${pennCNV//\//$windowsPathDelimeter}" > "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/${_project}/${name}"
 							unix2dos "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/${_project}/${name}"
 						done
