@@ -376,7 +376,7 @@ done
 #if [[ -n "${!NOTIFY_FOR_PHASE_WITH_STATE[0]:-}" && "${#NOTIFY_FOR_PHASE_WITH_STATE[@]:-0}" -ge 1 ]]; then
 	
 ## This array is necessary since a hashmap is unordered
-	for ordered_phase_state in ${NOTIFICATION_ORDER_PHASE_WITH_STATE[@]}
+	for ordered_phase_state in "${NOTIFICATION_ORDER_PHASE_WITH_STATE[@]}"
 	do
 		for phase_with_state in "${!NOTIFY_FOR_PHASE_WITH_STATE[@]}"
 		do

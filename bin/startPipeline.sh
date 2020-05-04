@@ -261,7 +261,7 @@ function submitPipeline () {
 			_capturingKitIndex=$((${sampleSheetColumnOffsets['capturingKit']} + 1))
 			_capturingKit=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v capt="${_capturingKitIndex}" 'BEGIN {FS=","}{print $capt}' | awk 'BEGIN{FS="/"}{print $2}' | head -1)
 		fi
-		_filePrefix="${sequencingStartDate}_${sequencer}_${run}_${flowcell}"
+		_filePrefix="${_sequencingStartDate}_${_sequencer}_${_run}_${_flowcell}"
 	#
 	# Track and Trace: log that we will start running jobs on the cluster.
 	#
@@ -279,7 +279,7 @@ function submitPipeline () {
 	fi
 	local _url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
 	printf '%s\n' "project,run_id,pipeline,url,capturingKit,message,copy_results_prm,finishedDate"  > "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
-	printf '%s\n' "${_project},${filePrefix},${_sampleType},${_url},${capturingKit},,,"  >> "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
+	printf '%s\n' "${_project},${_filePrefix},${_sampleType},${_url},${_capturingKit},,,"  >> "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
 
 	_url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_samples&hideselect=true&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
 	printf '%s\n' "project_job,job,project,started_date,finished_date,status,url,step"  > "${JOB_CONTROLE_FILE_BASE}.trace_post_jobs.csv.tmp"
