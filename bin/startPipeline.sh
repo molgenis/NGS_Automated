@@ -270,7 +270,7 @@ function submitPipeline () {
 		if [[ -n "${sampleSheetColumnOffsets['SentrixBarcode_A']+isset}" ]]
 		then
 			_sentrixBarcode_AIndex=$((${sampleSheetColumnOffsets['SentrixBarcode_A']} + 1))
-			_sentrixBarcodeA=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v sBA="${_sentrixBarcode_AIndex}" 'BEGIN {FS=","}{print $"sBA"}')
+			_sentrixBarcode_A=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v sBA="${_sentrixBarcode_AIndex}" 'BEGIN {FS=","}{print $"sBA"}')
 			_filePrefix="${_sentrixBarcode_A}"
 		fi
 	else
