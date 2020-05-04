@@ -197,8 +197,7 @@ function rsyncProjectRun() {
 			if md5sum -c "${_run}.md5" > "${_run}.md5.log" 2>&1
 			then
 				cd "${PRM_ROOT_DIR}/concordance/${PRMRAWDATA}/"
-				declare -a files=($(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/${CONCORDANCEFILESPATH}" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name "*.${CONCORDANCEFILESEXTENSION}"))
-				# shellcheck disable=SC2207 
+				mapfile -t files < <(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/${CONCORDANCEFILESPATH}" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name "*.${CONCORDANCEFILESEXTENSION}"
 				for i in "${files[@]}"
 				do
 					if [[ "${_sampleType}" == 'GAP' ]]
@@ -206,7 +205,7 @@ function rsyncProjectRun() {
 						sd=$(cat "${i}.sd")
 						local _belowSDThreshold="False"
 						_belowSDThreshold=$(awk -v sd="${sd}" '{if (sd <0.2){print "True"}{else print "False"}}')
-						if [[ _belowSDThreshold == 'True' ]]
+						if [[ "${_belowSDThreshold}" == 'True' ]]
 						then
 							ln -sf "${i}"
 						else
