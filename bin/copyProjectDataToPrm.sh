@@ -184,7 +184,6 @@ function rsyncProjectRun() {
 				>> "${JOB_CONTROLE_FILE_BASE}.started"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
 				"Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectRunDirTmp}) and prm (${_countFilesProjectRunDirPrm}) is NOT the same!"
-			_checksumVerification='FAILED'
 			
 		else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
@@ -199,12 +198,15 @@ function rsyncProjectRun() {
 			then
 				cd "${PRM_ROOT_DIR}/concordance/${PRMRAWDATA}/"
 				declare -a files=($(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/${CONCORDANCEFILESPATH}" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name "*.${CONCORDANCEFILESEXTENSION}"))
+				# shellcheck disable=SC2207 
 				for i in "${files[@]}"
 				do
 					if [[ "${_sampleType}" == 'GAP' ]]
 					then
 						sd=$(cat "${i}.sd")
-						if [[ "${sd}" < '0.2' ]]
+						local _belowSDThreshold="False"
+						_belowSDThreshold=$(awk -v sd="${sd}" '{if (sd <0.2){print "True"}{else print "False"}}')
+						if [[ _belowSDThreshold == 'True' ]]
 						then
 							ln -sf "${i}"
 						else
