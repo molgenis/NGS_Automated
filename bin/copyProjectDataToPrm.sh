@@ -325,7 +325,7 @@ function getSampleType(){
 	declare -A sampleSheetColumnOffsets=()
 	declare    sampleType='DNA' # Default when not specified in sample sheet.
 	declare    sampleTypeFieldIndex
-	IFS="${SAMPLESHEET_SEP}"  read -r -a sampleSheetColumnNames <<<(head -1 "${_sampleSheet}")
+	IFS="${SAMPLESHEET_SEP}"  read -r -a sampleSheetColumnNames <<<"$(head -1 "${_sampleSheet}")"
 	for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]:-0} ; offset++ ))
 	do
 		#
