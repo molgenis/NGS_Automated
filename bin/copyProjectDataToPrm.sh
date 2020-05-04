@@ -197,7 +197,7 @@ function rsyncProjectRun() {
 			if md5sum -c "${_run}.md5" > "${_run}.md5.log" 2>&1
 			then
 				cd "${PRM_ROOT_DIR}/concordance/${PRMRAWDATA}/"
-				mapfile -t files < <(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/${CONCORDANCEFILESPATH}" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name "*.${CONCORDANCEFILESEXTENSION}"
+				mapfile -t files < <(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/${CONCORDANCEFILESPATH}" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name "*.${CONCORDANCEFILESEXTENSION}")
 				for i in "${files[@]}"
 				do
 					if [[ "${_sampleType}" == 'GAP' ]]
@@ -244,7 +244,7 @@ function rsyncProjectRun() {
 						mkdir -p "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/${_project}/"
 						for pennCNV in "${pennCNVFiles[@]}"
 						do
-							name=$(basename "${pennCNV}")
+							name=$(basename "${pennCNV}")	
 							echo "\\\\zkh\appdata\medgen\leucinezipper${pennCNV//\//$windowsPathDelimeter}" > "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/${_project}/${name}"
 							unix2dos "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/${_project}/${name}"
 						done
