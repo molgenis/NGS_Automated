@@ -92,7 +92,7 @@ function rsyncRuns() {
 	#
 	# Track and Trace: log that we will start rsyncing to prm.
 	#
-	trackAndTracePut 'status_overview' "${_rawDataItem}" 'copy_raw_prm' 'started'
+	#trackAndTracePut 'status_overview' "${_rawDataItem}" 'copy_raw_prm' 'started'
 	#
 	# Perform rsync.
 	#  1. For ${_rawDataItem} dir: recursively with "default" archive (-a),
@@ -203,7 +203,7 @@ function rsyncRuns() {
 		&& mv -v "${_controlFileBaseForFunction}."{started,finished}
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Setting track & trace state to finished :)."
-	trackAndTracePut 'status_overview' "${_rawDataItem}" 'copy_raw_prm' 'finished'
+	#trackAndTracePut 'status_overview' "${_rawDataItem}" 'copy_raw_prm' 'finished'
 }
 
 function splitSamplesheetPerProject() {
@@ -310,11 +310,10 @@ function splitSamplesheetPerProject() {
 	for _project in "${_projects[@]}"
 	do
 		printf '%s\n' "project,run_id,pipeline,url,capturingKit,message,copy_results_prm,finishedDate" \
-			> "${_controlFileBaseForFunction}.trackAndTrace_projects.csv"
+			> "${_controlFileBaseForFunction}.trace_post_projects.csv"
 		printf '%s\n' "${_project},${_run},,,,,," \
-			>> "${_controlFileBaseForFunction}.trackAndTrace_projects.csv"
-		trackAndTracePostFromFile 'status_projects' 'add' \
-			"${_controlFileBaseForFunction}.trackAndTrace_projects.csv"
+			>> "${_controlFileBaseForFunction}.trace_post_projects.csv"
+
 		#
 		# Skip project if demultiplexing only.
 		#
@@ -337,7 +336,8 @@ function splitSamplesheetPerProject() {
 	local _allProjects
 	_allProjects="${_projects[*]}"
 	_allProjects="${_allProjects// /,}"
-	trackAndTracePut 'status_overview' "${_run}" 'projects' "'${_allProjects}'"
+	printf '%s\n' "${_allProjects}" > "${JOB_CONTROLE_FILE_BASE}.trace_putFromFile_overview.csv" 
+	
 	#
 	# Move samplesheet to archive on sourceServerFQDN
 	#
@@ -541,7 +541,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 declare -a sampleSheetsFromSourceServer
 # shellcheck disable=SC2029
-readarray -t sampleSheetsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${SCR_ROOT_DIR}/Samplesheets/\" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name '*.${SAMPLESHEET_EXT}'")
+readarray -t sampleSheetsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${SCR_ROOT_DIR}/Samplesheets/\" -mindepth 1 -maxdepth 1 -type f -name '*.${SAMPLESHEET_EXT}'")
 
 if [[ "${#sampleSheetsFromSourceServer[@]:-0}" -eq '0' ]]
 then
@@ -562,6 +562,7 @@ else
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing run ${filePrefix} ..."
 		fi
+
 		# shellcheck disable=SC2174
 		mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/"
 		# shellcheck disable=SC2174
@@ -616,7 +617,7 @@ else
 		if [[ "${processedRawDataItems}" == "${totalRawDataItems}" ]]
 		then
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "All raw data items (${processedRawDataItems}/${totalRawDataItems}) were copied to prm."
-			splitSamplesheetPerProject "${PRM_ROOT_DIR}/Samplesheets/archive/${_run}.${SAMPLESHEET_EXT}" "${filePrefix}" "${controlFileBase}/${filePrefix}"
+			splitSamplesheetPerProject "${PRM_ROOT_DIR}/Samplesheets/archive/${filePrefix}.${SAMPLESHEET_EXT}" "${filePrefix}" "${controlFileBase}/${filePrefix}"
 		fi
 		#
 		# Signal success or failure for complete process.
