@@ -203,6 +203,7 @@ function submitPipeline () {
 	local _capturingKitIndex
 	local _sentrixBarcode_A
 	local _sentrixBarcode_AIndex
+	local _prio
 	
 	declare    sampleTypeFieldIndex
 	IFS="${SAMPLESHEET_SEP}" read -r -a sampleSheetColumnNames <<< "$(head -1 "${project}.${SAMPLESHEET_EXT}")"
@@ -229,7 +230,7 @@ function submitPipeline () {
 		if [[ "${_priority^^}" == *"TRUE"* ]]
 		then
 			echo "should submit this in prio queue"
-			prio="true"
+			_prio="true"
 		fi
 	fi
 	capturingKit="None"
@@ -274,8 +275,7 @@ function submitPipeline () {
 			_filePrefix="${_sentrixBarcode_A}"
 		fi
 	else
-		echo "not a known sampleType"
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "not a known sampleType"
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Unknown sampleType: ${sampleType}"
 	fi
 	local _url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
 	printf '%s\n' "project,run_id,pipeline,url,capturingKit,message,copy_results_prm,finishedDate"  > "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
@@ -303,7 +303,7 @@ function submitPipeline () {
 					echo "See ${JOB_CONTROLE_FILE_BASE}.failed for details." > "${JOB_CONTROLE_FILE_BASE}.failed"
 					return
 				}
-	elif [ "${prio}" == "true" ]
+	elif [ "${_prio}" == "true" ]
 	then
 		sh submit.sh --qos=priority >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1 \
 			|| {
@@ -321,7 +321,7 @@ function submitPipeline () {
 	fi
 	touch "${JOB_CONTROLE_FILE_BASE}.started"
 	local _message
-	if [ "${prio}" == "true" ]
+	if [ "${_prio}" == "true" ]
 	then
 		_message="Jobs were submitted to the scheduler on in the prio queue on ${HOSTNAME_SHORT} by ${ROLE_USER} for ${_project}/${_run} on $(date '+%Y-%m-%d-T%H%M')."
 	else
