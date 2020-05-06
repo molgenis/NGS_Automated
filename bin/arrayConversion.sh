@@ -184,6 +184,7 @@ else
 	for sampleSheet in "${sampleSheets[@]}"
 	do
 		project="$(basename "${sampleSheet}" ".csv")"
+		export TRACE_FAILED="${_lfs_root_dir}/logs/${_project}/trace.failed"
 		#
 		# Create log dir with job control file for sequence run.
 		#
