@@ -184,6 +184,7 @@ else
 	for sampleSheet in "${sampleSheets[@]}"
 	do
 		project="$(basename "${sampleSheet}" ".csv")"
+		
 		#
 		# Create log dir with job control file for sequence run.
 		#
@@ -192,6 +193,7 @@ else
 			mkdir "${SCR_ROOT_DIR}/logs/${project}/"
 		fi
 		export JOB_CONTROLE_FILE_BASE="${SCR_ROOT_DIR}/logs/${project}/run01.arrayConversion"
+		export TRACE_FAILED="${SCR_ROOT_DIR}/logs/${project}/trace.failed"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project} ..."
 
 		head -1 "${sampleSheet}"
