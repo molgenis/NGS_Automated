@@ -218,29 +218,26 @@ else
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Generating and submitting jobs for ${project} ..." | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 			echo "started: $(date +%FT%T%z)" > "${SCR_ROOT_DIR}/logs/${project}/run01.arrayConversion.totalRuntime"
-			mkdir -v -p "${SCR_ROOT_DIR}/generatedscripts/${project}/" >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
 
+			{
+			mkdir -v -p "${SCR_ROOT_DIR}/generatedscripts/${project}/"
 			cd "${SCR_ROOT_DIR}/generatedscripts/${project}/"
-			cp -v "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" "${project}.csv" >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
+			cp -v "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" ./
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "copying ${EBROOTAGCT}/templates/generate_template.sh to ${SCR_ROOT_DIR}/generatedscripts/${project}/"
-			cp -v "${EBROOTAGCT}/templates/generate_template.sh" "${SCR_ROOT_DIR}/generatedscripts/${project}/"  >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
-
-			bash generate_template.sh  >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
-
+			cp -v "${EBROOTAGCT}/templates/generate_template.sh" ./
+			bash generate_template.sh 
 			cd "${SCR_ROOT_DIR}/projects/${project}/run01/jobs"
-			bash submit.sh >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
+			bash submit.sh 
+			} >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "jobs submitted"
-
 			#
 			# Track and Trace.
 			#
 			timeStamp="$(date +%FT%T%z)"
-			printf '%s\n' 'run_id,group,processRawData,copy_raw_prm,projects,startDate' \
-				> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace_overview.csv"
+			printf '%s\n' 'run_id,group,processRawData,copy_raw_prm,projects,date' \
+				> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
 			printf '%s\n' "${project},${group},started,,,${timeStamp}" \
-				>> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace_overview.csv"
-			trackAndTracePostFromFile 'status_overview' 'add' \
-				"${JOB_CONTROLE_FILE_BASE}.trackAndTrace_overview.csv"
+				>> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
 
 		fi
 	done

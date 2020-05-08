@@ -239,7 +239,7 @@ function trackAndTracePostFromFile() {
 				2>&1 | tee -a "${TRACE_FAILED}" \
 				&& log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to POST track&trace info using action ${_action} for entityTypeId=${_entityTypeId} from file=${_file} to https://${MOLGENISSERVER}/plugin/importwizard/importFile" \
 				2>&1 | tee -a "${TRACE_FAILED}" \
-				&& return
+				&& return 1
 		else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully POSTed track&trace info. HTTP response status was ${_lastHttpResponseStatus}."
 		fi
@@ -248,7 +248,7 @@ function trackAndTracePostFromFile() {
 			2>&1 | tee -a "${TRACE_FAILED}" \
 			&& log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to POST track&trace info using action ${_action} for entityTypeId=${_entityTypeId} from file=${_file} to https://${MOLGENISSERVER}/plugin/importwizard/importFile" \
 			2>&1 | tee -a "${TRACE_FAILED}" \
-			&& return
+			&& return 1
 	fi
 }
 
@@ -302,7 +302,7 @@ function trackAndTracePut() {
 				2>&1 | tee -a "${TRACE_FAILED}" \
 				&& log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to PUT value ${_content} using REST API at https://${MOLGENISSERVER}/api/v1/${_entityTypeId}/${_jobID}/${_field}." \
 				2>&1 | tee -a "${TRACE_FAILED}" \
-				&& return
+				&& return 1
 		else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully PUT track&trace info. HTTP response status was ${_lastHttpResponseStatus}."
 		fi
@@ -311,7 +311,7 @@ function trackAndTracePut() {
 			2>&1 | tee -a "${TRACE_FAILED}" \
 			&& log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to PUT value ${_content} using REST API at https://${MOLGENISSERVER}/api/v1/${_entityTypeId}/${_jobID}/${_field}." \
 			2>&1 | tee -a "${TRACE_FAILED}" \
-			&& return
+			&& return 1
 	fi
 }
 
