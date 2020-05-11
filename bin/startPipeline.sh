@@ -201,8 +201,6 @@ function submitPipeline () {
 	local _flowcellIndex
 	local _capturingKit
 	local _capturingKitIndex
-	local _sentrixBarcode_A
-	local _sentrixBarcode_AIndex
 	local _prio
 	
 	declare    sampleTypeFieldIndex
