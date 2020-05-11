@@ -203,7 +203,7 @@ function rsyncProjectRun() {
 					if [[ "${_sampleType}" == 'GAP' ]]
 					then
 						local _belowSDThreshold="False"
-						_belowSDThreshold=$(cat ${i}.sd | awk '{if ($1 <0.2){print "True"}else {print "False"}}')
+						_belowSDThreshold="$(cat "${i}.sd" | awk '{if ($1 <0.2){print "True"}else {print "False"}}')"
 						if [[ "${_belowSDThreshold}" == 'True' ]]
 						then
 							ln -sf "${i}" .
