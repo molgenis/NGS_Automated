@@ -269,11 +269,8 @@ function submitPipeline () {
 	#
 	elif [ "${_sampleType}" == "GAP" ]
 	then
-		if [[ -n "${sampleSheetColumnOffsets['SentrixBarcode_A']+isset}" ]]
-		then
 			_filePrefix="${_project}"
 			_capturingKit="NA"
-		fi
 	else
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Unknown sampleType: ${sampleType}"
 	fi

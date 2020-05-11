@@ -210,7 +210,6 @@ function splitSamplesheetPerProject() {
 	local _sampleSheet="${1}"
 	local _run="${2}"
 	local _controlFileBase="${3}"
-	local _runID="${4}"
 	local _controlFileBaseForFunction
 	_controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing ${_run} ..."
@@ -619,7 +618,7 @@ else
 		if [[ "${processedRawDataItems}" == "${totalRawDataItems}" ]]
 		then
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "All raw data items (${processedRawDataItems}/${totalRawDataItems}) were copied to prm."
-			splitSamplesheetPerProject "${PRM_ROOT_DIR}/Samplesheets/archive/${filePrefix}.${SAMPLESHEET_EXT}" "${filePrefix}" "${controlFileBase}/${runPrefix}" "${runPrefix}"
+			splitSamplesheetPerProject "${PRM_ROOT_DIR}/Samplesheets/archive/${filePrefix}.${SAMPLESHEET_EXT}" "${filePrefix}" "${controlFileBase}/${runPrefix}"
 		fi
 		#
 		# Signal success or failure for complete process.
