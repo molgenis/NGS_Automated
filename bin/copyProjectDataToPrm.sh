@@ -202,9 +202,8 @@ function rsyncProjectRun() {
 				do
 					if [[ "${_sampleType}" == 'GAP' ]]
 					then
-						sd=$(cat "${i}.sd")
 						local _belowSDThreshold="False"
-						_belowSDThreshold=$(awk -v sd="${sd}" '{if (sd <0.2){print "True"}{else print "False"}}')
+						_belowSDThreshold="$(awk '{if ($1 <0.2){print "True"}else {print "False"}}' "${i}.sd")"
 						if [[ "${_belowSDThreshold}" == 'True' ]]
 						then
 							ln -sf "${i}" .

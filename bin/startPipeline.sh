@@ -201,8 +201,6 @@ function submitPipeline () {
 	local _flowcellIndex
 	local _capturingKit
 	local _capturingKitIndex
-	local _sentrixBarcode_A
-	local _sentrixBarcode_AIndex
 	local _prio
 	
 	declare    sampleTypeFieldIndex
@@ -222,7 +220,7 @@ function submitPipeline () {
 		sampleSheetColumnOffsets["${_columnName}"]="${offset}"
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${_columnName} and sampleSheetColumnOffsets [${_columnName}] offset ${offset} "
 	done
-	prio="false"
+	_prio="false"
 	if [[ -n "${sampleSheetColumnOffsets['FirstPriority']+isset}" ]]
 	then
 		_priorityIndex=$((${sampleSheetColumnOffsets['FirstPriority']} + 1))
@@ -236,6 +234,7 @@ function submitPipeline () {
 	capturingKit="None"
 	if [[ "${_sampleType}" == "DNA" || "${_sampleType}" == "RNA" ]]
 	then
+		
 		if [[ -n "${sampleSheetColumnOffsets['sequencingStartDate']+isset}" ]]
 		then
 			_sequencingStartDateIndex=$((${sampleSheetColumnOffsets['sequencingStartDate']} + 1))
@@ -268,12 +267,8 @@ function submitPipeline () {
 	#
 	elif [ "${_sampleType}" == "GAP" ]
 	then
-		if [[ -n "${sampleSheetColumnOffsets['SentrixBarcode_A']+isset}" ]]
-		then
-			_sentrixBarcode_AIndex=$((${sampleSheetColumnOffsets['SentrixBarcode_A']} + 1))
-			_sentrixBarcode_A=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v sBA="${_sentrixBarcode_AIndex}" 'BEGIN {FS=","}{print $"sBA"}')
-			_filePrefix="${_sentrixBarcode_A}"
-		fi
+			_filePrefix="${_project}"
+			_capturingKit="NA"
 	else
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Unknown sampleType: ${sampleType}"
 	fi
