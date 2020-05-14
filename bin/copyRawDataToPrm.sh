@@ -539,7 +539,7 @@ else
 		#
 		# Process this sample sheet / run and find how out how many raw data items it contains.
 		#
-		filePrefix="$(basename "${sampleSheet%."${SAMPLESHEET_EXT}"}")"		
+		filePrefix="$(basename "${sampleSheet%."${SAMPLESHEET_EXT}"}")"
 		controlFileBase="${PRM_ROOT_DIR}/logs/${filePrefix}/"
 		runPrefix="run01"
 		export JOB_CONTROLE_FILE_BASE="${controlFileBase}/${runPrefix}.${SCRIPT_NAME}"
