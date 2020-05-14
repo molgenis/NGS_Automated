@@ -204,7 +204,7 @@ function trackAndTracePostFromFile() {
 		|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to login at ${MOLGENISSERVER}." \
 				2>&1 | tee -a "${TRACE_FAILED}" \
-				&& return
+				&& return 1
 	}
 	_token="${_curlResponse:10:32}"
 	#
@@ -274,7 +274,7 @@ function trackAndTracePut() {
 		|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to login at ${MOLGENISSERVER}." \
 				2>&1 | tee -a "${TRACE_FAILED}" \
-				&& return
+				&& return 1
 	}
 	_token="${_curlResponse:10:32}"
 	#

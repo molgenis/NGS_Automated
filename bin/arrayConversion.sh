@@ -193,6 +193,20 @@ else
 			mkdir "${SCR_ROOT_DIR}/logs/${project}/"
 		fi
 		export JOB_CONTROLE_FILE_BASE="${SCR_ROOT_DIR}/logs/${project}/run01.arrayConversion"
+		if [[ -f "${JOB_CONTROLE_FILE_BASE}.finished" ]]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished: Skipping finished ${project}."
+			continue
+		elif [[ -f "${JOB_CONTROLE_FILE_BASE}.started" ]]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.started: Skipping ${project}, which is already getting processed."
+			continue
+		elif [[ ! -f "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" ]]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheet found: skipping ${project}."
+			continue
+		fi
+		
 		export TRACE_FAILED="${SCR_ROOT_DIR}/logs/${project}/trace.failed"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project} ..."
 
