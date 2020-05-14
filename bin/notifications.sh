@@ -118,7 +118,7 @@ function notification() {
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "_lfs_root_dir<${_lfs_root_dir}> is not set or does not exist "
 			continue
 		fi
-		readarray -t _project_state_files < <(find "${_lfs_root_dir}/logs/" -maxdepth 2 -mindepth 2 -type f -name "*.${_phase}.${_state}*")
+		readarray -t _project_state_files < <(find "${_lfs_root_dir}/logs/" -maxdepth 2 -mindepth 2 -type f -name "*.${_phase}.${_state}*" -not -name "*.mailed")
 		if [[ "${#_project_state_files[@]:-0}" -eq '0' ]]
 		then
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No *.${_phase}.${_state} files present in ${_lfs_root_dir}/logs/*/."
@@ -181,7 +181,6 @@ function notification() {
 			if [[ "${_phase}" == 'pipeline' && "${_state}" == 'failed' ]]
 			then
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Pipeline has state failed; checking if we should resubmit jobs ..."
-				
 				if [[ ! -e "${_project_state_file%failed}resubmitted" ]]
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Project ${_project} was not resubmitted before -> resubmitting jobs ..."
