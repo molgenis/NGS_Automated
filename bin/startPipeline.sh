@@ -195,7 +195,8 @@ function submitPipeline () {
 	local _sequencingStartDateIndex
 	local _sequencer
 	local _sequencerIndex
-	local _runIndex
+	local _runIdIndex
+	local _runId
 	local _flowcell
 	local _flowcellIndex
 	local _capturingKit
@@ -260,7 +261,7 @@ function submitPipeline () {
 			_capturingKitIndex=$((${sampleSheetColumnOffsets['capturingKit']} + 1))
 			_capturingKit=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v capt="${_capturingKitIndex}" 'BEGIN {FS=","}{print $capt}' | awk 'BEGIN{FS="/"}{print $2}' | head -1)
 		fi
-		_filePrefix="${_sequencingStartDate}_${_sequencer}_${_run}_${_flowcell}"
+		_filePrefix="${_sequencingStartDate}_${_sequencer}_${_runId}_${_flowcell}"
 	#
 	# Track and Trace: log that we will start running jobs on the cluster.
 	#

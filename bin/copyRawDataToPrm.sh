@@ -59,8 +59,7 @@ function contains() {
 
 function rsyncRuns() {
 	local _rawDataItem="${1}"
-	local _filePrefix="${2}"
-	local _controlFileBase="${3}"
+	local _controlFileBase="${2}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_rawDataItem} ..."
 	#
@@ -602,7 +601,7 @@ else
 		do
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing ${rawDataItem} ..."
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${rawDataItem} is complete and ready to be copied to prm."
-			rsyncRuns "${rawDataItem}" "${filePrefix}" "${controlFileBase}/${rawDataItem}"
+			rsyncRuns "${rawDataItem}" "${controlFileBase}/${rawDataItem}"
 			if [[ -e "${controlFileBase}/${rawDataItem}.rsyncRuns.finished" ]]
 			then
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}/${rawDataItem}.rsyncRuns.finished present."
