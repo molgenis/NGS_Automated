@@ -195,7 +195,6 @@ function submitPipeline () {
 	local _sequencingStartDateIndex
 	local _sequencer
 	local _sequencerIndex
-	local _run
 	local _runIndex
 	local _flowcell
 	local _flowcellIndex
@@ -247,8 +246,8 @@ function submitPipeline () {
 		fi
 		if [[ -n "${sampleSheetColumnOffsets['run']+isset}" ]]
 		then
-			_runIndex=$((${sampleSheetColumnOffsets['run']} + 1))
-			_run=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v run="${_runIndex}" 'BEGIN {FS=","}{print $run}' | head -1)
+			_runIdIndex=$((${sampleSheetColumnOffsets['run']} + 1))
+			_runId=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v runId="${_runIdIndex}" 'BEGIN {FS=","}{print $runId}' | head -1)
 		fi
 		if [[ -n "${sampleSheetColumnOffsets['flowcell']+isset}" ]]
 		then
@@ -505,7 +504,7 @@ do
 	# Generate scripts (per sample sheet).
 	#
 	generateScripts "${project}" "${pipelineRun}" "${sampleType}"
-	#
+	#	
 	# Submit generated job scripts (per project).
 	#
 	if [[ -e "${TMP_ROOT_DIR}/logs/${project}/${pipelineRun}.generateScripts.finished" ]]
