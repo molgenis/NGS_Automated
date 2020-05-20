@@ -505,7 +505,7 @@ do
 	# Generate scripts (per sample sheet).
 	#
 	generateScripts "${project}" "${pipelineRun}" "${sampleType}"
-	#	
+	#
 	# Submit generated job scripts (per project).
 	#
 	if [[ -e "${TMP_ROOT_DIR}/logs/${project}/${pipelineRun}.generateScripts.finished" ]]
