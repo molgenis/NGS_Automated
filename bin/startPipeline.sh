@@ -195,8 +195,8 @@ function submitPipeline () {
 	local _sequencingStartDateIndex
 	local _sequencer
 	local _sequencerIndex
-	local _run
-	local _runIndex
+	local _runIdIndex
+	local _runId
 	local _flowcell
 	local _flowcellIndex
 	local _capturingKit
@@ -247,8 +247,8 @@ function submitPipeline () {
 		fi
 		if [[ -n "${sampleSheetColumnOffsets['run']+isset}" ]]
 		then
-			_runIndex=$((${sampleSheetColumnOffsets['run']} + 1))
-			_run=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v run="${_runIndex}" 'BEGIN {FS=","}{print $run}' | head -1)
+			_runIdIndex=$((${sampleSheetColumnOffsets['run']} + 1))
+			_runId=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v runId="${_runIdIndex}" 'BEGIN {FS=","}{print $runId}' | head -1)
 		fi
 		if [[ -n "${sampleSheetColumnOffsets['flowcell']+isset}" ]]
 		then
@@ -261,7 +261,7 @@ function submitPipeline () {
 			_capturingKitIndex=$((${sampleSheetColumnOffsets['capturingKit']} + 1))
 			_capturingKit=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v capt="${_capturingKitIndex}" 'BEGIN {FS=","}{print $capt}' | awk 'BEGIN{FS="/"}{print $2}' | head -1)
 		fi
-		_filePrefix="${_sequencingStartDate}_${_sequencer}_${_run}_${_flowcell}"
+		_filePrefix="${_sequencingStartDate}_${_sequencer}_${_runId}_${_flowcell}"
 	#
 	# Track and Trace: log that we will start running jobs on the cluster.
 	#

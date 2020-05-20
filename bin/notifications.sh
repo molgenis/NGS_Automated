@@ -209,7 +209,6 @@ function notification() {
 					method="${traceArray[1]}"
 					entity="status_${traceArray[2]}"
 					field="${traceArray[3]}"
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "PROCESSING: ${_phase}:${_state} <${method}> <${entity}> <${field}>"
 					if [ -e "${_tracingUploadFile}" ]
 					then
 						if grep -q "${_run}.${_phase}_${_state}" "${_tracingUploadFile}"
@@ -247,7 +246,7 @@ function notification() {
 						then
 							log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
 								"adding ${_run}.${_phase}.${_state} to ${_tracingUploadFile}"
-							echo -e "${_run}.${_phase}.${_state}\t$(date +%FT%T%z)" >> "${_tracingUploadFile}"
+							echo -e "${_run}.${_phase}_${_state}\t$(date +%FT%T%z)" >> "${_tracingUploadFile}"
 						else
 							log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed in updating ${_run}.${_phase}.${_state} to ${MOLGENISSERVER}"
 						fi
