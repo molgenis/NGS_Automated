@@ -215,7 +215,7 @@ function sanityChecking() {
 	then
 		_projectFieldIndex=$((${_sampleSheetColumnOffsets['ID']} + 1))
 		#
-		# The values in the 'ÍD' column are a combination of the project and sampleProcessStepID.
+		# The values in the 'ID' column are a combination of the project and sampleProcessStepID.
 		# E.g. GS_2A-Exoom_v3-835385.
 		# The 835385 is the sampleProcessStepID, which has to be removed to get the project value.
 		#
