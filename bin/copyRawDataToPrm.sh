@@ -59,8 +59,7 @@ function contains() {
 
 function rsyncRuns() {
 	local _rawDataItem="${1}"
-	local _filePrefix="${2}"
-	local _controlFileBase="${3}"
+	local _controlFileBase="${2}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_rawDataItem} ..."
 	#
@@ -75,24 +74,11 @@ function rsyncRuns() {
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
 		printf '' > "${_controlFileBaseForFunction}.started"
 	fi
-	#
-	# Determine whether an rsync is required for this run, which is the case when
-	# raw data production has finished successfully and this copy script has not.
-	#
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${rawDataItem} is complete and ready to be copied to prm."
-	if ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" test -e "${SCR_ROOT_DIR}/logs/${_filePrefix}/${STEPBEFOREFINISHEDFILE}"
-	then
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/logs/${_filePrefix}/${STEPBEFOREFINISHEDFILE} present."
-		printf '' > "${_controlFileBaseForFunction}.started"
-	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/logs/${_filePrefix}/${STEPBEFOREFINISHEDFILE} absent."
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${rawDataItem}, which is not ready for transfer to prm yet."
-		return
-	fi
+
 	#
 	# Track and Trace: log that we will start rsyncing to prm.
 	#
-	trackAndTracePut 'status_overview' "${_rawDataItem}" 'copy_raw_prm' 'started'
+	#trackAndTracePut 'status_overview' "${_rawDataItem}" 'copy_raw_prm' 'started'
 	#
 	# Perform rsync.
 	#  1. For ${_rawDataItem} dir: recursively with "default" archive (-a),
@@ -203,7 +189,7 @@ function rsyncRuns() {
 		&& mv -v "${_controlFileBaseForFunction}."{started,finished}
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Setting track & trace state to finished :)."
-	trackAndTracePut 'status_overview' "${_rawDataItem}" 'copy_raw_prm' 'finished'
+	#trackAndTracePut 'status_overview' "${_rawDataItem}" 'copy_raw_prm' 'finished'
 }
 
 function splitSamplesheetPerProject() {
@@ -310,11 +296,10 @@ function splitSamplesheetPerProject() {
 	for _project in "${_projects[@]}"
 	do
 		printf '%s\n' "project,run_id,pipeline,url,capturingKit,message,copy_results_prm,finishedDate" \
-			> "${_controlFileBaseForFunction}.trackAndTrace_projects.csv"
+			> "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
 		printf '%s\n' "${_project},${_run},,,,,," \
-			>> "${_controlFileBaseForFunction}.trackAndTrace_projects.csv"
-		trackAndTracePostFromFile 'status_projects' 'add' \
-			"${_controlFileBaseForFunction}.trackAndTrace_projects.csv"
+			>> "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
+
 		#
 		# Skip project if demultiplexing only.
 		#
@@ -337,7 +322,8 @@ function splitSamplesheetPerProject() {
 	local _allProjects
 	_allProjects="${_projects[*]}"
 	_allProjects="${_allProjects// /,}"
-	trackAndTracePut 'status_overview' "${_run}" 'projects' "'${_allProjects}'"
+	printf '%s\n' "${_allProjects}" > "${JOB_CONTROLE_FILE_BASE}.trace_putFromFile_overview.csv" 
+	
 	#
 	# Move samplesheet to archive on sourceServerFQDN
 	#
@@ -541,7 +527,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 declare -a sampleSheetsFromSourceServer
 # shellcheck disable=SC2029
-readarray -t sampleSheetsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${SCR_ROOT_DIR}/Samplesheets/\" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name '*.${SAMPLESHEET_EXT}'")
+readarray -t sampleSheetsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${SCR_ROOT_DIR}/Samplesheets/\" -mindepth 1 -maxdepth 1 -type f -name '*.${SAMPLESHEET_EXT}'")
 
 if [[ "${#sampleSheetsFromSourceServer[@]:-0}" -eq '0' ]]
 then
@@ -554,7 +540,8 @@ else
 		#
 		filePrefix="$(basename "${sampleSheet%."${SAMPLESHEET_EXT}"}")"
 		controlFileBase="${PRM_ROOT_DIR}/logs/${filePrefix}/"
-		export JOB_CONTROLE_FILE_BASE="${controlFileBase}/${filePrefix}.${SCRIPT_NAME}"
+		runPrefix="run01"
+		export JOB_CONTROLE_FILE_BASE="${controlFileBase}/${runPrefix}.${SCRIPT_NAME}"
 		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping already processed run ${filePrefix}."
@@ -562,6 +549,19 @@ else
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing run ${filePrefix} ..."
 		fi
+
+		#
+		# Determine whether an rsync is required for this run, which is the case when
+		# raw data production has finished successfully and this copy script has not.
+		#
+		if ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" test -e "${SCR_ROOT_DIR}/logs/${filePrefix}/${STEPBEFOREFINISHEDFILE}"
+		then
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/logs/${filePrefix}/${STEPBEFOREFINISHEDFILE} present."
+		else
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/logs/${filePrefix}/${STEPBEFOREFINISHEDFILE} absent."
+			continue
+		fi
+
 		# shellcheck disable=SC2174
 		mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/"
 		# shellcheck disable=SC2174
@@ -601,7 +601,7 @@ else
 		do
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing ${rawDataItem} ..."
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${rawDataItem} is complete and ready to be copied to prm."
-			rsyncRuns "${rawDataItem}" "${filePrefix}" "${controlFileBase}/${rawDataItem}"
+			rsyncRuns "${rawDataItem}" "${controlFileBase}/${rawDataItem}"
 			if [[ -e "${controlFileBase}/${rawDataItem}.rsyncRuns.finished" ]]
 			then
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}/${rawDataItem}.rsyncRuns.finished present."
@@ -616,19 +616,19 @@ else
 		if [[ "${processedRawDataItems}" == "${totalRawDataItems}" ]]
 		then
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "All raw data items (${processedRawDataItems}/${totalRawDataItems}) were copied to prm."
-			splitSamplesheetPerProject "${PRM_ROOT_DIR}/Samplesheets/archive/${_run}.${SAMPLESHEET_EXT}" "${filePrefix}" "${controlFileBase}/${filePrefix}"
+			splitSamplesheetPerProject "${PRM_ROOT_DIR}/Samplesheets/archive/${filePrefix}.${SAMPLESHEET_EXT}" "${filePrefix}" "${controlFileBase}/${runPrefix}"
 		fi
 		#
 		# Signal success or failure for complete process.
 		#
-		if [[ -e "${controlFileBase}/${filePrefix}.splitSamplesheetPerProject.finished" ]]
+		if [[ -e "${controlFileBase}/${runPrefix}.splitSamplesheetPerProject.finished" ]]
 		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}/${filePrefix}.splitSamplesheetPerProject.finished present."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}/${runPrefix}.splitSamplesheetPerProject.finished present."
 			rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing ${filePrefix}."
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}/${filePrefix}.splitSamplesheetPerProject.finished absent -> splitSamplesheetPerProject failed."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}/${runPrefix}.splitSamplesheetPerProject.finished absent -> splitSamplesheetPerProject failed."
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process ${filePrefix}."
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 		fi

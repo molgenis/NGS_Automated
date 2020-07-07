@@ -172,8 +172,10 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 # Sequencer is writing to this location: ${SEQ_DIR}
 # Looping through sub dirs to see if all files.
 #
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "ls -1 -d ${SEQ_DIR}/*/"
-for i in $(ls -1 -d "${SEQ_DIR}/"*/)
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "find ${SEQ_DIR}/ -mindepth 1 -maxdepth 1 -type d -o -type l"
+mapfile -t projects < <(find "${SEQ_DIR}/" -mindepth 1 -maxdepth 1 -type d -o -type l)
+
+for i in "${projects[@]}"
 do
 	project=$(basename "${i}")
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking ${project} ..."
@@ -222,23 +224,25 @@ do
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Generating and submitting jobs for ${project} ..." \
 		2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 	echo "started: $(date +%FT%T%z)" > "${SCR_ROOT_DIR}/logs/${project}/run01.demultiplexing.totalRuntime"
-	mkdir -v -p "${SCR_ROOT_DIR}/generatedscripts/${project}/" >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
+	{
+	mkdir -v -p "${SCR_ROOT_DIR}/generatedscripts/${project}/"
 	cd "${SCR_ROOT_DIR}/generatedscripts/${project}/"
-	cp -v "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" "${project}.csv" >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
-	cp -v "${EBROOTNGS_DEMULTIPLEXING}/generate_template.sh" ./  >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
-	bash generate_template.sh "${project}" "${SCR_ROOT_DIR}" "${group}" >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
+	cp -v "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" "${project}.csv"
+	cp -v "${EBROOTNGS_DEMULTIPLEXING}/generate_template.sh" ./ 
+	bash generate_template.sh "${project}" "${SCR_ROOT_DIR}" "${group}"
 	cd "${SCR_ROOT_DIR}/runs/${project}/jobs"
-	bash submit.sh >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
+	bash submit.sh
+	} >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "jobs submitted"
 	#
 	# Track and Trace.
 	#
 	timeStamp="$(date +%FT%T%z)"
-	printf '%s\n' 'run_id,group,demultiplexing,copy_raw_prm,projects,startDate' \
-		> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace_overview.csv"
+	printf '%s\n' 'run_id,group,process_raw_data,copy_raw_prm,projects,date' \
+		> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
 	printf '%s\n' "${project},${group},started,,,${timeStamp}" \
-		>> "${JOB_CONTROLE_FILE_BASE}.trackAndTrace_overview.csv"
-	trackAndTracePostFromFile 'status_overview' 'add' \
-		"${JOB_CONTROLE_FILE_BASE}.trackAndTrace_overview.csv"
+		>> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
+
 done
 
 trap - EXIT

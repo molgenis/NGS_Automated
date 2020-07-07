@@ -91,10 +91,10 @@ function rsyncProjectRun() {
 	#        in addition to "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished"
 	# for backwards compatibility with old NGS_Automated 1.x.
 	#
-	local _pipelineFinished='false'
 	local _rsyncRequired='false'
+	# shellcheck disable=SC2174
 	mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${_project}/"
-	if ssh ${DATA_MANAGER}@${HOSTNAME_TMP} test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${_project}/${_run}.calculateProjectMd5s.finished"
+	if ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${_project}/${_run}.calculateProjectMd5s.finished"
 	then
 		_rsyncRequired='true'
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run}"
@@ -115,15 +115,11 @@ function rsyncProjectRun() {
 	fi
 	
 	#
-	# Track and Trace: log that we will start rsyncing to prm.
-	#
-	local _url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
-	trackAndTracePut 'status_projects' "${_project}" 'copy_results_prm' 'started'
-	
-	#
 	# Count the number of all files produced in this analysis run.
 	#
-	local _countFilesProjectRunDirTmp=$(ssh ${DATA_MANAGER}@${HOSTNAME_TMP} "find ${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}/results/* -type f -o -type l | wc -l")
+	local _countFilesProjectRunDirTmp
+	# shellcheck disable=SC2029
+	_countFilesProjectRunDirTmp=$(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}/results/\"* -type f -o -type l | wc -l")
 	
 	# Perform rsync.
 	#  1. For ${_run} dir: recursively with "default" archive (-a),
@@ -137,11 +133,12 @@ function rsyncProjectRun() {
 	# ToDo: Do we need to add --delete to get rid of files that should no longer be there 
 	#       if an analysis run got updated?
 	#
-	local _transferSoFarSoGood='true'
+	local _transferSoFarSoGood
+	_transferSoFarSoGood='true'
 	echo "working on ${_project}/${_run}" > "${lockFile}"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run} dir ..." \
 	2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" 
-	rsync -av --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
+	rsync -av --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' "${dryrun:---progress}" \
 		"${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}" \
 		"${PRM_ROOT_DIR}/projects/${_project}/" \
 	|| {
@@ -153,7 +150,7 @@ function rsyncProjectRun() {
 		}
 	
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run}.md5 checksums ..."
-	rsync -acv --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' ${dryrun:-} \
+	rsync -acv --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' "${dryrun:---progress}" \
 		"${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}.md5" \
 		"${PRM_ROOT_DIR}/projects/${_project}/" \
 	|| {
@@ -173,19 +170,20 @@ function rsyncProjectRun() {
 	#
 	if [[ "${_transferSoFarSoGood}" == 'true' ]]
 	then
-		local _countFilesProjectRunDirPrm=$(find ${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/* -type f -o -type l | wc -l)
-		if [[ ${_countFilesProjectRunDirTmp} -ne ${_countFilesProjectRunDirPrm} ]]
+		local _countFilesProjectRunDirPrm
+		_countFilesProjectRunDirPrm=$(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/"* -type f -o -type l | wc -l)
+		if [[ "${_countFilesProjectRunDirTmp}" -ne "${_countFilesProjectRunDirPrm}" ]]
 		then
 			
 			find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/"* -type f -o -type l | sort -V > "${JOB_CONTROLE_FILE_BASE}.countPrmFiles.txt"
-			ssh ${DATA_MANAGER}@${HOSTNAME_TMP} "find ${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}/results/* -type f -o -type l | sort -V" > "${JOB_CONTROLE_FILE_BASE}.countTmpFiles.txt"
+			# shellcheck disable=SC2029
+			ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}/results/\"* -type f -o -type l | sort -V" > "${JOB_CONTROLE_FILE_BASE}.countTmpFiles.txt"
 			
 			echo "diff -q ${JOB_CONTROLE_FILE_BASE}.countPrmFiles.txt ${JOB_CONTROLE_FILE_BASE}.countTmpFiles.txt" >> "${JOB_CONTROLE_FILE_BASE}.started"
 			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectRunDirTmp}) and prm (${_countFilesProjectRunDirPrm}) is NOT the same!" \
 				>> "${JOB_CONTROLE_FILE_BASE}.started"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
 				"Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectRunDirTmp}) and prm (${_countFilesProjectRunDirPrm}) is NOT the same!"
-			_checksumVerification='FAILED'
 			
 		else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
@@ -193,28 +191,28 @@ function rsyncProjectRun() {
 			#
 			# Verify checksums on prm storage.
 			#
-			local _checksumVerification='unknown'
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
 				"Started verification of checksums by using checksums from ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5."
-			cd ${PRM_ROOT_DIR}/projects/${_project}/
-			if md5sum -c ${_run}.md5 > ${_run}.md5.log 2>&1
+			cd "${PRM_ROOT_DIR}/projects/${_project}/"
+			if md5sum -c "${_run}.md5" > "${_run}.md5.log" 2>&1
 			then
 				cd "${PRM_ROOT_DIR}/concordance/${PRMRAWDATA}/"
-				declare -a files=($(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/${CONCORDANCEFILESPATH}" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name "*.${CONCORDANCEFILESEXTENSION}"))
+				mapfile -t files < <(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/${CONCORDANCEFILESPATH}" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name "*.${CONCORDANCEFILESEXTENSION}")
 				for i in "${files[@]}"
 				do
 					if [[ "${_sampleType}" == 'GAP' ]]
 					then
-						sd=$(cat "${i}.sd")
-						if [[ "${sd}" < '0.2' ]]
+						local _belowSDThreshold="False"
+						_belowSDThreshold="$(awk '{if ($1 <0.2){print "True"}else {print "False"}}' "${i}.sd")"
+						if [[ "${_belowSDThreshold}" == 'True' ]]
 						then
-							ln -sf "${i}"
+							ln -sf "${i}" .
 						else
 							log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "SD for ${i} is higher than 0.2; skipped"
 						fi
 					else
 						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Making symlinks for concordance check."
-						ln -sf "${i}"
+						ln -sf "${i}" .
 					fi
 				done
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing symlink for project VCF."
@@ -223,12 +221,14 @@ function rsyncProjectRun() {
 				if [[ "${_sampleType}" == 'GAP' ]]
 				then
 					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "_sampleType is GAF. Making symlinks for DiagnosticOutput folder."
+					#shellcheck disable=SC2153
 					cd "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/"
 					windowsPathDelimeter="\\"
 					#
 					# Create symlink for PennCNV project file (old style).
 					#
 					penncnvproject=$(ls "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/${_project}_PennCNV.txt")
+					#shellcheck disable=SC2250
 					echo "\\\\zkh\appdata\medgen\leucinezipper${penncnvproject//\//$windowsPathDelimeter}" > "${_project}_PennCNV.txt"
 					unix2dos "${_project}_PennCNV.txt"
 					#
@@ -237,13 +237,14 @@ function rsyncProjectRun() {
 					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/ folder exists ..."
 					if [[ -d "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/" ]]
 					then
-						declare -a pennCNVFiles=($(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/" -name "*.txt"))
+						mapfile -t pennCNVFiles < <(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/" -name "*.txt")
+#						declare -a pennCNVFiles=($(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/" -name "*.txt"))
 						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Number of PennCNV files: ${#pennCNVFiles[@]}."
 						mkdir -p "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/${_project}/"
 						for pennCNV in "${pennCNVFiles[@]}"
 						do
-							name=$(basename "${pennCNV}")
-							convertedPennCNV=${pennCNV//\//$windowsPathDelimeter}
+							name=$(basename "${pennCNV}")	
+							#shellcheck disable=SC2250
 							echo "\\\\zkh\appdata\medgen\leucinezipper${pennCNV//\//$windowsPathDelimeter}" > "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/${_project}/${name}"
 							unix2dos "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/${_project}/${name}"
 						done
@@ -253,6 +254,7 @@ function rsyncProjectRun() {
 					# If any data is (still) missing after creating this symlink, processing will fail.
 					#
 					callrate=$(ls "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/Callrates_${_project}.txt")
+					#shellcheck disable=SC2250
 					echo "\\\\zkh\appdata\medgen\leucinezipper${callrate//\//$windowsPathDelimeter}" > "Callrates_${_project}.txt"
 					unix2dos "Callrates_${_project}.txt"
 					#
@@ -280,16 +282,14 @@ function rsyncProjectRun() {
 	#
 	if [[ -e "${JOB_CONTROLE_FILE_BASE}.failed" ]]; then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.failed. Setting track & trace state to failed :(."
-		trackAndTracePut 'status_projects' "${_project}" 'copy_results_prm' 'failed'
 
 	elif [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]; then
 		echo "Project/run ${_project}/${_run} is ready. The data is available at ${PRM_ROOT_DIR}/projects/." \
 			>> "${JOB_CONTROLE_FILE_BASE}.finished"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished. Setting track & trace state to finished :)."
 
-		trackAndTracePut 'status_projects' "${_project}" 'copy_results_prm' 'finished'
 		dateFinished=$(date +%FT%T%z -r "${JOB_CONTROLE_FILE_BASE}.finished")
-		trackAndTracePut 'status_projects' "${_project}" 'finishedDate' "'${dateFinished}'"
+		printf '"%s"\n' "${dateFinished}" > "${JOB_CONTROLE_FILE_BASE}.trace_putFromFile_projects.csv"
 
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/multiqc_data/${_project}.run_date_info.csv"
 		#if [[ -e "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/multiqc_data/${_project}.run_date_info.csv" ]]; then
@@ -310,25 +310,11 @@ function rsyncProjectRun() {
 		#
 		#	echo "${_project}: panel: ${_panel} stored to Chronqc database." >> "${JOB_CONTROLE_FILE_BASE}.finished"
 		#fi
-		#
-		# Set all the jobs to finished.
-		#
-		#grep '^processJob' ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/submit.sh \
-		#	| tr '"' ' ' \
-		#	| awk -v pro=${_project} '{OFS=","} {print pro"_"$2}' \
-		#	>> "${JOB_CONTROLE_FILE_BASE}.trackAndTraceJobIDs.csv"
-		#
-		#while read line
-		#do
-		#	trackAndTracePut 'status_jobs' "${line}" "status" "finished"
-		#done<"${JOB_CONTROLE_FILE_BASE}.trackAndTraceJobIDs.csv"	
+
 	else
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' 'Ended up in unexpected state:'
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Expected either ${JOB_CONTROLE_FILE_BASE}.finished or ${JOB_CONTROLE_FILE_BASE}.failed, but both are absent."
 	fi
-	#log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" 0 \
-	#        "moving ${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT} ${PRM_ROOT_DIR}/Samplesheets/archive/"
-	#mv "${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}" "${PRM_ROOT_DIR}/Samplesheets/archive/"
 	echo "finished: $(date +%FT%T%z)" >> "${JOB_CONTROLE_FILE_BASE}.totalRunTime"
 }
 
@@ -338,7 +324,7 @@ function getSampleType(){
 	declare -A sampleSheetColumnOffsets=()
 	declare    sampleType='DNA' # Default when not specified in sample sheet.
 	declare    sampleTypeFieldIndex
-	IFS="${SAMPLESHEET_SEP}" sampleSheetColumnNames=($(head -1 "${_sampleSheet}"))
+	IFS="${SAMPLESHEET_SEP}"  read -r -a sampleSheetColumnNames <<<"$(head -1 "${_sampleSheet}")"
 	for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]:-0} ; offset++ ))
 	do
 		#
@@ -355,7 +341,7 @@ function getSampleType(){
 	#	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${columnName} and sampleSheetColumnOffsets["${columnName}"] offset ${offset} "
 	done
 	
-	if [[ ! -z "${sampleSheetColumnOffsets['sampleType']+isset}" ]]; then
+	if [[ -n "${sampleSheetColumnOffsets['sampleType']+isset}" ]]; then
 		#
 		# Get sampleType from sample sheet and check if all samples are of the same type.
 		#
@@ -365,15 +351,15 @@ function getSampleType(){
 		then
 			sampleType=$(tail -n 1 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${sampleTypeFieldIndex}")
 	#		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found sampleType: ${sampleType}."
-			echo ${sampleType}
+			echo "${sampleType}"
 		else
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} contains multiple different sampleType values."
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${project} due to error in sample sheet."
-			continue
+			return
 		fi
 	else
 	#	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sampleType column missing in sample sheet; will use default value: ${sampleType}."
-		echo ${sampleType}
+		echo "${sampleType}"
 	fi
 }
 
@@ -388,7 +374,6 @@ function getSampleType(){
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
-declare email='false'
 declare dryrun=''
 while getopts ":g:l:hn" opt
 do
@@ -499,7 +484,8 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 # Get a list of all projects for this group, loop over their run analysis ("run") sub dirs and check if there are any we need to rsync.
 #
-declare -a projects=($(ssh ${DATA_MANAGER}@${HOSTNAME_TMP} "find ${TMP_ROOT_DIAGNOSTICS_DIR}/projects/ -maxdepth 1 -mindepth 1 -type d"))
+# shellcheck disable=SC2029
+mapfile -t projects < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/\" -maxdepth 1 -mindepth 1 -type d")
 if [[ "${#projects[@]:-0}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${TMP_ROOT_DIAGNOSTICS_DIR}/projects."
@@ -508,7 +494,8 @@ else
 	do
 		project=$(basename "${project}")
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project} ..."
-		declare -a runs=($(ssh ${DATA_MANAGER}@${HOSTNAME_TMP} "find "${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${project}/" -maxdepth 1 -mindepth 1 -type d"))
+		# shellcheck disable=SC2029
+		mapfile -t runs < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${project}/\" -maxdepth 1 -mindepth 1 -type d")
 		if [[ "${#runs[@]:-0}" -eq '0' ]]
 		then
 			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found for project ${project}."
@@ -521,14 +508,14 @@ else
 				calculateProjectMd5sFinishedFile="ssh ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${project}.calculateProjectMd5s.finished"
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${PRM_ROOT_DIR}/logs/${project}/"
 				mkdir -p "${PRM_ROOT_DIR}/logs/${project}/"
-				if ssh ${DATA_MANAGER}@${HOSTNAME_TMP} test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${run}.calculateProjectMd5s.finished"
+				if ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${run}.calculateProjectMd5s.finished"
 				then
 					if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]] && [[ "${calculateProjectMd5sFinishedFile}" -ot "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 					then
 						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${project}/${run}."
 					else
 						rsync -av "${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${project}/${run}/jobs/${project}.${SAMPLESHEET_EXT}" "${PRM_ROOT_DIR}/Samplesheets/archive/"
-						sampleType=$(getSampleType ${PRM_ROOT_DIR}/Samplesheets/${project}.${SAMPLESHEET_EXT})
+						sampleType="$(getSampleType "${PRM_ROOT_DIR}/Samplesheets/${project}.${SAMPLESHEET_EXT}")"
 						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sampleType =${sampleType}"
 						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/${run} ..."
 						rsyncProjectRun "${project}" "${run}" "${sampleType}"
