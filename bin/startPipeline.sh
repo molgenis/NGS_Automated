@@ -439,7 +439,7 @@ fi
 # Parse sample sheets.
 #
 sampleSheets=( "$(ls -1 "${TMP_ROOT_DIR}/Samplesheets/"*".${SAMPLESHEET_EXT}")" )
-for sampleSheet in "${sampleSheets[@]}"
+for sampleSheet in ${sampleSheets[@]}
 do
 	mac2unix "${sampleSheet}"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing sample sheet: ${sampleSheet} ..."
