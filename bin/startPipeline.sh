@@ -168,7 +168,7 @@ function submitPipeline () {
 	local _run="${2}"
 	local _sampleType="${3}" ## DNA, RNA, GAP
 	export JOB_CONTROLE_FILE_BASE="${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline"
-	echo "submitting pipeline for ${_project}" > "${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
+	printf 'Submitting pipeline job scripts for %s.\n' "${_project}" > "${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Starting submitPipeline part for project: ${_project}/${_run} ..."
 	if [[ -e "${JOB_CONTROLE_FILE_BASE}.started" ]]
 	then
@@ -179,10 +179,7 @@ function submitPipeline () {
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping  ${_project}/${_run}, because jobs have already finished."
 		return
 	fi
-	if [[ ! -e "${TMP_ROOT_DIR}/logs/${_project}" ]]
-	then
-		mkdir -p "${TMP_ROOT_DIR}/logs/${_project}"
-	fi
+	printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 	cd "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigated to: ${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/"
 	declare -a sampleSheetColumnNames=()
@@ -220,21 +217,20 @@ function submitPipeline () {
 		sampleSheetColumnOffsets["${_columnName}"]="${offset}"
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${_columnName} and sampleSheetColumnOffsets [${_columnName}] offset ${offset} "
 	done
-	_prio="false"
+	_prio='false'
 	if [[ -n "${sampleSheetColumnOffsets['FirstPriority']+isset}" ]]
 	then
 		_priorityIndex=$((${sampleSheetColumnOffsets['FirstPriority']} + 1))
 		_priority=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v prio="${_priorityIndex}" 'BEGIN {FS=","}{print "$prio"}')
 		if [[ "${_priority^^}" == *"TRUE"* ]]
 		then
-			echo "should submit this in prio queue"
-			_prio="true"
+			_prio='true'
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "High priority requested for at least one sample in samplesheet for project ${project}."
 		fi
 	fi
-	capturingKit="None"
-	if [[ "${_sampleType}" == "DNA" || "${_sampleType}" == "RNA" ]]
+	capturingKit=='None'
+	if [[ "${_sampleType}" == 'DNA' || "${_sampleType}" == 'RNA' ]]
 	then
-		
 		if [[ -n "${sampleSheetColumnOffsets['sequencingStartDate']+isset}" ]]
 		then
 			_sequencingStartDateIndex=$((${sampleSheetColumnOffsets['sequencingStartDate']} + 1))
@@ -256,74 +252,67 @@ function submitPipeline () {
 			_flowcell=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v flowcell="${_flowcellIndex}" 'BEGIN {FS=","}{print $flowcell}' | head -1)
 		fi
 		
-		if [ "${_sampleType}" == "DNA" ]
+		if [[ "${_sampleType}" == 'DNA' ]]
 		then
 			_capturingKitIndex=$((${sampleSheetColumnOffsets['capturingKit']} + 1))
 			_capturingKit=$(tail -n +2 "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/${project}.${SAMPLESHEET_EXT}" | awk -v capt="${_capturingKitIndex}" 'BEGIN {FS=","}{print $capt}' | awk 'BEGIN{FS="/"}{print $2}' | head -1)
 		fi
 		_filePrefix="${_sequencingStartDate}_${_sequencer}_${_runId}_${_flowcell}"
-	#
-	# Track and Trace: log that we will start running jobs on the cluster.
-	#
-	elif [ "${_sampleType}" == "GAP" ]
+	elif [[ "${_sampleType}" == 'GAP' ]]
 	then
-			_filePrefix="${_project}"
-			_capturingKit="NA"
+		_filePrefix="${_project}"
+		_capturingKit='NA'
 	else
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Unknown sampleType: ${sampleType}"
 	fi
+	#
+	# Track and Trace: project status.
+	#
 	local _url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
-	printf '%s\n' "project,run_id,pipeline,url,capturingKit,message,copy_results_prm,finishedDate"  > "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
-	printf '%s\n' "${_project},${_filePrefix},${_sampleType},${_url},${_capturingKit},,,"  >> "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
-
+	printf '%s\n' "project,run_id,pipeline,url,capturingKit,message,copy_results_prm,finishedDate" \
+		>  "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
+	printf '%s\n' "${_project},${_filePrefix},${_sampleType},${_url},${_capturingKit},,," \
+		>> "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
+	#
+	# Track and Trace: jobs for this project.
+	#
 	_url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_samples&hideselect=true&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
-	printf '%s\n' "project_job,job,project,started_date,finished_date,status,url,step"  > "${JOB_CONTROLE_FILE_BASE}.trace_post_jobs.csv.tmp"
+	printf '%s\n' "project_job,job,project,started_date,finished_date,status,url,step" \
+		>  "${JOB_CONTROLE_FILE_BASE}.trace_post_jobs.csv.tmp"
 	grep '^processJob' submit.sh | tr '"' ' ' | awk -v pro="${_project}" -v url="${_url}" '{OFS=","} {print pro"_"$2,$2,pro,"","","",url}' \
 		>> "${JOB_CONTROLE_FILE_BASE}.trace_post_jobs.csv.tmp"
-	awk '{FS=","}{if (NR==1){print $0}else{split($2,a,"_"); print $0","a[1]"_"a[2]}}' "${JOB_CONTROLE_FILE_BASE}.trace_post_jobs.csv.tmp"\
+	awk '{FS=","}{if (NR==1){print $0}else{split($2,a,"_"); print $0","a[1]"_"a[2]}}' \
+		"${JOB_CONTROLE_FILE_BASE}.trace_post_jobs.csv.tmp" \
 		> "${JOB_CONTROLE_FILE_BASE}.trace_post_jobs.csv.tmp2"
-	mv "${JOB_CONTROLE_FILE_BASE}.trace_post_jobs.csv.tmp2" "${JOB_CONTROLE_FILE_BASE}.trace_post_jobs.csv"
+	mv "${JOB_CONTROLE_FILE_BASE}.trace_post_jobs.csv"{.tmp2,}
 	rm -f "${JOB_CONTROLE_FILE_BASE}.trace_post_jobs.csv.tmp"
-
 	#
 	# Submit jobs to scheduler.
 	#
 	log4Bash 'INFO'  "${LINENO}" "${FUNCNAME:-main}" '0' "Submitting jobs for ${_project}/${_run} ..."
-	if [[ "${group}" == "umcg-atd" || "${group}" == "umcg-gsad" ]]
+	local _submitOptions
+	if [[ "${group}" == 'umcg-atd' || "${group}" == 'umcg-gsad' ]]
 	then
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Using submit option: --qos=leftover."
-		sh submit.sh --qos=leftover >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1 \
-			|| {
-					mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-					echo "See ${JOB_CONTROLE_FILE_BASE}.failed for details." > "${JOB_CONTROLE_FILE_BASE}.failed"
-					return
-				}
-	elif [ "${_prio}" == "true" ]
+		_submitOptions='--qos=leftover'
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Detected development group ${group}: using low priority QoS."
+	elif [[ "${_prio}" == 'true' ]]
 	then
-		sh submit.sh --qos=priority >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1 \
-			|| {
-					mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-					echo "See ${JOB_CONTROLE_FILE_BASE}.failed for details." > "${JOB_CONTROLE_FILE_BASE}.failed"
-					return
-				}
-	else
-		sh submit.sh >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1 \
-			|| {
-					mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-					echo "See ${JOB_CONTROLE_FILE_BASE}.failed for details." >> "${JOB_CONTROLE_FILE_BASE}.failed"
-					return
-				}
+		_submitOptions='--qos=priority'
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Detected _prio ${_prio}: using high priority QoS."
 	fi
-	touch "${JOB_CONTROLE_FILE_BASE}.started"
-	local _message
-	if [ "${_prio}" == "true" ]
+	if [[ -n "${_submitOptions:-}" ]]
 	then
-		_message="Jobs were submitted to the scheduler on in the prio queue on ${HOSTNAME_SHORT} by ${ROLE_USER} for ${_project}/${_run} on $(date '+%Y-%m-%d-T%H%M')."
-	else
-		_message="Jobs were submitted to the scheduler on ${HOSTNAME_SHORT} by ${ROLE_USER} for ${_project}/${_run} on $(date '+%Y-%m-%d-T%H%M')."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Using commandline submit options: ${_submitOptions}"
 	fi
-	echo "${_message}" >> "${JOB_CONTROLE_FILE_BASE}.started"
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_message}"
+	# shellcheck disable=SC2046
+	sh submit.sh ${_submitOptions:-} >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1 \
+	|| {
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to submit jobs for ${_project}/${_run} ."
+			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+			return
+		}
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
+		"Jobs were submitted to the scheduler on ${HOSTNAME_SHORT} by ${ROLE_USER} for ${_project}/${_run} on $(date '+%Y-%m-%d-T%H%M')."
 }
 
 #
@@ -514,6 +503,6 @@ do
 		submitPipeline "${project}" "${pipelineRun}" "${sampleType}"
 	fi
 done
-echo "done" > "${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
+echo 'done' > "${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
 trap - EXIT
 exit 0
