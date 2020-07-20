@@ -81,15 +81,14 @@ function notification() {
 	#
 	local    _phase="${1%:*}"
 	local    _state="${1#*:}"
-	local 	 actionsVar="${2}"
 	local -a _actions
+	#
+	# This will only work with Bash 4.4 and up, 
+	# which introduced the -d argument to specify a delimitor for readarray.
+	#
+	#readarray -t -d '|' _actions <<< "${2}"
+	readarray -t _actions <<< "${2//|/$'\n'}"
 	local -a _project_state_files=()
-	local    _timestamp
-	local    _project
-	local    _run
-	local    _subject
-	local    _body
-	local    _email_to
 	local    _lfs_root_dir
 	#
 	# The path to phase state files must be:
@@ -107,7 +106,6 @@ function notification() {
 	#	${run}     = the incremental 'analysis run number'. Starts with run01 and incremented in case of re-analysis.
 	#
 	
-	IFS='|' read -r -a _actions <<< "${actionsVar}"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing projects with phase ${_phase} in state: ${_state}"
 	declare -a _lfs_root_dirs=("${TMP_ROOT_DIR:-}" "${SCR_ROOT_DIR:-}" "${PRM_ROOT_DIR:-}" "${DAT_ROOT_DIR:-}")
 	for _lfs_root_dir in "${_lfs_root_dirs[@]}"
@@ -127,35 +125,8 @@ function notification() {
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found project state files: ${_project_state_files[*]}."
 		fi
 		#
-		# Check if we have email addresses for the recipients of the notifications.
-		# Must be
-		#   * either a "course" grained mailinglist with the same email recipients for all states of the same phase
-		#     located at: ${_lfs_root_dir}/logs/${_phase}.mailinglist
-		#   * or a "fine" grained mailinglist with the email recipients for a specific state of a phase
-		#     located at: ${_lfs_root_dir}/logs/${_phase}.{_state}.mailinglist
-		# The latter will overrule the former when both are found.
-		#
-		if [[ -r "${_lfs_root_dir}/logs/${_phase}.mailinglist" ]]
-		then
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_lfs_root_dir}/logs/${_phase}.mailinglist."
-			_email_to="$(< "${_lfs_root_dir}/logs/${_phase}.mailinglist" tr '\n' ' ')"
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsed ${_phase}.mailinglist and will send mail to: ${_email_to}."
-		fi
-		if [[ -r "${_lfs_root_dir}/logs/${_phase}.{_state}.mailinglist" ]]
-		then
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_lfs_root_dir}/logs/${_phase}.{_state}.mailinglist for more fine grained control over recipients for state {_state}."
-			_email_to="$(< "${_lfs_root_dir}/logs/${_phase}.{_state}.mailinglist" tr '\n' ' ')"
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsed ${_phase}.mailinglist and will send mail to: ${_email_to}."
-		fi
-		if [[ -z "${_email_to:-}" ]]
-		then
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Cannot parse recipients from ${_lfs_root_dir}/logs/${_phase}.mailinglist nor from ${_lfs_root_dir}/logs/${_phase}.${_phase}.mailinglist."
-			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Cannot send notifications by mail. I'm giving up, bye bye."
-		fi
-		#
 		# Create notifications.
 		#
-		
 		for _project_state_file in "${_project_state_files[@]}"
 		do
 			#
@@ -167,126 +138,194 @@ function notification() {
 			local _timestamp
 			_project="$(basename "$(dirname "${_project_state_file}")")"
 			_project_state_file_name="$(basename "${_project_state_file}")"
-			_logfolder_project="$(dirname "${_project_state_file}")"
 			_run="${_project_state_file_name%%.*}"
 			_timestamp="$(date --date="$(LC_DATE=C stat --printf='%y' "${_project_state_file}" | cut -d ' ' -f1,2)" "+%Y-%m-%dT%H:%M:%S")"
-			export JOB_CONTROLE_FILE_BASE="${_lfs_root_dir}/logs/${_project}/${_run}.${_phase}"
-			export TRACE_FAILED="${_lfs_root_dir}/logs/${_project}/trace.failed"
-			local _tracingUploadFile
-			_tracingUploadFile="${_lfs_root_dir}/logs/${_project}/${_phase}.uploadedToMolgenis"
-					
 			#
-			# Check is we should automatically resubmit jobs for a failed analysis pipeline.
+			# Configure logging for this notification script.
+			# We use the same logic with exported JOB_CONTROLE_FILE_BASE as for the other scripts from NGS_Automated,
+			# but obviously we can only use them for manual inspection if something goes wrong
+			# and not for automated notifications as that would result in a "chicken versus the egg; which came first?" problem.
+			#
+			# Note that currently there is only "${JOB_CONTROLE_FILE_BASE}.started" that may get moved to "${JOB_CONTROLE_FILE_BASE}.failed",
+			# but there is no "${JOB_CONTROLE_FILE_BASE}.finshed", because we cannot no if a new ${_project_state_file} will appear later.
+			# Hence logs for a project will always be parsed and as the logs dir grows,
+			# this may become problematic at some point and require cleanup of the logs.
+			#
+			local _controlFileBase="${TMP_ROOT_DIR}/logs/${_project}/${_run}"
+			export JOB_CONTROLE_FILE_BASE="${_controlFileBase}.${SCRIPT_NAME}"
+			printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
+			#
+			# In case a pipeline failed check if jobs were already resubmitted
+			# and only notify if the failure was reproducible and the pipeline failed again.
 			#
 			if [[ "${_phase}" == 'pipeline' && "${_state}" == 'failed' ]]
 			then
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Pipeline has state failed; checking if we should resubmit jobs ..."
-				if [[ ! -e "${_project_state_file%failed}resubmitted" ]]
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Pipeline has state failed; checking if jobs were already resubmitted ..."
+				if [[ ! -e "${_project_state_file%.pipeline.failed}.startPipeline.resubmitted" ]]
 				then
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Project ${_project} was not resubmitted before -> resubmitting jobs ..."
-					cd "${_lfs_root_dir}/projects/${_project}/${_run}/jobs/"
-					bash "submit.sh" > "${_project_state_file%failed}resubmitted"
-					cd -
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing ${_project_state_file} and ${_project_state_file}.mailed."
-					rm -f "${_project_state_file}" "${_project_state_file}.mailed"
-					echo "Jobs have been resubmitted on $(date -r "${_project_state_file%failed}resubmitted")."	> "${_lfs_root_dir}/logs/${_project}/${_phase}_resubmitted.trace_putFromFile_projects.csv"
-#					trackAndTracePut 'status_projects' "${_project}" 'message' "Jobs have been resubmitted on $(date -r "${_project_state_file%failed}resubmitted")."
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Jobs for project ${_project} were not resubmitted yet -> skip notification for state failed of phase pipeline."
 					continue
 				else
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_project_state_file%failed}resubmitted"
-					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Project ${_project} failed again -> will not resubmit jobs."
-					echo "Project ${_project} failed again -> will not resubmit jobs."	> "${_lfs_root_dir}/logs/${_project}/${_phase}_resubmitted.trace_putFromFile_projects.csv"
-#					trackAndTracePut 'status_projects' "${_project}" 'message' "Pipeline crashed again (even after a resubmit) on ${_timestamp}"
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_project_state_file%.pipeline.failed}.startPipeline.resubmitted"
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Pipeline for project ${_project} failed again -> notify for state failed of phase pipeline."
 				fi
 			fi
-				
+			#
+			# Perform notification action for this state of this phase in the workflow.
+			#
+			local _action
 			for _action in "${_actions[@]}"
-			do	
+			do
 				if [[ "${_action}" == *"trace"* ]]
-				then	
-					IFS='/' read -r -a traceArray <<< "${_action}"
-					
-					method="${traceArray[1]}"
-					entity="status_${traceArray[2]}"
-					field="${traceArray[3]}"
-					if [ -e "${_tracingUploadFile}" ]
-					then
-						if grep -q "${_run}.${_phase}_${_state}" "${_tracingUploadFile}"
-						then
-							log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_run}.${_phase}.${_state} in ${_tracingUploadFile}"
-							log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping: ${_project}/${_run}.${_phase}_${_state}, already uploaded to ${MOLGENISSERVER}."
-							continue
-						fi
-					fi
-					if [[ "${method}" == 'post' ]]
-					then
-						if trackAndTracePostFromFile "${entity}" 'add_update_existing' "${_logfolder_project}/${_run}.${_phase}.trace_${method}_${traceArray[2]}.csv"
-						then
-							log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
-								"adding ${_run}.${_phase}_${_state} to ${_tracingUploadFile}"
-							echo -e "${_run}.${_phase}_${_state}\t$(date +%FT%T%z)" >> "${_tracingUploadFile}"
-						else
-							log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed in uploading ${_logfolder_project}/${_run}.${_phase}.trace_${method}_${traceArray[2]}.csv to ${MOLGENISSERVER}"
-						fi
-					elif [[ "${method}" == 'put' ]]
-					then	
-						if trackAndTracePut "${entity}" "${_project}" "${field}" "${_state}"
-						then
-							log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
-								"adding ${_run}.${_phase}_${_state} to ${_tracingUploadFile}"
-							echo -e "${_run}.${_phase}_${_state}\t$(date +%FT%T%z)" >> "${_tracingUploadFile}"
-						else
-							log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed in updating ${_run}.${_phase}_${_state} to ${MOLGENISSERVER}"
-						fi
-						
-					elif [[ "${method}" == 'putFromFile' ]]
-					then
-						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "RUN=${_run}"
-						if trackAndTracePutFromFile "${entity}" "${_project}" "${field}" "${_logfolder_project}/${_run}.${_phase}.trace_${method}_${traceArray[2]}.csv"
-						then
-							log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
-								"adding ${_run}.${_phase}.${_state} to ${_tracingUploadFile}"
-							echo -e "${_run}.${_phase}_${_state}\t$(date +%FT%T%z)" >> "${_tracingUploadFile}"
-						else
-							log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed in updating ${_run}.${_phase}.${_state} to ${MOLGENISSERVER}"
-						fi
-					fi		
-					
-				elif [ "${_action}" == 'email' ]
 				then
 					#
-					# Check if email was already send.
+					# Notify Track and Trace MOLGENIS Database.
 					#
-					if [[ -e "${_project_state_file}.mailed" ]]
+					trackAndTrace "${_project_state_file}" "${_project}" "${_run}" "${_phase}" "${_state}" "${_action}" "${_controlFileBase}"
+				elif [[ "${_action}" == 'email' ]]
+				then
+					#
+					# Check if email notifications were explicitly enabled on the commandline.
+					#
+					if [[ "${email}" != 'true' ]]
 					then
-						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_project_state_file}.mailed"
-						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping: ${_project}/${_run}. Email was already sent for state ${_state} of phase ${_phase}."
-						continue
-					fi
-					
-					if [[ "${email}" == 'true' ]]
-					then
-						#
-						# Compile message.
-						#
-						_subject="Project ${_project}/${_run} has ${_state} for phase ${_phase} on ${HOSTNAME_SHORT} at ${_timestamp}."
-						_body="$(cat "${_project_state_file}")"
-						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Email subject: ${_subject}"
-						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Email body   : ${_body}"
-						#
-						# Send message.
-						#
-						printf '%s\n' "${_body}" \
-							| mail -s "${_subject}" "${_email_to}"
-						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating file: ${_project_state_file}.mailed"
-						touch "${_project_state_file}.mailed"
-					else
 						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Email disabled and not creating file: ${_project_state_file}.mailed"
+						continue
+					else
+						sendEmail "${_project_state_file}" "${_project}" "${_run}" "${_phase}" "${_state}" "${_lfs_root_dir}" "${_controlFileBase}"
 					fi
+				else
+					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Found unhandled action ${_action} for ${_run}.${_phase}.${_state} of ${_project}."
 				fi
 			done
 		done
 	done
+}
+
+function trackAndTrace() {
+	local    _project_state_file="${1}"
+	local    _project="${2}"
+	local    _run="${3}"
+	local    _phase="${4}"
+	local    _state="${5}"
+	local    _action="${6}"
+	local    _controlFileBase="${7}"
+	local    _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
+	local    _traceSucceededLog
+	local -a _traceSpecifications
+	local    _method
+	local    _entity
+	local    _field
+	_traceSucceededLog="${_controlFileBaseForFunction}.succeeded"
+	IFS='/' read -r -a _traceSpecifications <<< "${_action}"
+	_method="${_traceSpecifications[1]}"
+	# ToDo: remove hard-coded 'status_' from ${_entity}.
+	_entity="status_${_traceSpecifications[2]}"
+	_field="${_traceSpecifications[3]}"
+	if [[ -e "${_traceSucceededLog}" ]]
+	then
+		if grep -q "${_run}.${_phase}.${_state}" "${_traceSucceededLog}"
+		then
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_run}.${_phase}.${_state} in ${_traceSucceededLog}"
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping: ${_project}/${_run}.${_phase}_${_state}, because it was already uploaded to ${MOLGENISSERVER}."
+			return
+		fi
+	fi
+	if [[ "${_method}" == 'post' ]]
+	then
+		if trackAndTracePostFromFile "${_entity}" 'add_update_existing' "${_project_state_file}"
+		then
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Adding ${_run}.${_phase}.${_state} to ${_traceSucceededLog} ..."
+			echo -e "${_run}.${_phase}.${_state}\t$(date +%FT%T%z)" >> "${_traceSucceededLog}"
+		else
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to record ${_run}.${_phase}.${_state} for ${_project} at ${MOLGENISSERVER} using method ${_method}."
+		fi
+	elif [[ "${_method}" == 'put' ]]
+	then	
+		if trackAndTracePut "${_entity}" "${_project}" "${_field}" "${_state}"
+		then
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Adding ${_run}.${_phase}.${_state} to ${_traceSucceededLog} ..."
+			echo -e "${_run}.${_phase}.${_state}\t$(date +%FT%T%z)" >> "${_traceSucceededLog}"
+		else
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to record ${_run}.${_phase}.${_state} for ${_project} at ${MOLGENISSERVER} using method ${_method}."
+		fi
+		
+	elif [[ "${_method}" == 'putFromFile' ]]
+	then
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "RUN=${_run}"
+		if trackAndTracePutFromFile "${_entity}" "${_project}" "${_field}" "${_project_state_file}"
+		then
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Adding ${_run}.${_phase}.${_state} to ${_traceSucceededLog}"
+			echo -e "${_run}.${_phase}.${_state}\t$(date +%FT%T%z)" >> "${_traceSucceededLog}"
+		else
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to record ${_run}.${_phase}.${_state} for ${_project} at ${MOLGENISSERVER} using method ${_method}."
+		fi
+	else
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Found unhandled method ${_method} for ${_run}.${_phase}.${_state} of project ${_project}."
+	fi
+}
+
+function sendEmail() {
+	local    _project_state_file="${1}"
+	local    _project="${2}"
+	local    _run="${3}"
+	local    _phase="${4}"
+	local    _state="${5}"
+	local    _lfs_root_dir="${6}"
+	local    _controlFileBase="${7}"
+	local    _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
+	#
+	# Check if email was already send.
+	#
+	if [[ -e "${_project_state_file}.mailed" ]]
+	then
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_project_state_file}.mailed"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping: ${_project}/${_run}. Email was already sent for state ${_state} of phase ${_phase}."
+		return
+	fi
+	#
+	# Check if we have email addresses for the recipients of the notifications.
+	# Must be
+	#   * either a "course" grained mailinglist with the same email recipients for all states of the same phase
+	#     located at: ${_lfs_root_dir}/logs/${_phase}.mailinglist
+	#   * or a "fine" grained mailinglist with the email recipients for a specific state of a phase
+	#     located at: ${_lfs_root_dir}/logs/${_phase}.{_state}.mailinglist
+	# The latter will overrule the former when both are found.
+	#
+	local _email_to
+	if [[ -r "${_lfs_root_dir}/logs/${_phase}.mailinglist" ]]
+	then
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_lfs_root_dir}/logs/${_phase}.mailinglist."
+		_email_to="$(< "${_lfs_root_dir}/logs/${_phase}.mailinglist" tr '\n' ' ')"
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsed ${_phase}.mailinglist and will send mail to: ${_email_to}."
+	fi
+	if [[ -r "${_lfs_root_dir}/logs/${_phase}.{_state}.mailinglist" ]]
+	then
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_lfs_root_dir}/logs/${_phase}.{_state}.mailinglist for more fine grained control over recipients for state {_state}."
+		_email_to="$(< "${_lfs_root_dir}/logs/${_phase}.{_state}.mailinglist" tr '\n' ' ')"
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsed ${_phase}.mailinglist and will send mail to: ${_email_to}."
+	fi
+	if [[ -z "${_email_to:-}" ]]
+	then
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Cannot parse recipients from ${_lfs_root_dir}/logs/${_phase}.mailinglist nor from ${_lfs_root_dir}/logs/${_phase}.${_phase}.mailinglist."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Cannot send notifications by mail. I'm giving up, bye bye."
+	fi
+	#
+	# Compile message.
+	#
+	local _subject
+	local _body
+	_subject="Project ${_project}/${_run} has ${_state} for phase ${_phase} on ${HOSTNAME_SHORT} at ${_timestamp}."
+	_body="$(cat "${_project_state_file}")"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Email subject: ${_subject}"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Email body   : ${_body}"
+	#
+	# Send message.
+	#
+	printf '%s\n' "${_body}" \
+		| mail -s "${_subject}" "${_email_to}"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating file: ${_project_state_file}.mailed"
+	touch "${_project_state_file}.mailed"
 }
 
 #
@@ -372,24 +411,30 @@ done
 #
 # Notify for specific colon separated combinations of "phase:state".
 #
-#if [[ -n "${!NOTIFY_FOR_PHASE_WITH_STATE[0]:-}" && "${#NOTIFY_FOR_PHASE_WITH_STATE[@]:-0}" -ge 1 ]]; then
-	
-## This array is necessary since a hashmap is unordered
-	for ordered_phase_state in "${NOTIFICATION_ORDER_PHASE_WITH_STATE[@]}"
+# ${NOTIFY_FOR_PHASE_WITH_STATE[@]} is a hash
+#  Key   = phase:state
+#  Value = type of notification for that combination of state and phase in the workflow.
+# 
+# ${NOTIFICATION_ORDER_PHASE_WITH_STATE[@]} is an array and contains the keys of the ${NOTIFY_FOR_PHASE_WITH_STATE[@]} hash
+# in a specific order to ensure notification order is in sync with workflow order.
+#
+if [[ -n "${!NOTIFICATION_ORDER_PHASE_WITH_STATE[0]:-}" && "${#NOTIFICATION_ORDER_PHASE_WITH_STATE[@]:-0}" -ge 1 ]]
+then
+	for ordered_phase_with_state in "${NOTIFICATION_ORDER_PHASE_WITH_STATE[@]}"
 	do
-		for phase_with_state in "${!NOTIFY_FOR_PHASE_WITH_STATE[@]}"
-		do
-			if [[ "${ordered_phase_state}" == "${phase_with_state}" ]]
-			then
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0'  "NOTIFY: ${NOTIFY_FOR_PHASE_WITH_STATE[${phase_with_state}]}"
-				notification "${phase_with_state}" "${NOTIFY_FOR_PHASE_WITH_STATE[${phase_with_state}]}"
-			fi
-		done
+		if [[ -n "${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]:-}" ]]
+		then
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found notification types ${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]} for ${ordered_phase_with_state}."
+			notification "${ordered_phase_with_state}" "${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]}"
+		else
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Missing value for 'phase:state' ${ordered_phase_with_state} in NOTIFY_FOR_PHASE_WITH_STATE array in ${CFG_DIR}/${group}.cfg"
+			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "No notification types specified for this 'phase:state' combinations: cannot send notifications."
+		fi
 	done
-	#else
-#	log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Missing NOTIFY_FOR_PHASE_WITH_STATE[@] in ${CFG_DIR}/${group}.cfg"
-#	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "No 'phase:state' combinations for which notifications must be sent specified."
-#fi
+else
+	log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Missing NOTIFICATION_ORDER_PHASE_WITH_STATE array in ${CFG_DIR}/${group}.cfg"
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "No 'phase:state' combinations for which notifications must be sent specified."
+fi
 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished.'
 
