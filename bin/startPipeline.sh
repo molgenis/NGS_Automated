@@ -191,10 +191,11 @@ function submitJobScripts () {
 	local _sampleType="${3}" ## DNA, RNA, GAP
 	local _priority="${4}"
 	local _capturingKit="${5}"
-	local _labRunID # Either just ${project} for array data or ${_sequencingStartDate}_${_sequencer}_${_runId}_${_flowcell} for NGS data.
-	local _controlFileBase="${6}"
+	local _labRunID="${6}" # Either just ${project} for array data or ${_sequencingStartDate}_${_sequencer}_${_runId}_${_flowcell} for NGS data.
+	local _controlFileBase="${7}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
-	local _resubmitJobScripts="${7}"
+	local _resubmitJobScripts="${8}"
+	
 	#
 	# Check if function previously finished successfully for this data.
 	#
