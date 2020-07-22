@@ -106,14 +106,14 @@ function notification() {
 	#	${run}     = the incremental 'analysis run number'. Starts with run01 and incremented in case of re-analysis.
 	#
 	
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing projects with phase ${_phase} in state: ${_state}"
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing projects with phase ${_phase} in state: ${_state}."
 	declare -a _lfs_root_dirs=("${TMP_ROOT_DIR:-}" "${SCR_ROOT_DIR:-}" "${PRM_ROOT_DIR:-}" "${DAT_ROOT_DIR:-}")
 	for _lfs_root_dir in "${_lfs_root_dirs[@]}"
 	do
 		
 		if [[ -z "${_lfs_root_dir}" ]] || [[ ! -e "${_lfs_root_dir}" ]]
 		then
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "_lfs_root_dir<${_lfs_root_dir}> is not set or does not exist "
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "_lfs_root_dir ${_lfs_root_dir} is not set or does not exist."
 			continue
 		fi
 		readarray -t _project_state_files < <(find "${_lfs_root_dir}/logs/" -maxdepth 2 -mindepth 2 -type f -name "*.${_phase}.${_state}*" -not -name "*.mailed")
@@ -198,6 +198,19 @@ function notification() {
 					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Found unhandled action ${_action} for ${_run}.${_phase}.${_state} of ${_project}."
 				fi
 			done
+			#
+			# Signal succes.
+			#
+			if [[ ! -e "${_controlFileBase}.trackAndTrace.failed" && ! -e "${_controlFileBase}.sendEmail.failed" ]]
+			then 
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${SCRIPT_NAME} succeeded for ${_project}/${_run}.${_phase}.${_state}." \
+					&& rm -f "${JOB_CONTROLE_FILE_BASE}.failed" \
+					&& mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${JOB_CONTROLE_FILE_BASE}.finished."
+			else
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to handle notifications for ${_project}/${_run}.${_phase}.${_state}."
+				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+			fi
 		done
 	done
 }
@@ -272,6 +285,13 @@ function trackAndTrace() {
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	fi
+	#
+	# Signal succes.
+	#
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for ${_project}/${_run}.${_phase}.${_state}. See ${_controlFileBaseForFunction}.finished for details." \
+		&& rm -f "${_controlFileBaseForFunction}.failed" \
+		&& mv -v "${_controlFileBaseForFunction}."{started,finished}
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
 }
 
 function sendEmail() {
@@ -338,6 +358,13 @@ function sendEmail() {
 		| mail -s "${_subject}" "${_email_to}"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating file: ${_project_state_file}.mailed"
 	touch "${_project_state_file}.mailed"
+	#
+	# Signal succes.
+	#
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for ${_project}/${_run}.${_phase}.${_state}. See ${_controlFileBaseForFunction}.finished for details." \
+		&& rm -f "${_controlFileBaseForFunction}.failed" \
+		&& mv -v "${_controlFileBaseForFunction}."{started,finished}
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
 }
 
 #
