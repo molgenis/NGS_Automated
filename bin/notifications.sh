@@ -418,7 +418,7 @@ done
 # ${NOTIFICATION_ORDER_PHASE_WITH_STATE[@]} is an array and contains the keys of the ${NOTIFY_FOR_PHASE_WITH_STATE[@]} hash
 # in a specific order to ensure notification order is in sync with workflow order.
 #
-if [[ -n "${#NOTIFICATION_ORDER_PHASE_WITH_STATE[@]:-0}" -ge 1 ]]
+if [[ -n "${NOTIFICATION_ORDER_PHASE_WITH_STATE[@]:-}" && "${#NOTIFICATION_ORDER_PHASE_WITH_STATE[@]:-0}" -ge 1 ]]
 then
 	for ordered_phase_with_state in "${NOTIFICATION_ORDER_PHASE_WITH_STATE[@]}"
 	do
