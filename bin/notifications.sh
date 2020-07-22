@@ -231,6 +231,7 @@ function trackAndTrace() {
 			return
 		fi
 	fi
+	printf '' > "${_controlFileBaseForFunction}.started"
 	if [[ "${_method}" == 'post' ]]
 	then
 		if trackAndTracePostFromFile "${_entity}" 'add_update_existing' "${_project_state_file}"
@@ -270,7 +271,6 @@ function trackAndTrace() {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Found unhandled method ${_method} for ${_run}.${_phase}.${_state} of project ${_project}."
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
-
 	fi
 }
 
@@ -292,6 +292,7 @@ function sendEmail() {
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping: ${_project}/${_run}. Email was already sent for state ${_state} of phase ${_phase}."
 		return
 	fi
+	printf '' > "${_controlFileBaseForFunction}.started"
 	#
 	# Check if we have email addresses for the recipients of the notifications.
 	# Must be
