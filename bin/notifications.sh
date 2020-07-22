@@ -238,7 +238,9 @@ function trackAndTrace() {
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Adding ${_run}.${_phase}.${_state} to ${_traceSucceededLog} ..."
 			echo -e "${_run}.${_phase}.${_state}\t$(date +%FT%T%z)" >> "${_traceSucceededLog}"
 		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to record ${_run}.${_phase}.${_state} for ${_project} at ${MOLGENISSERVER} using method ${_method}."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to record ${_run}.${_phase}.${_state} for ${_project} at ${MOLGENISSERVER} using method ${_method}."
+			mv "${_controlFileBaseForFunction}."{started,failed}
+			return
 		fi
 	elif [[ "${_method}" == 'put' ]]
 	then	
@@ -247,7 +249,9 @@ function trackAndTrace() {
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Adding ${_run}.${_phase}.${_state} to ${_traceSucceededLog} ..."
 			echo -e "${_run}.${_phase}.${_state}\t$(date +%FT%T%z)" >> "${_traceSucceededLog}"
 		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to record ${_run}.${_phase}.${_state} for ${_project} at ${MOLGENISSERVER} using method ${_method}."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to record ${_run}.${_phase}.${_state} for ${_project} at ${MOLGENISSERVER} using method ${_method}."
+			mv "${_controlFileBaseForFunction}."{started,failed}
+			return
 		fi
 		
 	elif [[ "${_method}" == 'putFromFile' ]]
@@ -258,10 +262,15 @@ function trackAndTrace() {
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Adding ${_run}.${_phase}.${_state} to ${_traceSucceededLog}"
 			echo -e "${_run}.${_phase}.${_state}\t$(date +%FT%T%z)" >> "${_traceSucceededLog}"
 		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to record ${_run}.${_phase}.${_state} for ${_project} at ${MOLGENISSERVER} using method ${_method}."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to record ${_run}.${_phase}.${_state} for ${_project} at ${MOLGENISSERVER} using method ${_method}."
+			mv "${_controlFileBaseForFunction}."{started,failed}
+			return
 		fi
 	else
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Found unhandled method ${_method} for ${_run}.${_phase}.${_state} of project ${_project}."
+		mv "${_controlFileBaseForFunction}."{started,failed}
+		return
+
 	fi
 }
 
@@ -309,6 +318,8 @@ function sendEmail() {
 	then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Cannot parse recipients from ${_lfs_root_dir}/logs/${_phase}.mailinglist nor from ${_lfs_root_dir}/logs/${_phase}.${_phase}.mailinglist."
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Cannot send notifications by mail. I'm giving up, bye bye."
+		mv "${_controlFileBaseForFunction}."{started,failed}
+		return
 	fi
 	#
 	# Compile message.
