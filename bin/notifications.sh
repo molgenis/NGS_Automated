@@ -203,12 +203,12 @@ function notification() {
 			#
 			if [[ ! -e "${_controlFileBase}.trackAndTrace.failed" && ! -e "${_controlFileBase}.sendEmail.failed" ]]
 			then 
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${SCRIPT_NAME} succeeded for all phase:state combinations (for which notifications were configured) of ${_project}/${_run}." \
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${SCRIPT_NAME} succeeded for the last processed phase:state combinations (for which notifications were configured) of ${_project}/${_run}." \
 					&& rm -f "${JOB_CONTROLE_FILE_BASE}.failed" \
 					&& mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${JOB_CONTROLE_FILE_BASE}.finished."
 			else
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to handle notifications for ate least one phase:state combination of ${_project}/${_run}."
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to handle notifications for at least one phase:state combination of ${_project}/${_run}."
 				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			fi
 		done
