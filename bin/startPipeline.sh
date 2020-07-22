@@ -528,7 +528,7 @@ else
 			# Check if capturing kit was used.
 			#
 			capturingKit='None' # Default for NGS data.
-			if [[ "${_sampleType}" == 'DNA' ]]
+			if [[ "${sampleType}" == 'DNA' ]]
 			then
 				sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['capturingKit']} + 1))
 				capturingKit=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print "$sampleSheetFieldIndex"}' | head -1)
