@@ -418,16 +418,16 @@ done
 # ${NOTIFICATION_ORDER_PHASE_WITH_STATE[@]} is an array and contains the keys of the ${NOTIFY_FOR_PHASE_WITH_STATE[@]} hash
 # in a specific order to ensure notification order is in sync with workflow order.
 #
-if [[ -n "${!NOTIFICATION_ORDER_PHASE_WITH_STATE[0]:-}" && "${#NOTIFICATION_ORDER_PHASE_WITH_STATE[@]:-0}" -ge 1 ]]
+if [[ -n "${#NOTIFICATION_ORDER_PHASE_WITH_STATE[@]:-0}" -ge 1 ]]
 then
 	for ordered_phase_with_state in "${NOTIFICATION_ORDER_PHASE_WITH_STATE[@]}"
 	do
-		if [[ -n "${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]:-}" ]]
+		if [[ -n "${ordered_phase_with_state:-}" && -n "${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]:-}" ]]
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found notification types ${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]} for ${ordered_phase_with_state}."
 			notification "${ordered_phase_with_state}" "${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]}"
 		else
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Missing value for 'phase:state' ${ordered_phase_with_state} in NOTIFY_FOR_PHASE_WITH_STATE array in ${CFG_DIR}/${group}.cfg"
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Missing value for 'phase:state' ${ordered_phase_with_state:-} in NOTIFY_FOR_PHASE_WITH_STATE array in ${CFG_DIR}/${group}.cfg"
 			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "No notification types specified for this 'phase:state' combinations: cannot send notifications."
 		fi
 	done
