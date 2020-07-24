@@ -209,25 +209,30 @@ function sanityChecking() {
 		_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
 	done
 	#
-	# Check if GS samplesheet contains required project column.
+	# Check if GS samplesheet contains required a combined project name + sampleProcessStepID column.
+	# Sometimes GS used Sample_ID as column name and sometimes just ID;
+	# we'll use whatever is present.
 	#
 	if [[ -n "${_sampleSheetColumnOffsets['ID']+isset}" ]]
 	then
 		_projectFieldIndex=$((${_sampleSheetColumnOffsets['ID']} + 1))
-		#
-		# The values in the 'ID' column are a combination of the project and sampleProcessStepID.
-		# E.g. GS_2A-Exoom_v3-835385.
-		# The 835385 is the sampleProcessStepID, which has to be removed to get the project value.
-		#
-		readarray -t _projects < <(tail -n +2 "${_gsSampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_projectFieldIndex}" | sed 's/-[0-9][0-9]*$//' | sort | uniq)
-		if [[ "${#_projects[@]:-0}" -lt '1' ]]
-		then
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_gsSampleSheet} does not contain at least one project value."
-			mv "${_controlFileBaseForFunction}."{started,failed}
-			return
-		fi
+	elif [[ -n "${_sampleSheetColumnOffsets['Sample_ID']+isset}" ]]
+	then
+		_projectFieldIndex=$((${_sampleSheetColumnOffsets['Sample_ID']} + 1))
 	else
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "project column missing in ${_gsSampleSheet}."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Column containing project name combined with sampleProcessStepID is missing in ${_gsSampleSheet}."
+		mv "${_controlFileBaseForFunction}."{started,failed}
+		return
+	fi
+	#
+	# The values in the 'Sample_ID' or 'ID' column are a combination of the project and sampleProcessStepID.
+	# E.g. GS_2A-Exoom_v3-835385.
+	# The 835385 is the sampleProcessStepID, which has to be removed to get the project value.
+	#
+	readarray -t _projects < <(tail -n +2 "${_gsSampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_projectFieldIndex}" | sed 's/-[0-9][0-9]*$//' | sort | uniq)
+	if [[ "${#_projects[@]:-0}" -lt '1' ]]
+	then
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_gsSampleSheet} does not contain at least one project value."
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	fi
@@ -537,7 +542,17 @@ function processSamplesheetsAndMoveConvertedData() {
 	do
 		_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
 	done
-	_projectFieldIndex=$((${_sampleSheetColumnOffsets['ID']} + 1))
+	if [[ -n "${_sampleSheetColumnOffsets['ID']+isset}" ]]
+	then
+		_projectFieldIndex=$((${_sampleSheetColumnOffsets['ID']} + 1))
+	elif [[ -n "${_sampleSheetColumnOffsets['Sample_ID']+isset}" ]]
+	then
+		_projectFieldIndex=$((${_sampleSheetColumnOffsets['Sample_ID']} + 1))
+	else
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Column containing project name combined with sampleProcessStepID is missing in ${_gsSampleSheet}."
+		mv "${_controlFileBaseForFunction}."{started,failed}
+		return
+	fi
 	readarray -t _projects < <(tail -n +2 "${_gsSampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_projectFieldIndex}" | sed 's/-[0-9][0-9]*$//' | sort | uniq )
 	#
 	# Get a list of sequencing run dirs (created by renameFastQs.bash)
