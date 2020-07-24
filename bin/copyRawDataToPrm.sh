@@ -299,7 +299,6 @@ function splitSamplesheetPerProject() {
 			> "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
 		printf '%s\n' "${_project},${_run},,,,,," \
 			>> "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
-
 		#
 		# Skip project if demultiplexing only.
 		#
