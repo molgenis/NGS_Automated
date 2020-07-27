@@ -225,13 +225,13 @@ do
 		2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 	echo "started: $(date +%FT%T%z)" > "${SCR_ROOT_DIR}/logs/${project}/run01.demultiplexing.totalRuntime"
 	{
-	mkdir -v -p "${SCR_ROOT_DIR}/generatedscripts/${project}/"
-	cd "${SCR_ROOT_DIR}/generatedscripts/${project}/"
-	cp -v "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" "${project}.csv"
-	cp -v "${EBROOTNGS_DEMULTIPLEXING}/generate_template.sh" ./ 
-	bash generate_template.sh "${project}" "${SCR_ROOT_DIR}" "${group}"
-	cd "${SCR_ROOT_DIR}/runs/${project}/jobs"
-	bash submit.sh
+		mkdir -v -p "${SCR_ROOT_DIR}/generatedscripts/${project}/"
+		cd "${SCR_ROOT_DIR}/generatedscripts/${project}/"
+		cp -v "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" "${project}.csv"
+		cp -v "${EBROOTNGS_DEMULTIPLEXING}/generate_template.sh" ./ 
+		bash generate_template.sh "${project}" "${SCR_ROOT_DIR}" "${group}"
+		cd "${SCR_ROOT_DIR}/runs/${project}/jobs"
+		bash submit.sh
 	} >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "jobs submitted"
 	#
@@ -242,7 +242,6 @@ do
 		> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
 	printf '%s\n' "${project},${group},started,,,${timeStamp}" \
 		>> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
-
 done
 
 trap - EXIT

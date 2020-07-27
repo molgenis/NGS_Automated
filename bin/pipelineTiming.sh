@@ -8,9 +8,9 @@ set -u
 
 #
 ##		This script will run on Leucine-zipper or zinc-finger. First it will pull the project files, from projects from whom the demultiplex pipeline is finished.
-###		It will check if there is a .finished file for the generateScripts, pipeline, copyProjectDataPrm, if there is, these steps are finished. 
+###		It will check if there is a .finished file for the startPipeline, pipeline, copyProjectDataPrm, if there is, these steps are finished. 
 ####	If no .finished file is precent, it will check if the run0*.pipeline.started is older than 6h, 
-####	*.generateScripts.started is older than 5h and the *.copyProjectDataPrm.started is older than 5(last time it was modified). 
+####	*.startPipeline.started is older than 5h and the *.copyProjectDataPrm.started is older than 5(last time it was modified). 
 ###		If the .started is not older than 5 or 6h, no worries the pipeline is probably still running.
 ##		If the .started file is older than 5 or 6 hours, it wil generate a .failed file.
 #
@@ -215,35 +215,35 @@ projectSheets=$(find "${projectStartDir}/" -name '*.csv' -type f)
 for projectSheet in "${projectSheets[@]}"
 do 
 	project=$(basename "${projectSheet}" .csv)
-	declare -a _generateScriptsFinished
-	declare -a _generateScriptsStarted
+	declare -a _startPipelineFinished
+	declare -a _startPipelineStarted
 	## determine run number.
 	
-	#_generateScriptsFinished=($(find "${logsDir}/${project}/" -name '*.generateScripts.finished'))
-	mapfile -t _generateScriptsFinished < <(find "${logsDir}/${project}/" -name '*.generateScripts.finished')
-	mapfile -t _generateScriptsStarted < <(find "${logsDir}/${project}/" -name "*.generateScripts.started")
+	#_startPipelineFinished=($(find "${logsDir}/${project}/" -name '*.startPipeline.finished'))
+	mapfile -t _startPipelineFinished < <(find "${logsDir}/${project}/" -name '*.startPipeline.finished')
+	mapfile -t _startPipelineStarted < <(find "${logsDir}/${project}/" -name "*.startPipeline.started")
 	
-	if [[ "${#_generateScriptsFinished[@]:-0}" -eq '1' ]]
+	if [[ "${#_startPipelineFinished[@]:-0}" -eq '1' ]]
 	then
-		run=$(basename "${_generateScriptsFinished[0]}" .generateScripts.finished)
+		run=$(basename "${_startPipelineFinished[0]}" .startPipeline.finished)
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using run number: ${run}"
-	elif [[ "${#_generateScriptsFinished[@]:-0}" -gt '1' ]]
+	elif [[ "${#_startPipelineFinished[@]:-0}" -gt '1' ]]
 	then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${project} due to multiple generateScriptFinished files."
 		return
-	elif [[ "${#_generateScriptsFinished[@]:-0}" -lt '1' ]]
+	elif [[ "${#_startPipelineFinished[@]:-0}" -lt '1' ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping because runnumber can't be determined using existing scripts for project ${project}."
 		return
-	elif [[ "${#_generateScriptsStarted[@]:-0}" -eq '1' ]]
+	elif [[ "${#_startPipelineStarted[@]:-0}" -eq '1' ]]
 	then
-		run=$(basename "${_generateScriptsStarted[0]}" .generateScripts.started)
+		run=$(basename "${_startPipelineStarted[0]}" .startPipeline.started)
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using run number: ${run}"
-	elif [[ "${#_generateScriptsStarted[@]:-0}" -gt '1' ]]
+	elif [[ "${#_startPipelineStarted[@]:-0}" -gt '1' ]]
 	then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${project} due to multiple generateScriptStarted files."
 		return
-	elif [[ "${#_generateScriptsStarted[@]:-0}" -lt '1' ]]
+	elif [[ "${#_startPipelineStarted[@]:-0}" -lt '1' ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping because runnumber can't be determined using existing scripts for project ${project}."
 		return
@@ -260,27 +260,27 @@ do
 	fi
 	
 
-	## step 1, checks the generatedScripts
-	if [ -e "${logsDir}/${project}/${run}.generateScripts.finished" ]
+	## step 1, checks the startPipeline
+	if [ -e "${logsDir}/${project}/${run}.startPipeline.finished" ]
 	then
-		echo -e "generatedScripts finished for project ${project}" >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
+		echo -e "startPipeline finished for project ${project}" >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
 		touch "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.finished"
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "generateScripts finished for project ${project}"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "startPipeline finished for project ${project}"
 	else
-		timeStampGeneratedScripts=$(find "${logsDir}/${project}/" -type f -mmin +240 -iname "${run}.generateScripts.started")
+		timeStampGeneratedScripts=$(find "${logsDir}/${project}/" -type f -mmin +240 -iname "${run}.startPipeline.started")
 		if [[ -z "${timeStampGeneratedScripts}" ]]
 		then
 			echo -e "generateScipts has not started yet or is running" >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "generateScipts has not started yet or is running for project ${project}"
 			continue
 		else
-			echo -e "generateScripts.started file is OLDER than 4 hours.\n" \
-			"time ${run}.generateScripts.started was last modified:" \
-			"$(stat -c %y "${TMP_ROOT_DIR}/logs/${project}/${run}.generateScripts.started")" >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
+			echo -e "startPipeline.started file is OLDER than 4 hours.\n" \
+			"time ${run}.startPipeline.started was last modified:" \
+			"$(stat -c %y "${TMP_ROOT_DIR}/logs/${project}/${run}.startPipeline.started")" >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
 	
-			touch "${TMP_ROOT_DIR}/logs/${project}/${run}.generateScriptsTiming.failed"
-			echo -e "Dear HPC helpdesk,\n\nPlease check if there is something wrong with the pipeline.\nThe generatedScripts step for project ${project} is not finished after 4h.\n\nKind regards\nHPC" > "${TMP_ROOT_DIR}/logs/${project}/${run}.generateScriptsTiming.failed"
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "generateScripts.started file is OLDER than 4 hours for project ${project}"
+			touch "${TMP_ROOT_DIR}/logs/${project}/${run}.startPipelineTiming.failed"
+			echo -e "Dear HPC helpdesk,\n\nPlease check if there is something wrong with the pipeline.\nThe startPipeline step for project ${project} is not finished after 4h.\n\nKind regards\nHPC" > "${TMP_ROOT_DIR}/logs/${project}/${run}.startPipelineTiming.failed"
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "startPipeline.started file is OLDER than 4 hours for project ${project}"
 			continue
 		fi
 	fi

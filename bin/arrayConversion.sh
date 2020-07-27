@@ -222,10 +222,13 @@ else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "check ${SCR_ROOT_DIR}/rawdata/array/IDAT/${barcode}/${barcode}_qc.txt"
 			if [ -e "${SCR_ROOT_DIR}/rawdata/array/IDAT/${barcode}/${barcode}_qc.txt" ]
 			then
-				count=$((count+1))
-			else
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${barcode} is not finished yet, so the processing of project ${project} cannot be continued"
-			fi
+				if grep -q "<ScanSettings" "${SCR_ROOT_DIR}/rawdata/array/IDAT/${barcode}/${barcode}_qc.txt"
+				then
+					count=$((count+1))
+				else
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${barcode}_qc.txt does exist but the project is not finished yet, ${project} cannot be continued"
+				fi
+			fi	
 		done
 
 		if [ "${count}" == "${numberOfBarcodes}" ]
