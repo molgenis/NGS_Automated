@@ -196,7 +196,7 @@ log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "See ${logDir}/rsync-from-${
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Rsyncing everything except the .finished files ...'
 
 #
-declare -a gsProjectsFromSourceServer
+declare -a gsProjectsSourceServer
 # shellcheck disable=SC2029
 readarray -t gsProjectsSourceServer< <(ssh "${HOSTNAME_DATA_STAGING}" "find \"/groups/${GROUP}/${SCR_LFS}/\" -mindepth 1 -maxdepth 1 -type d ")
 
