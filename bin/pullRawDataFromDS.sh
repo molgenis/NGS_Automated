@@ -226,7 +226,6 @@ else
 				--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
 				--omit-dir-times \
 				--omit-link-times \
-				--relative \
 				"${HOSTNAME_DATA_STAGING}:/groups/${GROUP}/${SCR_LFS}/${gsProject}/*.finished" \
 				"/groups/${GROUP}/${TMP_LFS}/${gsProject}/"	
 		fi
