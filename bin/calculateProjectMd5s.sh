@@ -94,10 +94,10 @@ function calculateMd5() {
 			"Found ${JOB_CONTROLE_FILE_BASE}.finished: skipping ${_project}/${_run}/ ... "
 		return
 	fi
-	if [[ ! -e "${_controlFileBase}.pipeline.finished" ]]
+	if [[ ! -e "${_controlFileBase}.startPipeline.finished" ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
-			"Cannot find ${_controlFileBase}.pipeline.finished: skipping ${_project}/${_run}/ ... "
+			"Cannot find ${_controlFileBase}.startPipeline.finished: skipping ${_project}/${_run}/ ... "
 		return
 	fi
 	#

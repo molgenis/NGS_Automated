@@ -284,6 +284,8 @@ function splitSamplesheetPerProject() {
 			return
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run} contains the projects: ${_projects[*]}."
+			printf '%s\n' "project,run_id,pipeline,url,capturingKit,message,copy_results_prm,finishedDate" \
+				> "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
 		fi
 	else
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}, because ${PROJECTCOLUMN} column is missing in sample sheet."
@@ -295,8 +297,7 @@ function splitSamplesheetPerProject() {
 	#
 	for _project in "${_projects[@]}"
 	do
-		printf '%s\n' "project,run_id,pipeline,url,capturingKit,message,copy_results_prm,finishedDate" \
-			> "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
+		
 		printf '%s\n' "${_project},${_run},,,,,," \
 			>> "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
 		#
@@ -321,7 +322,7 @@ function splitSamplesheetPerProject() {
 	local _allProjects
 	_allProjects="${_projects[*]}"
 	_allProjects="${_allProjects// /,}"
-	printf '%s\n' "${_allProjects}" > "${JOB_CONTROLE_FILE_BASE}.trace_putFromFile_overview.csv" 
+	printf '%s\n' "\"${_allProjects}\"" > "${JOB_CONTROLE_FILE_BASE}.trace_putFromFile_overview.csv" 
 	
 	#
 	# Move samplesheet to archive on sourceServerFQDN
@@ -541,13 +542,7 @@ else
 		controlFileBase="${PRM_ROOT_DIR}/logs/${filePrefix}/"
 		runPrefix="run01"
 		export JOB_CONTROLE_FILE_BASE="${controlFileBase}/${runPrefix}.${SCRIPT_NAME}"
-		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
-		then
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping already processed run ${filePrefix}."
-			continue
-		else
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing run ${filePrefix} ..."
-		fi
+
 		#
 		# Determine whether an rsync is required for this run, which is the case when
 		# raw data production has finished successfully and this copy script has not.
@@ -568,6 +563,16 @@ else
 		mkdir -m 2750 -p "${PRM_ROOT_DIR}/Samplesheets/"
 		# shellcheck disable=SC2174
 		mkdir -m 2750 -p "${PRM_ROOT_DIR}/Samplesheets/archive/"
+		
+		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping already processed run ${filePrefix}."
+			continue
+		else
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing run ${filePrefix} ..."
+		fi
+		printf "finished" > "${JOB_CONTROLE_FILE_BASE}.trace_putFromFile_setProcessRawData.csv" 
+		
 		#
 		# Step 1: Create a list of raw data items for this run/samplesheet.
 		#

@@ -151,7 +151,7 @@ function notification() {
 			# Hence logs for a project will always be parsed and as the logs dir grows,
 			# this may become problematic at some point and require cleanup of the logs.
 			#
-			local _controlFileBase="${TMP_ROOT_DIR}/logs/${_project}/${_run}"
+			local _controlFileBase="${_lfs_root_dir}/logs/${_project}/${_run}"
 			export JOB_CONTROLE_FILE_BASE="${_controlFileBase}.${SCRIPT_NAME}"
 			printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 			#
