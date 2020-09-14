@@ -260,7 +260,7 @@ function submitJobScripts () {
 	# As soon as the first job was submitted it may start to run when enough resources are available,
 	# so we must create pipeline.started just before submitting the first job.
 	#
-	printf '' > "${_controlFileBase}.pipeline.started"
+#	printf '' > "${_controlFileBase}.pipeline.started"
 	# shellcheck disable=SC2248
 	sh submit.sh ${_submitOptions:-} >> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
@@ -510,7 +510,7 @@ else
 		if [[ -n "${sampleSheetColumnOffsets['FirstPriority']+isset}" ]]
 		then
 			sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['FirstPriority']} + 1))
-			firstPriority=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print "$sampleSheetFieldIndex"}')
+			firstPriority=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
 			if [[ "${firstPriority^^}" == *"TRUE"* ]]
 			then
 				priority='true'
@@ -532,7 +532,7 @@ else
 			if [[ "${sampleType}" == 'DNA' ]]
 			then
 				sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['capturingKit']} + 1))
-				capturingKit=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print "$sampleSheetFieldIndex"}' | head -1)
+				capturingKit=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}' | head -1)
 			fi
 			#
 			# Determine which lab run ID this is: ${sequencingStartDate}_${sequencer}_${incrementalRunNumber}_${flowcell}
@@ -540,22 +540,22 @@ else
 			if [[ -n "${sampleSheetColumnOffsets['sequencingStartDate']+isset}" ]]
 			then
 				sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['sequencingStartDate']} + 1))
-				sequencingStartDate=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print "$sampleSheetFieldIndex"}' | head -1)
+				sequencingStartDate=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}' | head -1)
 			fi
 			if [[ -n "${sampleSheetColumnOffsets['sequencer']+isset}" ]]
 			then
 				sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['sequencer']} + 1))
-				sequencer=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print "$sampleSheetFieldIndex"}' | head -1)
+				sequencer=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}' | head -1)
 			fi
 			if [[ -n "${sampleSheetColumnOffsets['run']+isset}" ]]
 			then
 				sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['run']} + 1))
-				incrementalRunNumber=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print "$sampleSheetFieldIndex"}' | head -1)
+				incrementalRunNumber=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}' | head -1)
 			fi
 			if [[ -n "${sampleSheetColumnOffsets['flowcell']+isset}" ]]
 			then
 				sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['flowcell']} + 1))
-				flowcell=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print "$sampleSheetFieldIndex"}' | head -1)
+				flowcell=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}' | head -1)
 			fi
 			labRunID="${sequencingStartDate}_${sequencer}_${incrementalRunNumber}_${flowcell}"
 		elif [[ "${sampleType}" == 'GAP' ]]
