@@ -260,6 +260,7 @@ function submitJobScripts () {
 	# As soon as the first job was submitted it may start to run when enough resources are available,
 	# so we must create pipeline.started just before submitting the first job.
 	#
+	printf '' > "${_controlFileBase}.pipeline.started"
 	# shellcheck disable=SC2248
 	sh submit.sh ${_submitOptions:-} >> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
