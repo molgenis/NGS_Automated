@@ -685,6 +685,7 @@ function processSamplesheetsAndMoveConvertedData() {
 	timeStamp="$(date +%FT%T%z)"
 	printf '%s\n' 'run_id,group,process_raw_data,copy_raw_prm,projects,date' \
 		> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
+	# shellcheck disable=SC2153
 	printf '%s\n' "${_runDir},${GROUP},started,,,${timeStamp}" \
 		>> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
 
