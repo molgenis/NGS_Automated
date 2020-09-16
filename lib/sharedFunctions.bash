@@ -203,7 +203,7 @@ function trackAndTracePostFromFile() {
 	_curlResponse=$(curl -f -s -H 'Content-Type: application/json' -X POST -d "{\"username\":\"${USERNAME}\", \"password\":\"${PASSWORD}\"}" "https://${MOLGENISSERVER}/api/v1/login") \
 		|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to login at ${MOLGENISSERVER}."
-			return
+			return 1
 	}
 	_token="${_curlResponse:10:32}"
 	#
@@ -233,14 +233,14 @@ function trackAndTracePostFromFile() {
 		then
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "HTTP response status was ${_lastHttpResponseStatus}."
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to POST track&trace info using action ${_action} for entityTypeId=${_entityTypeId} from file=${_file} to https://${MOLGENISSERVER}/plugin/importwizard/importFile"
-			return
+			return 1
 		else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully POSTed track&trace info. HTTP response status was ${_lastHttpResponseStatus}."
 		fi
 	else
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to parse status code number from HTTP response status ${_lastHttpResponseStatus}."
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to POST track&trace info using action ${_action} for entityTypeId=${_entityTypeId} from file=${_file} to https://${MOLGENISSERVER}/plugin/importwizard/importFile"
-		return
+		return 1
 	fi
 }
 
@@ -291,14 +291,14 @@ function trackAndTracePut() {
 		then
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "HTTP response status was ${_lastHttpResponseStatus}."
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to PUT value ${_content} using REST API at https://${MOLGENISSERVER}/api/v1/${_entityTypeId}/${_jobID}/${_field}."
-			return
+			return 1
 		else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully PUT track&trace info. HTTP response status was ${_lastHttpResponseStatus}."
 		fi
 	else
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to parse status code number from HTTP response status ${_lastHttpResponseStatus}."
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to PUT value ${_content} using REST API at https://${MOLGENISSERVER}/api/v1/${_entityTypeId}/${_jobID}/${_field}."
-		return
+		return 1
 	fi
 }
 
