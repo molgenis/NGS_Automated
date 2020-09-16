@@ -566,6 +566,7 @@ else
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing run ${filePrefix} ..."
 		fi
+		## update the column processData (in the overview entity) from the previous step 
 		printf "finished" > "${JOB_CONTROLE_FILE_BASE}.trace_putFromFile_setProcessRawData.csv" 
 		
 		printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
