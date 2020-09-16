@@ -558,11 +558,6 @@ else
 		mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/"
 		# shellcheck disable=SC2174
 		mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${filePrefix}/"
-		printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
-		# shellcheck disable=SC2174
-		mkdir -m 2750 -p "${PRM_ROOT_DIR}/Samplesheets/"
-		# shellcheck disable=SC2174
-		mkdir -m 2750 -p "${PRM_ROOT_DIR}/Samplesheets/archive/"
 		
 		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 		then
@@ -572,6 +567,13 @@ else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing run ${filePrefix} ..."
 		fi
 		printf "finished" > "${JOB_CONTROLE_FILE_BASE}.trace_putFromFile_setProcessRawData.csv" 
+		
+		printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
+		# shellcheck disable=SC2174
+		mkdir -m 2750 -p "${PRM_ROOT_DIR}/Samplesheets/"
+		# shellcheck disable=SC2174
+		mkdir -m 2750 -p "${PRM_ROOT_DIR}/Samplesheets/archive/"
+		
 		
 		#
 		# Step 1: Create a list of raw data items for this run/samplesheet.
