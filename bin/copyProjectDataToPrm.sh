@@ -213,7 +213,7 @@ function rsyncProjectRun() {
 					else
 						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Making symlinks for concordance check."
 						ln -sf "${i}" .
-						
+						# shellcheck disable=SC2029
 						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigating to /groups/${GROUP}/${COMP_PRM_LFS}/concordance/${PRMRAWDATA}/ to create symlink for concordance check on the complementary prm"
 						cd "/groups/${GROUP}/${COMP_PRM_LFS}/concordance/${PRMRAWDATA}/"
 						ln -sf "${i}" .
@@ -272,7 +272,7 @@ function rsyncProjectRun() {
 					then
 						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "no symlink created for project ${_project} since there is already a project with the same name on /groups/${GROUP}/${COMP_PRM_LFS}/projects/"
 					else
-						ln -sf "${PRM_ROOT_DIR}/projects/${_project}"
+						ln -sf "${PRM_ROOT_DIR}/projects/${_project}" .
 						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "symlink created on the complementary prm (/groups/${GROUP}/${COMP_PRM_LFS}/projects/)"
 					fi
 					cd -
