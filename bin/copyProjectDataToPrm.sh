@@ -213,11 +213,17 @@ function rsyncProjectRun() {
 					else
 						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Making symlinks for concordance check."
 						ln -sf "${i}" .
+						
+						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigating to /groups/${GROUP}/${COMP_PRM_LFS}/concordance/${PRMRAWDATA}/ to create symlink for concordance check on the complementary prm"
+						cd "/groups/${GROUP}/${COMP_PRM_LFS}/concordance/${PRMRAWDATA}/"
+						ln -sf "${i}" .
+						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "navigating back to ${PRM_ROOT_DIR}/concordance/${PRMRAWDATA}/ to create symlink for original prm"
+						cd - 
 					fi
 				done
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing symlink for project VCF."
 				rm -f "${PRM_ROOT_DIR}/concordance/${PRMRAWDATA}/${_project}.final.vcf.gz"
-				cd -
+				cd "${PRM_ROOT_DIR}/projects/${_project}/"
 				if [[ "${_sampleType}" == 'GAP' ]]
 				then
 					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "_sampleType is GAF. Making symlinks for DiagnosticOutput folder."
@@ -258,6 +264,17 @@ function rsyncProjectRun() {
 					echo "\\\\zkh\appdata\medgen\leucinezipper${callrate//\//$windowsPathDelimeter}" > "Callrates_${_project}.txt"
 					unix2dos "Callrates_${_project}.txt"
 					#
+					cd -
+					
+					#make also a copy to the complementary prm
+					cd /groups/${GROUP}/${COMP_PRM_LFS}/projects/
+					if [ -d /groups/${GROUP}/${COMP_PRM_LFS}/projects/${_project} ]
+					then
+						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "no symlink created for project ${_project} since there is already a project with the same name on /groups/${GROUP}/${COMP_PRM_LFS}/projects/"
+					else
+						ln -sf ${PRM_ROOT_DIR}/projects/${_project}
+						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "symlink created on the complementary prm (/groups/${GROUP}/${COMP_PRM_LFS}/projects/)"
+					fi
 					cd -
 				fi
 				echo "The results can be found in: ${PRM_ROOT_DIR}." \
