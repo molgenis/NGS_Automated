@@ -213,7 +213,7 @@ function rsyncProjectRun() {
 					else
 						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Making symlinks for concordance check."
 						ln -sf "${i}" .
-						# shellcheck disable=SC2029
+						# shellcheck disable=SC2153
 						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigating to /groups/${GROUP}/${COMP_PRM_LFS}/concordance/${PRMRAWDATA}/ to create symlink for concordance check on the complementary prm"
 						cd "/groups/${GROUP}/${COMP_PRM_LFS}/concordance/${PRMRAWDATA}/"
 						ln -sf "${i}" .
