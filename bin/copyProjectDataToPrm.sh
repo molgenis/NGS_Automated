@@ -267,8 +267,8 @@ function rsyncProjectRun() {
 					cd -
 					
 					#make also a copy to the complementary prm
-					cd /groups/${GROUP}/${COMP_PRM_LFS}/projects/
-					if [ -d /groups/${GROUP}/${COMP_PRM_LFS}/projects/${_project} ]
+					cd "/groups/${GROUP}/${COMP_PRM_LFS}/projects/"
+					if [ -d "/groups/${GROUP}/${COMP_PRM_LFS}/projects/${_project}" ]
 					then
 						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "no symlink created for project ${_project} since there is already a project with the same name on /groups/${GROUP}/${COMP_PRM_LFS}/projects/"
 					else
