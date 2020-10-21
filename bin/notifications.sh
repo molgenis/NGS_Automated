@@ -167,7 +167,13 @@ function notification() {
 					continue
 				else
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_project_state_file%.pipeline.failed}.startPipeline.resubmitted"
-					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Pipeline for project ${_project} failed again -> notify for state failed of phase pipeline."
+					if [[ "${_project_state_file}" -nt "${_project_state_file%.pipeline.failed}.startPipeline.resubmitted" ]]
+					then
+						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Pipeline for project ${_project} failed again -> notify for state failed of phase pipeline."
+					else
+						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Jobs for project ${_project} were resubmitted and pipeline did not fail again yet -> skip notification for state failed of phase pipeline."
+						continue
+					fi
 				fi
 			fi
 			#
