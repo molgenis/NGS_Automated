@@ -198,7 +198,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Rsyncing everything except
 #
 declare -a gsProjectsSourceServer
 # shellcheck disable=SC2029
-readarray -t gsProjectsSourceServer< <(ssh "${HOSTNAME_DATA_STAGING}" "find \"/groups/${GROUP}/${SCR_LFS}/\" -mindepth 1 -maxdepth 1 -type d ")
+readarray -t gsProjectsSourceServer< <(ssh "${HOSTNAME_DATA_STAGING}" "find \"/groups/${GROUP}/${SCR_LFS}/\" -mindepth 1 -maxdepth 1 -type d")
 
 if [[ "${#gsProjectsSourceServer[@]:-0}" -eq '0' ]]
 then
@@ -209,8 +209,21 @@ else
 		gsProject="$(basename "${gsProject}")"
 		if [ -e "/groups/${GROUP}/${TMP_LFS}/logs/${gsProject}/${gsProject}.processGsRawData.finished" ]
 		then
-			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "${gsProject} already processed, no need to transfer the data again"
+			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "${gsProject} already processed, no need to transfer the data again."
 		else
+			#
+			# Check if gsProject is supposed to be complete (*.finished present).
+			#
+			gsProjectUploadCompleted='false'
+			if ssh "${HOSTNAME_DATA_STAGING}" "find \"/groups/${GROUP}/${SCR_LFS}/${gsProject}/\" -mindepth 1 -maxdepth 1 -name '*.finished'"
+			then
+				gsProjectUploadCompleted='true'
+			fi
+			#
+			# Rsync everything but the .finished file: may be imcompletely uploaded project,
+			# but we already rsync everything we've got so far.
+			#
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing everything but the .finished file for ${gsProject} ..."
 			/usr/bin/rsync -vrltD \
 				--log-file="${logDir}/rsync-from-${HOSTNAME_DATA_STAGING%%.*}.log" \
 				--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
@@ -219,15 +232,22 @@ else
 				--exclude='*.finished' \
 				"${HOSTNAME_DATA_STAGING}:/groups/${GROUP}/${SCR_LFS}/${gsProject}" \
 				"/groups/${GROUP}/${TMP_LFS}/"
-
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Rsyncing only the .finished files ...'
-			/usr/bin/rsync -vrltD \
-				--log-file="${logDir}/rsync-from-${HOSTNAME_DATA_STAGING%%.*}.log" \
-				--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
-				--omit-dir-times \
-				--omit-link-times \
-				"${HOSTNAME_DATA_STAGING}:/groups/${GROUP}/${SCR_LFS}/${gsProject}/*.finished" \
-				"/groups/${GROUP}/${TMP_LFS}/${gsProject}/"	
+			#
+			# Rsync the .finished file last if the upload was complete.
+			#
+			if [[ "${gsProjectUploadCompleted}" == 'true' ]]
+			then
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing only the .finished file for ${gsProject} ..."
+				/usr/bin/rsync -vrltD \
+					--log-file="${logDir}/rsync-from-${HOSTNAME_DATA_STAGING%%.*}.log" \
+					--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
+					--omit-dir-times \
+					--omit-link-times \
+					"${HOSTNAME_DATA_STAGING}:/groups/${GROUP}/${SCR_LFS}/${gsProject}/*.finished" \
+					"/groups/${GROUP}/${TMP_LFS}/${gsProject}/"
+			else
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No .finished file for ${gsProject} present yet: nothing to sync."
+			fi
 		fi
 	done
 fi
