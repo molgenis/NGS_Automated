@@ -193,13 +193,9 @@ export JOB_CONTROLE_FILE_BASE="${logDir}/${logTimeStamp}.${SCRIPT_NAME}"
 # shellcheck disable=SC2153
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pulling data from data staging server ${HOSTNAME_DATA_STAGING%%.*} using rsync to /groups/${GROUP}/${TMP_LFS}/ ..."
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "See ${logDir}/rsync-from-${HOSTNAME_DATA_STAGING%%.*}.log for details ..."
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Rsyncing everything except the .finished files ...'
-
-#
 declare -a gsProjectsSourceServer
 # shellcheck disable=SC2029
 readarray -t gsProjectsSourceServer< <(ssh "${HOSTNAME_DATA_STAGING}" "find \"/groups/${GROUP}/${SCR_LFS}/\" -mindepth 1 -maxdepth 1 -type d")
-
 if [[ "${#gsProjectsSourceServer[@]:-0}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found at ${HOSTNAME_DATA_STAGING}:/groups/${GROUP}/${SCR_LFS}/"
@@ -215,6 +211,7 @@ else
 			# Check if gsProject is supposed to be complete (*.finished present).
 			#
 			gsProjectUploadCompleted='false'
+			# shellcheck disable=SC2029
 			if ssh "${HOSTNAME_DATA_STAGING}" "find \"/groups/${GROUP}/${SCR_LFS}/${gsProject}/\" -mindepth 1 -maxdepth 1 -name '*.finished'"
 			then
 				gsProjectUploadCompleted='true'
