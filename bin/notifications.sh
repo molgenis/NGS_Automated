@@ -146,13 +146,16 @@ function notification() {
 			# but obviously we can only use them for manual inspection if something goes wrong
 			# and not for automated notifications as that would result in a "chicken versus the egg; which came first?" problem.
 			#
-			# Note that currently there is only "${JOB_CONTROLE_FILE_BASE}.started" that may get moved to "${JOB_CONTROLE_FILE_BASE}.failed",
-			# but there is no "${JOB_CONTROLE_FILE_BASE}.finshed", because we cannot no if a new ${_project_state_file} will appear later.
+			# Note that currently we cannot no if a new ${_project_state_file} will appear later on.
 			# Hence logs for a project will always be parsed and as the logs dir grows,
 			# this may become problematic at some point and require cleanup of the logs.
 			#
+			# ${_controlFileBase}       is used for tracking the succes of specific notifiction per run per project
+			#                           and therefore passed to the notification functions "trackAndTrace" and "sendEmail"
+			# ${JOB_CONTROLE_FILE_BASE} is is used for tracking the overall succes of this notifiction script as a whole.
+			#
 			local _controlFileBase="${_lfs_root_dir}/logs/${_project}/${_run}"
-			export JOB_CONTROLE_FILE_BASE="${_controlFileBase}.${SCRIPT_NAME}"
+			export JOB_CONTROLE_FILE_BASE="${_lfs_root_dir}/logs/${SCRIPT_NAME}"
 			printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 			#
 			# In case a pipeline failed check if jobs were already resubmitted
