@@ -42,6 +42,7 @@ def printNewSamplesheet(_projectSamplesheetPath, _gsSamplesheetDataHashmap, _sam
         _newRows.append(_headers)
         for _row in _reader:
             _sampleProcessStepID = _row['sampleProcessStepID'] # Uniquely identifies a sample.
+            logging.debug('Found sampleProcessStepID ' + _sampleProcessStepID + '; starting lookup of additional sample meta data in _gsSamplesheetDataHashmap ...')
             #
             # Try to create new rows: one for each flowcell-lane combination for each sample (=sampleProcessStepID).
             #
