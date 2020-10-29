@@ -690,7 +690,6 @@ function processSamplesheetsAndMoveConvertedData() {
 	# shellcheck disable=SC2153
 	printf '%s\n' "${_runDir},${GROUP},started,,,${timeStamp}" \
 		>> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
-
 	#
 	# Cleanup uploaded samplesheets per project.
 	#

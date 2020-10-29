@@ -216,11 +216,11 @@ if args.samplesheetsOutputDir == args.inhouseSamplesheetsInputDir:
 #
 # Check availability and readability of GS samplesheet.
 #
-for gsSamplesheetFile in glob.iglob(os.path.join(args.genomeScanInputDir, "CSV_UMCG_*.csv")):
+for gsSamplesheetFile in glob.iglob(os.path.join(args.genomeScanInputDir, "CSV_UMCG_*.csv.converted")):
     if os.path.isfile(gsSamplesheetFile) and os.access(gsSamplesheetFile, os.R_OK):
         logging.info('Found GenomeScan samplesheet: ' + gsSamplesheetFile + '.')
     else:
-        logging.critical('Either the ' + args.genomeScanInputDir + 'CSV_UMCG_*.csv file is missing or it is not readable.')
+        logging.critical('Either the ' + args.genomeScanInputDir + 'CSV_UMCG_*.csv.converted file is missing or it is not readable.')
         sys.exit('FATAL ERROR!')
 #
 # Check availability and readability of md5sum file.
