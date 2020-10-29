@@ -93,13 +93,15 @@ function sanityChecking() {
 			2>> "${_controlFileBaseForFunction}.started" \
 			&& sed -i "/^[\s${SAMPLESHEET_SEP}]*$/d" "${_gsSampleSheet}.converted" \
 			2>> "${_controlFileBaseForFunction}.started" \
-			&& mv -f "${_gsSampleSheet}"{.converted,} \
-			2>> "${_controlFileBaseForFunction}.started" \
 		|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to convert line end characters and/or remove empty lines for ${_gsSampleSheet}."
 			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		}
+		#
+		# Continue with converted samplesheet.
+		#
+		_gsSampleSheet="${_gsSampleSheet}.converted"
 	elif [[ "${_numberOfSamplesheets}" -gt 1 ]]
 	then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "More than one CSV_UMCG_*.${SAMPLESHEET_EXT} GS samplesheet present in ${TMP_ROOT_DIR}/${_batch}/."
@@ -155,7 +157,7 @@ function sanityChecking() {
 	# _insaneSamples is a string of sample IDs only present either on disk or on the samplesheet.
 	#
 	readarray -t _samplesOnDisk < <(find "${TMP_ROOT_DIR}/${_batch}/" -maxdepth 1 -mindepth 1 -name '*.fastq.gz' | grep -o "${_batch}-[0-9][0-9]*" | sort -u)
-	readarray -t _samplesInSamplesheet < <(grep -o "${_batch}-[0-9][0-9]*" "${TMP_ROOT_DIR}/${_batch}/CSV_UMCG_"*".${SAMPLESHEET_EXT}" | sort -u)
+	readarray -t _samplesInSamplesheet < <(grep -o "${_batch}-[0-9][0-9]*" "${TMP_ROOT_DIR}/${_batch}/CSV_UMCG_"*".${SAMPLESHEET_EXT}.converted" | sort -u)
 	local _insaneSamples
 	_insaneSamples="$(echo "${_samplesOnDisk[@]:-}" "${_samplesInSamplesheet[@]:-}" | tr ' ' '\n' | sort | uniq -u | tr '\n' ' ')"
 	if [[ -n "${_insane_samples:-}" ]]
@@ -536,7 +538,7 @@ function processSamplesheetsAndMoveConvertedData() {
 	declare -A _sampleSheetColumnOffsets=()
 	local      _projectFieldIndex
 	declare -a _projects=()
-	_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/CSV_UMCG_"*".${SAMPLESHEET_EXT}")
+	_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/CSV_UMCG_"*".${SAMPLESHEET_EXT}.converted")
 	IFS="${SAMPLESHEET_SEP}" read -r -a _sampleSheetColumnNames <<< "$(head -1 "${_gsSampleSheet}")"
 	for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]:-0} ; _offset++ ))
 	do
