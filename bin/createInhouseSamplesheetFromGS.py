@@ -238,10 +238,10 @@ else:
 #
 gsFilenameDataHashmap = makeOriginalFilenameHashmap(checksumsFilePath)
 # For debugging data structure only:
-import pprint
-pp = pprint.PrettyPrinter(indent=4)
-pp.pprint(gsFilenameDataHashmap)
-pp.pprint('=====================================================')
+#import pprint
+#pp = pprint.PrettyPrinter(indent=4)
+#pp.pprint(gsFilenameDataHashmap)
+#pp.pprint('=====================================================')
 
 #
 # Combine GS samplesheet with original filename information form gsFilenameDataHashmap.
@@ -291,7 +291,7 @@ for row in gsReader:
     gsProjects.append(gsProject)
     gsBarcodesAndGenomeScanID = row['Index1'] + '-' + row['Index2'] + '-' + gsGenomeScanID
     logging.debug('Compiled gsBarcodesAndGenomeScanID key ' + gsBarcodesAndGenomeScanID + ' for lookup of values in gsFilenameDataHashmap.')
-    if gsSamplesheetDataHashmap.has_key(gsSampleProcessStepID):
+    if gsSampleProcessStepID in gsSamplesheetDataHashmap:
         logging.critical('sampleProcessStepID ' + gsSampleProcessStepID + ' is not uniq in project ' + gsProject + '.')
         sys.exit('FATAL ERROR!')
     try:
@@ -307,15 +307,20 @@ for row in gsReader:
         #        'FastQs': [{'lane': '7', 'sequencingStartDate': '181128', 'run': '0363', 'sequencer': 'K00296', 'flowcell': 'H2TGVBBXY', 'barcodes': 'CAGAGAGG-TCTACTCT'}, 
         #                   {'lane': '8', 'sequencingStartDate': '181128', 'run': '0364', 'sequencer': 'K00296', 'flowcell': 'HYKGJBBXX', 'barcodes': 'CAGAGAGG-TCTACTCT'}]}}
         #
-        gsSamplesheetDataHashmap[gsSampleProcessStepID] = {
-            'project': gsProject, 'GS_ID': gsGenomeScanID,
-            'FastQs': gsFilenameDataHashmap[gsBarcodesAndGenomeScanID]
-        }
-        # For debugging data structure only:
-        import pprint
-        pp = pprint.PrettyPrinter(indent=4)
-        pp.pprint(gsSamplesheetDataHashmap)
-        pp.pprint('#####################################################')
+        if gsBarcodesAndGenomeScanID in gsFilenameDataHashmap:
+            gsSamplesheetDataHashmap[gsSampleProcessStepID] = {
+                'project': gsProject, 'GS_ID': gsGenomeScanID,
+                'FastQs': gsFilenameDataHashmap[gsBarcodesAndGenomeScanID]
+            }
+            # For debugging data structure only:
+            #import pprint
+            #pp = pprint.PrettyPrinter(indent=4)
+            #pp.pprint(gsSamplesheetDataHashmap)
+            #pp.pprint('#####################################################')
+        else:
+            logging.critical('Meta data parsed from original FastQ filenames as supplied by GenomeScan missing for sample ' + gsGenomeScanID + ' with barcodes ' + row['Index1'] + '-' + row['Index2'] + ' from project ' + gsProject + '.')
+            logging.critical('Check if the barcodes in the samplesheets match with the barcodes in the FastQ files for ' + gsGenomeScanID + '.')
+            sys.exit('FATAL ERROR!')
     except:
         logging.critical('Meta data parsed from original FastQ filenames as supplied by GenomeScan missing for sample ' + gsGenomeScanID + ' with barcodes ' + row['Index1'] + '-' + row['Index2'] + ' from project ' + gsProject + '.')
         sys.exit('FATAL ERROR!')
