@@ -306,10 +306,10 @@ for row in gsReader:
             'FastQs': gsFilenameDataHashmap[gsBarcodesAndGenomeScanID]
         }
         # For debugging data structure only:
-        #import pprint
-        #pp = pprint.PrettyPrinter(indent=4)
-        #pp.pprint(gsSamplesheetDataHashmap)
-        #pp.pprint('#####################################################')
+        import pprint
+        pp = pprint.PrettyPrinter(indent=4)
+        pp.pprint(gsSamplesheetDataHashmap)
+        pp.pprint('#####################################################')
     except:
         logging.critical('Meta data parsed from original FastQ filenames as supplied by GenomeScan missing for sample ' + gsGenomeScanID + ' with barcodes ' + row['Index1'] + '-' + row['Index2'] + ' from project ' + gsProject + '.')
         sys.exit('FATAL ERROR!')
