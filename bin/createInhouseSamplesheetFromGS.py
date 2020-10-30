@@ -294,20 +294,20 @@ for row in gsReader:
     if gsSampleProcessStepID in gsSamplesheetDataHashmap:
         logging.critical('sampleProcessStepID ' + gsSampleProcessStepID + ' is not uniq in project ' + gsProject + '.')
         sys.exit('FATAL ERROR!')
-    try:
-        #
-        # Example data structure of gsSamplesheetDataHashmap:
-        # defaultdict(<type 'dict'>, {
-        #    '123456': {
-        #        'project': 'QXTR_426-Exoom_v1', 'GS_ID': '103373-032-059', 
-        #        'FastQs': [{'lane': '7', 'sequencingStartDate': '181128', 'run': '0363', 'sequencer': 'K00296', 'flowcell': 'H2TGVBBXY', 'barcodes': 'CTCTCTAC-AGAGGATA'}, 
-        #                   {'lane': '8', 'sequencingStartDate': '181128', 'run': '0364', 'sequencer': 'K00296', 'flowcell': 'HYKGJBBXX', 'barcodes': 'CTCTCTAC-AGAGGATA'}]},
-        #    '789012': {
-        #        'project': 'QXTR_426-Exoom_v1', 'GS_ID': '103373-032-058', 
-        #        'FastQs': [{'lane': '7', 'sequencingStartDate': '181128', 'run': '0363', 'sequencer': 'K00296', 'flowcell': 'H2TGVBBXY', 'barcodes': 'CAGAGAGG-TCTACTCT'}, 
-        #                   {'lane': '8', 'sequencingStartDate': '181128', 'run': '0364', 'sequencer': 'K00296', 'flowcell': 'HYKGJBBXX', 'barcodes': 'CAGAGAGG-TCTACTCT'}]}}
-        #
-        if gsBarcodesAndGenomeScanID in gsFilenameDataHashmap:
+    #
+    # Example data structure of gsSamplesheetDataHashmap:
+    # defaultdict(<type 'dict'>, {
+    #    '123456': {
+    #        'project': 'QXTR_426-Exoom_v1', 'GS_ID': '103373-032-059', 
+    #        'FastQs': [{'lane': '7', 'sequencingStartDate': '181128', 'run': '0363', 'sequencer': 'K00296', 'flowcell': 'H2TGVBBXY', 'barcodes': 'CTCTCTAC-AGAGGATA'}, 
+    #                   {'lane': '8', 'sequencingStartDate': '181128', 'run': '0364', 'sequencer': 'K00296', 'flowcell': 'HYKGJBBXX', 'barcodes': 'CTCTCTAC-AGAGGATA'}]},
+    #    '789012': {
+    #        'project': 'QXTR_426-Exoom_v1', 'GS_ID': '103373-032-058', 
+    #        'FastQs': [{'lane': '7', 'sequencingStartDate': '181128', 'run': '0363', 'sequencer': 'K00296', 'flowcell': 'H2TGVBBXY', 'barcodes': 'CAGAGAGG-TCTACTCT'}, 
+    #                   {'lane': '8', 'sequencingStartDate': '181128', 'run': '0364', 'sequencer': 'K00296', 'flowcell': 'HYKGJBBXX', 'barcodes': 'CAGAGAGG-TCTACTCT'}]}}
+    #
+    if gsBarcodesAndGenomeScanID in gsFilenameDataHashmap:
+        try:
             gsSamplesheetDataHashmap[gsSampleProcessStepID] = {
                 'project': gsProject, 'GS_ID': gsGenomeScanID,
                 'FastQs': gsFilenameDataHashmap[gsBarcodesAndGenomeScanID]
@@ -317,12 +317,12 @@ for row in gsReader:
             #pp = pprint.PrettyPrinter(indent=4)
             #pp.pprint(gsSamplesheetDataHashmap)
             #pp.pprint('#####################################################')
-        else:
+        except:
             logging.critical('Meta data parsed from original FastQ filenames as supplied by GenomeScan missing for sample ' + gsGenomeScanID + ' with barcodes ' + row['Index1'] + '-' + row['Index2'] + ' from project ' + gsProject + '.')
-            logging.critical('Check if the barcodes in the samplesheets match with the barcodes in the FastQ files for ' + gsGenomeScanID + '.')
             sys.exit('FATAL ERROR!')
-    except:
+    else:
         logging.critical('Meta data parsed from original FastQ filenames as supplied by GenomeScan missing for sample ' + gsGenomeScanID + ' with barcodes ' + row['Index1'] + '-' + row['Index2'] + ' from project ' + gsProject + '.')
+        logging.critical('Check if the barcodes in the samplesheets match with the barcodes in the FastQ files for ' + gsGenomeScanID + '.')
         sys.exit('FATAL ERROR!')
 gsSamplesheetFileHandle.close()
 #
