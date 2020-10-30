@@ -237,6 +237,11 @@ else:
 # Get sequencing meta-data from original filenames as listed in the checksum file.
 #
 gsFilenameDataHashmap = makeOriginalFilenameHashmap(checksumsFilePath)
+# For debugging data structure only:
+import pprint
+pp = pprint.PrettyPrinter(indent=4)
+pp.pprint(gsFilenameDataHashmap)
+pp.pprint('=====================================================')
 
 #
 # Combine GS samplesheet with original filename information form gsFilenameDataHashmap.
@@ -285,6 +290,7 @@ for row in gsReader:
     gsGenomeScanID=row['GS_ID']
     gsProjects.append(gsProject)
     gsBarcodesAndGenomeScanID = row['Index1'] + '-' + row['Index2'] + '-' + gsGenomeScanID
+    logging.debug('Compiled gsBarcodesAndGenomeScanID key ' + gsBarcodesAndGenomeScanID + ' for lookup of values in gsFilenameDataHashmap.')
     if gsSamplesheetDataHashmap.has_key(gsSampleProcessStepID):
         logging.critical('sampleProcessStepID ' + gsSampleProcessStepID + ' is not uniq in project ' + gsProject + '.')
         sys.exit('FATAL ERROR!')
