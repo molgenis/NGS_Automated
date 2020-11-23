@@ -249,13 +249,17 @@ else
 	done
 fi
 
-#
-# Cleanup old data if data transfer with rsync finished successfully (and hence did not crash this script).
-#
-log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting data older than 14 days from ${HOSTNAME_DATA_STAGING%%.*}:/groups/${GROUP}/${SCR_LFS}/ ..."
-# shellcheck disable=SC2029
-/usr/bin/ssh "${HOSTNAME_DATA_STAGING}" "/bin/find /groups/${GROUP}/${SCR_LFS}/ -mtime +14 -ignore_readdir_race -delete"
-
+if [[ "${GROUP}" == "umcg-gst"]]
+then
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "this is a testgroup, data should not be removed after 14 days"
+else
+	#
+	# Cleanup old data if data transfer with rsync finished successfully (and hence did not crash this script).
+	#
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting data older than 14 days from ${HOSTNAME_DATA_STAGING%%.*}:/groups/${GROUP}/${SCR_LFS}/ ..."
+	# shellcheck disable=SC2029
+	/usr/bin/ssh "${HOSTNAME_DATA_STAGING}" "/bin/find /groups/${GROUP}/${SCR_LFS}/ -mtime +14 -ignore_readdir_race -delete"
+fi
 #
 # Clean exit.
 #
