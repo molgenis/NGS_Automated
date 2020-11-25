@@ -249,7 +249,7 @@ else
 	done
 fi
 
-if [[ "${GROUP}" == "umcg-gst" ]]
+if [[ "${CLEANUP}" == "false" ]]
 then
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "this is a testgroup, data should not be removed after 14 days"
 else
