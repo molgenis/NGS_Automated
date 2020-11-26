@@ -680,16 +680,20 @@ function processSamplesheetsAndMoveConvertedData() {
 			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		}
+		
+		#
+		# Track and Trace.
+		#
+		timeStamp="$(date +%FT%T%z)"
+		printf '%s\n' 'run_id,group,process_raw_data,copy_raw_prm,projects,date' \
+			> "${TMP_ROOT_DIR}/logs/${_runDir}/run01.${SCRIPT_NAME}.trace_post_overview.csv"
+		# shellcheck disable=SC2153
+		printf '%s\n' "${_runDir},${GROUP},started,,,${timeStamp}" \
+			>> "${TMP_ROOT_DIR}/logs/${_runDir}/run01.${SCRIPT_NAME}.trace_post_overview.csv"
+
+		touch "${TMP_ROOT_DIR}/logs/${_runDir}/run01.${SCRIPT_NAME}.finished"
 	done
-	#
-	# Track and Trace.
-	#
-	timeStamp="$(date +%FT%T%z)"
-	printf '%s\n' 'run_id,group,process_raw_data,copy_raw_prm,projects,date' \
-		> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
-	# shellcheck disable=SC2153
-	printf '%s\n' "${_runDir},${GROUP},started,,,${timeStamp}" \
-		>> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
+
 	#
 	# Cleanup uploaded samplesheets per project.
 	#
@@ -702,7 +706,7 @@ function processSamplesheetsAndMoveConvertedData() {
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for batch ${_batch}. See ${_controlFileBaseForFunction}.finished for details." \
 		&& rm -f "${_controlFileBaseForFunction}.failed" \
 		&& mv -v "${_controlFileBaseForFunction}."{started,finished}
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.GSfinished."
 }
 
 function showHelp() {
@@ -883,7 +887,7 @@ else
 		#       proper prm mount on the GD clusters and this script can run a GD cluster
 		#       instead of on a research cluster.
 		#
-		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
+		if [[ -e "${JOB_CONTROLE_FILE_BASE}.GSfinished" ]]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping already processed batch ${gsBatch}."
 			continue
@@ -935,7 +939,7 @@ else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.processSamplesheetsAndMoveConvertedData.finished present -> processing completed for batch ${gsBatch}..."
 			rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing batch ${gsBatch}."
-			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,GSfinished}
 		else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.processSamplesheetsAndMoveConvertedData.finished absent -> processing failed for batch ${gsBatch}."
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process batch ${gsBatch}."
