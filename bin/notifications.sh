@@ -219,6 +219,7 @@ function notification() {
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${JOB_CONTROLE_FILE_BASE}.finished."
 			else
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to handle notifications for at least one phase:state combination of ${_project}/${_run}."
+				echo "Failed to handle notifications for at least one phase:state combination of ${_project}/${_run}." >> "${JOB_CONTROLE_FILE_BASE}.started"
 				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			fi
 		done
@@ -274,6 +275,7 @@ function trackAndTrace() {
 			echo -e "${_run}.${_phase}.${_state}\t$(date +%FT%T%z)" >> "${_traceSucceededLog}"
 		else
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to record ${_run}.${_phase}.${_state} for ${_project} at ${MOLGENISSERVER} using method ${_method}."
+			echo "Failed to record ${_run}.${_phase}.${_state} for ${_project} at ${MOLGENISSERVER} using method ${_method}." >> "${_controlFileBaseForFunction}.started"
 			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		fi
@@ -287,11 +289,13 @@ function trackAndTrace() {
 			echo -e "${_run}.${_phase}.${_state}\t$(date +%FT%T%z)" >> "${_traceSucceededLog}"
 		else
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to record ${_run}.${_phase}.${_state} for ${_project} at ${MOLGENISSERVER} using method ${_method}."
+			echo "Failed to record ${_run}.${_phase}.${_state} for ${_project} at ${MOLGENISSERVER} using method ${_method}." >> "${_controlFileBaseForFunction}.started"
 			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		fi
 	else
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Found unhandled method ${_method} for ${_run}.${_phase}.${_state} of project ${_project}."
+		echo "Found unhandled method ${_method} for ${_run}.${_phase}.${_state} of project ${_project}." >> "${_controlFileBaseForFunction}.started"
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	fi
@@ -349,6 +353,7 @@ function sendEmail() {
 	then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Cannot parse recipients from ${_lfs_root_dir}/logs/${_phase}.mailinglist nor from ${_lfs_root_dir}/logs/${_phase}.${_phase}.mailinglist."
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Cannot send notifications by mail. I'm giving up, bye bye."
+		echo "Cannot parse recipients from ${_lfs_root_dir}/logs/${_phase}.mailinglist nor from ${_lfs_root_dir}/logs/${_phase}.${_phase}.mailinglist." >> "${_controlFileBaseForFunction}.started"
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	fi
