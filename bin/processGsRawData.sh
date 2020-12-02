@@ -680,16 +680,20 @@ function processSamplesheetsAndMoveConvertedData() {
 			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		}
+		
+		#
+		# Track and Trace.
+		#
+		timeStamp="$(date +%FT%T%z)"
+		printf '%s\n' 'run_id,group,process_raw_data,copy_raw_prm,projects,date' \
+			> "${TMP_ROOT_DIR}/logs/${_runDir}/run01.${SCRIPT_NAME}.trace_post_overview.csv"
+		# shellcheck disable=SC2153
+		printf '%s\n' "${_runDir},${GROUP},finished,,,${timeStamp}" \
+			>> "${TMP_ROOT_DIR}/logs/${_runDir}/run01.${SCRIPT_NAME}.trace_post_overview.csv"
+
+		touch "${TMP_ROOT_DIR}/logs/${_runDir}/run01.${SCRIPT_NAME}.finished"
 	done
-	#
-	# Track and Trace.
-	#
-	timeStamp="$(date +%FT%T%z)"
-	printf '%s\n' 'run_id,group,process_raw_data,copy_raw_prm,projects,date' \
-		> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
-	# shellcheck disable=SC2153
-	printf '%s\n' "${_runDir},${GROUP},started,,,${timeStamp}" \
-		>> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
+
 	#
 	# Cleanup uploaded samplesheets per project.
 	#

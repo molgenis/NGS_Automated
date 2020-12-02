@@ -81,6 +81,7 @@ function notification() {
 	#
 	local    _phase="${1%:*}"
 	local    _state="${1#*:}"
+	local    _lfs_root_dir="${3}"
 	local -a _actions
 	#
 	# This will only work with Bash 4.4 and up, 
@@ -89,7 +90,7 @@ function notification() {
 	#readarray -t -d '|' _actions <<< "${2}"
 	readarray -t _actions <<< "${2//|/$'\n'}"
 	local -a _project_state_files=()
-	local    _lfs_root_dir
+
 	#
 	# The path to phase state files must be:
 	#	"${TMP_ROOT_DIR}/logs/${project}/${run}.${_phase}.${_state}"
@@ -107,121 +108,112 @@ function notification() {
 	#
 	
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing projects with phase ${_phase} in state: ${_state}."
-	declare -a _lfs_root_dirs=("${TMP_ROOT_DIR:-}" "${SCR_ROOT_DIR:-}" "${PRM_ROOT_DIR:-}" "${DAT_ROOT_DIR:-}")
-	for _lfs_root_dir in "${_lfs_root_dirs[@]}"
-	do
+
+	readarray -t _project_state_files < <(find "${_lfs_root_dir}/logs/" -maxdepth 2 -mindepth 2 -type f -name "*.${_phase}.${_state}*" -not -name "*.mailed")
+	if [[ "${#_project_state_files[@]:-0}" -eq '0' ]]
+	then
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No *.${_phase}.${_state} files present in ${_lfs_root_dir}/logs/*/."
+		return
+	else
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found project state files: ${_project_state_files[*]}."
+	fi
 		
-		if [[ -z "${_lfs_root_dir}" ]] || [[ ! -e "${_lfs_root_dir}" ]]
-		then
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "_lfs_root_dir ${_lfs_root_dir} is not set or does not exist."
-			continue
-		fi
-		readarray -t _project_state_files < <(find "${_lfs_root_dir}/logs/" -maxdepth 2 -mindepth 2 -type f -name "*.${_phase}.${_state}*" -not -name "*.mailed")
-		if [[ "${#_project_state_files[@]:-0}" -eq '0' ]]
-		then
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No *.${_phase}.${_state} files present in ${_lfs_root_dir}/logs/*/."
-			continue
-		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found project state files: ${_project_state_files[*]}."
-		fi
+
+	#
+	# Create notifications.
+	#
+	for _project_state_file in "${_project_state_files[@]}"
+	do
 		#
-		# Create notifications.
+		# Get project, run and timestamp from state file name/path.
 		#
-		for _project_state_file in "${_project_state_files[@]}"
-		do
-			#
-			# Get project, run and timestamp from state file name/path.
-			#
-			local _project
-			local _project_state_file_name
-			local _run
-			local _timestamp
-			_project="$(basename "$(dirname "${_project_state_file}")")"
-			_project_state_file_name="$(basename "${_project_state_file}")"
-			_run="${_project_state_file_name%%.*}"
-			_timestamp="$(date --date="$(LC_DATE=C stat --printf='%y' "${_project_state_file}" | cut -d ' ' -f1,2)" "+%Y-%m-%dT%H:%M:%S")"
-			#
-			# Configure logging for this notification script.
-			# We use the same logic with exported JOB_CONTROLE_FILE_BASE as for the other scripts from NGS_Automated,
-			# but obviously we can only use them for manual inspection if something goes wrong
-			# and not for automated notifications as that would result in a "chicken versus the egg; which came first?" problem.
-			#
-			# Note that currently we cannot no if a new ${_project_state_file} will appear later on.
-			# Hence logs for a project will always be parsed and as the logs dir grows,
-			# this may become problematic at some point and require cleanup of the logs.
-			#
-			# ${_controlFileBase}       is used for tracking the succes of specific notifiction per run per project
-			#                           and therefore passed to the notification functions "trackAndTrace" and "sendEmail"
-			# ${JOB_CONTROLE_FILE_BASE} is is used for tracking the overall succes of this notifiction script as a whole.
-			#
-			local _controlFileBase="${_lfs_root_dir}/logs/${_project}/${_run}"
-			export JOB_CONTROLE_FILE_BASE="${_lfs_root_dir}/logs/${SCRIPT_NAME}"
-			printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
-			#
-			# In case a pipeline failed check if jobs were already resubmitted
-			# and only notify if the failure was reproducible and the pipeline failed again.
-			#
-			if [[ "${_phase}" == 'pipeline' && "${_state}" == 'failed' ]]
+		local _project
+		local _project_state_file_name
+		local _run
+		local _timestamp
+		_project="$(basename "$(dirname "${_project_state_file}")")"
+		_project_state_file_name="$(basename "${_project_state_file}")"
+		_run="${_project_state_file_name%%.*}"
+		_timestamp="$(date --date="$(LC_DATE=C stat --printf='%y' "${_project_state_file}" | cut -d ' ' -f1,2)" "+%Y-%m-%dT%H:%M:%S")"
+		#
+		# Configure logging for this notification script.
+		# We use the same logic with exported JOB_CONTROLE_FILE_BASE as for the other scripts from NGS_Automated,
+		# but obviously we can only use them for manual inspection if something goes wrong
+		# and not for automated notifications as that would result in a "chicken versus the egg; which came first?" problem.
+		#
+		# Note that currently we cannot no if a new ${_project_state_file} will appear later on.
+		# Hence logs for a project will always be parsed and as the logs dir grows,
+		# this may become problematic at some point and require cleanup of the logs.
+		#
+		# ${_controlFileBase}       is used for tracking the succes of specific notifiction per run per project
+		#                           and therefore passed to the notification functions "trackAndTrace" and "sendEmail"
+		# ${JOB_CONTROLE_FILE_BASE} is is used for tracking the overall succes of this notifiction script as a whole.
+		#
+		local _controlFileBase="${_lfs_root_dir}/logs/${_project}/${_run}"
+
+		#
+		# In case a pipeline failed check if jobs were already resubmitted
+		# and only notify if the failure was reproducible and the pipeline failed again.
+		#
+		if [[ "${_phase}" == 'pipeline' && "${_state}" == 'failed' ]]
+		then
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Pipeline has state failed; checking if jobs were already resubmitted ..."
+			if [[ ! -e "${_project_state_file%.pipeline.failed}.startPipeline.resubmitted" ]]
 			then
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Pipeline has state failed; checking if jobs were already resubmitted ..."
-				if [[ ! -e "${_project_state_file%.pipeline.failed}.startPipeline.resubmitted" ]]
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Jobs for project ${_project} were not resubmitted yet -> skip notification for state failed of phase pipeline."
+				continue
+			else
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_project_state_file%.pipeline.failed}.startPipeline.resubmitted"
+				if [[ "${_project_state_file}" -nt "${_project_state_file%.pipeline.failed}.startPipeline.resubmitted" ]]
 				then
-					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Jobs for project ${_project} were not resubmitted yet -> skip notification for state failed of phase pipeline."
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Pipeline for project ${_project} failed again -> notify for state failed of phase pipeline."
+				else
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Jobs for project ${_project} were resubmitted and pipeline did not fail again yet -> skip notification for state failed of phase pipeline."
+					continue
+				fi
+			fi
+		fi
+		#
+		# Perform notification action for this state of this phase in the workflow.
+		#
+		local _action
+		for _action in "${_actions[@]}"
+		do
+			if [[ "${_action}" == *"trace"* ]]
+			then
+				#
+				# Notify Track and Trace MOLGENIS Database.
+				#
+				trackAndTrace "${_project_state_file}" "${_project}" "${_run}" "${_phase}" "${_state}" "${_action}" "${_controlFileBase}"
+			elif [[ "${_action}" == 'email' ]]
+			then
+				#
+				# Check if email notifications were explicitly enabled on the commandline.
+				#
+				if [[ "${email}" != 'true' ]]
+				then
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Email disabled and not creating file: ${_project_state_file}.mailed"
 					continue
 				else
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_project_state_file%.pipeline.failed}.startPipeline.resubmitted"
-					if [[ "${_project_state_file}" -nt "${_project_state_file%.pipeline.failed}.startPipeline.resubmitted" ]]
-					then
-						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Pipeline for project ${_project} failed again -> notify for state failed of phase pipeline."
-					else
-						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Jobs for project ${_project} were resubmitted and pipeline did not fail again yet -> skip notification for state failed of phase pipeline."
-						continue
-					fi
+					sendEmail "${_project_state_file}" "${_project}" "${_run}" "${_phase}" "${_state}" "${_lfs_root_dir}" "${_controlFileBase}"
 				fi
-			fi
-			#
-			# Perform notification action for this state of this phase in the workflow.
-			#
-			local _action
-			for _action in "${_actions[@]}"
-			do
-				if [[ "${_action}" == *"trace"* ]]
-				then
-					#
-					# Notify Track and Trace MOLGENIS Database.
-					#
-					trackAndTrace "${_project_state_file}" "${_project}" "${_run}" "${_phase}" "${_state}" "${_action}" "${_controlFileBase}"
-				elif [[ "${_action}" == 'email' ]]
-				then
-					#
-					# Check if email notifications were explicitly enabled on the commandline.
-					#
-					if [[ "${email}" != 'true' ]]
-					then
-						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Email disabled and not creating file: ${_project_state_file}.mailed"
-						continue
-					else
-						sendEmail "${_project_state_file}" "${_project}" "${_run}" "${_phase}" "${_state}" "${_lfs_root_dir}" "${_controlFileBase}"
-					fi
-				else
-					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Found unhandled action ${_action} for ${_run}.${_phase}.${_state} of ${_project}."
-				fi
-			done
-			#
-			# Signal succes.
-			#
-			if [[ ! -e "${_controlFileBase}.trackAndTrace.failed" && ! -e "${_controlFileBase}.sendEmail.failed" ]]
-			then 
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${SCRIPT_NAME} succeeded for the last processed phase:state combination (for which notifications were configured) of ${_project}/${_run}." \
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "               Beware that notifications for previously processed phase:state combinations may have failed." \
-					&& rm -f "${JOB_CONTROLE_FILE_BASE}.failed" \
-					&& mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${JOB_CONTROLE_FILE_BASE}.finished."
 			else
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to handle notifications for at least one phase:state combination of ${_project}/${_run}."
-				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Found unhandled action ${_action} for ${_run}.${_phase}.${_state} of ${_project}."
 			fi
 		done
+		#
+		# Signal succes.
+		#
+		if [[ ! -e "${_controlFileBase}.trackAndTrace.failed" && ! -e "${_controlFileBase}.sendEmail.failed" ]]
+		then 
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${SCRIPT_NAME} succeeded for the last processed phase:state combination (for which notifications were configured) of ${_project}/${_run}." \
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "               Beware that notifications for previously processed phase:state combinations may have failed."
+
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${JOB_CONTROLE_FILE_BASE}.finished."
+		else
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to handle notifications for at least one phase:state combination of ${_project}/${_run}."
+			status_notifications="failed"
+		fi
 	done
 }
 
@@ -467,23 +459,53 @@ done
 # ${NOTIFICATION_ORDER_PHASE_WITH_STATE[@]} is an array and contains the keys of the ${NOTIFY_FOR_PHASE_WITH_STATE[@]} hash
 # in a specific order to ensure notification order is in sync with workflow order.
 #
-if [[ -n "${NOTIFICATION_ORDER_PHASE_WITH_STATE[*]:-}" && "${#NOTIFICATION_ORDER_PHASE_WITH_STATE[@]:-0}" -ge 1 ]]
-then
-	for ordered_phase_with_state in "${NOTIFICATION_ORDER_PHASE_WITH_STATE[@]}"
-	do
-		if [[ -n "${ordered_phase_with_state:-}" && -n "${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]:-}" ]]
-		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found notification types ${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]} for ${ordered_phase_with_state}."
-			notification "${ordered_phase_with_state}" "${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]}"
-		else
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Missing value for 'phase:state' ${ordered_phase_with_state:-} in NOTIFY_FOR_PHASE_WITH_STATE array in ${CFG_DIR}/${group}.cfg"
-			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "No notification types specified for this 'phase:state' combinations: cannot send notifications."
-		fi
-	done
-else
-	log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Missing NOTIFICATION_ORDER_PHASE_WITH_STATE array in ${CFG_DIR}/${group}.cfg"
-	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "No 'phase:state' combinations for which notifications must be sent specified."
-fi
+
+declare -a _lfs_root_dirs=("${TMP_ROOT_DIR:-}" "${SCR_ROOT_DIR:-}" "${PRM_ROOT_DIR:-}" "${DAT_ROOT_DIR:-}")
+for _lfs_root_dir in "${_lfs_root_dirs[@]}"
+do
+	
+	if [[ -z "${_lfs_root_dir}" ]] || [[ ! -e "${_lfs_root_dir}" ]]
+	then
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "_lfs_root_dir ${_lfs_root_dir} is not set or does not exist."
+		continue
+	fi
+	
+	export JOB_CONTROLE_FILE_BASE="${_lfs_root_dir}/logs/${SCRIPT_NAME}"
+	printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
+	status_notifications="unknown"
+	
+	if [[ -n "${NOTIFICATION_ORDER_PHASE_WITH_STATE[*]:-}" && "${#NOTIFICATION_ORDER_PHASE_WITH_STATE[@]:-0}" -ge 1 ]]
+	then
+		for ordered_phase_with_state in "${NOTIFICATION_ORDER_PHASE_WITH_STATE[@]}"
+		do
+			if [[ -n "${ordered_phase_with_state:-}" && -n "${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]:-}" ]]
+			then
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found notification types ${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]} for ${ordered_phase_with_state}."
+				notification "${ordered_phase_with_state}" "${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]}" "${_lfs_root_dir}"
+			else
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Missing value for 'phase:state' ${ordered_phase_with_state:-} in NOTIFY_FOR_PHASE_WITH_STATE array in ${CFG_DIR}/${group}.cfg"
+				log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "No notification types specified for this 'phase:state' combinations: cannot send notifications."
+			fi
+		done
+	else
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Missing NOTIFICATION_ORDER_PHASE_WITH_STATE array in ${CFG_DIR}/${group}.cfg"
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "No 'phase:state' combinations for which notifications must be sent specified."
+	fi
+	
+	if [[ "${status_notifications}" == "failed" ]]
+	then
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "There is something wrong, please check ${JOB_CONTROLE_FILE_BASE}.failed"
+		mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+	elif [[ "${status_notifications}" == "unknown" ]]
+	then
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${JOB_CONTROLE_FILE_BASE}.finished."
+		mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+	else
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "This is a unknown status =>  ${status_notifications}"
+	fi
+	
+	
+done
 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished.'
 
