@@ -472,7 +472,7 @@ do
 	
 	export JOB_CONTROLE_FILE_BASE="${_lfs_root_dir}/logs/${SCRIPT_NAME}"
 	printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
-	status_notifications=""
+	status_notifications="unknown"
 	
 	if [[ -n "${NOTIFICATION_ORDER_PHASE_WITH_STATE[*]:-}" && "${#NOTIFICATION_ORDER_PHASE_WITH_STATE[@]:-0}" -ge 1 ]]
 	then
@@ -492,11 +492,11 @@ do
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "No 'phase:state' combinations for which notifications must be sent specified."
 	fi
 	
-	if [ "${status_notifications}" == "failed" ]
+	if [[ "${status_notifications}" == "failed" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "There is something wrong, please check ${JOB_CONTROLE_FILE_BASE}.failed"
 		mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-	elif [ "${status_notifications}" == "" ]
+	elif [[ "${status_notifications}" == "unknown" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${JOB_CONTROLE_FILE_BASE}.finished."
 		mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
