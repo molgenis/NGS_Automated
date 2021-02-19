@@ -129,6 +129,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files ..."
 declare -a configFiles=(
 	"${CFG_DIR}/${group}.cfg"
 	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
+	"${CFG_DIR}/${sourceServer}.cfg"
 	"${CFG_DIR}/sharedConfig.cfg"
 	#"${HOME}/molgenis.cfg" Pull data from a DS server is currently not monitored using a Track & Trace Molgenis.
 )
@@ -224,10 +225,6 @@ else
 
 		if [[ "${finished}" == "true" ]]
 		then
-			
-			echo "data for run ${filePrefix} completed"
-			echo "${SEQ_DIR}/${filePrefix}"
-			
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing everything from ${filePrefix}"
 			/usr/bin/rsync -vrltD \
 				--log-file="${JOB_CONTROLE_FILE_BASE}.log" \
@@ -235,13 +232,12 @@ else
 				--omit-dir-times \
 				--omit-link-times \
 				"${DATA_MANAGER}@${sourceServerFQDN}:${SEQ_DIR}/${filePrefix}" \
-				"${PRM_ROOT_DIR}/rawdata/bcls/"
-			
+				"${PRM_ROOT_DIR}/rawdata/bcls/"	
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer is busy producing data: skipping ${filePrefix}."
 			continue	
 		fi
-		
+		# shellcheck disable=SC2029
 		countFilesRunDirScr="$(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${SEQ_DIR}/${filePrefix}/\"* -type f | wc -l")"
 		countFilesRunDirPrm="$(find "${PRM_ROOT_DIR}/rawdata/bcls/${filePrefix}/"* -type f | wc -l)"
 		if [[ "${countFilesRunDirScr}" -ne "${countFilesRunDirPrm}" ]]; then
