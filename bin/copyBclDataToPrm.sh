@@ -204,7 +204,7 @@ else
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${JOB_CONTROLE_FILE_BASE}.finished is present -> Skipping."
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping already transferred ${filePrefix}."
-			return
+			continue
 		else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${JOB_CONTROLE_FILE_BASE}.finished not present -> Continue..."
 			printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
