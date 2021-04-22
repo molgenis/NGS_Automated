@@ -275,7 +275,7 @@ else
 			then
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${gsProject} because it is older than 14 days"	
 				## creating an empty dir (source dir) to sync with the destination dir && then removing source dir
-				rsync -a --delete "$(mkdir ${HOME}/empty_dir/ ; echo "${HOME}/empty_dir/")" "${HOSTNAME_DATA_STAGING}:/home/umcg-ndewater/files/${gsProject}" 
+				rsync -a --delete "$(mkdir "${HOME}/empty_dir/" ; echo "${HOME}/empty_dir/")" "${HOSTNAME_DATA_STAGING}:/home/umcg-ndewater/files/${gsProject}" 
 				rmdir "${HOME}/empty_dir/"
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "the project ${gsProject} is only $(((dateInSecNow - dateInSecProject) / 86400)) days old"
