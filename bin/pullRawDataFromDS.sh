@@ -268,14 +268,14 @@ else
 			gsProject="$(basename "${gsProject}")"
 			
 			# convert date to seconds to have an easier calculation of the date difference			
-			dateInSecProject=$(date -d"$(rsync "${HOSTNAME_DATA_STAGING}:/home/umcg-ndewater/files/${gsProject}" | awk '{print $3}')" +%s)
+			dateInSecProject="$(date -d"$(rsync "${HOSTNAME_DATA_STAGING}:/home/umcg-ndewater/files/${gsProject}" | awk '{print $3}')" +%s)"
 			dateInSecNow=$(date +%s)
 			#86400 = 1 day in seconds 
-			if [[ $(((dateInSecNow - dateInSecProject) / 86400)) > 14 ]]
+			if [[ $(((dateInSecNow - dateInSecProject) / 86400)) -gt 14 ]]
 			then
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${gsProject} because it is older than 14 days"	
 				## creating an empty dir (source dir) to sync with the destination dir && then removing source dir
-				rsync -a --delete $(mkdir ${HOME}/empty_dir/ ; echo "${HOME}/empty_dir/") "${HOSTNAME_DATA_STAGING}:/home/umcg-ndewater/files/${gsProject}" 
+				rsync -a --delete "$(mkdir ${HOME}/empty_dir/ ; echo "${HOME}/empty_dir/")" "${HOSTNAME_DATA_STAGING}:/home/umcg-ndewater/files/${gsProject}" 
 				rmdir "${HOME}/empty_dir/"
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "the project ${gsProject} is only $(((dateInSecNow - dateInSecProject) / 86400)) days old"
