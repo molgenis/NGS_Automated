@@ -212,7 +212,6 @@ else
 			# Check if gsProject is supposed to be complete (*.finished present).
 			#
 			gsProjectUploadCompleted='false'
-			# shellcheck disable=SC2029
 			if rsync "${HOSTNAME_DATA_STAGING}:/home/umcg-ndewater/files/${gsProject}/${gsProject}.finished" 2>/dev/null
 			then
 				gsProjectUploadCompleted='true'
@@ -258,7 +257,7 @@ else
 	# Cleanup old data if data transfer with rsync finished successfully (and hence did not crash this script).
 	#
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting data older than 14 days from ${HOSTNAME_DATA_STAGING%%.*}:/groups/${GROUP}/${SCR_LFS}/ ..."
-	# shellcheck disable=SC2029
+	## get the project name by parsing the /home/umcg-ndewater/files/ folder, directories only and no empty or '.'
 	readarray -t gsProjectsSourceServer< <(rsync -f"+ */" -f"- *" "${HOSTNAME_DATA_STAGING}:/home/umcg-ndewater/files/" | awk '{if ($5 != "" && $5 != "."){print $5}}')
 	if [[ "${#gsProjectsSourceServer[@]:-0}" -eq '0' ]]
 	then
