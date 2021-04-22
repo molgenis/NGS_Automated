@@ -241,7 +241,7 @@ else
 					--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
 					--omit-dir-times \
 					--omit-link-times \
-					"${HOSTNAME_DATA_STAGING}:/home/umcg-ndewater/files/${gsProject}/"*".finished" \
+					"${HOSTNAME_DATA_STAGING}:/home/umcg-ndewater/files/${gsProject}/${gsProject}.finished" \
 					"/groups/${GROUP}/${TMP_LFS}/${gsProject}/"
 			else
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No .finished file for ${gsProject} present yet: nothing to sync."
