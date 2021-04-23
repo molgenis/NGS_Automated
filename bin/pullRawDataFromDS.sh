@@ -193,57 +193,57 @@ export JOB_CONTROLE_FILE_BASE="${logDir}/${logTimeStamp}.${SCRIPT_NAME}"
 # shellcheck disable=SC2153
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pulling data from data staging server ${HOSTNAME_DATA_STAGING%%.*} using rsync to /groups/${GROUP}/${TMP_LFS}/ ..."
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "See ${logDir}/rsync-from-${HOSTNAME_DATA_STAGING%%.*}.log for details ..."
-declare -a gsProjectsSourceServer
-# shellcheck disable=SC2029
-readarray -t gsProjectsSourceServer< <(ssh "${HOSTNAME_DATA_STAGING}" "find \"/groups/${GROUP}/${SCR_LFS}/\" -mindepth 1 -maxdepth 1 -type d")
-if [[ "${#gsProjectsSourceServer[@]:-0}" -eq '0' ]]
+declare -a gsBatchesSourceServer
+
+##only get directories from /home/umcg-ndewater/files/
+readarray -t gsBatchesSourceServer< <(rsync -f"+ */" -f"- *" "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}" | awk '{if ($5 != "" && $5 != "."){print $5}}')
+if [[ "${#gsBatchesSourceServer[@]:-0}" -eq '0' ]]
 then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found at ${HOSTNAME_DATA_STAGING}:/groups/${GROUP}/${SCR_LFS}/"
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No batches found at ${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}"
 else
-	for gsProject in "${gsProjectsSourceServer[@]}"
+	for gsBatch in "${gsBatchesSourceServer[@]}"
 	do
-		gsProject="$(basename "${gsProject}")"
-		if [ -e "/groups/${GROUP}/${TMP_LFS}/logs/${gsProject}/${gsProject}.processGsRawData.finished" ]
+		gsBatch="$(basename "${gsBatch}")"
+		if [ -e "/groups/${GROUP}/${TMP_LFS}/logs/${gsBatch}/${gsBatch}.processGsRawData.finished" ]
 		then
-			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "${gsProject} already processed, no need to transfer the data again."
+			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "${gsBatch} already processed, no need to transfer the data again."
 		else
 			#
-			# Check if gsProject is supposed to be complete (*.finished present).
+			# Check if gsBatch is supposed to be complete (*.finished present).
 			#
-			gsProjectUploadCompleted='false'
-			# shellcheck disable=SC2029
-			if ssh "${HOSTNAME_DATA_STAGING}" "find \"/groups/${GROUP}/${SCR_LFS}/${gsProject}/\" -mindepth 1 -maxdepth 1 -name '*.finished'"
+			gsBatchUploadCompleted='false'
+			if rsync "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}/${gsBatch}.finished" 2>/dev/null
 			then
-				gsProjectUploadCompleted='true'
+				gsBatchUploadCompleted='true'
 			fi
 			#
-			# Rsync everything but the .finished file: may be imcompletely uploaded project,
+			# Rsync everything but the .finished file: may be imcompletely uploaded batch,
 			# but we already rsync everything we've got so far.
 			#
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing everything but the .finished file for ${gsProject} ..."
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing everything but the .finished file for ${gsBatch} ..."
 			/usr/bin/rsync -vrltD \
 				--log-file="${logDir}/rsync-from-${HOSTNAME_DATA_STAGING%%.*}.log" \
 				--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
 				--omit-dir-times \
 				--omit-link-times \
 				--exclude='*.finished' \
-				"${HOSTNAME_DATA_STAGING}:/groups/${GROUP}/${SCR_LFS}/${gsProject}" \
+				"${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}" \
 				"/groups/${GROUP}/${TMP_LFS}/"
 			#
 			# Rsync the .finished file last if the upload was complete.
 			#
-			if [[ "${gsProjectUploadCompleted}" == 'true' ]]
+			if [[ "${gsBatchUploadCompleted}" == 'true' ]]
 			then
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing only the .finished file for ${gsProject} ..."
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing only the .finished file for ${gsBatch} ..."
 				/usr/bin/rsync -vrltD \
 					--log-file="${logDir}/rsync-from-${HOSTNAME_DATA_STAGING%%.*}.log" \
 					--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
 					--omit-dir-times \
 					--omit-link-times \
-					"${HOSTNAME_DATA_STAGING}:/groups/${GROUP}/${SCR_LFS}/${gsProject}/*.finished" \
-					"/groups/${GROUP}/${TMP_LFS}/${gsProject}/"
+					"${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}/${gsBatch}.finished" \
+					"/groups/${GROUP}/${TMP_LFS}/${gsBatch}/"
 			else
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No .finished file for ${gsProject} present yet: nothing to sync."
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No .finished file for ${gsBatch} present yet: nothing to sync."
 			fi
 		fi
 	done
@@ -257,8 +257,32 @@ else
 	# Cleanup old data if data transfer with rsync finished successfully (and hence did not crash this script).
 	#
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting data older than 14 days from ${HOSTNAME_DATA_STAGING%%.*}:/groups/${GROUP}/${SCR_LFS}/ ..."
-	# shellcheck disable=SC2029
-	/usr/bin/ssh "${HOSTNAME_DATA_STAGING}" "/bin/find /groups/${GROUP}/${SCR_LFS}/ -mtime +14 -ignore_readdir_race -delete"
+	
+	# get the batch name by parsing the ${GENOMESCAN_HOME_DIR} folder, directories only and no empty or '.'
+	readarray -t gsBatchesSourceServer< <(rsync -f"+ */" -f"- *" "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}" | awk '{if ($5 != "" && $5 != "."){print $5}}')
+	if [[ "${#gsBatchesSourceServer[@]:-0}" -eq '0' ]]
+	then
+		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No batches found at ${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}"
+	else
+		for gsBatch in "${gsBatchesSourceServer[@]}"
+		do
+			gsBatch="$(basename "${gsBatch}")"
+			# convert date to seconds to have an easier calculation of the date difference			
+			dateInSecProject="$(date -d"$(rsync "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}" | awk '{print $3}')" +%s)"
+			dateInSecNow=$(date +%s)
+			# 86400 = 1 day in seconds 
+			if [[ $(((dateInSecNow - dateInSecProject) / 86400)) -gt 14 ]]
+			then
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${gsBatch} because it is older than 14 days"	
+				# creating an empty dir (source dir) to sync with the destination dir && then removing source dir
+				mkdir "${HOME}/empty_dir/"
+				rsync -a --delete "${HOME}/empty_dir/" "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}" 
+				rmdir "${HOME}/empty_dir/"
+			else
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "the batch ${gsBatch} is only $(((dateInSecNow - dateInSecProject) / 86400)) days old"
+			fi
+		done
+	fi
 fi
 #
 # Clean exit.
