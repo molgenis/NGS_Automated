@@ -257,7 +257,8 @@ else
 	# Cleanup old data if data transfer with rsync finished successfully (and hence did not crash this script).
 	#
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting data older than 14 days from ${HOSTNAME_DATA_STAGING%%.*}:/groups/${GROUP}/${SCR_LFS}/ ..."
-	## get the batch name by parsing the ${GENOMESCAN_HOME_DIR} folder, directories only and no empty or '.'
+	
+	# get the batch name by parsing the ${GENOMESCAN_HOME_DIR} folder, directories only and no empty or '.'
 	readarray -t gsBatchesSourceServer< <(rsync -f"+ */" -f"- *" "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}" | awk '{if ($5 != "" && $5 != "."){print $5}}')
 	if [[ "${#gsBatchesSourceServer[@]:-0}" -eq '0' ]]
 	then
@@ -266,16 +267,16 @@ else
 		for gsBatch in "${gsBatchesSourceServer[@]}"
 		do
 			gsBatch="$(basename "${gsBatch}")"
-			
 			# convert date to seconds to have an easier calculation of the date difference			
 			dateInSecProject="$(date -d"$(rsync "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}" | awk '{print $3}')" +%s)"
 			dateInSecNow=$(date +%s)
-			#86400 = 1 day in seconds 
+			# 86400 = 1 day in seconds 
 			if [[ $(((dateInSecNow - dateInSecProject) / 86400)) -gt 14 ]]
 			then
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${gsBatch} because it is older than 14 days"	
-				## creating an empty dir (source dir) to sync with the destination dir && then removing source dir
-				rsync -a --delete "$(mkdir "${HOME}/empty_dir/" ; echo "${HOME}/empty_dir/")" "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}" 
+				# creating an empty dir (source dir) to sync with the destination dir && then removing source dir
+				mkdir "${HOME}/empty_dir/"
+				rsync -a --delete "${HOME}/empty_dir/" "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}" 
 				rmdir "${HOME}/empty_dir/"
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "the batch ${gsBatch} is only $(((dateInSecNow - dateInSecProject) / 86400)) days old"
