@@ -196,7 +196,7 @@ log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "See ${logDir}/rsync-from-${
 declare -a gsProjectsSourceServer
 
 ##only get directories from /home/umcg-ndewater/files/
-readarray -t gsProjectsSourceServer< <(rsync -f"+ */" -f"- *" "${HOSTNAME_DATA_STAGING}:/home/umcg-ndewater/files/" | awk '{if ($5 != "" && $5 != "."){print $5}}')
+readarray -t gsProjectsSourceServer< <(rsync -f"+ */" -f"- *" "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}" | awk '{if ($5 != "" && $5 != "."){print $5}}')
 if [[ "${#gsProjectsSourceServer[@]:-0}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found at ${HOSTNAME_DATA_STAGING}:/groups/${GROUP}/${SCR_LFS}/"
@@ -212,7 +212,7 @@ else
 			# Check if gsProject is supposed to be complete (*.finished present).
 			#
 			gsProjectUploadCompleted='false'
-			if rsync "${HOSTNAME_DATA_STAGING}:/home/umcg-ndewater/files/${gsProject}/${gsProject}.finished" 2>/dev/null
+			if rsync "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsProject}/${gsProject}.finished" 2>/dev/null
 			then
 				gsProjectUploadCompleted='true'
 			fi
@@ -227,7 +227,7 @@ else
 				--omit-dir-times \
 				--omit-link-times \
 				--exclude='*.finished' \
-				"${HOSTNAME_DATA_STAGING}:/home/umcg-ndewater/files/${gsProject}" \
+				"${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsProject}" \
 				"/groups/${GROUP}/${TMP_LFS}/"
 			#
 			# Rsync the .finished file last if the upload was complete.
@@ -240,7 +240,7 @@ else
 					--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
 					--omit-dir-times \
 					--omit-link-times \
-					"${HOSTNAME_DATA_STAGING}:/home/umcg-ndewater/files/${gsProject}/${gsProject}.finished" \
+					"${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsProject}/${gsProject}.finished" \
 					"/groups/${GROUP}/${TMP_LFS}/${gsProject}/"
 			else
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No .finished file for ${gsProject} present yet: nothing to sync."
@@ -257,25 +257,25 @@ else
 	# Cleanup old data if data transfer with rsync finished successfully (and hence did not crash this script).
 	#
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting data older than 14 days from ${HOSTNAME_DATA_STAGING%%.*}:/groups/${GROUP}/${SCR_LFS}/ ..."
-	## get the project name by parsing the /home/umcg-ndewater/files/ folder, directories only and no empty or '.'
-	readarray -t gsProjectsSourceServer< <(rsync -f"+ */" -f"- *" "${HOSTNAME_DATA_STAGING}:/home/umcg-ndewater/files/" | awk '{if ($5 != "" && $5 != "."){print $5}}')
+	## get the project name by parsing the ${GENOMESCAN_HOME_DIR} folder, directories only and no empty or '.'
+	readarray -t gsProjectsSourceServer< <(rsync -f"+ */" -f"- *" "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}" | awk '{if ($5 != "" && $5 != "."){print $5}}')
 	if [[ "${#gsProjectsSourceServer[@]:-0}" -eq '0' ]]
 	then
-		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found at ${HOSTNAME_DATA_STAGING}:/home/umcg-ndewater/files/"
+		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found at ${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}"
 	else
 		for gsProject in "${gsProjectsSourceServer[@]}"
 		do
 			gsProject="$(basename "${gsProject}")"
 			
 			# convert date to seconds to have an easier calculation of the date difference			
-			dateInSecProject="$(date -d"$(rsync "${HOSTNAME_DATA_STAGING}:/home/umcg-ndewater/files/${gsProject}" | awk '{print $3}')" +%s)"
+			dateInSecProject="$(date -d"$(rsync "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsProject}" | awk '{print $3}')" +%s)"
 			dateInSecNow=$(date +%s)
 			#86400 = 1 day in seconds 
 			if [[ $(((dateInSecNow - dateInSecProject) / 86400)) -gt 14 ]]
 			then
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${gsProject} because it is older than 14 days"	
 				## creating an empty dir (source dir) to sync with the destination dir && then removing source dir
-				rsync -a --delete "$(mkdir "${HOME}/empty_dir/" ; echo "${HOME}/empty_dir/")" "${HOSTNAME_DATA_STAGING}:/home/umcg-ndewater/files/${gsProject}" 
+				rsync -a --delete "$(mkdir "${HOME}/empty_dir/" ; echo "${HOME}/empty_dir/")" "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsProject}" 
 				rmdir "${HOME}/empty_dir/"
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "the project ${gsProject} is only $(((dateInSecNow - dateInSecProject) / 86400)) days old"
