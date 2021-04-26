@@ -668,6 +668,7 @@ else
 fi
 
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished.'
+printf '%s\n' "Finished." >> "${lockFile}"
 
 trap - EXIT
 exit 0
