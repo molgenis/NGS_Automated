@@ -92,7 +92,7 @@ function rsyncRuns() {
 	#       if an analysis run got updated?
 	#
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_rawDataItem} dir ..."
-	printf '%s\n' "Rsyncing ${_rawDataItem} dir ..." > "${lockFile}"
+	printf '%s\n' "Rsyncing ${_rawDataItem} dir ..." >> "${lockFile}"
 	# shellcheck disable=SC2174
 	mkdir -m 2750 -p "${PRM_ROOT_DIR}/rawdata/"
 	local _rawDataType
@@ -525,7 +525,7 @@ fi
 hashedSource="$(printf '%s:%s' "${sourceServer}" "${SCR_ROOT_DIR}" | md5sum | awk '{print $1}')"
 lockFile="${PRM_ROOT_DIR}/logs/${SCRIPT_NAME}_${hashedSource}.lock"
 thereShallBeOnlyOne "${lockFile}"
-printf 'Lock file for %s instance that fetches data from %s:%s' "${SCRIPT_NAME}" "${sourceServer}" "${SCR_ROOT_DIR}" > "${lockFile}"
+printf 'Lock file for %s instance that fetches data from %s:%s\n' "${SCRIPT_NAME}" "${sourceServer}" "${SCR_ROOT_DIR}" > "${lockFile}"
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile} ..."
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${PRM_ROOT_DIR}/logs ..."
 
