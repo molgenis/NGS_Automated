@@ -74,7 +74,6 @@ function rsyncRuns() {
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
 		printf '' > "${_controlFileBaseForFunction}.started"
 	fi
-
 	#
 	# Track and Trace: log that we will start rsyncing to prm.
 	#
@@ -226,7 +225,11 @@ function splitSamplesheetPerProject() {
 		return
 	}
 	#
-	# Parse sample sheet to get a list of project values.
+	# Parse samplesheet to get a list of:
+	#  * project values
+	#  * analysis values (which analysis to perform for the samples of a project)
+	#    When DEMULTIPLEXING ONLY is specified, the project based samplesheets are not copied to the location
+	#    where they will trigger the next step of NGS_Automated.
 	#
 	declare -a _sampleSheetColumnNames=()
 	declare -A _sampleSheetColumnOffsets=()
@@ -242,7 +245,7 @@ function splitSamplesheetPerProject() {
 		_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
 	done
 	#
-	# Check if the pipeline step can be skipped. 
+	# Get pipeline/analysis values from samplesheet.
 	#
 	if [[ -n "${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]+isset}" ]]; then
 		_pipelineFieldIndex=$((${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]} + 1))
@@ -251,7 +254,7 @@ function splitSamplesheetPerProject() {
 		if [[ "${#_pipelines[@]:-0}" -lt '1' ]]
 		then
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} does not contain at least one value in the ${PIPELINECOLUMN} column."
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in sample sheet."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in samplesheet."
 			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		elif [[ "${#_pipelines[@]:-0}" -ge '1' ]]
@@ -266,12 +269,12 @@ function splitSamplesheetPerProject() {
 			done
 		fi
 	else
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}, because ${PIPELINECOLUMN} column is missing in sample sheet."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}, because ${PIPELINECOLUMN} column is missing in samplesheet."
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	fi
 	#
-	# Check if sample sheet contains required project column.
+	# Get project values from samplesheet.
 	#
 	if [[ -n "${_sampleSheetColumnOffsets["${PROJECTCOLUMN}"]+isset}" ]]; then
 		_projectFieldIndex=$((${_sampleSheetColumnOffsets["${PROJECTCOLUMN}"]} + 1))
@@ -279,7 +282,7 @@ function splitSamplesheetPerProject() {
 		if [[ "${#_projects[@]:-0}" -lt '1' ]]
 		then
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} does not contain at least one value in the ${PROJECTCOLUMN} column."
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in sample sheet."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in samplesheet."
 			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		else
@@ -288,34 +291,38 @@ function splitSamplesheetPerProject() {
 				> "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
 		fi
 	else
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}, because ${PROJECTCOLUMN} column is missing in sample sheet."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}, because ${PROJECTCOLUMN} column is missing in samplesheet."
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	fi
 	#
-	# Create sample sheet per project.
+	# Create samplesheet per project unless
+	#  * either only demultiplexing was requested via the samplesheet
+	#  * or when disabled on the commandline by enabling "archiveMode".
 	#
-	for _project in "${_projects[@]}"
-	do
-		
-		printf '%s\n' "${_project},${_run},,,,,," \
-			>> "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
-		#
-		# Skip project if demultiplexing only.
-		#
-		if [[ $(contains "${_demultiplexOnly[@]}" "${_project}") == "y" ]]
-		then
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing Only for project: ${_project}, continue" \
-			continue
-		else
-			local _projectSampleSheet
-			_projectSampleSheet="${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}"
-			head -1 "${_sampleSheet}" > "${_projectSampleSheet}.tmp"
-			grep "${_project}" "${_sampleSheet}" >> "${_projectSampleSheet}.tmp"
-			mv "${_projectSampleSheet}"{.tmp,}
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Created ${_projectSampleSheet}."
-		fi
-	done
+	if [[ "${archiveMode}" == 'false' ]]; then
+		for _project in "${_projects[@]}"
+		do
+			
+			printf '%s\n' "${_project},${_run},,,,,," \
+				>> "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
+			#
+			# Skip project if demultiplexing only.
+			#
+			if [[ $(contains "${_demultiplexOnly[@]}" "${_project}") == "y" ]]
+			then
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing Only for project: ${_project}, continue" \
+				continue
+			else
+				local _projectSampleSheet
+				_projectSampleSheet="${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}"
+				head -1 "${_sampleSheet}" > "${_projectSampleSheet}.tmp"
+				grep "${_project}" "${_sampleSheet}" >> "${_projectSampleSheet}.tmp"
+				mv "${_projectSampleSheet}"{.tmp,}
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Created ${_projectSampleSheet}."
+			fi
+		done
+	fi
 	#
 	# Track and Trace.
 	#
@@ -353,14 +360,20 @@ Usage:
 Options:
 
 	-h	Show this help.
-	-g	Group.
 	-n	Dry-run: Do not perform actual sync, but only list changes instead.
-	-l	Log level.
+	-a	Archive mode: only copy the raw data to prm and do not split the flowcell based samplesheet
+		into project samplesheets to trigger the project-based analysis of the data with a subsequent pipeline.
+	-g [group]
+		Group for which to process data.
+	-l [level]
+		Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
-	-s	Source server address from where the rawdate will be fetched
+	-s [server]
+		Source server address from where the rawdate will be fetched
 		Must be a Fully Qualified Domain Name (FQDN).
 		E.g. gattaca01.gcc.rug.nl or gattaca02.gcc.rug.nl
-	-r	Root dir on the server specified with -s and from where the raw data will be fetched (optional).
+	-r [root]
+		Root dir on the server specified with -s and from where the raw data will be fetched (optional).
 		By default this is the SCR_ROOT_DIR variable, which is compiled from variables specified in the
 		<group>.cfg, <source_host>.cfg and sharedConfig.cfg config files (see below.)
 		You need to override SCR_ROOT_DIR when the data is to be fetched from a non default path,
@@ -390,13 +403,17 @@ EOH
 # Get commandline arguments.
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
+declare archiveMode='false'
 declare group=''
 declare dryrun=''
 declare sourceServerFQDN=''
 declare sourceServerRootDir=''
-while getopts ":g:l:s:r:hn" opt
+while getopts ":g:l:s:r:ahn" opt
 do
 	case "${opt}" in
+		a)
+			archiveMode='true'
+			;;
 		h)
 			showHelp
 			;;
@@ -490,17 +507,25 @@ fi
 if [[ "${ROLE_USER}" != "${DATA_MANAGER}" ]]; then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${DATA_MANAGER}, but you are ${ROLE_USER} (${REAL_USER})."
 fi
+
 #
 # Make sure only one copy of this script runs simultaneously
-# per data collection we want to copy to prm -> one copy per group.
+# per data collection we want to copy to prm -> one copy per group per combination of ${sourceServer} and ${SCR_ROOT_DIR}.
 # Therefore locking must be done after
 # * sourcing the file containing the lock function,
 # * sourcing config files,
 # * and parsing commandline arguments,
 # but before doing the actual data transfers.
 #
-lockFile="${PRM_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
+# As servernames and folders may contain various characters that would require escaping in (lock) file names,
+# we compute a hash for the combination of ${sourceServer} and ${SCR_ROOT_DIR} to append to the ${SCRIPT_NAME}
+# for creating unique lock file. We write the combination of ${sourceServer} and ${SCR_ROOT_DIR} in the lock file
+# to make it easier to detect which combination of ${sourceServer} and ${SCR_ROOT_DIR} the lock file is for.
+#
+hashedSource="$(printf '%s:%s' "${sourceServer}" "${SCR_ROOT_DIR}" | md5sum | awk '{print $1}')"
+lockFile="${PRM_ROOT_DIR}/logs/${SCRIPT_NAME}_${hashedSource}.lock"
 thereShallBeOnlyOne "${lockFile}"
+printf 'Lock file for %s instance that fetches data from %s:%s' "${SCRIPT_NAME}" "${sourceServer}" "${SCR_ROOT_DIR}" > "${lockFile}"
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile} ..."
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${PRM_ROOT_DIR}/logs ..."
 
@@ -520,10 +545,9 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 
 #
-# Get a list of all sample sheets for this group on the specified sourceServer, where the raw data was generated,
-# then
-#	1. loop over their analysis ("run") sub dirs and check if there are any we need to rsync.
-#	2. split the sample sheets per project and the data was rsynced.
+# Get a list of all samplesheets for this group on the specified sourceServer, where the raw data was generated, and
+#	1. Loop over their analysis ("run") sub dirs and check if there are any we need to rsync.
+#	2. Optionally, split the samplesheets per project after the data was rsynced.
 #
 declare -a sampleSheetsFromSourceServer
 # shellcheck disable=SC2029
@@ -531,18 +555,17 @@ readarray -t sampleSheetsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServ
 
 if [[ "${#sampleSheetsFromSourceServer[@]:-0}" -eq '0' ]]
 then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found at ${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}."
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheets found at ${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}."
 else
 	for sampleSheet in "${sampleSheetsFromSourceServer[@]}"
 	do
 		#
-		# Process this sample sheet / run and find how out how many raw data items it contains.
+		# Process this samplesheet / run and find how out how many raw data items it contains.
 		#
 		filePrefix="$(basename "${sampleSheet%."${SAMPLESHEET_EXT}"}")"
 		controlFileBase="${PRM_ROOT_DIR}/logs/${filePrefix}/"
 		runPrefix="run01"
 		export JOB_CONTROLE_FILE_BASE="${controlFileBase}/${runPrefix}.${SCRIPT_NAME}"
-
 		#
 		# Determine whether an rsync is required for this run, which is the case when
 		# raw data production has finished successfully and this copy script has not.
@@ -558,7 +581,6 @@ else
 		mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/"
 		# shellcheck disable=SC2174
 		mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${filePrefix}/"
-		
 		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping already processed run ${filePrefix}."
@@ -566,16 +588,21 @@ else
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing run ${filePrefix} ..."
 		fi
-		## update the column processData (in the overview entity) from the previous step 
-		printf "finished" > "${JOB_CONTROLE_FILE_BASE}.trace_putFromFile_setProcessRawData.csv" 
-		
+		#
+		# Update the column processData (in the overview entity) from the previous step:
+		# When data is ready for this step, the previous step must have been completed succesfully.
+		# (This is redundant if track and trace worked in the previous step,
+		# but catches cases where data was produced correctly, but track and trace failed.)
+		#
+		printf "finished" > "${JOB_CONTROLE_FILE_BASE}.trace_putFromFile_setProcessRawData.csv"
+		#
+		# Let's start.
+		#
 		printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 		# shellcheck disable=SC2174
 		mkdir -m 2750 -p "${PRM_ROOT_DIR}/Samplesheets/"
 		# shellcheck disable=SC2174
 		mkdir -m 2750 -p "${PRM_ROOT_DIR}/Samplesheets/archive/"
-		
-		
 		#
 		# Step 1: Create a list of raw data items for this run/samplesheet.
 		#
