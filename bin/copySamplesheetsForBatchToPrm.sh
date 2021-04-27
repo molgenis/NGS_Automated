@@ -98,7 +98,7 @@ function processBatch() {
 		local _flowcell
 		_flowcell="$(basename "${_flowcellDirFromSourceServer}")"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if flowcell ${_flowcell} was already successfully transferred to prm ..."
-		if [[ -e "${PRM_ROOT_DIR}/logs/${_flowcell}/${_flowcell}.copyRawDataToPrm.finished" ]]
+		if [[ -e "${PRM_ROOT_DIR}/logs/${_flowcell}/${_flowcell}.copyRawDataToPrm.finished" || -e "${PRM_ROOT_DIR}/logs/${_flowcell}/run01.copyRawDataToPrm.finished" ]]
 		then
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "    ${PRM_ROOT_DIR}/logs/${_flowcell}/${_flowcell}.copyRawDataToPrm.finished present."
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "    ${_flowcell} was transferred to prm."
