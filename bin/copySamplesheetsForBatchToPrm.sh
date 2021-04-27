@@ -341,7 +341,7 @@ if [[ "${#batchDirsFromSourceServer[@]:-0}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No batch directories found at ${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/[0-9]*-[0-9]*."
 else
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Found batch directories ${batchDirsFromSourceServer[@]:-}."
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Found batch directories ${batchDirsFromSourceServer[*]:-}."
 	for batchDirFromSourceServer in "${batchDirsFromSourceServer[@]}"
 	do
 		#
