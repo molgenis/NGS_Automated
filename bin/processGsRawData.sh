@@ -680,7 +680,6 @@ function processSamplesheetsAndMoveConvertedData() {
 			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		}
-		
 		#
 		# Track and Trace.
 		#
@@ -690,10 +689,8 @@ function processSamplesheetsAndMoveConvertedData() {
 		# shellcheck disable=SC2153
 		printf '%s\n' "${_runDir},${GROUP},finished,,,${timeStamp}" \
 			>> "${TMP_ROOT_DIR}/logs/${_runDir}/run01.${SCRIPT_NAME}.trace_post_overview.csv"
-
 		touch "${TMP_ROOT_DIR}/logs/${_runDir}/run01.${SCRIPT_NAME}.finished"
 	done
-
 	#
 	# Cleanup uploaded samplesheets per project.
 	#
