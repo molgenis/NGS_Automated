@@ -358,6 +358,7 @@ else
 			continue
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing ${batch} ..."
+			printf '%s\n' "Processing ${batch} ..." >> "${lockFile}"
 		fi
 		#
 		# Let's start.
