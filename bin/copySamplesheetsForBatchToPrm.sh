@@ -81,6 +81,7 @@ function processBatch() {
 	# NGS flowcell dirs consist of 4 values separated by underscores.
 	# E.g. 210419_A00379_0361_H3C3GDSX2
 	#
+	# shellcheck disable=SC2029
 	readarray -t _flowcellDirsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${_batchDirFromSourceServer}\" -maxdepth 1 -mindepth 1 -type d -name '[^_]*_[^_]*_[^_]*_[^_]*'")
 	if [[ "${#_flowcellDirsFromSourceServer[@]:-0}" -eq '0' ]]
 	then
