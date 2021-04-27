@@ -540,7 +540,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #		ControlPersist 5m
 #  3. Create ~/.ssh/tmp dir:
 #		mkdir -p -m 700 ~/.ssh/tmp
-#  3. Recursively restrict access to the ~/.ssh dir to allow only the owner/user:
+#  4. Recursively restrict access to the ~/.ssh dir to allow only the owner/user:
 #		chmod -R go-rwx ~/.ssh
 #
 
