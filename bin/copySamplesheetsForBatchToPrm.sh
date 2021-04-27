@@ -62,7 +62,7 @@ function processBatch() {
 	local _batchDirFromSourceServer="${2}"
 	local _controlFileBase="${3}"
 	local _controlFileBaseForFunction
-	_controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
+	_controlFileBaseForFunction="${_controlFileBase}/${_batch}.${FUNCNAME[0]}"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing ${_batch} ..."
 	#
 	# Check if function previously finished successfully for this data.
@@ -126,7 +126,7 @@ function processBatch() {
 		mv -v "${_controlFileBaseForFunction}."{started,failed}
 		return
 	}
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully rsynct samplesheets for batch ${_batch} to prm." \
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully rsynced samplesheets for batch ${_batch} to prm." \
 		&& rm -f "${_controlFileBaseForFunction}.failed" \
 		&& mv -v "${_controlFileBaseForFunction}."{started,finished}
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
