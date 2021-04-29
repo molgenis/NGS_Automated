@@ -329,7 +329,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 # Get a list of all batches for this group on the specified sourceServer, where the raw data was generated, and
 #	1. Find all flowcells that are part of that batch.
-#	2. Determine if those flowcells were all successfully processed by copyRarDataToPrm.sh.
+#	2. Determine if those flowcells were all successfully processed by copyRawDataToPrm.sh.
 #	3. If yes, then rsync the per project samplesheets for this batch to prm, so they will trigger analysis
 #	   with a pipeline like NGS_DNA or NGS_RNA or ...
 #
