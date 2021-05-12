@@ -296,21 +296,26 @@ function splitSamplesheetPerProject() {
 		return
 	fi
 	#
-	# Create samplesheet per project unless
-	#  * either only demultiplexing was requested via the samplesheet
-	#  * or when disabled on the commandline by enabling "archiveMode".
+	# Process projects from samplesheet.
 	#
-	
 	for _project in "${_projects[@]}"
 	do
-		
+		#
+		# Track and Trace for project.
+		#
+		printf '%s\n' "${_project},${_run},,,,,," >> "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
+		#
+		# Create samplesheet per project unless
+		#  * either only demultiplexing was requested via the samplesheet
+		#  * or when disabled on the commandline by enabling "archiveMode".
+		#
 		if [[ "${archiveMode}" == 'false' ]]; then
 			#
 			# Skip project if demultiplexing only.
 			#
 			if [[ $(contains "${_demultiplexOnly[@]}" "${_project}") == "y" ]]
 			then
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing Only for project: ${_project}, continue" \
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "'Demultiplexing Only' detected for project: ${_project}; will not create project samplesheet."
 				continue
 			else
 				local _projectSampleSheet
@@ -321,20 +326,14 @@ function splitSamplesheetPerProject() {
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Created ${_projectSampleSheet}."
 			fi
 		fi
-		printf '%s\n' "${_project},${_run},,,,,," \
-			>> "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
-		
 	done
-
 	#
-	# Track and Trace.
+	# Track and Trace for flowcell/rawdata.
 	#
-	
 	local _allProjects
 	_allProjects="${_projects[*]}"
 	_allProjects="${_allProjects// /,}"
 	printf '%s\n' "\"${_allProjects}\"" > "${JOB_CONTROLE_FILE_BASE}.trace_putFromFile_overview.csv" 
-	
 	#
 	# Move samplesheet to archive on sourceServerFQDN
 	#
