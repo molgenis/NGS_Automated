@@ -300,12 +300,11 @@ function splitSamplesheetPerProject() {
 	#  * either only demultiplexing was requested via the samplesheet
 	#  * or when disabled on the commandline by enabling "archiveMode".
 	#
-	if [[ "${archiveMode}" == 'false' ]]; then
-		for _project in "${_projects[@]}"
-		do
-			
-			printf '%s\n' "${_project},${_run},,,,,," \
-				>> "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
+	
+	for _project in "${_projects[@]}"
+	do
+		
+		if [[ "${archiveMode}" == 'false' ]]; then
 			#
 			# Skip project if demultiplexing only.
 			#
@@ -321,11 +320,16 @@ function splitSamplesheetPerProject() {
 				mv "${_projectSampleSheet}"{.tmp,}
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Created ${_projectSampleSheet}."
 			fi
-		done
-	fi
+		fi
+		printf '%s\n' "${_project},${_run},,,,,," \
+			>> "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
+		
+	done
+
 	#
 	# Track and Trace.
 	#
+	
 	local _allProjects
 	_allProjects="${_projects[*]}"
 	_allProjects="${_allProjects// /,}"
