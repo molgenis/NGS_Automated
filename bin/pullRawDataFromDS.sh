@@ -217,7 +217,7 @@ else
 				gsBatchUploadCompleted='true'
 			fi
 			#
-			# Rsync everything but the .finished file: may be imcompletely uploaded batch,
+			# Rsync everything but the .finished file: may be incompletely uploaded batch,
 			# but we already rsync everything we've got so far.
 			#
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing everything but the .finished file for ${gsBatch} ..."
