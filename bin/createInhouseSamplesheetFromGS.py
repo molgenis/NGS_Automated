@@ -349,7 +349,7 @@ for project in (uniqProjects):
         if (projectCounts[project] == (len(open(projectSamplesheetPath).readlines())-1)):
             logging.debug('Number of samples in GS samplesheet (' + str(projectCounts[project]) + ') is the same as in inhouse samplesheet for project: ' + project + '.')
         else:
-            logging.critical('Number of samples in GS samplesheet (' + str(projectCounts[project]) + ') is NOT the same as in inhouse Project (' + (len(open(projectSamplesheetPath).readlines())-1) + ' for project ' + project + '.')
+            logging.critical('Number of samples in GS samplesheet (' + str(projectCounts[project]) + ') is NOT the same as in inhouse Project (' + str(len(open(projectSamplesheetPath).readlines())-1) + ') for project ' + project + '.')
             sys.exit('FATAL ERROR!')
         #
         # Create new complete samplesheet.
