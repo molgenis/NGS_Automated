@@ -215,6 +215,9 @@ else
 			if rsync "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}/${gsBatch}.finished" 2>/dev/null
 			then
 				gsBatchUploadCompleted='true'
+				logTimeStamp=$(date '+%Y-%m-%d-T%H%M')
+				rsync "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}" \
+					> "/groups/${GROUP}/${TMP_LFS}/logs/${gsBatch}/${gsBatch}.uploadCompletedListing_${logTimeStamp}.log"
 			fi
 			#
 			# Rsync everything but the .finished file: may be incompletely uploaded batch,
