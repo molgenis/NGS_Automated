@@ -50,7 +50,7 @@ function showHelp() {
         #
         cat <<EOH
 ===============================================================================================================
-Script to copy (sync) data from a succesfully finished analysis project from tmp to prm storage.
+Script to collect QC data from multiple sources and store it in a chronQC datatbase. This database is used to generate ChronQC reports.
 
 Usage:
 
@@ -60,7 +60,6 @@ Options:
 
         -h   Show this help.
         -g   Group.
-        -n   Dry-run: Do not perform actual sync, but only list changes instead.
         -l   Log level.
                 Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
@@ -105,13 +104,14 @@ function processProjectToDB() {
             cp ${PRM_MULTIQCPROJECT_DIR}/multiqc_general_stats.txt ${CHRONQC_TMP}/${_project}.multiqc_general_stats.txt
             cp ${PRM_MULTIQCPROJECT_DIR}/multiqc_sources.txt ${CHRONQC_TMP}/${_project}.multiqc_sources.txt
 
-
+            # rename one of the duplicated SAMPLE column names to make it work.
             perl -pe 's|SAMPLE|SAMPLE_NAME2|' ${CHRONQC_TMP}/${_project}.multiqc_picard_AlignmentSummaryMetrics.txt > ${CHRONQC_TMP}/${_project}.2.multiqc_picard_AlignmentSummaryMetrics.txt
 
-            #grep fastqc ${CHRONQC_TMP}/${_project}.multiqc_sources.txt | awk -v p=${_project} -v d=$datum '{print $3","p","d}'
             cp ${CHRONQC_TMP}/${_project}.run_date_info.csv ${CHRONQC_TMP}/${_project}.2.run_date_info.csv
-            grep fastqc ${CHRONQC_TMP}/${_project}.multiqc_sources.txt | awk -v p=${_project} '{print $3","p","substr($3,1,6)}' >>${CHRONQC_TMP}/${_project}.2.run_date_info.csv
 
+            #Gets all the samples processed with FastQC form the MultiQC multi_source file. This is done because samplenames differ from regular samplesheet at that stage in th epipeline..
+            #The Output is converted into standard ChronQC run_date_info.csv format.
+            grep fastqc ${CHRONQC_TMP}/${_project}.multiqc_sources.txt | awk -v p=${_project} '{print $3","p","substr($3,1,6)}' >>${CHRONQC_TMP}/${_project}.2.run_date_info.csv
             awk 'BEGIN{FS=OFS=","} NR>1{cmd = "date -d \"" $3 "\" \"+%d/%m/%Y\"";cmd | getline out; $3=out; close("uuidgen")} 1' ${CHRONQC_TMP}/${_project}.2.run_date_info.csv > ${CHRONQC_TMP}/${_project}.2.run_date_info.csv.tmp
             mv ${CHRONQC_TMP}/${_project}.2.run_date_info.csv.tmp ${CHRONQC_TMP}/${_project}.2.run_date_info.csv
 
@@ -203,12 +203,14 @@ function generateChronQCOutput() {
        mv "${2}" "${archiveDir}"
 }
 
-
+#
+## Generates a QC report based in the '-p tablename', and a possible subselection of that table. This is done based on a panel, for example 'Exoom'. 
+## The layout of the report is configured by the given json config file. 
+#
 function generate_plots(){
 
         log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Generating ChronQC reports"
-        #chronqc plot  -o ${CHRONQC_REPORTS_DIRS}/ -f ${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite NGSInzetten  ${CHRONQC_TEMPLATE_DIRS}/chronqc.NGSInzetten.json
-        #chronqc plot  -o ${CHRONQC_REPORTS_DIRS}/ -f ${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite concentratie  ${CHRONQC_TEMPLATE_DIRS}/chronqc.concentratie.json
+
         chronqc plot  -o ${CHRONQC_REPORTS_DIRS}/ -p general -f ${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite Exoom  ${CHRONQC_TEMPLATE_DIRS}/chronqc.general.json
         chronqc plot  -o ${CHRONQC_REPORTS_DIRS}/ -p AlignmentSummaryMetrics -f ${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite Exoom  ${CHRONQC_TEMPLATE_DIRS}/chronqc.AlignmentSummaryMetrics.json
         chronqc plot  -o ${CHRONQC_REPORTS_DIRS}/ -p Capturing -f ${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite Capturing  ${CHRONQC_TEMPLATE_DIRS}/chronqc.Capturing.json
@@ -347,6 +349,9 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 
 module load "chronqc/${CHRONQC_VERSION}"
 
+#
+## Loops over all runs and projects and checks if it is already in chronQC database. If not than call function 'processProjectToDB "${project}" "${run}" to process this project.'
+#
 readarray -t projects < <(find "${PRM_ROOT_DIR}/projects/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${PRM_ROOT_DIR}/projects/||")
 if [[ "${#projects[@]:-0}" -eq '0' ]]
 then
@@ -383,6 +388,10 @@ else
         done
 fi
 
+#
+## Checks directory ${IMPORT_DIR} for new Darwin import files. Than calls function 'generateChronQCOutput "${i}" "${importDir}/${tableFile}" "${fileType}"'
+## to process files. After precession the files are moved to archive.
+#
 while read -r i
 do
         if [[ -e "${i}" ]]
@@ -398,11 +407,8 @@ do
                         echo "${runinfoFile} data is already processed"
                 else
                         fileType=$(cut -d '_' -f1 <<< "${runinfoFile}")
-                        echo "filetype:${fileType}"
                         fileDate=$(cut -d '_' -f3 <<< "${runinfoFile}")
-                        echo "date:${fileDate}"
                         tableFile=$(echo "${fileType}_${fileDate}.csv")
-                        echo "tableFile:${tableFile}"
 
                         generateChronQCOutput "${i}" "${importDir}/${tableFile}" "${fileType}"
                         touch "${TMP_TRENDANALYSE_LOGS_DIR}/${runinfoFile}.finished"
@@ -413,10 +419,11 @@ do
                 #log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "all files are processed"
 
         fi
-done < <(find "${importDir}"/ -maxdepth 1 -type f -iname "*runinfo*.csv")
+done < <(find "${IMPORT_DIR}"/ -maxdepth 1 -type f -iname "*runinfo*.csv")
 
-
-
+#
+## Function for generating a list of ChronQC plots.
+#
 generate_plots
 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished successfully!'
