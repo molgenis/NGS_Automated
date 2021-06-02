@@ -50,7 +50,7 @@ function showHelp() {
         #
         cat <<EOH
 ===============================================================================================================
-Script to collect QC data from multiple sources and store it in a chronQC datatbase. This database is used to generate ChronQC reports.
+Script to collect QC data from multiple sources and stores it in a ChronQC datatbase. This database is used to generate ChronQC reports.
 
 Usage:
 
@@ -81,7 +81,6 @@ function processProjectToDB() {
         local _project="${1}"
         local _run="${2}"
 
-        echo "${_project} ${_project}"
         CHRONQC_TMP="${TMP_TRENDANALYSE_DIR}/tmp/"
         CHRONQC_DATABASE_NAME="${TMP_TRENDANALYSE_DIR}/database/"
         PRM_MULTIQCPROJECT_DIR="${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/multiqc_data"
