@@ -123,7 +123,7 @@ function processProjectToDB() {
             log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Update database for project ${_project}: panel: ${_panel}."
 
             #convert date :|
-            awk 'BEGIN{FS=OFS=","} NR>1{cmd = "date -d \"" $3 "\" \"+%d/%m/%Y\"";cmd | getline out; $3=out; close("uuidgen")} 1' ${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/multiqc_data/${_project}.run_date_info.csv >  ${CHRONQC_TMP}/${_project}.run_date_info.csv
+            awk 'BEGIN{FS=OFS=","} NR>1{cmd = "date -d \"" $3 "\" \"+%d/%m/%Y\"";cmd | getline out; $3=out; close("uuidgen")} 1' "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/multiqc_data/${_project}.run_date_info.csv" >  "${CHRONQC_TMP}/${_project}.run_date_info.csv"
 
             log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Importing ${_project}.2.multiqc_picard_AlignmentSummaryMetrics.txt"
             chronqc database --update --db "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" \
@@ -397,27 +397,23 @@ while read -r i
 do
         if [[ -e "${i}" ]]
         then
-                echo "infosheets:${i}"
                 runinfoFile=$(basename "${i}" .csv)
-                echo "runinfoFile:${runinfoFile}"
                 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "files to be processed:${runinfoFile}"
 
                 if [[ -e "${TMP_TRENDANALYSE_LOGS_DIR}/darwin/${runinfoFile}.finished" ]]
                 then
                         log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${runinfoFile} data is already processed"
-                        echo "${runinfoFile} data is already processed"
                 else
                         fileType=$(cut -d '_' -f1 <<< "${runinfoFile}")
                         fileDate=$(cut -d '_' -f3 <<< "${runinfoFile}")
-                        tableFile=$(echo "${fileType}_${fileDate}.csv")
+                        tableFile="${fileType}_${fileDate}.csv"
 
                         generateChronQCOutput "${i}" "${IMPORT_DIR}/${tableFile}" "${fileType}"
                         touch "${TMP_TRENDANALYSE_LOGS_DIR}/darwin/${runinfoFile}.finished"
 
                 fi
         else
-                echo 'all files are processed'
-                #log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "all files are processed"
+                log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "all files are processed"
 
         fi
 done < <(find "${IMPORT_DIR}"/ -maxdepth 1 -type f -iname "*runinfo*.csv")
