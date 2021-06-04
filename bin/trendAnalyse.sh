@@ -195,11 +195,12 @@ fi
 
 function generateChronQCOutput() {
 
-        chronqc database -f --create --run-date-info "${1}" -o "${CHRONQC_DATABASE_NAME}/darwin/" --db-table "${3}" "${2}" "${3}"
+        mkdir -p  "${CHRONQC_DATABASE_NAME}/darwin/"
+        chronqc database -f --create --run-date-info "${1}" -o "${CHRONQC_DATABASE_NAME}" --db-table "${3}" "${2}" "${3}"
         log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "database filled with met ${1}"
 
-       mv "${1}" "${archiveDir}"
-       mv "${2}" "${archiveDir}"
+        mv "${1}" "${ARCHIVE_DIR}"
+        mv "${2}" "${ARCHIVE_DIR}"
 }
 
 #
@@ -324,7 +325,7 @@ fi
 lockFile="${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
 thereShallBeOnlyOne "${lockFile}"
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile} ..."
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${TMP_ROOT_DIR}/trendanalyse/logs ..."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${TMP_ROOT_DIR}/trendanalysis/logs ..."
 
 #
 # Use multiplexing to reduce the amount of SSH connections created
@@ -367,8 +368,8 @@ else
                 else
                         for run in "${runs[@]}"
                         do
-                                export TMP_TRENDANALYSE_DIR="${TMP_ROOT_DIR}/trendanalyse"
-                                export TMP_TRENDANALYSE_LOGS_DIR="${TMP_ROOT_DIR}/trendanalyse/logs"
+                                export TMP_TRENDANALYSE_DIR="${TMP_ROOT_DIR}/trendanalysis"
+                                export TMP_TRENDANALYSE_LOGS_DIR="${TMP_TRENDANALYSE_DIR}/logs"
                                 controlFileBase="${TMP_TRENDANALYSE_DIR}/logs/${project}/${run}"
                                 export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
                                 export PROCESSPROJECTTODB_CONTROLE_FILE_BASE="${TMP_TRENDANALYSE_DIR}/logs/${project}/${run}.processProjectToDB"
@@ -391,6 +392,7 @@ fi
 ## Checks directory ${IMPORT_DIR} for new Darwin import files. Than calls function 'generateChronQCOutput "${i}" "${importDir}/${tableFile}" "${fileType}"'
 ## to process files. After precession the files are moved to archive.
 #
+mkdir -p "${TMP_TRENDANALYSE_LOGS_DIR}/darwin/"
 while read -r i
 do
         if [[ -e "${i}" ]]
@@ -400,7 +402,7 @@ do
                 echo "runinfoFile:${runinfoFile}"
                 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "files to be processed:${runinfoFile}"
 
-                if [[ -e "${TMP_TRENDANALYSE_LOGS_DIR}/${runinfoFile}.finished" ]]
+                if [[ -e "${TMP_TRENDANALYSE_LOGS_DIR}/darwin/${runinfoFile}.finished" ]]
                 then
                         log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${runinfoFile} data is already processed"
                         echo "${runinfoFile} data is already processed"
@@ -409,8 +411,8 @@ do
                         fileDate=$(cut -d '_' -f3 <<< "${runinfoFile}")
                         tableFile=$(echo "${fileType}_${fileDate}.csv")
 
-                        generateChronQCOutput "${i}" "${importDir}/${tableFile}" "${fileType}"
-                        touch "${TMP_TRENDANALYSE_LOGS_DIR}/${runinfoFile}.finished"
+                        generateChronQCOutput "${i}" "${IMPORT_DIR}/${tableFile}" "${fileType}"
+                        touch "${TMP_TRENDANALYSE_LOGS_DIR}/darwin/${runinfoFile}.finished"
 
                 fi
         else

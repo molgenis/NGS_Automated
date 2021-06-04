@@ -26,32 +26,45 @@ def printNewSamplesheet(_projectSamplesheetPath, _gsSamplesheetDataHashmap, _sam
         _reader = csv.DictReader(_f1)
         _headers = _reader.fieldnames
         #
-        # Add extra columns barcode1 and GenomeScanID.
+        # Check if columns are present and extra columns if necessary.
+        # Columns may or may not already be present depending on
+        #  * version of Darwin code that produced the samplesheet
+        #  * whether were prepped at GenomeScan or in our own lab.
         #
-        _headers.append('barcode1')
-        _headers.append('GS_ID')
+        _potentiallyMissingColumns = ['barcode', 'barcode1', 'barcode2', 'GS_ID']
+        for _potentiallyMissingColumn in _potentiallyMissingColumns:
+            if not _potentiallyMissingColumn in _headers:
+                _headers.append(_potentiallyMissingColumn)
         #
         # Parse sample from inhouse samplesheet.
         #
         _newRows = []
         _newRows.append(_headers)
         for _row in _reader:
-            _barcodes = _row['barcode'] + '-' + _row['barcode2']
-            _barcodesProject = _row['barcode'] + '-' + _row['barcode2'] + '-' + _row['project'] # Uniquely identifies a sample
+            _sampleProcessStepID = _row['sampleProcessStepID'] # Uniquely identifies a sample.
+            logging.debug('Found sampleProcessStepID ' + _sampleProcessStepID + '; starting lookup of additional sample meta data in _gsSamplesheetDataHashmap ...')
             #
-            # Try to create new rows: one for each flowcell-lane combination for each sample (=barcodes-project combination).
+            # Try to create new rows: one for each flowcell-lane combination for each sample (=sampleProcessStepID).
             #
             # Example data structure of _gsSamplesheetDataHashmap:
             # defaultdict(<type 'dict'>, {
-            #    'CTCTCTAC-AGAGGATA-QXTR_426-Exoom_v1': {
+            #    '123456': {
             #        'project': 'QXTR_426-Exoom_v1', 'GS_ID': '103373-032-059', 
             #        'FastQs': [{'lane': '7', 'sequencingStartDate': '181128', 'run': '0363', 'sequencer': 'K00296', 'flowcell': 'H2TGVBBXY', 'barcodes': 'CTCTCTAC-AGAGGATA'}, 
             #                   {'lane': '8', 'sequencingStartDate': '181128', 'run': '0364', 'sequencer': 'K00296', 'flowcell': 'HYKGJBBXX', 'barcodes': 'CTCTCTAC-AGAGGATA'}]},
             #
+            # The key '123456' in the example above is the sampleProcessStepID.
+            #
             try:
-                if _row['project'] == _gsSamplesheetDataHashmap[_barcodesProject]['project']:
-                    for FastQ in _gsSamplesheetDataHashmap[_barcodesProject]['FastQs']:
-                        _newRowValues=[]
+                if _row['project'] == _gsSamplesheetDataHashmap[_sampleProcessStepID]['project']:
+                    for FastQ in _gsSamplesheetDataHashmap[_sampleProcessStepID]['FastQs']:
+                        try:
+                            _barcode1 = FastQ['barcodes'].split('-')[0]
+                            _barcode2 = FastQ['barcodes'].split('-')[1]
+                        except:
+                            logging.critical('Failed to split barcodes "' + FastQ['barcodes'] + '" into dash separated barcode1 and barcode2.')
+                            sys.exit('FATAL ERROR!')
+                        _newRowValues = []
                         for _header in _headers:
                             #
                             # list of columns for which the default/empty value from the inhouse samplesheet is replaced by values from the GS samplesheet.
@@ -67,11 +80,13 @@ def printNewSamplesheet(_projectSamplesheetPath, _gsSamplesheetDataHashmap, _sam
                             elif _header == 'sequencingStartDate':
                                 _newRowValues.append(FastQ['sequencingStartDate'])
                             elif _header == 'barcode1':
-                                _newRowValues.append(_row['barcode'])
+                                _newRowValues.append(_barcode1)
+                            elif _header == 'barcode2':
+                                _newRowValues.append(_barcode2)
                             elif _header == 'barcode':
-                                _newRowValues.append(_barcodes)
+                                _newRowValues.append(FastQ['barcodes'])
                             elif _header == 'GS_ID':
-                                _newRowValues.append(_gsSamplesheetDataHashmap[_barcodesProject]['GS_ID'])
+                                _newRowValues.append(_gsSamplesheetDataHashmap[_sampleProcessStepID]['GS_ID'])
                             else:
                                 #
                                 # Copy other, unmodified columns + their values from the original samplesheet to the new row.
@@ -82,10 +97,10 @@ def printNewSamplesheet(_projectSamplesheetPath, _gsSamplesheetDataHashmap, _sam
                         #
                         _newRows.append(_newRowValues)
                 else:
-                    logging.critical('Project name for the sample (_barcodesProject=' + _barcodesProject + ') from inhouse sample sheet and from GenomeScan sample sheet is not the same project.')
+                    logging.critical('Project name for the sample with sampleProcessStepID ' + sampleProcessStepID + ' from inhouse sample sheet and from GenomeScan sample sheet is not the same project.')
                     sys.exit('FATAL ERROR!')
             except:
-                logging.critical('Failed to supplement sample (barcode_project=' + _barcodesProject + ') with meta-data from GenomeScan sample sheet.')
+                logging.critical('Failed to supplement sample with sampleProcessStepID ' + sampleProcessStepID + ' with meta-data from GenomeScan sample sheet.')
                 sys.exit('FATAL ERROR!')
         _f1.close()
     #
@@ -202,11 +217,11 @@ if args.samplesheetsOutputDir == args.inhouseSamplesheetsInputDir:
 #
 # Check availability and readability of GS samplesheet.
 #
-for gsSamplesheetFile in glob.iglob(os.path.join(args.genomeScanInputDir, "CSV_UMCG_*.csv")):
+for gsSamplesheetFile in glob.iglob(os.path.join(args.genomeScanInputDir, "CSV_UMCG_*.csv.converted")):
     if os.path.isfile(gsSamplesheetFile) and os.access(gsSamplesheetFile, os.R_OK):
         logging.info('Found GenomeScan samplesheet: ' + gsSamplesheetFile + '.')
     else:
-        logging.critical('Either the ' + args.genomeScanInputDir + 'CSV_UMCG_*.csv file is missing or it is not readable.')
+        logging.critical('Either the ' + args.genomeScanInputDir + 'CSV_UMCG_*.csv.converted file is missing or it is not readable.')
         sys.exit('FATAL ERROR!')
 #
 # Check availability and readability of md5sum file.
@@ -222,63 +237,101 @@ else:
 # Get sequencing meta-data from original filenames as listed in the checksum file.
 #
 gsFilenameDataHashmap = makeOriginalFilenameHashmap(checksumsFilePath)
+# For debugging data structure only:
+#import pprint
+#pp = pprint.PrettyPrinter(indent=4)
+#pp.pprint(gsFilenameDataHashmap)
+#pp.pprint('=====================================================')
 
 #
 # Combine GS samplesheet with original filename information form gsFilenameDataHashmap.
-# GS samplesheet filestructure:
+#
+# GS samplesheet filestructure for samples prepped not at GenomeScan and send in as pools:
 #          GS_ID,         Sample_ID, Pool,   Index1,   Index2
 # 103473-011-001, QXTR_222-Exoom_v1,    1, CGAGGCTG, AGGCTTAG
+#
+## GS samplesheet filestructure for samples prepped at GenomeScan:
+#          GS_ID,                    ID, positie, geslacht, Pool,   Index1,   Index2
+# 103473-011-001, GS_1A-Exoom_v3-123456,     A01,        V,    1, CGAGGCTG, AGGCTTAG
 #
 gsSamplesheetFileHandle = open(gsSamplesheetFile,'r')
 gsReader = csv.DictReader(gsSamplesheetFileHandle)
 gsHeaders = gsReader.fieldnames
+gsSampleIdColumnName = 'Missing'
 gsSamplesheetDataHashmap = defaultdict(dict)
-projects = []
+gsProjects = []
+if 'Sample_ID' in gsHeaders:
+    gsSampleIdColumnName = 'Sample_ID'
+elif 'ID' in gsHeaders:
+    gsSampleIdColumnName = 'ID'
+else:
+    logging.critical('Cannot find sample ID column name in ' + gsSamplesheetFile + '.')
+    sys.exit('FATAL ERROR!')
+logging.debug('Found sample ID column name ' + gsSampleIdColumnName + ' in ' + gsSamplesheetFile + '.')
 for row in gsReader:
-    if row['Sample_ID'] in (None,""):
+    
+    if row[gsSampleIdColumnName] in (None,""):
         logging.warning('Empty row detected in GS samplesheet.')
         continue
-    project=row['Sample_ID'] # Confusingly 'Sample_ID' column actually contains the projectName.
-    genomeScanID=row['GS_ID']
-    projects.append(project)
-    barcodesProject = row['Index1'] + '-' + row['Index2'] + '-' + project
-    barcodesGenomeScanID = row['Index1'] + '-' + row['Index2'] + '-' + genomeScanID
-    if gsSamplesheetDataHashmap.has_key(barcodesProject):
-        logging.critical('Barcodes ' + row['Index1'] + '-' + row['Index2'] + ' are not uniq in project ' + project + '.')
+    #
+    # The "sample ID" provided to GenomeScan by our lab is a combination of
+    #  * project
+    #  * sampleProcessStepID; a unique value for each sample.
+    # Use a regular expression to parse the individual values from the combi.
+    #
+    if re.match("(^[a-zA-Z0-9_-]+)-([0-9]+)$", row[gsSampleIdColumnName]):
+        m = re.match("(^[a-zA-Z0-9_-]+)-([0-9]+)$", row[gsSampleIdColumnName])
+        gsProject = m.group(1)
+        gsSampleProcessStepID = m.group(2)
+        logging.debug('Found project ' + gsProject + ' and sampleProcessStepID ' + gsSampleProcessStepID + ' in column ' + gsSampleIdColumnName + '.')
+    else:
+        logging.critical('Cannot parse project name and sampleProcessStepID from "' + row[gsSampleIdColumnName] + '" in column ' + gsSampleIdColumnName + ' from ' + gsSamplesheetFile + '.')
         sys.exit('FATAL ERROR!')
-    try:
-        #
-        # Example data structure of gsSamplesheetDataHashmap:
-        # defaultdict(<type 'dict'>, {
-        #    'CTCTCTAC-AGAGGATA-QXTR_426-Exoom_v1': {
-        #        'project': 'QXTR_426-Exoom_v1', 'GS_ID': '103373-032-059', 
-        #        'FastQs': [{'lane': '7', 'sequencingStartDate': '181128', 'run': '0363', 'sequencer': 'K00296', 'flowcell': 'H2TGVBBXY', 'barcodes': 'CTCTCTAC-AGAGGATA'}, 
-        #                   {'lane': '8', 'sequencingStartDate': '181128', 'run': '0364', 'sequencer': 'K00296', 'flowcell': 'HYKGJBBXX', 'barcodes': 'CTCTCTAC-AGAGGATA'}]},
-        #    'CAGAGAGG-TCTACTCT-QXTR_426-Exoom_v1': {
-        #        'project': 'QXTR_426-Exoom_v1', 'GS_ID': '103373-032-058', 
-        #        'FastQs': [{'lane': '7', 'sequencingStartDate': '181128', 'run': '0363', 'sequencer': 'K00296', 'flowcell': 'H2TGVBBXY', 'barcodes': 'CAGAGAGG-TCTACTCT'}, 
-        #                   {'lane': '8', 'sequencingStartDate': '181128', 'run': '0364', 'sequencer': 'K00296', 'flowcell': 'HYKGJBBXX', 'barcodes': 'CAGAGAGG-TCTACTCT'}]}}
-        #
-        gsSamplesheetDataHashmap[barcodesProject] = {
-            'project': project, 'GS_ID': genomeScanID,
-            'FastQs': gsFilenameDataHashmap[barcodesGenomeScanID]
-        }
-        # For debugging data structure only:
-        #import pprint
-        #pp = pprint.PrettyPrinter(indent=4)
-        #pp.pprint(gsSamplesheetDataHashmap)
-        #pp.pprint('#####################################################')
-    except:
-        logging.critical('Meta data parsed from original FastQ filenames as supplied by GenomeScan missing for sample ' + genomeScanID + ' with barcodes ' + row['Index1'] + '-' + row['Index2'] + ' from project ' + project + '.')
+    gsGenomeScanID=row['GS_ID']
+    gsProjects.append(gsProject)
+    gsBarcodesAndGenomeScanID = row['Index1'] + '-' + row['Index2'] + '-' + gsGenomeScanID
+    logging.debug('Compiled gsBarcodesAndGenomeScanID key ' + gsBarcodesAndGenomeScanID + ' for lookup of values in gsFilenameDataHashmap.')
+    if gsSampleProcessStepID in gsSamplesheetDataHashmap:
+        logging.critical('sampleProcessStepID ' + gsSampleProcessStepID + ' is not uniq in project ' + gsProject + '.')
+        sys.exit('FATAL ERROR!')
+    #
+    # Example data structure of gsSamplesheetDataHashmap:
+    # defaultdict(<type 'dict'>, {
+    #    '123456': {
+    #        'project': 'QXTR_426-Exoom_v1', 'GS_ID': '103373-032-059', 
+    #        'FastQs': [{'lane': '7', 'sequencingStartDate': '181128', 'run': '0363', 'sequencer': 'K00296', 'flowcell': 'H2TGVBBXY', 'barcodes': 'CTCTCTAC-AGAGGATA'}, 
+    #                   {'lane': '8', 'sequencingStartDate': '181128', 'run': '0364', 'sequencer': 'K00296', 'flowcell': 'HYKGJBBXX', 'barcodes': 'CTCTCTAC-AGAGGATA'}]},
+    #    '789012': {
+    #        'project': 'QXTR_426-Exoom_v1', 'GS_ID': '103373-032-058', 
+    #        'FastQs': [{'lane': '7', 'sequencingStartDate': '181128', 'run': '0363', 'sequencer': 'K00296', 'flowcell': 'H2TGVBBXY', 'barcodes': 'CAGAGAGG-TCTACTCT'}, 
+    #                   {'lane': '8', 'sequencingStartDate': '181128', 'run': '0364', 'sequencer': 'K00296', 'flowcell': 'HYKGJBBXX', 'barcodes': 'CAGAGAGG-TCTACTCT'}]}}
+    #
+    if gsBarcodesAndGenomeScanID in gsFilenameDataHashmap:
+        try:
+            gsSamplesheetDataHashmap[gsSampleProcessStepID] = {
+                'project': gsProject, 'GS_ID': gsGenomeScanID,
+                'FastQs': gsFilenameDataHashmap[gsBarcodesAndGenomeScanID]
+            }
+            # For debugging data structure only:
+            #import pprint
+            #pp = pprint.PrettyPrinter(indent=4)
+            #pp.pprint(gsSamplesheetDataHashmap)
+            #pp.pprint('#####################################################')
+        except:
+            logging.critical('Meta data parsed from original FastQ filenames as supplied by GenomeScan missing for sample ' + gsGenomeScanID + ' with barcodes ' + row['Index1'] + '-' + row['Index2'] + ' from project ' + gsProject + '.')
+            sys.exit('FATAL ERROR!')
+    else:
+        logging.critical('Meta data parsed from original FastQ filenames as supplied by GenomeScan missing for sample ' + gsGenomeScanID + ' with barcodes ' + row['Index1'] + '-' + row['Index2'] + ' from project ' + gsProject + '.')
+        logging.critical('Check if the barcodes in the samplesheets match with the barcodes in the FastQ files for ' + gsGenomeScanID + '.')
         sys.exit('FATAL ERROR!')
 gsSamplesheetFileHandle.close()
 #
 # Get list of uniq project names and count number of samples per project.
 #
-uniqProjects =(sorted(set(projects)))
+uniqProjects =(sorted(set(gsProjects)))
 projectCounts={}
 for uniqProject in (uniqProjects):
-    projectCounts[uniqProject]=projects.count(uniqProject)
+    projectCounts[uniqProject]=gsProjects.count(uniqProject)
 #
 # Parse sample sheets per project.
 #
@@ -296,7 +349,7 @@ for project in (uniqProjects):
         if (projectCounts[project] == (len(open(projectSamplesheetPath).readlines())-1)):
             logging.debug('Number of samples in GS samplesheet (' + str(projectCounts[project]) + ') is the same as in inhouse samplesheet for project: ' + project + '.')
         else:
-            logging.critical('Number of samples in GS samplesheet (' + str(projectCounts[project]) + ') is NOT the same as in inhouse Project (' + (len(open(projectSamplesheetPath).readlines())-1) + ' for project ' + project + '.')
+            logging.critical('Number of samples in GS samplesheet (' + str(projectCounts[project]) + ') is NOT the same as in inhouse Project (' + str(len(open(projectSamplesheetPath).readlines())-1) + ') for project ' + project + '.')
             sys.exit('FATAL ERROR!')
         #
         # Create new complete samplesheet.

@@ -1,20 +1,24 @@
 #!/bin/bash
 
-set -e
-set -u
-
-# module load NGS_Automated/beta; demultiplexingTiming.sh -g umcg-atd -l DEBUG
-
-if [[ "${BASH_VERSINFO}" -lt 4 || "${BASH_VERSINFO[0]}" -lt 4 ]]
+#
+##
+### Environment and Bash sanity.
+##
+#
+if [[ "${BASH_VERSINFO[0]}" -lt 4 ]]
 then
 	echo "Sorry, you need at least bash 4.x to use ${0}." >&2
 	exit 1
 fi
 
+set -e # Exit if any subcommand or pipeline returns a non-zero exit status.
+set -u # Raise exception if variable is unbound. Combined with set -e will halt execution when an unbound variable is encountered.
+
+umask 0027
 
 # Env vars.
 export TMPDIR="${TMPDIR:-/tmp}" # Default to /tmp if $TMPDIR was not defined.
-SCRIPT_NAME="$(basename ${0})"
+SCRIPT_NAME="$(basename "${0}")"
 SCRIPT_NAME="${SCRIPT_NAME%.*sh}"
 INSTALLATION_DIR="$(cd -P "$(dirname "${0}")/.." && pwd)"
 LIB_DIR="${INSTALLATION_DIR}/lib"
@@ -22,8 +26,6 @@ CFG_DIR="${INSTALLATION_DIR}/etc"
 HOSTNAME_SHORT="$(hostname -s)"
 ROLE_USER="$(whoami)"
 REAL_USER="$(logname 2>/dev/null || echo 'no login name')"
-
-
 
 #
 ##
@@ -33,9 +35,11 @@ REAL_USER="$(logname 2>/dev/null || echo 'no login name')"
 
 if [[ -f "${LIB_DIR}/sharedFunctions.bash" && -r "${LIB_DIR}/sharedFunctions.bash" ]]
 then
+	# shellcheck source=lib/sharedFunctions.bash
 	source "${LIB_DIR}/sharedFunctions.bash"
 else
 	printf '%s\n' "FATAL: cannot find or cannot access sharedFunctions.bash"
+	trap - EXIT
 	exit 1
 fi
 
@@ -49,7 +53,7 @@ Script to start NGS_Demultiplexing automagicly when sequencer is finished, and c
 
 Usage:
 
-	$(basename $0) OPTIONS
+	$(basename "${0}") OPTIONS
 
 Options:
 
@@ -60,12 +64,11 @@ Options:
 
 Config and dependencies:
 
-This script needs 3 config files, which must be located in ${CFG_DIR}:
- 1. <group>.cfg	for the group specified with -g
- 2. <host>.cfg	for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
- 3. sharedConfig.cfg	for all groups and all servers.
-In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
-
+	This script needs 3 config files, which must be located in ${CFG_DIR}:
+		1. <group>.cfg	for the group specified with -g
+		2. <host>.cfg	for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
+		3. sharedConfig.cfg	for all groups and all servers.
+	In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
 ======================================================================================================================
 
 EOH
@@ -83,11 +86,10 @@ EOH
 #
 # Get commandline arguments.
 #
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments..."
-declare group=''
-while getopts "g:l:h" opt
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
+while getopts ":g:l:h" opt
 do
-	case $opt in
+	case "${opt}" in
 		h)
 			showHelp
 			;;
@@ -95,16 +97,18 @@ do
 			GROUP="${OPTARG}"
 			;;
 		l)
-			l4b_log_level=${OPTARG^^}
-			l4b_log_level_prio=${l4b_log_levels[${l4b_log_level}]}
+			l4b_log_level="${OPTARG^^}"
+			l4b_log_level_prio="${l4b_log_levels["${l4b_log_level}"]}"
 			;;
 		\?)
-			log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Invalid option -${OPTARG}. Try $(basename $0) -h for help."
+			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Invalid option -${OPTARG}. Try $(basename "${0}") -h for help."
 			;;
 		:)
-			log4Bash "${LINENO}" "${FUNCNAME:-main}" '1' "Option -${OPTARG} requires an argument. Try $(basename $0) -h for help."
+			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Option -${OPTARG} requires an argument. Try $(basename "${0}") -h for help."
 			;;
-	esac
+		*)
+			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Unhandled option. Try $(basename "${0}") -h for help."
+			;;	esac
 done
 
 #
@@ -118,7 +122,7 @@ fi
 #
 # Source config files.
 #
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files..."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files ..."
 declare -a configFiles=(
 	"${CFG_DIR}/${GROUP}.cfg"
 	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
@@ -126,19 +130,23 @@ declare -a configFiles=(
 	"${HOME}/molgenis.cfg"
 )
 
-for configFile in "${configFiles[@]}"; do 
+for configFile in "${configFiles[@]}"
+do
 	if [[ -f "${configFile}" && -r "${configFile}" ]]
 	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config file ${configFile}..."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Sourcing config file ${configFile} ..."
 		#
 		# In some Bash versions the source command does not work properly with process substitution.
 		# Therefore we source a first time with process substitution for proper error handling
 		# and a second time without just to make sure we can use the content from the sourced files.
 		#
-		mixed_stdouterr=$(source ${configFile} 2>&1) || log4Bash 'FATAL' ${LINENO} "${FUNCNAME:-main}" ${?} "Cannot source ${configFile}."
-		source ${configFile}  # May seem redundant, but is a mandatory workaround for some Bash versions.
+		# Disable shellcheck code syntax checking for config files.
+		# shellcheck source=/dev/null
+		mixed_stdouterr=$(source "${configFile}" 2>&1) || log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" "${?}" "Cannot source ${configFile}."
+		# shellcheck source=/dev/null
+		source "${configFile}"  # May seem redundant, but is a mandatory workaround for some Bash versions.
 	else
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Config file ${configFile} missing or not accessible."
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Config file ${configFile} missing or not accessible."
 	fi
 done
 
@@ -163,41 +171,63 @@ fi
 timeStampDir="${SCR_ROOT_DIR}/logs/Timestamp/"
 
 ## check if there are samplesheet available for run time checking.
-checkSampleSheet=$(find "${SCR_ROOT_DIR}/Samplesheets/" -maxdepth 1 -type f -name "*.csv")
 
-if [[ -z "${checkSampleSheet}" ]]
+declare -a _checkSampleSheet
+mapfile -t _checkSampleSheet < <(find "${SCR_ROOT_DIR}/Samplesheets" -maxdepth 1 -type f -name '*.csv')
+
+if [[ "${#_checkSampleSheet[@]:-0}" -lt '1' ]]
 then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "All runs are processed, no new sample sheet available"
 fi
 
-for sampleSheet in $(ls "${SCR_ROOT_DIR}/Samplesheets/"*".csv")
+for sampleSheet in "${_checkSampleSheet[@]}"
 do 
 	sequenceRun=$(basename "${sampleSheet}" .csv)
 	## check if there is a sequence run corresponding to the samplesheet.
 	if [[ ! -d "${SCR_ROOT_DIR}/runs/${sequenceRun}/" ]]
 	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no data corresponding to run:${sequenceRun}, check if the samplesheet is correct"
-		printf '%b\n' "A demutiplexingTiming error. There is no data corresponding to run:${sequenceRun}, check if the samplesheet is correct." | mail -s "Please check if samplesheet ${sequenceRun} is correct."  "hpc.helpdesk@umcg.nl"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no data corresponding to run:${sequenceRun}, check if the samplesheet is correct"
 		continue
 	fi
 	## check if the sequencer is ready.
 	if [[ ! -d "${SCR_ROOT_DIR}/logs/${sequenceRun}/" ]]
 	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer is not finished yet for run ${sequenceRun}"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer is not finished yet for run ${sequenceRun}"
 		continue
 	fi
 	
 	## determine run number.
-	if [ -e "${SCR_ROOT_DIR}/logs/${sequenceRun}/"*".demultiplexing.finished" ]
+	declare -a _demultiplexingFinished
+	declare -a _demultiplexingStarted
+	mapfile -t _demultiplexingFinished < <(find "${SCR_ROOT_DIR}/logs/${sequenceRun}/" -name '*.demultiplexing.finished')
+	mapfile -t _demultiplexingStarted < <(find "${SCR_ROOT_DIR}/logs/${sequenceRun}/" -name '*.demultiplexing.started')
+	
+	if [[ "${#_demultiplexingFinished[@]:-0}" -eq '1' ]]
 	then
-		run=$(basename "${SCR_ROOT_DIR}/logs/${sequenceRun}/"*".demultiplexing.finished" .demultiplexing.finished)
+		run=$(basename "${_demultiplexingFinished[0]}" .demultiplexing.finished)
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using run number: ${run}"
-	elif [ -e "${SCR_ROOT_DIR}/logs/${sequenceRun}/"*".demultiplexing.started" ]
+	elif [[ "${#_demultiplexingFinished[@]:-0}" -gt '1' ]]
 	then
-		run=$(basename "${SCR_ROOT_DIR}/logs/${sequenceRun}/"*".demultiplexing.started" .demultiplexing.started)
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${sequenceRun} due to multiple demultiplexing.finished files."
+		return
+	elif [[ "${#_demultiplexingFinished[@]:-0}" -lt '1' ]]
+	then
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping because runnumber can't be determined using existing scripts for sequenceRun ${sequenceRun}."
+		return
+	elif [[ "${#_demultiplexingStarted[@]:-0}" -eq '1' ]]
+	then
+		run=$(basename "${_demultiplexingStarted[0]}" .demultiplexing.finished)
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using run number: ${run}"
+	elif [[ "${#_demultiplexingStarted[@]:-0}" -gt '1' ]]
+	then
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${sequenceRun} due to multiple demultiplexing.finished files."
+		return
+	elif [[ "${#_demultiplexingStarted[@]:-0}" -lt '1' ]]
+	then
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping because runnumber can't be determined using existing scripts for sequenceRun ${sequenceRun}."
+		return
 	fi
-
+	
 	touch "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
 	echo -e "moment of checking run time: $(date)\nsamplesheet: ${sampleSheet}\n" > "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using sampleSheet: ${sampleSheet}"
@@ -210,17 +240,18 @@ do
 		declare -A sampleSheetColumnOffsets=()
 		declare -a projects=()
 		
-		IFS="," sampleSheetColumnNames=($(head -1 "${sampleSheet}"))
+		IFS="${SAMPLESHEET_SEP}" read -r -a sampleSheetColumnNames <<< "$(head -1 "${sampleSheet}")"
 		
 		for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]:-0} ; offset++ ))
 		do
 			sampleSheetColumnOffsets["${sampleSheetColumnNames[${offset}]}"]="${offset}"
 		done
 
-		if [[ ! -z "${sampleSheetColumnOffsets['project']+isset}" ]] 
+		if [[ -n "${sampleSheetColumnOffsets['project']+isset}" ]] 
 		then
 			projectFieldIndex=$((${sampleSheetColumnOffsets['project']} + 1))
-			IFS=$'\n' projects=($(tail -n +2 "${sampleSheet}" | cut -d "," -f "${projectFieldIndex}" | sort | uniq ))
+			IFS=$'\n' read -r -a projects <<< "$(tail -n +2 "${sampleSheet}" | cut -d "," -f "${projectFieldIndex}" | sort | uniq )"
+			
 		fi
 
 		for project in "${projects[@]}"
@@ -247,7 +278,7 @@ do
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing is running for sequence run ${sequenceRun}"
 		else
 			echo -e "demultiplexing.started file is OLDER than 1 hour.\ntime ${run}.demultiplexing.started was last modified:" \
-			$(stat -c %y "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.demultiplexing.started") >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
+			"$(stat -c %y "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.demultiplexing.started")" >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
 			
 			touch "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.failed"
 			echo -e "Dear HPC helpdesk,\n\nPlease check if there is something wrong with the demultiplexing pipeline.\nThe demultiplexing of run ${sequenceRun} is not finished after 1h.\n\nKind regards\nHPC" > "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.failed"

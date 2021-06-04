@@ -50,7 +50,7 @@ function showHelp() {
 	#
 	cat <<EOH
 ======================================================================================================================
-Script to start NGS_Demultiplexing automagicly when sequencer is finished, and corresponding samplesheet is available.
+Script to start arrayConversionTool  automagicly when array scanner is finished, and corresponding samplesheet is available.
 
 Usage:
 	$(basename "${0}") OPTIONS
@@ -62,9 +62,9 @@ Options:
 
 Config and dependencies:
 	This script needs 4 config files, which must be located in ${CFG_DIR}:
-		1. <group>.cfg       for the group specified with -g
-		2. <this_host>.cfg   for this server. E.g.: "${HOSTNAME_SHORT}.cfg"
-		3. sharedConfig.cfg  for all groups and all servers.
+	1. <group>.cfg       for the group specified with -g
+	2. <this_host>.cfg   for this server. E.g.: "${HOSTNAME_SHORT}.cfg"
+	3. sharedConfig.cfg  for all groups and all servers.
 	In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
 ===============================================================================================================
 EOH
@@ -83,7 +83,7 @@ EOH
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
-while getopts ":g:l:h" opt
+while getopts "g:l:h" opt
 do
 	case "${opt}" in
 		h)
@@ -172,77 +172,92 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 # Sequencer is writing to this location: ${SEQ_DIR}
 # Looping through sub dirs to see if all files.
 #
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "find ${SEQ_DIR}/ -mindepth 1 -maxdepth 1 -type d -o -type l"
-mapfile -t projects < <(find "${SEQ_DIR}/" -mindepth 1 -maxdepth 1 -type d -o -type l)
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "find ${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}"
+readarray -t sampleSheets< <(find "${SCR_ROOT_DIR}/Samplesheets/" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name '*.csv')
+########for i in $() PER samplesheet er door heen lopen? en dan kijken of alle glaasjes gefinished zijn en dan pas processing?
 
-for i in "${projects[@]}"
-do
-	project=$(basename "${i}")
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking ${project} ..."
-	export JOB_CONTROLE_FILE_BASE="${SCR_ROOT_DIR}/logs/${project}/run01.demultiplexing"
-	if [[ -f "${JOB_CONTROLE_FILE_BASE}.finished" ]]
-	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished: Skipping finished ${project}."
-		continue
-	elif [[ -f "${JOB_CONTROLE_FILE_BASE}.started" ]]
-	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.started: Skipping ${project}, which is already getting processed."
-		continue
-	elif [[ ! -f "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" ]]
-	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheet found: skipping ${project}."
-		continue
-	fi
-	#
-	# Create log dir with job control file for sequence run.
-	#
-	if [[ ! -d "${SCR_ROOT_DIR}/logs/${project}/" ]]
-	then
-		mkdir "${SCR_ROOT_DIR}/logs/${project}/"
-	fi
-	#
-	# Check if the run has already completed.
-	#
-	sequencer=$(echo "${project}" | awk 'BEGIN {FS="_"} {print $2}')
-	miSeqCompleted='no'
-	miSeqNameRegex='^M[0-9][0-9]*$'
-	if [[ -f "${SEQ_DIR}/${project}/RTAComplete.txt" ]] && [[ "${sequencer}" =~ ${miSeqNameRegex} ]]
-	then
-		miSeqCompleted='yes'
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Miseq run detected: miSeqCompleted=yes for ${project}."
-	fi
-	if [[ -f "${SEQ_DIR}/${project}/RunCompletionStatus.xml" || "${miSeqCompleted}" == 'yes' ]]
-	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer has completed data generation for: ${project}."
-	else
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer is busy producing data: skipping ${project}."
-		continue
-	fi
-	#
-	# All ingredients are present and the project has not been processed yet: generate FastQ files.
-	#
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Generating and submitting jobs for ${project} ..." \
-		2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
-	echo "started: $(date +%FT%T%z)" > "${SCR_ROOT_DIR}/logs/${project}/run01.demultiplexing.totalRuntime"
-	{
-		mkdir -v -p "${SCR_ROOT_DIR}/generatedscripts/${project}/"
-		cd "${SCR_ROOT_DIR}/generatedscripts/${project}/"
-		cp -v "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" "${project}.csv"
-		cp -v "${EBROOTNGS_DEMULTIPLEXING}/generate_template.sh" ./ 
-		bash generate_template.sh "${project}" "${SCR_ROOT_DIR}" "${group}"
-		cd "${SCR_ROOT_DIR}/runs/${project}/jobs"
-		bash submit.sh
-	} >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "jobs submitted"
-	#
-	# Track and Trace.
-	#
-	timeStamp="$(date +%FT%T%z)"
-	printf '%s\n' 'run_id,group,process_raw_data,copy_raw_prm,projects,date' \
-		> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
-	printf '%s\n' "${project},${group},started,,,${timeStamp}" \
-		>> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
-done
+####
+if [[ "${#sampleSheets[@]:-0}" -eq '0' ]]
+then
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found at ${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}."
+else
+	for sampleSheet in "${sampleSheets[@]}"
+	do
+		project="$(basename "${sampleSheet}" ".csv")"
+		
+		#
+		# Create log dir with job control file for sequence run.
+		#
+		if [[ ! -d "${SCR_ROOT_DIR}/logs/${project}/" ]]
+		then
+			mkdir "${SCR_ROOT_DIR}/logs/${project}/"
+		fi
+		export JOB_CONTROLE_FILE_BASE="${SCR_ROOT_DIR}/logs/${project}/run01.arrayConversion"
+		if [[ -f "${JOB_CONTROLE_FILE_BASE}.finished" ]]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished: Skipping finished ${project}."
+			continue
+		elif [[ -f "${JOB_CONTROLE_FILE_BASE}.started" ]]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.started: Skipping ${project}, which is already getting processed."
+			continue
+		elif [[ ! -f "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" ]]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheet found: skipping ${project}."
+			continue
+		fi
+		
+		export TRACE_FAILED="${SCR_ROOT_DIR}/logs/${project}/trace.failed"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project} ..."
 
+		head -1 "${sampleSheet}"
+		colnum=$(head -1 "${sampleSheet}" | sed 's/,/\n/g'| nl | grep 'SentrixBarcode_A$' | grep -o '[0-9][0-9]*')
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found SentrixBarcode_A in column number ${colnum}."
+		readarray -t barcodes< <(tail -n +2 "${sampleSheet}" | cut -d , -f "${colnum}" | sort | uniq)
+		count=0
+		numberOfBarcodes=${#barcodes[@]}
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "total number of barcodes: ${numberOfBarcodes}"
+		for barcode in "${barcodes[@]}"
+		do
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "check ${SCR_ROOT_DIR}/rawdata/array/IDAT/${barcode}/${barcode}_qc.txt"
+			if [ -e "${SCR_ROOT_DIR}/rawdata/array/IDAT/${barcode}/${barcode}_qc.txt" ]
+			then
+				if grep -q "<ScanSettings" "${SCR_ROOT_DIR}/rawdata/array/IDAT/${barcode}/${barcode}_qc.txt"
+				then
+					count=$((count+1))
+				else
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${barcode}_qc.txt does exist but the project is not finished yet, ${project} cannot be continued"
+				fi
+			fi	
+		done
+
+		if [ "${count}" == "${numberOfBarcodes}" ]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Generating and submitting jobs for ${project} ..." | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
+			echo "started: $(date +%FT%T%z)" > "${SCR_ROOT_DIR}/logs/${project}/run01.arrayConversion.totalRuntime"
+
+			{
+			mkdir -v -p "${SCR_ROOT_DIR}/generatedscripts/${project}/"
+			cd "${SCR_ROOT_DIR}/generatedscripts/${project}/"
+			cp -v "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" ./
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "copying ${EBROOTAGCT}/templates/generate_template.sh to ${SCR_ROOT_DIR}/generatedscripts/${project}/"
+			cp -v "${EBROOTAGCT}/templates/generate_template.sh" ./
+			bash generate_template.sh 
+			cd "${SCR_ROOT_DIR}/projects/${project}/run01/jobs"
+			bash submit.sh 
+			} >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "jobs submitted"
+			#
+			# Track and Trace.
+			#
+			timeStamp="$(date +%FT%T%z)"
+			printf '%s\n' 'run_id,group,processRawData,copy_raw_prm,projects,date' \
+				> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
+			printf '%s\n' "${project},${group},started,,,${timeStamp}" \
+				>> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
+
+		fi
+	done
+fi
 trap - EXIT
 exit 0
