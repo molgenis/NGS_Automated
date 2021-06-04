@@ -98,21 +98,21 @@ function processProjectToDB() {
         if [[ -e "${PRM_MULTIQCPROJECT_DIR}/${_project}.run_date_info.csv" ]]; then
 
             log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "found ${PRM_MULTIQCPROJECT_DIR}/${_project}.run_date_info.csv. Updating ChronQC database with ${_project}."
-            cp ${PRM_MULTIQCPROJECT_DIR}/${_project}.run_date_info.csv ${CHRONQC_TMP}/${_project}.run_date_info.csv
-            cp ${PRM_MULTIQCPROJECT_DIR}/multiqc_picard_AlignmentSummaryMetrics.txt ${CHRONQC_TMP}/${_project}.multiqc_picard_AlignmentSummaryMetrics.txt
-            cp ${PRM_MULTIQCPROJECT_DIR}/multiqc_general_stats.txt ${CHRONQC_TMP}/${_project}.multiqc_general_stats.txt
-            cp ${PRM_MULTIQCPROJECT_DIR}/multiqc_sources.txt ${CHRONQC_TMP}/${_project}.multiqc_sources.txt
+            cp "${PRM_MULTIQCPROJECT_DIR}/${_project}.run_date_info.csv" "${CHRONQC_TMP}/${_project}.run_date_info.csv"
+            cp "${PRM_MULTIQCPROJECT_DIR}/multiqc_picard_AlignmentSummaryMetrics.txt" "${CHRONQC_TMP}/${_project}.multiqc_picard_AlignmentSummaryMetrics.txt"
+            cp "${PRM_MULTIQCPROJECT_DIR}/multiqc_general_stats.txt" "${CHRONQC_TMP}/${_project}.multiqc_general_stats.txt"
+            cp "${PRM_MULTIQCPROJECT_DIR}/multiqc_sources.txt" "${CHRONQC_TMP}/${_project}.multiqc_sources.txt"
 
             # rename one of the duplicated SAMPLE column names to make it work.
-            perl -pe 's|SAMPLE|SAMPLE_NAME2|' ${CHRONQC_TMP}/${_project}.multiqc_picard_AlignmentSummaryMetrics.txt > ${CHRONQC_TMP}/${_project}.2.multiqc_picard_AlignmentSummaryMetrics.txt
+            perl -pe 's|SAMPLE|SAMPLE_NAME2|' "${CHRONQC_TMP}/${_project}.multiqc_picard_AlignmentSummaryMetrics.txt" > "${CHRONQC_TMP}/${_project}.2.multiqc_picard_AlignmentSummaryMetrics.txt"
 
-            cp ${CHRONQC_TMP}/${_project}.run_date_info.csv ${CHRONQC_TMP}/${_project}.2.run_date_info.csv
+            cp "${CHRONQC_TMP}/${_project}.run_date_info.csv" "${CHRONQC_TMP}/${_project}.2.run_date_info.csv"
 
             #Gets all the samples processed with FastQC form the MultiQC multi_source file. This is done because samplenames differ from regular samplesheet at that stage in th epipeline..
             #The Output is converted into standard ChronQC run_date_info.csv format.
-            grep fastqc ${CHRONQC_TMP}/${_project}.multiqc_sources.txt | awk -v p=${_project} '{print $3","p","substr($3,1,6)}' >>${CHRONQC_TMP}/${_project}.2.run_date_info.csv
+            grep fastqc "${CHRONQC_TMP}/${_project}.multiqc_sources.txt" | awk -v p="${_project}" '{print $3","p","substr($3,1,6)}' >>"${CHRONQC_TMP}/${_project}.2.run_date_info.csv"
             awk 'BEGIN{FS=OFS=","} NR>1{cmd = "date -d \"" $3 "\" \"+%d/%m/%Y\"";cmd | getline out; $3=out; close("uuidgen")} 1' ${CHRONQC_TMP}/${_project}.2.run_date_info.csv > ${CHRONQC_TMP}/${_project}.2.run_date_info.csv.tmp
-            mv ${CHRONQC_TMP}/${_project}.2.run_date_info.csv.tmp ${CHRONQC_TMP}/${_project}.2.run_date_info.csv
+            mv "${CHRONQC_TMP}/${_project}.2.run_date_info.csv.tmp" "${CHRONQC_TMP}/${_project}.2.run_date_info.csv"
 
             # Get panel information from $_project} based on column 'capturingKit'.
             _panel=$(awk -F "${SAMPLESHEET_SEP}" 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i}}{if(NR > 1) print $(f["capturingKit"]) }' ${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/${_project}.csv | sort -u | cut -d'/' -f2)
@@ -126,22 +126,22 @@ function processProjectToDB() {
             awk 'BEGIN{FS=OFS=","} NR>1{cmd = "date -d \"" $3 "\" \"+%d/%m/%Y\"";cmd | getline out; $3=out; close("uuidgen")} 1' ${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/multiqc_data/${_project}.run_date_info.csv >  ${CHRONQC_TMP}/${_project}.run_date_info.csv
 
             log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Importing ${_project}.2.multiqc_picard_AlignmentSummaryMetrics.txt"
-            chronqc database --update --db ${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite \
-            ${CHRONQC_TMP}/${_project}.2.multiqc_picard_AlignmentSummaryMetrics.txt \
+            chronqc database --update --db "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" \
+            "${CHRONQC_TMP}/${_project}.2.multiqc_picard_AlignmentSummaryMetrics.txt" \
             --db-table AlignmentSummaryMetrics \
-            --run-date-info ${CHRONQC_TMP}/${_project}.run_date_info.csv \
-            ${_panel} || {
+            --run-date-info "${CHRONQC_TMP}/${_project}.run_date_info.csv" \
+            "${_panel}" || {
                         log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to import ${_project}: panel: ${_panel} stored to Chronqc database." \
                         2>&1 | tee -a "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.started"
                         mv "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}."{started,failed}
                         return
                         }
                         log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Importing ${CHRONQC_TMP}/${_project}.multiqc_general_stats.txt"
-                        chronqc database --update --db ${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite \
-            ${CHRONQC_TMP}/${_project}.multiqc_general_stats.txt \
+                        chronqc database --update --db "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" \
+            "${CHRONQC_TMP}/${_project}.multiqc_general_stats.txt" \
             --db-table general \
-            --run-date-info ${CHRONQC_TMP}/${_project}.2.run_date_info.csv \
-            ${_panel} || {
+            --run-date-info "${CHRONQC_TMP}/${_project}.2.run_date_info.csv" \
+            "${_panel}" || {
                         log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to import ${_project}: panel: ${_panel} stored to Chronqc database." \
                         2>&1 | tee -a "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.started"
                         mv "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}."{started,failed}
@@ -159,10 +159,10 @@ function processProjectToDB() {
 
            chronqc database --create \
             -o  "${CHRONQC_DATABASE_NAME}" \
-            ${CHRONQC_TMP}/${_project}.2.multiqc_picard_AlignmentSummaryMetrics.txt \
-            --run-date-info ${CHRONQC_TMP}/${_project}.run_date_info.csv \
+            "${CHRONQC_TMP}/${_project}.2.multiqc_picard_AlignmentSummaryMetrics.txt" \
+            --run-date-info "${CHRONQC_TMP}/${_project}.run_date_info.csv" \
             --db-table AlignmentSummaryMetrics \
-            ${_panel} -f || {
+            "${_panel}" -f || {
                             log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_project}: panel: ${_panel} stored to Chronqc database." \
                             2>&1 | tee -a "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.started"
                             mv "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}."{started,failed}
@@ -170,10 +170,10 @@ function processProjectToDB() {
                         }
                         chronqc database --create \
             -o  "${CHRONQC_DATABASE_NAME}" \
-            ${CHRONQC_TMP}/${_project}.multiqc_general_stats.txt \
-            --run-date-info ${CHRONQC_TMP}/${_project}.2.run_date_info.csv \
+            "${CHRONQC_TMP}/${_project}.multiqc_general_stats.txt" \
+            --run-date-info "${CHRONQC_TMP}/${_project}.2.run_date_info.csv" \
             --db-table general \
-            ${_panel} -f || {
+            "${_panel}" -f || {
                             log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_project}: panel: ${_panel} stored to Chronqc database." \
                             2>&1 | tee -a "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.started"
                             mv "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}."{started,failed}
@@ -205,18 +205,18 @@ function generateChronQCOutput() {
 
 #
 ## Generates a QC report based in the '-p tablename', and a possible subselection of that table. This is done based on a panel, for example 'Exoom'. 
-## The layout of the report is configured by the given json config file. 
+## The layout of the report is configured by the given json config file.
 #
 function generate_plots(){
 
         log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Generating ChronQC reports"
 
-        chronqc plot  -o ${CHRONQC_REPORTS_DIRS}/ -p general -f ${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite Exoom  ${CHRONQC_TEMPLATE_DIRS}/chronqc.general.json
-        chronqc plot  -o ${CHRONQC_REPORTS_DIRS}/ -p AlignmentSummaryMetrics -f ${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite Exoom  ${CHRONQC_TEMPLATE_DIRS}/chronqc.AlignmentSummaryMetrics.json
-        chronqc plot  -o ${CHRONQC_REPORTS_DIRS}/ -p Capturing -f ${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite Capturing  ${CHRONQC_TEMPLATE_DIRS}/chronqc.Capturing.json
-        chronqc plot  -o ${CHRONQC_REPORTS_DIRS}/ -p Concentratie -f ${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite Concentratie  ${CHRONQC_TEMPLATE_DIRS}/chronqc.Concentratie.json
-        chronqc plot  -o ${CHRONQC_REPORTS_DIRS}/ -p NGSInzetten -f ${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite NGSInzetten  ${CHRONQC_TEMPLATE_DIRS}/chronqc.NGSInzetten.json
-        chronqc plot  -o ${CHRONQC_REPORTS_DIRS}/ -p SamplePrep -f ${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite SamplePrep  ${CHRONQC_TEMPLATE_DIRS}/chronqc.SamplePrep.json
+        chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p general -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Exoom  "${CHRONQC_TEMPLATE_DIRS}/chronqc.general.json"
+        chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p AlignmentSummaryMetrics -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Exoom  "${CHRONQC_TEMPLATE_DIRS}/chronqc.AlignmentSummaryMetrics.json"
+        chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p Capturing -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Capturing  "${CHRONQC_TEMPLATE_DIRS}/chronqc.Capturing.json"
+        chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p Concentratie -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Concentratie  "${CHRONQC_TEMPLATE_DIRS}/chronqc.Concentratie.json"
+        chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p NGSInzetten -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" NGSInzetten  "${CHRONQC_TEMPLATE_DIRS}/chronqc.NGSInzetten.json"
+        chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p SamplePrep -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" SamplePrep  "${CHRONQC_TEMPLATE_DIRS}/chronqc.SamplePrep.json"
 
         log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "ChronQC reports finished."
 }
