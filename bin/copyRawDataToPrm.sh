@@ -445,7 +445,8 @@ do
 			;;
 		*)
 			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Unhandled option. Try $(basename "${0}") -h for help."
-			;;	esac
+			;;
+	esac
 done
 
 #
