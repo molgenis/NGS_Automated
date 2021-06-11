@@ -3,7 +3,7 @@
 #
 # Use either WORKSPACE location for Jenkins or
 # resolve path to scripts we need to check
-# when executed manualy outside Jenkins.
+# when executed manually outside Jenkins.
 #
 if [[ -z "${WORKSPACE:-}" ]]; then
 	MYDIR="$(cd -P "$(dirname "${0}")" && pwd)"
