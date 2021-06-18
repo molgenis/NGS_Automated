@@ -568,7 +568,7 @@ else
 		# Step 1: Generate scripts (per sample sheet).
 		#
 		generateScripts "${project}" "${pipelineRun}" "${sampleType}" "${controlFileBase}"
-		#
+		##
 		# Step 2: Submit generated job scripts (per project).
 		#
 		if [[ -e "${controlFileBase}.generateScripts.finished" ]]
