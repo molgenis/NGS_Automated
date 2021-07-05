@@ -901,7 +901,7 @@ else
 		#
 		if [[ -e "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished" ]]
 		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished present -> Data transfer completed; let's process batch ${gsBatch}..."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "exit present -> Data transfer completed; let's process batch ${gsBatch}..."
 			sanityChecking "${gsBatch}" "${controlFileBase}"
 		else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished absent -> Data transfer not yet completed; skipping batch ${gsBatch}."

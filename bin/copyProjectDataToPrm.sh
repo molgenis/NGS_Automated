@@ -196,34 +196,6 @@ function rsyncProjectRun() {
 			cd "${PRM_ROOT_DIR}/projects/${_project}/"
 			if md5sum -c "${_run}.md5" > "${_run}.md5.log" 2>&1
 			then
-				cd "${PRM_ROOT_DIR}/concordance/${PRMRAWDATA}/"
-				mapfile -t files < <(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/${CONCORDANCEFILESPATH}" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name "*.${CONCORDANCEFILESEXTENSION}")
-				for i in "${files[@]}"
-				do
-					if [[ "${_sampleType}" == 'GAP' ]]
-					then
-						local _belowSDThreshold="False"
-						_belowSDThreshold="$(awk '{if ($1 <0.2){print "True"}else {print "False"}}' "${i}.sd")"
-						if [[ "${_belowSDThreshold}" == 'True' ]]
-						then
-							ln -sf "${i}" .
-						else
-							log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "SD for ${i} is higher than 0.2; skipped"
-						fi
-					else
-						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Making symlinks for concordance check."
-						ln -sf "${i}" .
-						# shellcheck disable=SC2153
-						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Navigating to /groups/${GROUP}/${COMP_PRM_LFS}/concordance/${PRMRAWDATA}/ to create symlink for concordance check on the complementary prm"
-						cd "/groups/${GROUP}/${COMP_PRM_LFS}/concordance/${PRMRAWDATA}/"
-						ln -sf "${i}" .
-						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "navigating back to ${PRM_ROOT_DIR}/concordance/${PRMRAWDATA}/ to create symlink for original prm"
-						cd - 
-					fi
-				done
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing symlink for project VCF."
-				rm -f "${PRM_ROOT_DIR}/concordance/${PRMRAWDATA}/${_project}.final.vcf.gz"
-				cd "${PRM_ROOT_DIR}/projects/${_project}/"
 				if [[ "${_sampleType}" == 'GAP' ]]
 				then
 					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "_sampleType is GAF. Making symlinks for DiagnosticOutput folder."
