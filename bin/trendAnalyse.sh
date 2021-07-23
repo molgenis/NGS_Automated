@@ -77,6 +77,94 @@ EOH
 		exit 0
 }
 
+function processRawdataToDB() {
+		local _rawdata="${1}"
+
+		CHRONQC_TMP="${TMP_TRENDANALYSE_DIR}/tmp/"
+		CHRONQC_DATABASE_NAME="${TMP_TRENDANALYSE_DIR}/database/"
+		PRM_RAWDATA_DIR="${PRM_ROOT_DIR}/rawdata/ngs/${_rawdata}/Info/"
+
+		if [[ -e "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.finished" ]]
+				then
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_rawdata} was already processed. return"
+				return
+		else
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_rawdata} ..." \
+				2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started"
+		fi
+
+		if [[ -e "${PRM_RAWDATA_DIR}/SequenceRun_run_date_info.csv" ]]
+		then
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "found "${PRM_RAWDATA_DIR}/SequenceRun_run_date_info.csv" . Updating ChronQC database with ${_rawdata}."
+
+				cp "${PRM_RAWDATA_DIR}/SequenceRun_run_date_info.csv" "${CHRONQC_TMP}/${_rawdata}.SequenceRun_run_date_info.csv"
+				cp "${PRM_RAWDATA_DIR}/SequenceRun.csv" "${CHRONQC_TMP}/${_rawdata}.SequenceRun.csv"
+
+				_sequencer=$(echo "${_rawdata}" | cut -d '_' -f2)
+
+				for i in "${MULTIQC_METRICS_TO_PLOT[@]}"
+				do
+						local _metrics="${i%:*}"
+						local _table="${i#*:}"
+
+						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Importing ${_rawdata}.${_metrics}"
+						echo "chronqc database --update --db "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" \
+						"${CHRONQC_TMP}/${_rawdata}.${_metrics}" \
+						--db-table "${_table}" \
+						--run-date-info "${CHRONQC_TMP}/${_rawdata}.SequenceRun_run_date_info.csv" \
+						"${_sequencer}"" || {
+
+						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to import ${_rawdata} with "${_sequencer}" stored to Chronqc database." \
+						2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started"
+						mv "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,failed}
+						return
+						}
+				done
+
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} ${_rawdata} with "${_sequencer}" stored to Chronqc database." \
+				2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started" \
+				&& rm -f "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.failed" \
+				&& mv -v "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,finished}
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.finished."
+
+		else
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Create database for project ${_rawdata}."
+
+				for i in "${MULTIQC_METRICS_TO_PLOT[@]}"
+				do
+						local _metrics="${i%:*}"
+						local _table="${i#*:}"
+
+						echo "chronqc database --create \
+						-o  "${CHRONQC_DATABASE_NAME}" \
+						"${CHRONQC_TMP}/${_rawdata}.${_metrics}" \
+						--run-date-info "${CHRONQC_TMP}/${_rawdata}.SequenceRun_run_date_info.csv" \
+						--db-table "${_table}" \
+						"${_sequencer}" -f "|| {
+								log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_rawdata} with "${_sequencer}" stored to Chronqc database." \
+								2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started"
+						mv "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,failed}
+						return
+						}
+				done
+
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} ${_rawdata} with "${_sequencer}" was stored in Chronqc database." \
+				&& rm -f "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.failed" \
+				&& mv -v "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,finished}
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.finished."
+
+		fi
+
+		elif [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
+		then
+				echo "rawdata ${_rawdata} is ready. The data is available at ${PRM_ROOT_DIR}/projects/." \
+				>> "${JOB_CONTROLE_FILE_BASE}.finished"
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished. Setting track & trace state to finished :)."
+		fi
+
+}
+
+
 function processProjectToDB() {
 		local _project="${1}"
 		local _run="${2}"
@@ -192,12 +280,16 @@ function processProjectToDB() {
 
 function generateChronQCOutput() {
 
-		mkdir -p  "${CHRONQC_DATABASE_NAME}/darwin/"
-		chronqc database -f --create --run-date-info "${1}" -o "${CHRONQC_DATABASE_NAME}" --db-table "${3}" "${2}" "${3}"
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "database filled with met ${1}"
+		locale _runinfo="${1}"
+		locale _tablefile="${2}"
+		locale _filetype="${3}"
 
-		mv "${1}" "${ARCHIVE_DIR}"
-		mv "${2}" "${ARCHIVE_DIR}"
+		mkdir -p  "${CHRONQC_DATABASE_NAME}/darwin/"
+		chronqc database -f --create --run-date-info "${_runinfo}" -o "${CHRONQC_DATABASE_NAME}" --db-table "${_filetype}" "${_tablefile}" "${_filetype}"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "database filled with ${_runinfo}"
+
+		mv "${_runinfo}" "${ARCHIVE_DIR}"
+		mv "${_tablefile}" "${ARCHIVE_DIR}"
 }
 
 #
@@ -347,6 +439,39 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 # shellcheck disable=SC2029
 
 module load "chronqc/${CHRONQC_VERSION}"
+
+#
+## Loops over all rawdata folders and checks if it is already in chronQC database. If not than call function 'processRawdataToDB "${rawdata}" to process this project.'
+#
+readarray -t rawdata < <(find "${PRM_ROOT_DIR}/rawdata/ngs/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${PRM_ROOT_DIR}/rawdata/ngs/||")
+if [[ "${#rawdata[@]:-0}" -eq '0' ]]
+then
+		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${PRM_ROOT_DIR}/rawdata/ngs/."
+else
+		for rawdat in "${rawdata[@]}"
+		do
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing rawdat ${rawdat} ..."
+				echo "Working on ${rawdat}" > "${lockFile}"
+
+				export TMP_TRENDANALYSE_DIR="${TMP_ROOT_DIR}/trendanalysis"
+				export TMP_TRENDANALYSE_LOGS_DIR="${TMP_TRENDANALYSE_DIR}/logs"
+				controlFileBase="${TMP_TRENDANALYSE_DIR}/logs/${rawdat}"
+				export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
+				export PROCESSRAWDATATODB_CONTROLE_FILE_BASE="${TMP_TRENDANALYSE_DIR}/logs/${rawdat}.processRawdataToDB"
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${TMP_TRENDANALYSE_DIR}/logs/${rawdat}/"
+				mkdir -p "${TMP_TRENDANALYSE_DIR}/logs/${rawdat}"
+
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${rawdat} ..."
+
+				if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]] && [[ "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.finished" -ot "${JOB_CONTROLE_FILE_BASE}.finished" ]]
+				then
+						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${rawdat}."
+				else
+						processRawdataToDB "${rawdat}"
+				fi
+
+		done
+fi
 
 #
 ## Loops over all runs and projects and checks if it is already in chronQC database. If not than call function 'processProjectToDB "${project}" "${run}" to process this project.'
