@@ -79,10 +79,13 @@ EOH
 
 function processRawdataToDB() {
 		local _rawdata="${1}"
+		local _sequencer=$(echo "${_rawdata}" | cut -d '_' -f2)
+
 
 		CHRONQC_TMP="${TMP_TRENDANALYSE_DIR}/tmp/"
 		CHRONQC_DATABASE_NAME="${TMP_TRENDANALYSE_DIR}/database/"
 		PRM_RAWDATA_DIR="${PRM_ROOT_DIR}/rawdata/ngs/${_rawdata}/Info/"
+
 
 		if [[ -e "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.finished" ]]
 				then
@@ -100,7 +103,6 @@ function processRawdataToDB() {
 				cp "${PRM_RAWDATA_DIR}/SequenceRun_run_date_info.csv" "${CHRONQC_TMP}/${_rawdata}.SequenceRun_run_date_info.csv"
 				cp "${PRM_RAWDATA_DIR}/SequenceRun.csv" "${CHRONQC_TMP}/${_rawdata}.SequenceRun.csv"
 
-				_sequencer=$(echo "${_rawdata}" | cut -d '_' -f2)
 
 				for i in "${MULTIQC_METRICS_TO_PLOT[@]}"
 				do
@@ -108,11 +110,11 @@ function processRawdataToDB() {
 						local _table="${i#*:}"
 
 						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Importing ${_rawdata}.${_metrics}"
-						echo "chronqc database --update --db "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" \
+						chronqc database --update --db "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" \
 						"${CHRONQC_TMP}/${_rawdata}.${_metrics}" \
 						--db-table "${_table}" \
 						--run-date-info "${CHRONQC_TMP}/${_rawdata}.SequenceRun_run_date_info.csv" \
-						"${_sequencer}"" || {
+						"${_sequencer}" || {
 
 						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to import ${_rawdata} with "${_sequencer}" stored to Chronqc database." \
 						2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started"
@@ -135,12 +137,12 @@ function processRawdataToDB() {
 						local _metrics="${i%:*}"
 						local _table="${i#*:}"
 
-						echo "chronqc database --create \
+						chronqc database --create \
 						-o  "${CHRONQC_DATABASE_NAME}" \
 						"${CHRONQC_TMP}/${_rawdata}.${_metrics}" \
 						--run-date-info "${CHRONQC_TMP}/${_rawdata}.SequenceRun_run_date_info.csv" \
 						--db-table "${_table}" \
-						"${_sequencer}" -f "|| {
+						"${_sequencer}" -f || {
 								log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_rawdata} with "${_sequencer}" stored to Chronqc database." \
 								2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started"
 						mv "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,failed}
@@ -225,7 +227,7 @@ function processProjectToDB() {
 										chronqc database --update --db "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" \
 										"${CHRONQC_TMP}/${_project}.2.${_metrics}" \
 										--db-table "${_table}" \
-										--run-date-info "${CHRONQC_TMP}/${_project}.run_date_info.csv" \
+										--run-date-info "${CHRONQC_TMP}/${_project}.2.run_date_info.csv" \
 										"${_panel}" || {
 														log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to import ${_project}: panel: ${_panel} stored to Chronqc database." \
 														2>&1 | tee -a "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.started"
@@ -252,7 +254,7 @@ function processProjectToDB() {
 								chronqc database --create \
 								-o  "${CHRONQC_DATABASE_NAME}" \
 								"${CHRONQC_TMP}/${_project}.2.${_metrics}" \
-								--run-date-info "${CHRONQC_TMP}/${_project}.run_date_info.csv" \
+								--run-date-info "${CHRONQC_TMP}/${_project}.2.run_date_info.csv" \
 								--db-table "${_table}" \
 								"${_panel}" -f || {
 													log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_project}: panel: ${_panel} stored to Chronqc database." \
@@ -280,9 +282,9 @@ function processProjectToDB() {
 
 function generateChronQCOutput() {
 
-		locale _runinfo="${1}"
-		locale _tablefile="${2}"
-		locale _filetype="${3}"
+		local _runinfo="${1}"
+		local _tablefile="${2}"
+		local _filetype="${3}"
 
 		mkdir -p  "${CHRONQC_DATABASE_NAME}/darwin/"
 		chronqc database -f --create --run-date-info "${_runinfo}" -o "${CHRONQC_DATABASE_NAME}" --db-table "${_filetype}" "${_tablefile}" "${_filetype}"
