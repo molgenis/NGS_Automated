@@ -195,16 +195,17 @@ function processProjectToDB() {
 						grep fastqc "${CHRONQC_TMP}/${_project}.multiqc_sources.txt" | awk -v p="${_project}" '{print $3","p","substr($3,1,6)}' >>"${CHRONQC_TMP}/${_project}.2.run_date_info.csv"
 						awk 'BEGIN{FS=OFS=","} NR>1{cmd = "date -d \"" $3 "\" \"+%d/%m/%Y\"";cmd | getline out; $3=out; close("uuidgen")} 1' "${CHRONQC_TMP}/${_project}.2.run_date_info.csv" > "${CHRONQC_TMP}/${_project}.2.run_date_info.csv.tmp"
 						_checkdate=$(awk 'BEGIN{FS=OFS=","} NR==2 {print $3}' "${CHRONQC_TMP}/${_project}.2.run_date_info.csv.tmp")
+						echo "_checkdate:${_checkdate}++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 						mv "${CHRONQC_TMP}/${_project}.2.run_date_info.csv.tmp" "${CHRONQC_TMP}/${_project}.2.run_date_info.csv"
 
-						#check if date is in formar dd/mm/yyyy
+						#check if date is in format dd/mm/yyyy
 	
 						# Get panel information from $_project} based on column 'capturingKit'.
 						_panel=$(awk -F "${SAMPLESHEET_SEP}" 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i}}{if(NR > 1) print $(f["capturingKit"]) }' "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/${_project}.csv" | sort -u | cut -d'/' -f2)
 						IFS='_' read -r -a array <<< "${_panel}"
 						_panel="${array[0]}"
 						
-						if [[ "${_checkdate}"  == "+%d/%m/%Y" ]]
+						if [[ "${_checkdate}"  =~ [0-9] ]]
 						then
 						
 								if [[ -e "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" ]]
@@ -267,7 +268,7 @@ function processProjectToDB() {
 						else
 								log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_project}: panel: ${_panel} has date ${_checkdate} this is not fit for chronQC." \
 								2>&1 | tee -a "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.started"
-								mv "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.{started,${_checkdate}.incorrectDate}"
+								mv -v "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}."{started,incorrectDate}
 								continue
 						fi
 	
