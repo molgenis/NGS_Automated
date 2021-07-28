@@ -313,10 +313,17 @@ function generate_plots(){
 #		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p Concentratie -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Concentratie  "${CHRONQC_TEMPLATE_DIRS}/chronqc.Concentratie.json"
 #		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p NGSInzetten -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" NGSInzetten  "${CHRONQC_TEMPLATE_DIRS}/chronqc.NGSInzetten.json"
 #		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p SamplePrep -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" SamplePrep  "${CHRONQC_TEMPLATE_DIRS}/chronqc.SamplePrep.json"
-
-		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p ArrayInzetten -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" ArrayInzetten  "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.default.json"
 #		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p ArrayInzetten -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" ArrayInzetten  "${CHRONQC_TEMPLATE_DIRS}/chronqc.ArrayInzetten.json"
 #		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p SequenceRun -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" SequenceRun  "${CHRONQC_TEMPLATE_DIRS}/chronqc.SequenceRun.json"
+
+		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p general -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Exoom  "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.default.json"
+		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p AlignmentSummaryMetrics -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Exoom  "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.default.json"
+		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p HsMetrics -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Exoom"${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.default.json"
+		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p Capturing -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Capturing  "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.default.json"
+		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p Concentratie -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Concentratie  "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.default.json"
+		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p NGSInzetten -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" NGSInzetten  "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.default.json"
+		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p SamplePrep -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" SamplePrep  "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.default.json"
+		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p ArrayInzetten -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" ArrayInzetten  "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.default.json"
 		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p SequenceRun -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" SequenceRun  "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.default.json"
 
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "ChronQC reports finished."
