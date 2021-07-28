@@ -203,8 +203,6 @@ function processProjectToDB() {
 						if [[ -e "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" ]]
 						then
 								log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Update database for project ${_project}: panel: ${_panel}."
-								#convert date :|
-								awk 'BEGIN{FS=OFS=","} NR>1{cmd = "date -d \"" $3 "\" \"+%d/%m/%Y\"";cmd | getline out; $3=out; close("uuidgen")} 1' "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/multiqc_data/${_project}.run_date_info.csv" >  "${CHRONQC_TMP}/${_project}.run_date_info.csv"
 
 								for i in "${MULTIQC_METRICS_TO_PLOT[@]}"
 								do
