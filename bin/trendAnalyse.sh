@@ -313,9 +313,8 @@ function generate_plots(){
 		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p Concentratie -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Concentratie  "${CHRONQC_TEMPLATE_DIRS}/chronqc.Concentratie.json"
 		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p NGSInzetten -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" NGSInzetten  "${CHRONQC_TEMPLATE_DIRS}/chronqc.NGSInzetten.json"
 		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p SamplePrep -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" SamplePrep  "${CHRONQC_TEMPLATE_DIRS}/chronqc.SamplePrep.json"
-# de ArrayInzetten en SequenceRun, checken of het zo klopt.
-#		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p ArrayInzetten -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" ArrayInzetten  "${CHRONQC_TEMPLATE_DIRS}/chronqc.ArrayInzetten.json"
-#		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p SequenceRun -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" SequenceRun  "${CHRONQC_TEMPLATE_DIRS}/chronqc.SequenceRun.json"
+		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p ArrayInzetten -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" ArrayInzetten  "${CHRONQC_TEMPLATE_DIRS}/chronqc.ArrayInzetten.json"
+		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p SequenceRun -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" SequenceRun  "${CHRONQC_TEMPLATE_DIRS}/chronqc.SequenceRun.json"
 
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "ChronQC reports finished."
 }
@@ -476,7 +475,7 @@ else
 				then
 						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${rawdat}."
 				else
-					echo "___processRawdataToDB "${rawdat}"_______________"
+					processRawdataToDB "${rawdat}"
 				fi
 
 		done
