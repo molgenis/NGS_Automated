@@ -104,24 +104,18 @@ function processRawdataToDB() {
 				cp "${PRM_RAWDATA_DIR}/SequenceRun.csv" "${CHRONQC_TMP}/${_rawdata}.SequenceRun.csv"
 
 
-				for i in "${MULTIQC_METRICS_TO_PLOT[@]}"
-				do
-						local _metrics="${i%:*}"
-						local _table="${i#*:}"
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Importing ${_rawdata}.SequenceRun.csv"
+				chronqc database --update --db "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" \
+				"${CHRONQC_TMP}/${_rawdata}.SequenceRun.csv" \
+				--db-table SequenceRun \
+				--run-date-info "${CHRONQC_TMP}/${_rawdata}.SequenceRun_run_date_info.csv" \
+				"${_sequencer}" || {
 
-						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Importing ${_rawdata}.${_metrics}"
-						chronqc database --update --db "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" \
-						"${CHRONQC_TMP}/${_rawdata}.${_metrics}" \
-						--db-table "${_table}" \
-						--run-date-info "${CHRONQC_TMP}/${_rawdata}.SequenceRun_run_date_info.csv" \
-						"${_sequencer}" || {
-
-						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to import ${_rawdata} with "${_sequencer}" stored to Chronqc database." \
-						2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started"
-						mv "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,failed}
-						return
-						}
-				done
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to import ${_rawdata} with "${_sequencer}" stored to Chronqc database." \
+				2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started"
+				mv "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,failed}
+				return
+				}
 
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} ${_rawdata} with "${_sequencer}" stored to Chronqc database." \
 				2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started" \
@@ -132,23 +126,17 @@ function processRawdataToDB() {
 		else
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Create database for project ${_rawdata}."
 
-				for i in "${MULTIQC_METRICS_TO_PLOT[@]}"
-				do
-						local _metrics="${i%:*}"
-						local _table="${i#*:}"
-
-						chronqc database --create \
-						-o  "${CHRONQC_DATABASE_NAME}" \
-						"${CHRONQC_TMP}/${_rawdata}.${_metrics}" \
-						--run-date-info "${CHRONQC_TMP}/${_rawdata}.SequenceRun_run_date_info.csv" \
-						--db-table "${_table}" \
-						"${_sequencer}" -f || {
-								log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_rawdata} with "${_sequencer}" stored to Chronqc database." \
-								2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started"
-						mv "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,failed}
-						return
-						}
-				done
+				chronqc database --create \
+				-o  "${CHRONQC_DATABASE_NAME}" \
+				"${CHRONQC_TMP}/${_rawdata}.SequenceRun.csv" \
+				--run-date-info "${CHRONQC_TMP}/${_rawdata}.SequenceRun_run_date_info.csv" \
+				--db-table "SequenceRun" \
+				"${_sequencer}" -f || {
+						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_rawdata} with "${_sequencer}" stored to Chronqc database." \
+						2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started"
+				mv "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,failed}
+				return
+				}
 
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} ${_rawdata} with "${_sequencer}" was stored in Chronqc database." \
 				&& rm -f "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.failed" \
@@ -222,7 +210,8 @@ function processProjectToDB() {
 								do
 										local _metrics="${i%:*}"
 										local _table="${i#*:}"
-													
+										echo "---------_table:${_table}-----_metrics:${_metrics}---------------"									
+			
 										log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Importing ${_project}.${_metrics}"
 										chronqc database --update --db "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" \
 										"${CHRONQC_TMP}/${_project}.2.${_metrics}" \
@@ -472,7 +461,7 @@ else
 				then
 						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${rawdat}."
 				else
-						processRawdataToDB "${rawdat}"
+					echo "___processRawdataToDB "${rawdat}"_______________"
 				fi
 
 		done
