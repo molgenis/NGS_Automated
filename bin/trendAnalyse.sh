@@ -88,61 +88,66 @@ function processRawdataToDB() {
 
 
 		if [[ -e "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.finished" ]]
-				then
+		then
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_rawdata} was already processed. return"
 				return
 		else
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_rawdata} ..." \
 				2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started"
 		fi
+		
 
-		if [[ -e "${PRM_RAWDATA_DIR}/SequenceRun_run_date_info.csv" ]]
-		then
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "found "${PRM_RAWDATA_DIR}/SequenceRun_run_date_info.csv" . Updating ChronQC database with ${_rawdata}."
-
+		if [[ -e "${PRM_RAWDATA_DIR}/SequenceRun_run_date_info.csv"  ]]
+		then 
 				cp "${PRM_RAWDATA_DIR}/SequenceRun_run_date_info.csv" "${CHRONQC_TMP}/${_rawdata}.SequenceRun_run_date_info.csv"
 				cp "${PRM_RAWDATA_DIR}/SequenceRun.csv" "${CHRONQC_TMP}/${_rawdata}.SequenceRun.csv"
 
+				if [[ -e "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" ]]
+				then
+						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "found ${PRM_RAWDATA_DIR}/SequenceRun_run_date_info.csv . Updating ChronQC database with ${_rawdata}."
 
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Importing ${_rawdata}.SequenceRun.csv"
-				chronqc database --update --db "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" \
-				"${CHRONQC_TMP}/${_rawdata}.SequenceRun.csv" \
-				--db-table SequenceRun \
-				--run-date-info "${CHRONQC_TMP}/${_rawdata}.SequenceRun_run_date_info.csv" \
-				"${_sequencer}" || {
+						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Importing ${_rawdata}.SequenceRun.csv"
+						chronqc database --update --db "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" \
+						"${CHRONQC_TMP}/${_rawdata}.SequenceRun.csv" \
+						--db-table SequenceRun \
+						--run-date-info "${CHRONQC_TMP}/${_rawdata}.SequenceRun_run_date_info.csv" \
+						"${_sequencer}" || {
 
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to import ${_rawdata} with "${_sequencer}" stored to Chronqc database." \
-				2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started"
-				mv "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,failed}
-				return
-				}
-
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} ${_rawdata} with "${_sequencer}" stored to Chronqc database." \
-				2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started" \
-				&& rm -f "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.failed" \
-				&& mv -v "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,finished}
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.finished."
-
-		else
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Create database for project ${_rawdata}."
-
-				chronqc database --create \
-				-o  "${CHRONQC_DATABASE_NAME}" \
-				"${CHRONQC_TMP}/${_rawdata}.SequenceRun.csv" \
-				--run-date-info "${CHRONQC_TMP}/${_rawdata}.SequenceRun_run_date_info.csv" \
-				--db-table "SequenceRun" \
-				"${_sequencer}" -f || {
-						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_rawdata} with "${_sequencer}" stored to Chronqc database." \
+						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to import ${_rawdata} with "${_sequencer}" stored to Chronqc database." \
 						2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started"
-				mv "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,failed}
-				return
-				}
+						mv "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,failed}
+						return
+						}
 
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} ${_rawdata} with "${_sequencer}" was stored in Chronqc database." \
-				&& rm -f "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.failed" \
-				&& mv -v "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,finished}
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.finished."
+						log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} ${_rawdata} with "${_sequencer}" stored to Chronqc database." \
+						2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started" \
+						&& rm -f "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.failed" \
+						&& mv -v "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,finished}
+						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.finished."
 
+				else
+						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Create database for project ${_rawdata}."
+
+						chronqc database --create \
+						-o  "${CHRONQC_DATABASE_NAME}" \
+						"${CHRONQC_TMP}/${_rawdata}.SequenceRun.csv" \
+						--run-date-info "${CHRONQC_TMP}/${_rawdata}.SequenceRun_run_date_info.csv" \
+						--db-table "SequenceRun" \
+						"${_sequencer}" -f || {
+								log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_rawdata} with "${_sequencer}" stored to Chronqc database." \
+								2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started"
+						mv "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,failed}
+						return
+						}
+
+						log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} ${_rawdata} with ${_sequencer} was stored in Chronqc database." \
+						&& rm -f "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.failed" \
+						&& mv -v "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,finished}
+						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.finished."
+
+				fi
+		else
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} for sequence run ${_rawdata}, no sequencer statistics were stored "
 		fi
 
 		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
@@ -466,7 +471,7 @@ else
 				export TMP_TRENDANALYSE_LOGS_DIR="${TMP_TRENDANALYSE_DIR}/logs"
 				controlFileBase="${TMP_TRENDANALYSE_DIR}/logs/${rawdat}"
 				export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
-				export PROCESSRAWDATATODB_CONTROLE_FILE_BASE="${TMP_TRENDANALYSE_DIR}/logs/${rawdat}.processRawdataToDB"
+				export PROCESSRAWDATATODB_CONTROLE_FILE_BASE="${TMP_TRENDANALYSE_DIR}/logs/${rawdat}/${rawdat}.processRawdataToDB"
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${TMP_TRENDANALYSE_DIR}/logs/${rawdat}/"
 				mkdir -p "${TMP_TRENDANALYSE_DIR}/logs/${rawdat}"
 
