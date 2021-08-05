@@ -113,13 +113,13 @@ function processRawdataToDB() {
 						--run-date-info "${CHRONQC_TMP}/${_rawdata}.SequenceRun_run_date_info.csv" \
 						"${_sequencer}" || {
 
-						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to import ${_rawdata} with "${_sequencer}" stored to Chronqc database." \
+						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to import ${_rawdata} with ${_sequencer} stored to Chronqc database." \
 						2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started"
 						mv "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,failed}
 						return
 						}
 
-						log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} ${_rawdata} with "${_sequencer}" stored to Chronqc database." \
+						log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} ${_rawdata} with ${_sequencer} stored to Chronqc database." \
 						2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started" \
 						&& rm -f "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.failed" \
 						&& mv -v "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,finished}
@@ -134,7 +134,7 @@ function processRawdataToDB() {
 						--run-date-info "${CHRONQC_TMP}/${_rawdata}.SequenceRun_run_date_info.csv" \
 						--db-table "SequenceRun" \
 						"${_sequencer}" -f || {
-								log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_rawdata} with "${_sequencer}" stored to Chronqc database." \
+								log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_rawdata} with ${_sequencer} stored to Chronqc database." \
 								2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started"
 						mv "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,failed}
 						return
@@ -171,80 +171,77 @@ function processProjectToDB() {
 		if [[ -e "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.finished" ]]
 		then
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_project}/${_run} was already processed. return"
-						return
-				else
-						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run} ..." \
-						2>&1 | tee -a "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.started"
-				fi
+				return
+		else
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run} ..." \
+				2>&1 | tee -a "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.started"
+		fi
 
-				if [[ -e "${PRM_MULTIQCPROJECT_DIR}/${_project}.run_date_info.csv" ]]
+		if [[ -e "${PRM_MULTIQCPROJECT_DIR}/${_project}.run_date_info.csv" ]]
+		then
+
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "found ${PRM_MULTIQCPROJECT_DIR}/${_project}.run_date_info.csv. Updating ChronQC database with ${_project}."
+
+				cp "${PRM_MULTIQCPROJECT_DIR}/${_project}.run_date_info.csv" "${CHRONQC_TMP}/${_project}.run_date_info.csv"
+				cp "${PRM_MULTIQCPROJECT_DIR}/multiqc_sources.txt" "${CHRONQC_TMP}/${_project}.multiqc_sources.txt"
+
+				for i in "${MULTIQC_METRICS_TO_PLOT[@]}"
+				do
+						local _metrics="${i%:*}"
+						cp "${PRM_MULTIQCPROJECT_DIR}/${_metrics}" "${CHRONQC_TMP}/${_project}.${_metrics}"
+						perl -pe 's|SAMPLE\t|SAMPLE_NAME2\t|' "${CHRONQC_TMP}/${_project}.${_metrics}" > "${CHRONQC_TMP}/${_project}.2.${_metrics}"
+				done
+
+				# rename one of the duplicated SAMPLE column names to make it work.
+				cp "${CHRONQC_TMP}/${_project}.run_date_info.csv" "${CHRONQC_TMP}/${_project}.2.run_date_info.csv"
+
+				#Gets all the samples processed with FastQC form the MultiQC multi_source file. This is done because samplenames differ from regular samplesheet at that stage in th epipeline..
+				#The Output is converted into standard ChronQC run_date_info.csv format.
+				grep fastqc "${CHRONQC_TMP}/${_project}.multiqc_sources.txt" | awk -v p="${_project}" '{print $3","p","substr($3,1,6)}' >>"${CHRONQC_TMP}/${_project}.2.run_date_info.csv"
+				awk 'BEGIN{FS=OFS=","} NR>1{cmd = "date -d \"" $3 "\" \"+%d/%m/%Y\"";cmd | getline out; $3=out; close("uuidgen")} 1' "${CHRONQC_TMP}/${_project}.2.run_date_info.csv" > "${CHRONQC_TMP}/${_project}.2.run_date_info.csv.tmp"
+				#Check if the date in the run_date_info.csv file is in correct format, dd/mm/yyyy
+				_checkdate=$(awk 'BEGIN{FS=OFS=","} NR==2 {print $3}' "${CHRONQC_TMP}/${_project}.2.run_date_info.csv.tmp")
+				echo "_checkdate:${_checkdate}"
+				mv "${CHRONQC_TMP}/${_project}.2.run_date_info.csv.tmp" "${CHRONQC_TMP}/${_project}.2.run_date_info.csv"
+
+				# Get panel information from $_project} based on column 'capturingKit'.
+				_panel=$(awk -F "${SAMPLESHEET_SEP}" 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i}}{if(NR > 1) print $(f["capturingKit"]) }' "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/${_project}.csv" | sort -u | cut -d'/' -f2)
+				IFS='_' read -r -a array <<< "${_panel}"
+				_panel="${array[0]}"
+
+				if [[ "${_checkdate}"  =~ [0-9] ]]
 				then
-
-						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "found ${PRM_MULTIQCPROJECT_DIR}/${_project}.run_date_info.csv. Updating ChronQC database with ${_project}."
-
-						cp "${PRM_MULTIQCPROJECT_DIR}/${_project}.run_date_info.csv" "${CHRONQC_TMP}/${_project}.run_date_info.csv"
-						cp "${PRM_MULTIQCPROJECT_DIR}/multiqc_sources.txt" "${CHRONQC_TMP}/${_project}.multiqc_sources.txt"
-
-						for i in "${MULTIQC_METRICS_TO_PLOT[@]}"
-						do
-								local _metrics="${i%:*}"
-								cp "${PRM_MULTIQCPROJECT_DIR}/${_metrics}" "${CHRONQC_TMP}/${_project}.${_metrics}"
-								perl -pe 's|SAMPLE\t|SAMPLE_NAME2\t|' "${CHRONQC_TMP}/${_project}.${_metrics}" > "${CHRONQC_TMP}/${_project}.2.${_metrics}"
-						done
-
-						# rename one of the duplicated SAMPLE column names to make it work.
-						cp "${CHRONQC_TMP}/${_project}.run_date_info.csv" "${CHRONQC_TMP}/${_project}.2.run_date_info.csv"
-
-						#Gets all the samples processed with FastQC form the MultiQC multi_source file. This is done because samplenames differ from regular samplesheet at that stage in th epipeline..
-						#The Output is converted into standard ChronQC run_date_info.csv format.
-						grep fastqc "${CHRONQC_TMP}/${_project}.multiqc_sources.txt" | awk -v p="${_project}" '{print $3","p","substr($3,1,6)}' >>"${CHRONQC_TMP}/${_project}.2.run_date_info.csv"
-						awk 'BEGIN{FS=OFS=","} NR>1{cmd = "date -d \"" $3 "\" \"+%d/%m/%Y\"";cmd | getline out; $3=out; close("uuidgen")} 1' "${CHRONQC_TMP}/${_project}.2.run_date_info.csv" > "${CHRONQC_TMP}/${_project}.2.run_date_info.csv.tmp"
-						_checkdate=$(awk 'BEGIN{FS=OFS=","} NR==2 {print $3}' "${CHRONQC_TMP}/${_project}.2.run_date_info.csv.tmp")
-						echo "_checkdate:${_checkdate}++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-						mv "${CHRONQC_TMP}/${_project}.2.run_date_info.csv.tmp" "${CHRONQC_TMP}/${_project}.2.run_date_info.csv"
-
-						#check if date is in format dd/mm/yyyy
-	
-						# Get panel information from $_project} based on column 'capturingKit'.
-						_panel=$(awk -F "${SAMPLESHEET_SEP}" 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i}}{if(NR > 1) print $(f["capturingKit"]) }' "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/${_project}.csv" | sort -u | cut -d'/' -f2)
-						IFS='_' read -r -a array <<< "${_panel}"
-						_panel="${array[0]}"
-						
-						if [[ "${_checkdate}"  =~ [0-9] ]]
+						if [[ -e "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" ]]
 						then
-						
-								if [[ -e "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" ]]
-								then
-										log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Update database for project ${_project}: panel: ${_panel}."
+								log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Update database for project ${_project}: panel: ${_panel}."
 
-										for i in "${MULTIQC_METRICS_TO_PLOT[@]}"
-										do
-												local _metrics="${i%:*}"
-												local _table="${i#*:}"
-												echo "---------_table:${_table}-----_metrics:${_metrics}---------------"									
-			
-												log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Importing ${_project}.${_metrics}"
-												chronqc database --update --db "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" \
-												"${CHRONQC_TMP}/${_project}.2.${_metrics}" \
-												--db-table "${_table}" \
-												--run-date-info "${CHRONQC_TMP}/${_project}.2.run_date_info.csv" \
-												"${_panel}" || {
-																log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to import ${_project}: panel: ${_panel} stored to Chronqc database." \
-																2>&1 | tee -a "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.started"
-																mv "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}."{started,failed}
-																return
-															}
-										done
+								for i in "${MULTIQC_METRICS_TO_PLOT[@]}"
+								do
+										local _metrics="${i%:*}"
+										local _table="${i#*:}"
 
-										log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} ${_project}: panel: ${_panel} stored to Chronqc database." \
-										2>&1 | tee -a "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.started" \
-										&& rm -f "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.failed" \
-										&& mv -v "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}."{started,finished}
-										log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.finished."
+										log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Importing ${_project}.${_metrics}"
+										chronqc database --update --db "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" \
+										"${CHRONQC_TMP}/${_project}.2.${_metrics}" \
+										--db-table "${_table}" \
+										--run-date-info "${CHRONQC_TMP}/${_project}.2.run_date_info.csv" \
+										"${_panel}" || {
+														log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to import ${_project}: panel: ${_panel} stored to Chronqc database." \
+														2>&1 | tee -a "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.started"
+														mv "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}."{started,failed}
+														return
+														}
+								done
 
-								else
+								log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} ${_project}: panel: ${_panel} stored to Chronqc database." \
+								2>&1 | tee -a "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.started" \
+								&& rm -f "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.failed" \
+								&& mv -v "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}."{started,finished}
+								log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.finished."
 
-										log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Create database for project ${_project}: panel: ${_panel}."
+						else
+
+								log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Create database for project ${_project}: panel: ${_panel}."
 
 								for i in "${MULTIQC_METRICS_TO_PLOT[@]}"
 								do
@@ -269,23 +266,20 @@ function processProjectToDB() {
 										&& mv -v "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}."{started,finished}
 										log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.finished."
 
-								fi
-						else
-								log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_project}: panel: ${_panel} has date ${_checkdate} this is not fit for chronQC." \
-								2>&1 | tee -a "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.started"
-								mv -v "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}."{started,incorrectDate}
-								continue
 						fi
-	
-								
-								
-								
-				elif [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
-				then
-						echo "Project/run ${_project}/${_run} is ready. The data is available at ${PRM_ROOT_DIR}/projects/." \
-						>> "${JOB_CONTROLE_FILE_BASE}.finished"
-						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished. Setting track & trace state to finished :)."
+				else
+						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_project}: panel: ${_panel} has date ${_checkdate} this is not fit for chronQC." \
+						2>&1 | tee -a "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.started"
+						mv -v "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}."{started,incorrectDate}
+						continue
 				fi
+
+		elif [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
+		then
+				echo "Project/run ${_project}/${_run} is ready. The data is available at ${PRM_ROOT_DIR}/projects/." \
+				>> "${JOB_CONTROLE_FILE_BASE}.finished"
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished. Setting track & trace state to finished :)."
+		fi
 
 }
 
@@ -320,7 +314,9 @@ function generate_plots(){
 		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p NGSInzetten -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" NGSInzetten  "${CHRONQC_TEMPLATE_DIRS}/chronqc.NGSInzetten.json"
 		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p SamplePrep -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" SamplePrep  "${CHRONQC_TEMPLATE_DIRS}/chronqc.SamplePrep.json"
 		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p ArrayInzetten -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" ArrayInzetten  "${CHRONQC_TEMPLATE_DIRS}/chronqc.ArrayInzetten.json"
-		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p SequenceRun -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" SequenceRun  "${CHRONQC_TEMPLATE_DIRS}/chronqc.SequenceRun.json"
+
+#		In order to use the sequence run chronQC, we need data first, so the NGS_Demultplexing has to be released first.
+#		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p SequenceRun -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" NB501043  "${CHRONQC_TEMPLATE_DIRS}/chronqc.SequenceRun.json"
 
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "ChronQC reports finished."
 }
