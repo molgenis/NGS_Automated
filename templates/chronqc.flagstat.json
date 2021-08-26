@@ -1,0 +1,233 @@
+[
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "duplicates_failed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "duplicates_passed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "flagstat_total"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "mapped_failed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "mapped_failed_pct"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "mapped_passed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "mapped_passed_pct"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "paired_in_sequencing_failed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "paired_in_sequencing_passed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "properly_paired_failed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "properly_paired_failed_pct"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "properly_paired_passed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "properly_paired_passed_pct"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "read1_failed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "read1_passed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "read2_failed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "read2_passed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "secondary_failed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "secondary_passed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "singletons_failed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "singletons_failed_pct"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "singletons_passed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "singletons_passed_pct"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "supplementary_failed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "supplementary_passed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "total_failed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "total_passed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "with_itself_and_mate_mapped_failed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "with_itself_and_mate_mapped_passed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "with_mate_mapped_to_a_different_chr_(mapQ_>=_5)_failed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "with_mate_mapped_to_a_different_chr_(mapQ_>=_5)_passed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "with_mate_mapped_to_a_different_chr_failed"
+        }
+    },
+    {
+        "table_name": "flagstat",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "y_value": "with_mate_mapped_to_a_different_chr_passed"
+        }
+    }
+]
