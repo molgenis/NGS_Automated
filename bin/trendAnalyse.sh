@@ -79,7 +79,8 @@ EOH
 
 function processRawdataToDB() {
 		local _rawdata="${1}"
-		local _sequencer=$(echo "${_rawdata}" | cut -d '_' -f2)
+		local _sequencer
+		_sequencer=$(echo "${_rawdata}" | cut -d '_' -f2)
 
 
 		CHRONQC_TMP="${TMP_TRENDANALYSE_DIR}/tmp/"
@@ -593,7 +594,7 @@ done < <(find "${IMPORT_DIR}"/ -maxdepth 1 -type f -iname "*runinfo*.csv")
 #
 generate_plots
 
-log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "cleanup "${CHRONQC_TMP}"* ..."
+log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "cleanup ${CHRONQC_TMP}* ..."
 rm "${CHRONQC_TMP}/"*
 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished successfully!'
