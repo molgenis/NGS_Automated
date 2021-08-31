@@ -189,7 +189,7 @@ function processProjectToDB() {
 				for i in "${MULTIQC_METRICS_TO_PLOT[@]}"
 				do
 						local _metrics="${i%:*}"
-						echo "++++++++++++++++++++++++++_metrics: ${_metrics}+++++++++++++++++++++++++++++++++++++++++++++"
+						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "using _metrics: ${_metrics}"
 						if [[ "${_metrics}" == multiqc_picard_insertSize.txt ]]
 						then
 							cp "${PRM_MULTIQCPROJECT_DIR}/${_metrics}" "${CHRONQC_TMP}/${_project}.${_metrics}"
