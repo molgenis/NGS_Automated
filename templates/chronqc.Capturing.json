@@ -1,0 +1,18 @@
+[
+    {
+        "table_name": "Capturing",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "chart_title": "Concentration ng/ul",
+            "y_value": "CONCENTRATION"
+        }
+    },
+    {
+        "table_name": "Capturing",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "chart_title": "Molarity nmol/L",
+            "y_value": "MOLARITY"
+        }
+    }
+]
