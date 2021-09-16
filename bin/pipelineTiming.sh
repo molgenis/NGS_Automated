@@ -316,7 +316,7 @@ do
 		touch "${TMP_ROOT_DIR}/logs/${project}/${run}.copyProjectDataToPrmTiming.finished"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "copyProjectDataToPrm finished for project ${project}"
 	else
-		timeStampCopyProjectDataToPrm=$(ssh "${HOSTNAME_PRM}" "find \"/groups/${GROUP}/${PRM_LFS}/logs/${project}/\" -type f -mmin +240 -iname \"${run}.copyProjectDataToPrm.started\""
+		timeStampCopyProjectDataToPrm=$(ssh "${HOSTNAME_PRM}" "find "/groups/${GROUP}/${PRM_LFS}/logs/${project}/" -type f -mmin +240 -iname "${run}.copyProjectDataToPrm.started"")
 		if [[ -z "${timeStampCopyProjectDataToPrm}" ]]
 		then
 			echo -e "copyProjectDataToPrm has not started yet, or is running" >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
