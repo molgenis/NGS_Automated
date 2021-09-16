@@ -316,6 +316,7 @@ do
 		touch "${TMP_ROOT_DIR}/logs/${project}/${run}.copyProjectDataToPrmTiming.finished"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "copyProjectDataToPrm finished for project ${project}"
 	else
+		#shellcheck disable=SC2029
 		timeStampCopyProjectDataToPrm=$(ssh "${HOSTNAME_PRM}" "find \"/groups/${GROUP}/${PRM_LFS}/logs/${project}/\" -type f -mmin +240 -iname \"${run}.copyProjectDataToPrm.started\"")
 		if [[ -z "${timeStampCopyProjectDataToPrm}" ]]
 		then
