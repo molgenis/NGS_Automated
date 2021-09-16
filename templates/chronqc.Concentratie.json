@@ -1,0 +1,32 @@
+[
+    {
+        "table_name": "Concentratie",
+        "chart_type": "time_series_with_absolute_threshold",
+        "chart_properties": {
+            "chart_title": "A260_230 (Mean per run)",
+            "lower_threshold": 1.4,
+            "upper_threshold": 2.2,
+            "y_value": "A260_230"
+        }
+    },
+    {
+        "table_name": "Concentratie",
+        "chart_type": "time_series_with_absolute_threshold",
+        "chart_properties": {
+            "chart_title": "A260_280 (Mean per run)",
+            "lower_threshold": 1.4,
+            "upper_threshold": 2.2,
+            "y_value": "A260_280"
+        }
+    },
+    {
+        "table_name": "Concentratie",
+        "chart_type": "time_series_with_absolute_threshold",
+        "chart_properties": {
+            "chart_title": "YIELD ng/ul (Mean per run)",
+            "lower_threshold": 80,
+            "y_value": "YIELD"
+        }
+    }
+
+]
