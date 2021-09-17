@@ -189,7 +189,7 @@ function processProjectToDB() {
 				for i in "${MULTIQC_METRICS_TO_PLOT[@]}"
 				do
 						local _metrics="${i%:*}"
-						echo "++++++++++++++++++++++++++_metrics: ${_metrics}+++++++++++++++++++++++++++++++++++++++++++++"
+						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "using _metrics: ${_metrics}"
 						if [[ "${_metrics}" == multiqc_picard_insertSize.txt ]]
 						then
 							cp "${PRM_MULTIQCPROJECT_DIR}/${_metrics}" "${CHRONQC_TMP}/${_project}.${_metrics}"
@@ -347,8 +347,8 @@ function generate_plots(){
 		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p general -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Exoom  "${CHRONQC_TEMPLATE_DIRS}/chronqc.general.json"
 		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p AlignmentSummaryMetrics -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Exoom  "${CHRONQC_TEMPLATE_DIRS}/chronqc.AlignmentSummaryMetrics.json"
 		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p HsMetrics -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Exoom  "${CHRONQC_TEMPLATE_DIRS}/chronqc.HsMetrics.json"
-		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p insertSize -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Exoom  "${CHRONQC_TEMPLATE_DIRS}/chronqc.insertSize.json"
-		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p flagstat -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Exoom  "${CHRONQC_TEMPLATE_DIRS}/chronqc.flagstat.json"
+#		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p insertSize -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Exoom  "${CHRONQC_TEMPLATE_DIRS}/chronqc.insertSize.json"
+#		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p flagstat -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Exoom  "${CHRONQC_TEMPLATE_DIRS}/chronqc.flagstat.json"
 
 		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p Capturing -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Capturing  "${CHRONQC_TEMPLATE_DIRS}/chronqc.Capturing.json"
 		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p Concentratie -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Concentratie  "${CHRONQC_TEMPLATE_DIRS}/chronqc.Concentratie.json"
