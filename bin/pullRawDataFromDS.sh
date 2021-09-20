@@ -220,8 +220,9 @@ else
 					> "${logDir}/${gsBatch}.uploadCompletedListing_${logTimeStamp}.log"
 			fi
 			#
-			# Rsync everything but the .finished file: may be incompletely uploaded batch,
-			# but we already rsync everything we've got so far.
+			# Rsync everything except the *.finished file and except any "hidden" files starting with a dot
+			# (which may be temporary files created by rsync and which we do not have permissions for):
+			# this may be an incompletely uploaded batch, but we already rsync everything we've got so far.
 			#
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing everything but the .finished file for ${gsBatch} ..."
 			/usr/bin/rsync -vrltD \
@@ -230,6 +231,7 @@ else
 				--omit-dir-times \
 				--omit-link-times \
 				--exclude='*.finished' \
+				--exclude='.*' \
 				"${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}" \
 				"/groups/${GROUP}/${TMP_LFS}/"
 			#

@@ -251,7 +251,7 @@ do
 
 	if [[ ! -d "${logsDir}/${project}/" ]]
 	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The pipeline has not started jet for project: ${project}"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The pipeline has not started yet for project: ${project}"
 		continue
 	else
 		touch "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
@@ -310,22 +310,23 @@ do
 	fi 
 
 	## step 3, check the copyProjectDataToPrm
-	if [ -e "${logsDir}/${project}/${run}.copyProjectDataToPrm.finished" ]
+	if ssh "${HOSTNAME_PRM}" test -e "/groups/${GROUP}/${PRM_LFS}/logs/${project}/${run}.copyProjectDataToPrm.finished"
 	then
 		echo -e "copyProjectDataToPrm is finished for project ${project}" >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
 		touch "${TMP_ROOT_DIR}/logs/${project}/${run}.copyProjectDataToPrmTiming.finished"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "copyProjectDataToPrm finished for project ${project}"
 	else
-		timeStampCopyProjectDataToPrm=$(find "${logsDir}/${project}/" -type f -mmin +240 -iname "${run}.copyProjectDataToPrm.started")
+		#shellcheck disable=SC2029
+		timeStampCopyProjectDataToPrm=$(ssh "${HOSTNAME_PRM}" "find \"/groups/${GROUP}/${PRM_LFS}/logs/${project}/\" -type f -mmin +240 -iname \"${run}.copyProjectDataToPrm.started\"")
 		if [[ -z "${timeStampCopyProjectDataToPrm}" ]]
 		then
-			echo -e "copyProjectDataToPrm has not started jet, or is running" >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
+			echo -e "copyProjectDataToPrm has not started yet, or is running" >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "copyProjectDataToPrm has not started yet or is running for project ${project}"
 			continue
 		else
 			echo -e "copyProjectDataToPrm.started file is OLDER than 4 hours.\n" \
 			"time ${run}.copyProjectDataToPrm.started was last modified:\n" \
-			"$(stat -c %y "${TMP_ROOT_DIR}/logs/${project}/${run}.copyProjectDataToPrm.started")" >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
+			ssh "${HOSTNAME_PRM}" "stat -c %y \"${TMP_ROOT_DIR}/logs/${project}/${run}.copyProjectDataToPrm.started\"" >> "${TMP_ROOT_DIR}/logs/${project}/${run}.${SCRIPT_NAME}.log"
 			touch "${TMP_ROOT_DIR}/logs/${project}/${run}.copyProjectDataToPrmTiming.failed"
 			echo -e "Dear HPC helpdesk,\n\nPlease check if there is something wrong with the pipeline.\nThe copyProjectDataToPrm has started but is not finished after 6h for project ${project}.\n\nKind regards\nHPC" > "${TMP_ROOT_DIR}/logs/${project}/${run}.copyProjectDataToPrmTiming.failed"
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "copyProjectDataToPrm.started file OLDER than 4 hours for project ${project}"
