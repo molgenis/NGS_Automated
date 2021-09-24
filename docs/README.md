@@ -54,7 +54,7 @@ This script will first produce a generatedscripts <br>
 #### 1.5 copy project data to prm
 This script will copy the project data to an archive storage
 
-**Scriptname:** calculateProjectMd5s.sh<br />
+**Scriptname:** copyProjectDataToPrm.sh<br />
 **User:**  umcg-gd-dm<br />
 **Cluster:** chaperone.umcg.nl / coenzyme.umcg.nl<br />
 
