@@ -91,7 +91,7 @@ function rsyncProjectRun() {
 	#        in addition to "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished"
 	# for backwards compatibility with old NGS_Automated 1.x.
 	#
-	local _rsyncRequired='false'
+
 	# shellcheck disable=SC2174
 	mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${_project}/"
 
