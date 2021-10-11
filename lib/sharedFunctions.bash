@@ -205,7 +205,7 @@ function trackAndTracePostFromFile() {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to login at ${MOLGENISSERVER}."
 			return 1
 	}
-	_token=$(echo "${_curlResponse}" | awk 'BEGIN {FS=":"}{if (NR==2){print $2}}' | awk 'BEGIN {FS="\""}{print $2}')
+	_token=$(echo "${_curlResponse}" | awk 'BEGIN {FS=":"}{if ($1 ~ /token/){ print $2}}' | awk 'BEGIN {FS="\""}{print $2}')
 	#
 	# Upload file.
 	#
@@ -267,7 +267,7 @@ function trackAndTracePut() {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to login at ${MOLGENISSERVER}."
 			return
 	}
-	_token=$(echo "${_curlResponse}" | awk 'BEGIN {FS=":"}{if (NR==2){print $2}}' | awk 'BEGIN {FS="\""}{print $2}')
+	_token=$(echo "${_curlResponse}" | awk 'BEGIN {FS=":"}{if ($1 ~ /token/){ print $2}}' | awk 'BEGIN {FS="\""}{print $2}')
 	#
 	# PUT data to Track & Trace server API.
 	#
