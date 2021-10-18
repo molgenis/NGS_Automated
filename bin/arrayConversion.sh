@@ -251,7 +251,7 @@ else
 			# Track and Trace.
 			#
 			timeStamp="$(date +%FT%T%z)"
-			printf '%s\n' 'run_id,group,processRawData,copy_raw_prm,projects,date' \
+			printf '%s\n' 'run_id,group,process_raw_data,copy_raw_prm,projects,date' \
 				> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
 			printf '%s\n' "${project},${group},started,,,${timeStamp}" \
 				>> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
