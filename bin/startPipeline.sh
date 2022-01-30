@@ -227,7 +227,7 @@ function submitJobScripts () {
 	# Track and Trace: jobs for this project.
 	#
 	local _jobName
-	readarray -t _jobNames < <(grep -o '^processJob' submit.sh  | cut -d ' ' -f 2 | tr -d '"')
+	readarray -t _jobNames < <(grep '^processJob' submit.sh  | cut -d ' ' -f 2 | tr -d '"')
 	_url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_samples&hideselect=true&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
 	printf '%s,%s,%s,%s,%s,%s,%s,%s\n' 'project_job' 'job' 'project' 'started_date' 'finished_date' 'status' 'url' 'step' \
 		>  "${JOB_CONTROLE_FILE_BASE}.trace_post_jobs.csv"

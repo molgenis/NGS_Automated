@@ -49,7 +49,7 @@ function showHelp() {
 	#
 	cat <<EOH
 ======================================================================================================================
-Script to start NGS_Demultiplexing automagicly when sequencer is finished, and corresponding samplesheet is available.
+Script to detect start/finish time processGsRawData script.
 
 Usage:
 
@@ -163,64 +163,46 @@ fi
 
 
 #
-##	  This script will run on gattaca0[1-2]. And will check how old the run0*.demultiplexing.started is (last time it is modified). 
+##	  This script will run on gattaca0[1-2]. And will check how old the run0*.processGsRawData.started is (last time it is modified). 
 ###	 It will make a file per project, called like the project.csv, containing the run number.
 ##	  LZ will pull these files, so the project can be monitored on LZ. 
 # 
 
-timeStampDir="${SCR_ROOT_DIR}/logs/Timestamp/"
+timeStampDir="${TMP_ROOT_DIR}/logs/Timestamp/"
 
 ## check if there are samplesheet available for run time checking.
 
-declare -a _checkSampleSheet
-mapfile -t _checkSampleSheet < <(find "${SCR_ROOT_DIR}/Samplesheets" -maxdepth 1 -type f -name '*.csv')
-
-if [[ "${#_checkSampleSheet[@]:-0}" -lt '1' ]]
+#mapfile -t _checkLogs < <(find "${TMP_ROOT_DIR}/logs/*/" -maxdepth 1 -type f -name '*.csv')
+mapfile -t _gsProjects < <(find "${TMP_ROOT_DIR}/logs/"*/ -maxdepth 1 -type f -name '*process*' | awk 'BEGIN{FS="/"}{print $6}' | uniq)
+if [[ "${#_gsProjects[@]:-0}" -lt '1' ]]
 then
-	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "All runs are processed, no new sample sheet available"
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "No gsProjects found in ${TMP_ROOT_DIR}/logs/"
 fi
 
-for sampleSheet in "${_checkSampleSheet[@]}"
+for gsProject in "${_gsProjects[@]}"
 do 
-	sequenceRun=$(basename "${sampleSheet}" .csv)
-	## check if there is a sequence run corresponding to the samplesheet.
-	if [[ ! -d "${SCR_ROOT_DIR}/runs/${sequenceRun}/" ]]
-	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no data corresponding to run:${sequenceRun}, check if the samplesheet is correct"
-		continue
-	fi
-	## check if the sequencer is ready.
-	if [[ ! -d "${SCR_ROOT_DIR}/logs/${sequenceRun}/" ]]
-	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer is not finished yet for run ${sequenceRun}"
-		continue
-	fi
-	
-	## determine run number.
-	declare -a _demultiplexingFinished
-	declare -a _demultiplexingStarted
-	mapfile -t _demultiplexingFinished < <(find "${SCR_ROOT_DIR}/logs/${sequenceRun}/" -name '*.demultiplexing.finished')
-	mapfile -t _demultiplexingStarted < <(find "${SCR_ROOT_DIR}/logs/${sequenceRun}/" -name '*.demultiplexing.started')
-	
+	mapfile -t _processGsRawDataFinished < <(find "${SCR_ROOT_DIR}/logs/${gsProject}/" -name '*.processGsRawData.finished')
+	mapfile -t _processGsRawDataStarted < <(find "${SCR_ROOT_DIR}/logs/${gsProject}/" -name '*.processGsRawData.started')
+
 	if [[ "${#_demultiplexingFinished[@]:-0}" -eq '1' ]]
 	then
-		run=$(basename "${_demultiplexingFinished[0]}" .demultiplexing.finished)
+		run=$(basename "${_processGsRawDataFinished[0]}" .processGsRawData.finished)
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using run number: ${run}"
 	elif [[ "${#_demultiplexingFinished[@]:-0}" -gt '1' ]]
 	then
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${sequenceRun} due to multiple demultiplexing.finished files."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${gsProject} due to multiple processGsRawData.finished files."
 		return
 	elif [[ "${#_demultiplexingFinished[@]:-0}" -lt '1' ]]
 	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping because runnumber can't be determined using existing scripts for sequenceRun ${sequenceRun}."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping because runnumber can't be determined using existing scripts for gsProject ${gsProject}."
 		return
 	elif [[ "${#_demultiplexingStarted[@]:-0}" -eq '1' ]]
 	then
-		run=$(basename "${_demultiplexingStarted[0]}" .demultiplexing.started)
+		run=$(basename "${_demultiplexingStarted[0]}" .processGsRawData.started)
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using run number: ${run}"
 	elif [[ "${#_demultiplexingStarted[@]:-0}" -gt '1' ]]
 	then
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${sequenceRun} due to multiple demultiplexing.started files."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${sequenceRun} due to multiple processGsRawData.started files."
 		return
 	elif [[ "${#_demultiplexingStarted[@]:-0}" -lt '1' ]]
 	then
@@ -228,14 +210,19 @@ do
 		return
 	fi
 	
-	touch "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
-	echo -e "moment of checking run time: $(date)\nsamplesheet: ${sampleSheet}\n" > "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using sampleSheet: ${sampleSheet}"
+	touch "${TMP_ROOT_DIR}/logs/${gsProject}/${run}.${SCRIPT_NAME}.log"
+	echo -e "moment of checking run time: $(date)\n" > "${SCR_ROOT_DIR}/logs/${gsProject}/${run}.${SCRIPT_NAME}.log"
+	#log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "using sampleSheet: ${sampleSheet}"
 
 	## check if the demultiplexing is finished. If it is, make a Timestamp sheet so the pipeline and copyRawDataToPrm steps can be monitored.
 	## If the demultiplexing is not finished yet, check how old the .started file is.
-	if [ -e "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.demultiplexing.finished" ]
-	then
+	if [ -e "${TMP_ROOT_DIR}/logs/${gsProject}/${run}.processGsRawData.finished" ]
+	then	
+		rawData=$(find "${TMP_ROOT_DIR}/${gsProject}/" -mindepth 1 -type d)
+				
+		welke informatie hebben we waar?
+		${TMP_ROOT_DIR}/gsProject bevat rawdata naam
+		
 		declare -a sampleSheetColumnNames=()
 		declare -A sampleSheetColumnOffsets=()
 		declare -a projects=()
@@ -266,24 +253,25 @@ do
 			else
 				echo -e "${sequenceRun}" >> "${projectStampFile}"
 			fi
+			
 			touch "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.finished"
 			echo -e "Demultiplexing is finished for sequence run ${sequenceRun}" >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing is finished for sequence run ${sequenceRun}"
 		done
 	else
-		timeStamp=$(find "${SCR_ROOT_DIR}/logs/${sequenceRun}/" -type f -mmin +60 -iname "${run}.demultiplexing.started")
+		timeStamp=$(find "${SCR_ROOT_DIR}/logs/${sequenceRun}/" -type f -mmin +60 -iname "${run}.processGsRawData.started")
 		if [[ -z "${timeStamp}" ]]
 		then
 			echo -e "Demultiplexing is running for sequence run ${sequenceRun}" >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing is running for sequence run ${sequenceRun}"
 		else
-			echo -e "demultiplexing.started file is OLDER than 1 hour.\ntime ${run}.demultiplexing.started was last modified:" \
-			"$(stat -c %y "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.demultiplexing.started")" >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
+			echo -e "processGsRawData.started file is OLDER than 1 hour.\ntime ${run}.processGsRawData.started was last modified:" \
+			"$(stat -c %y "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.processGsRawData.started")" >> "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.log"
 			
 			touch "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.failed"
 			echo -e "Dear HPC helpdesk,\n\nPlease check if there is something wrong with the demultiplexing pipeline.\nThe demultiplexing of run ${sequenceRun} is not finished after 1h.\n\nKind regards\nHPC" > "${SCR_ROOT_DIR}/logs/${sequenceRun}/${run}.${SCRIPT_NAME}.failed"
 			
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Demultiplexing.started file is OLDER than 1 hour for sequencerun: ${sequenceRun}"
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "processGsRawData.started file is OLDER than 1 hour for sequencerun: ${sequenceRun}"
 		fi 
 	fi
 done
