@@ -55,6 +55,8 @@ Options:
 	-h   Show this help.
 	-g   Group.
 	-e   Enable email notification. (Disabled by default.)
+	-s	 run specific state only (default=all) [all,failed,finished,started,rejectedsamples,gendercheckfailed,trace_post_jobs.csv,trace_post_projects.csv,
+												trace_putFromFile_overview.csv,trace_post_projects.csv,trace_putFromFile_setProcessRawData.csv,trace_post_overview.csv]
 	-l   Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
@@ -109,7 +111,19 @@ function notification() {
 	
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing projects with phase ${_phase} in state: ${_state}."
 
-	readarray -t _project_state_files < <(find "${_lfs_root_dir}/logs/" -maxdepth 2 -mindepth 2 -type f -name "*.${_phase}.${_state}*" -not -name "*.mailed")
+	if [[ "${selectedState}" == "all" ]]
+	then
+		readarray -t _project_state_files < <(find "${_lfs_root_dir}/logs/" -maxdepth 2 -mindepth 2 -type f -name "*.${_phase}.${_state}*" -not -name "*.mailed")
+	else
+		if [[ "${_state}" == "${selectedState}" ]]
+		then
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "selectedState is ${selectedState}"
+			readarray -t _project_state_files < <(find "${_lfs_root_dir}/logs/" -maxdepth 2 -mindepth 2 -type f -name "*.${_phase}.${selectedState}*" -not -name "*.mailed")
+		else
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "state ${_state} is not selectedState ${selectedState}"
+			return
+		fi
+	fi
 	if [[ "${#_project_state_files[@]:-0}" -eq '0' ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No *.${_phase}.${_state} files present in ${_lfs_root_dir}/logs/*/."
@@ -185,7 +199,8 @@ function notification() {
 				# Notify Track and Trace MOLGENIS Database.
 				#
 				trackAndTrace "${_project_state_file}" "${_project}" "${_run}" "${_phase}" "${_state}" "${_action}" "${_controlFileBase}"
-			elif [[ "${_action}" == 'email' ]]
+
+			elif [[ "${_action}" == *'email'* ]]
 			then
 				#
 				# Check if email notifications were explicitly enabled on the commandline.
@@ -195,7 +210,27 @@ function notification() {
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Email disabled and not creating file: ${_project_state_file}.mailed"
 					continue
 				else
-					sendEmail "${_project_state_file}" "${_project}" "${_run}" "${_phase}" "${_state}" "${_lfs_root_dir}" "${_controlFileBase}"
+					sendEmail='true'
+					IFS='/' read -r -a _traceSpecifications <<< "${_action}"
+					maxTime="${_traceSpecifications[1]:-0}" 
+					if [[ "${maxTime}" -ne '0' ]]
+					then
+						maxTimeMin=$((${maxTime}*60))
+						timeStampPipeline=$(find "${_project_state_file}" -mmin +"${maxTimeMin}")
+						if [[ -z "${timeStampPipeline}" ]]
+						then
+							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The file ${_project_state_file} is not available or not older than ${maxTime} hours"
+							sendEmail='false'
+						else
+							echo -e "Dear HPC helpdesk,\n\nPlease check if there is something wrong with the ${_phase}.\nThe ${_phase} for project ${_project} is not finished after ${maxTime} hours.\n\nKind regards\nHPC Helpdesk" > "${_project_state_file}.mail"
+							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_project_state_file} file is OLDER than ${maxTime} hours for project ${_project}"
+						fi
+					fi
+
+					if [[ "${sendEmail}" == 'true' ]]
+					then
+						sendEmail "${_project_state_file}" "${_project}" "${_run}" "${_phase}" "${_state}" "${_action}" "${_lfs_root_dir}" "${_controlFileBase}"
+					fi
 				fi
 			else
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Found unhandled action ${_action} for ${_run}.${_phase}.${_state} of ${_project}."
@@ -291,20 +326,21 @@ function trackAndTrace() {
 	# Signal succes.
 	#
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for ${_project}/${_run}.${_phase}.${_state}. See ${_controlFileBaseForFunction}.finished for details." \
-		&& rm -f "${_controlFileBaseForFunction}.failed" \
-		&& mv -v "${_controlFileBaseForFunction}."{started,finished}
+	&& rm -f "${_controlFileBaseForFunction}.failed" \
+	&& mv -v "${_controlFileBaseForFunction}."{started,finished}
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
 }
 
 function sendEmail() {
-	local    _project_state_file="${1}"
-	local    _project="${2}"
-	local    _run="${3}"
-	local    _phase="${4}"
-	local    _state="${5}"
-	local    _lfs_root_dir="${6}"
-	local    _controlFileBase="${7}"
-	local    _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
+	local	_project_state_file="${1}"
+	local	_project="${2}"
+	local	_run="${3}"
+	local	_phase="${4}"
+	local	_state="${5}"
+	local	_action="${6}"
+	local	_lfs_root_dir="${7}"
+	local	_controlFileBase="${8}"
+	local	_controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
 	#
 	# Check if email was already send.
 	#
@@ -315,6 +351,7 @@ function sendEmail() {
 		return
 	fi
 	printf '' > "${_controlFileBaseForFunction}.started"
+
 	#
 	# Check if we have email addresses for the recipients of the notifications.
 	# Must be
@@ -381,7 +418,7 @@ function sendEmail() {
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
 declare email='false'
-while getopts ":g:l:he" opt; do
+while getopts ":g:l:s:he" opt; do
 	case "${opt}" in
 		h)
 			showHelp
@@ -391,6 +428,9 @@ while getopts ":g:l:he" opt; do
 			;;
 		e)
 			email='true'
+			;;
+		s)
+			selectedState="${OPTARG}"
 			;;
 		l)
 			l4b_log_level="${OPTARG^^}"
@@ -417,6 +457,13 @@ if [[ "${email}" == 'true' ]]; then
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Email option enabled: will try to send emails.'
 else
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Email option option not enabled: will log for debugging on stdout.'
+fi
+if [[ -z "${selectedState:-}" ]]
+then
+	selectedState='all'
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'selectedState=all'
+else
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "selectedState=${selectedState}"
 fi
 
 #
