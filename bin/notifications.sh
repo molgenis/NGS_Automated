@@ -55,8 +55,7 @@ Options:
 	-h   Show this help.
 	-g   Group.
 	-e   Enable email notification. (Disabled by default.)
-	-s	 run specific state only (default=all) [all,failed,finished,started,rejectedsamples,gendercheckfailed,trace_post_jobs.csv,trace_post_projects.csv,
-												trace_putFromFile_overview.csv,trace_post_projects.csv,trace_putFromFile_setProcessRawData.csv,trace_post_overview.csv]
+	-s	 run specific phase:state (see cfg files which combinations can be selected)
 	-l   Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
@@ -111,19 +110,7 @@ function notification() {
 	
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing projects with phase ${_phase} in state: ${_state}."
 
-	if [[ "${selectedState}" == "all" ]]
-	then
-		readarray -t _project_state_files < <(find "${_lfs_root_dir}/logs/" -maxdepth 2 -mindepth 2 -type f -name "*.${_phase}.${_state}*" -not -name "*.mailed")
-	else
-		if [[ "${_state}" == "${selectedState}" ]]
-		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "selectedState is ${selectedState}"
-			readarray -t _project_state_files < <(find "${_lfs_root_dir}/logs/" -maxdepth 2 -mindepth 2 -type f -name "*.${_phase}.${selectedState}*" -not -name "*.mailed")
-		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "state ${_state} is not selectedState ${selectedState}"
-			return
-		fi
-	fi
+	readarray -t _project_state_files < <(find "${_lfs_root_dir}/logs/" -maxdepth 2 -mindepth 2 -type f -name "*.${_phase}.${_state}*" -not -name "*.mailed")
 	if [[ "${#_project_state_files[@]:-0}" -eq '0' ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No *.${_phase}.${_state} files present in ${_lfs_root_dir}/logs/*/."
@@ -430,7 +417,7 @@ while getopts ":g:l:s:he" opt; do
 			email='true'
 			;;
 		s)
-			selectedState="${OPTARG}"
+			selectedPhaseState="${OPTARG}"
 			;;
 		l)
 			l4b_log_level="${OPTARG^^}"
@@ -458,12 +445,12 @@ if [[ "${email}" == 'true' ]]; then
 else
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Email option option not enabled: will log for debugging on stdout.'
 fi
-if [[ -z "${selectedState:-}" ]]
+if [[ -z "${selectedPhaseState:-}" ]]
 then
-	selectedState='all'
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'selectedState=all'
+	selectedPhaseState='all'
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'selectedPhaseState=all'
 else
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "selectedState=${selectedState}"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "selectedPhaseState=${selectedPhaseState}"
 fi
 
 #
@@ -525,13 +512,24 @@ do
 	then
 		for ordered_phase_with_state in "${NOTIFICATION_ORDER_PHASE_WITH_STATE[@]}"
 		do
-			if [[ -n "${ordered_phase_with_state:-}" && -n "${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]:-}" ]]
+			if [[ "${selectedPhaseState}" == "all" ]]
 			then
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found notification types ${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]} for ${ordered_phase_with_state}."
-				notification "${ordered_phase_with_state}" "${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]}" "${_lfs_root_dir}"
+				if [[ -n "${ordered_phase_with_state:-}" && -n "${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]:-}" ]]
+				then
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found notification types ${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]} for ${ordered_phase_with_state}."
+					notification "${ordered_phase_with_state}" "${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]}" "${_lfs_root_dir}"
+				else
+					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Missing value for 'phase:state' ${ordered_phase_with_state:-} in NOTIFY_FOR_PHASE_WITH_STATE array in ${CFG_DIR}/${group}.cfg"
+					log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "No notification types specified for this 'phase:state' combinations: cannot send notifications."
+				fi
 			else
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Missing value for 'phase:state' ${ordered_phase_with_state:-} in NOTIFY_FOR_PHASE_WITH_STATE array in ${CFG_DIR}/${group}.cfg"
-				log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "No notification types specified for this 'phase:state' combinations: cannot send notifications."
+				if [[ "${ordered_phase_with_state}" == "${selectedPhaseState}" ]]
+				then
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${ordered_phase_with_state} is ${selectedPhaseState}"
+					notification "${ordered_phase_with_state}" "${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]}" "${_lfs_root_dir}"
+				else
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${ordered_phase_with_state} is not ${selectedPhaseState}"
+				fi
 			fi
 		done
 	else
