@@ -55,7 +55,7 @@ Options:
 	-h   Show this help.
 	-g   Group.
 	-e   Enable email notification. (Disabled by default.)
-	-s	 run specific phase:state (see cfg files which combinations can be selected)
+	-s   run specific phase:state (see cfg files which combinations can be selected)
 	-l   Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
@@ -107,7 +107,7 @@ function notification() {
 	#	${project} = the 'project' name as specified in the sample sheet.
 	#	${run}     = the incremental 'analysis run number'. Starts with run01 and incremented in case of re-analysis.
 	#
-	
+
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing projects with phase ${_phase} in state: ${_state}."
 
 	readarray -t _project_state_files < <(find "${_lfs_root_dir}/logs/" -maxdepth 2 -mindepth 2 -type f -name "*.${_phase}.${_state}*" -not -name "*.mailed")
@@ -118,7 +118,7 @@ function notification() {
 	else
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found project state files: ${_project_state_files[*]}."
 	fi
-		
+
 
 	#
 	# Create notifications.
@@ -291,7 +291,7 @@ function trackAndTrace() {
 			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		fi
-		
+
 	elif [[ "${_method}" == 'putFromFile' ]]
 	then
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "RUN=${_run}"
@@ -405,6 +405,7 @@ function sendEmail() {
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
 declare email='false'
+declare selectedPhaseState='all'
 while getopts ":g:l:s:he" opt; do
 	case "${opt}" in
 		h)
@@ -445,13 +446,7 @@ if [[ "${email}" == 'true' ]]; then
 else
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Email option option not enabled: will log for debugging on stdout.'
 fi
-if [[ -z "${selectedPhaseState:-}" ]]
-then
-	selectedPhaseState='all'
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'selectedPhaseState=all'
-else
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "selectedPhaseState=${selectedPhaseState}"
-fi
+
 
 #
 # Source config files.
@@ -497,17 +492,17 @@ done
 declare -a _lfs_root_dirs=("${TMP_ROOT_DIR:-}" "${SCR_ROOT_DIR:-}" "${PRM_ROOT_DIR:-}" "${DAT_ROOT_DIR:-}")
 for _lfs_root_dir in "${_lfs_root_dirs[@]}"
 do
-	
+
 	if [[ -z "${_lfs_root_dir}" ]] || [[ ! -e "${_lfs_root_dir}" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "_lfs_root_dir ${_lfs_root_dir} is not set or does not exist."
 		continue
 	fi
-	
+
 	export JOB_CONTROLE_FILE_BASE="${_lfs_root_dir}/logs/${SCRIPT_NAME}"
 	printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 	status_notifications="unknown"
-	
+
 	if [[ -n "${NOTIFICATION_ORDER_PHASE_WITH_STATE[*]:-}" && "${#NOTIFICATION_ORDER_PHASE_WITH_STATE[@]:-0}" -ge 1 ]]
 	then
 		for ordered_phase_with_state in "${NOTIFICATION_ORDER_PHASE_WITH_STATE[@]}"
@@ -548,8 +543,8 @@ do
 	else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "This is a unknown status =>  ${status_notifications}"
 	fi
-	
-	
+
+
 done
 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished.'
