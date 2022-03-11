@@ -231,6 +231,7 @@ function rsyncProjectRun() {
 				&& rm -f "${JOB_CONTROLE_FILE_BASE}.failed" \
 				&& mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
+				rm -f "${PRM_ROOT_DIR}/Samplesheets/${project}.${SAMPLESHEET_EXT}"
 			else
 				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 				echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${PRM_ROOT_DIR}/logs/${_project}/${_run}.md5.failed.log for details." \
