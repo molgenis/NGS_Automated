@@ -203,8 +203,8 @@ function notification() {
 					if [[ "${maxTime}" -ne '0' ]]
 					then
 						maxTimeMin=$((${maxTime}*60))
-						timeStampPipeline=$(find "${_project_state_file}" -mmin +"${maxTimeMin}")
-						if [[ -z "${timeStampPipeline:-}" ]]
+						timeStampPhaseState=$(find "${_project_state_file}" -mmin +"${maxTimeMin}")
+						if [[ -z "${timeStampPhaseState:-}" ]]
 						then
 							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The file ${_project_state_file} is not available or not older than ${maxTime} hours"
 							sendingEmail='false'
