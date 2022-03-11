@@ -66,11 +66,6 @@ which shellcheck 2>&1 >/dev/null \
 
 MYDIR="$(cd -P "$(dirname "${0}")" && pwd)"
 
-#
-# Run ShellCheck for all Bash scripts in the bin/ subdir.
-#  * Includes sourced files, so the libraries from the lib/ subfolder 
-#    are checked too as long a they are used in at least one script.
-#
 if [[ "${CIRCLECI}" == true ]]
 then
 	#
@@ -78,18 +73,15 @@ then
 	# because we cannot easily resolve variables sourced from etc/*.cfg config files.
 	#
 	export SHELLCHECK_OPTS="${SHELLCHECK_OPTS} -e SC2154"
-	#
-	# ShellCheck for CircleCI.
-	#
+fi
+#
+# Run ShellCheck for all Bash scripts in the bin/ subdir.
+#  * Includes sourced files, so the libraries from the lib/ subfolder 
+#    are checked too as long a they are used in at least one script.
+#
+if [[ "${verbose:-0}" -eq 1 ]]
+then
 	shellcheck -a -x -o all -f tty "${MYDIR}"/../bin/*.sh
 else
-	#
-	# ShellCheck for regular user on the commandline.
-	#
-	if [[ "${verbose:-0}" -eq 1 ]]
-	then
-		shellcheck -a -x -o all -f tty "${MYDIR}"/../bin/*.sh # cannot use the printf construct used below for non-vebose output as it destroys the terminal colors.
-	else
-		printf '%s\n' "$(shellcheck -a -x -o all -f gcc "${MYDIR}"/../bin/*.sh)"
-	fi
+	shellcheck -a -x -o all -f gcc "${MYDIR}"/../bin/*.sh
 fi
