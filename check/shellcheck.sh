@@ -82,15 +82,5 @@ then
 	# because we cannot easily resolve variables sourced from etc/*.cfg config files.
 	#
 	export SHELLCHECK_OPTS="${SHELLCHECK_OPTS} -e SC2154"
-	#
-	# Reformat to add hyperlinks to the ShellCheck issues on the wiki:
-	#	https://github.com/koalaman/shellcheck/wiki/SC${ISSUENUMBER}
-	# explaining what is wrong with the code / style and how to improve it.
-	#
-	shellcheck -a -x -o all -f "${format}" "${MYDIR}"/../bin/*.sh \
-		| sed "s|${MYDIR}/../||g" \
-		| perl -lpe 's|\[(SC[0-9]+)\]|<a href="https://github.com/koalaman/shellcheck/wiki/$1">[$1]</a>|'
-else
-	shellcheck -a -x -o all -f "${format}" "${MYDIR}"/../bin/*.sh \
-		| sed "s|${MYDIR}/../||g"
 fi
+shellcheck -a -x -o all -f "${format}" "${MYDIR}"/../bin/*.sh | sed "s|${MYDIR}/../||g"
