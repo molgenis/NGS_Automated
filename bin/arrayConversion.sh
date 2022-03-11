@@ -213,25 +213,27 @@ else
 		head -1 "${sampleSheet}"
 		colnum=$(head -1 "${sampleSheet}" | sed 's/,/\n/g'| nl | grep 'SentrixBarcode_A$' | grep -o '[0-9][0-9]*')
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found SentrixBarcode_A in column number ${colnum}."
-		readarray -t barcodes< <(tail -n +2 "${sampleSheet}" | cut -d , -f "${colnum}" | sort | uniq)
+		readarray -t plateNumbers< <(tail -n +2 "${sampleSheet}" | cut -d , -f "${colnum}" | sort | uniq)
 		count=0
-		numberOfBarcodes=${#barcodes[@]}
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "total number of barcodes: ${numberOfBarcodes}"
-		for barcode in "${barcodes[@]}"
+		numberOfPlateNumbers=${#plateNumbers[@]}
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "total number of plateNumbers: ${numberOfPlateNumbers}"
+		for plateNumber in "${plateNumbers[@]}"
 		do
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "check ${SCR_ROOT_DIR}/rawdata/array/IDAT/${barcode}/${barcode}_qc.txt"
-			if [ -e "${SCR_ROOT_DIR}/rawdata/array/IDAT/${barcode}/${barcode}_qc.txt" ]
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "check ${SCR_ROOT_DIR}/rawdata/array/IDAT/${plateNumber}/${plateNumber}_qc.txt"
+			if [ -e "${SCR_ROOT_DIR}/rawdata/array/IDAT/${plateNumber}/${plateNumber}_qc.txt" ]
 			then
-				if grep -q "<ScanSettings" "${SCR_ROOT_DIR}/rawdata/array/IDAT/${barcode}/${barcode}_qc.txt"
+				if grep -q "<ScanSettings" "${SCR_ROOT_DIR}/rawdata/array/IDAT/${plateNumber}/${plateNumber}_qc.txt"
 				then
 					count=$((count+1))
 				else
-					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${barcode}_qc.txt does exist but the project is not finished yet, ${project} cannot be continued"
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${plateNumber}_qc.txt does exist but the project is not finished yet, ${project} cannot be continued"
 				fi
-			fi	
+			else
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${SCR_ROOT_DIR}/rawdata/array/IDAT/${plateNumber}/ does not exist"
+			fi
 		done
 
-		if [ "${count}" == "${numberOfBarcodes}" ]
+		if [ "${count}" == "${numberOfPlateNumbers}" ]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Generating and submitting jobs for ${project} ..." | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 			echo "started: $(date +%FT%T%z)" > "${SCR_ROOT_DIR}/logs/${project}/run01.arrayConversion.totalRuntime"
@@ -255,7 +257,8 @@ else
 				> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
 			printf '%s\n' "${project},${group},started,,,${timeStamp}" \
 				>> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
-
+		else
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${plateNumber}_qc.txt does exist but the project is not finished "
 		fi
 	done
 fi

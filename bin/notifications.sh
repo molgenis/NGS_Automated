@@ -55,6 +55,7 @@ Options:
 	-h   Show this help.
 	-g   Group.
 	-e   Enable email notification. (Disabled by default.)
+	-s   run specific phase:state (see cfg files which combinations can be selected)
 	-l   Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
@@ -106,7 +107,7 @@ function notification() {
 	#	${project} = the 'project' name as specified in the sample sheet.
 	#	${run}     = the incremental 'analysis run number'. Starts with run01 and incremented in case of re-analysis.
 	#
-	
+
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing projects with phase ${_phase} in state: ${_state}."
 
 	readarray -t _project_state_files < <(find "${_lfs_root_dir}/logs/" -maxdepth 2 -mindepth 2 -type f -name "*.${_phase}.${_state}*" -not -name "*.mailed")
@@ -117,7 +118,7 @@ function notification() {
 	else
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found project state files: ${_project_state_files[*]}."
 	fi
-		
+
 
 	#
 	# Create notifications.
@@ -185,7 +186,8 @@ function notification() {
 				# Notify Track and Trace MOLGENIS Database.
 				#
 				trackAndTrace "${_project_state_file}" "${_project}" "${_run}" "${_phase}" "${_state}" "${_action}" "${_controlFileBase}"
-			elif [[ "${_action}" == 'email' ]]
+
+			elif [[ "${_action}" == *'email'* ]]
 			then
 				#
 				# Check if email notifications were explicitly enabled on the commandline.
@@ -195,7 +197,27 @@ function notification() {
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Email disabled and not creating file: ${_project_state_file}.mailed"
 					continue
 				else
-					sendEmail "${_project_state_file}" "${_project}" "${_run}" "${_phase}" "${_state}" "${_lfs_root_dir}" "${_controlFileBase}"
+					sendingEmail='true'
+					IFS='/' read -r -a _traceSpecifications <<< "${_action}"
+					maxTime="${_traceSpecifications[1]:-0}" 
+					if [[ "${maxTime}" -ne '0' ]]
+					then
+						maxTimeMin=$((${maxTime}*60))
+						timeStampPhaseState=$(find "${_project_state_file}" -mmin +"${maxTimeMin}")
+						if [[ -z "${timeStampPhaseState:-}" ]]
+						then
+							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The file ${_project_state_file} is not available or not older than ${maxTime} hours"
+							sendingEmail='false'
+						else
+							echo -e "Dear HPC helpdesk,\n\nPlease check if there is something wrong with the ${_phase}.\nThe ${_phase} for project ${_project} is not finished after ${maxTime} hours.\n\nKind regards\nHPC Helpdesk" > "${_project_state_file}"
+							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_project_state_file} file is OLDER than ${maxTime} hours for project ${_project}"
+						fi
+					fi
+
+					if [[ "${sendingEmail}" == 'true' ]]
+					then
+						sendEmail "${_project_state_file}" "${_project}" "${_run}" "${_phase}" "${_state}" "${_lfs_root_dir}" "${_controlFileBase}"
+					fi
 				fi
 			else
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Found unhandled action ${_action} for ${_run}.${_phase}.${_state} of ${_project}."
@@ -269,7 +291,7 @@ function trackAndTrace() {
 			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		fi
-		
+
 	elif [[ "${_method}" == 'putFromFile' ]]
 	then
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "RUN=${_run}"
@@ -291,20 +313,20 @@ function trackAndTrace() {
 	# Signal succes.
 	#
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for ${_project}/${_run}.${_phase}.${_state}. See ${_controlFileBaseForFunction}.finished for details." \
-		&& rm -f "${_controlFileBaseForFunction}.failed" \
-		&& mv -v "${_controlFileBaseForFunction}."{started,finished}
+	&& rm -f "${_controlFileBaseForFunction}.failed" \
+	&& mv -v "${_controlFileBaseForFunction}."{started,finished}
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
 }
 
 function sendEmail() {
-	local    _project_state_file="${1}"
-	local    _project="${2}"
-	local    _run="${3}"
-	local    _phase="${4}"
-	local    _state="${5}"
-	local    _lfs_root_dir="${6}"
-	local    _controlFileBase="${7}"
-	local    _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
+	local	_project_state_file="${1}"
+	local	_project="${2}"
+	local	_run="${3}"
+	local	_phase="${4}"
+	local	_state="${5}"
+	local	_lfs_root_dir="${6}"
+	local	_controlFileBase="${7}"
+	local	_controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
 	#
 	# Check if email was already send.
 	#
@@ -315,6 +337,7 @@ function sendEmail() {
 		return
 	fi
 	printf '' > "${_controlFileBaseForFunction}.started"
+
 	#
 	# Check if we have email addresses for the recipients of the notifications.
 	# Must be
@@ -381,7 +404,8 @@ function sendEmail() {
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
 declare email='false'
-while getopts ":g:l:he" opt; do
+declare selectedPhaseState='all'
+while getopts ":g:l:s:he" opt; do
 	case "${opt}" in
 		h)
 			showHelp
@@ -391,6 +415,9 @@ while getopts ":g:l:he" opt; do
 			;;
 		e)
 			email='true'
+			;;
+		s)
+			selectedPhaseState="${OPTARG}"
 			;;
 		l)
 			l4b_log_level="${OPTARG^^}"
@@ -418,6 +445,7 @@ if [[ "${email}" == 'true' ]]; then
 else
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Email option option not enabled: will log for debugging on stdout.'
 fi
+
 
 #
 # Source config files.
@@ -463,26 +491,28 @@ done
 declare -a _lfs_root_dirs=("${TMP_ROOT_DIR:-}" "${SCR_ROOT_DIR:-}" "${PRM_ROOT_DIR:-}" "${DAT_ROOT_DIR:-}")
 for _lfs_root_dir in "${_lfs_root_dirs[@]}"
 do
-	
+
 	if [[ -z "${_lfs_root_dir}" ]] || [[ ! -e "${_lfs_root_dir}" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "_lfs_root_dir ${_lfs_root_dir} is not set or does not exist."
 		continue
 	fi
-	
+
 	export JOB_CONTROLE_FILE_BASE="${_lfs_root_dir}/logs/${SCRIPT_NAME}"
 	printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 	status_notifications="unknown"
-	
+
 	if [[ -n "${NOTIFICATION_ORDER_PHASE_WITH_STATE[*]:-}" && "${#NOTIFICATION_ORDER_PHASE_WITH_STATE[@]:-0}" -ge 1 ]]
 	then
 		for ordered_phase_with_state in "${NOTIFICATION_ORDER_PHASE_WITH_STATE[@]}"
 		do
 			if [[ -n "${ordered_phase_with_state:-}" && -n "${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]:-}" ]]
 			then
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found notification types ${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]} for ${ordered_phase_with_state}."
-				notification "${ordered_phase_with_state}" "${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]}" "${_lfs_root_dir}"
-			else
+				if [[ "${selectedPhaseState}" == 'all' || "${selectedPhaseState}" == "${ordered_phase_with_state}" ]]
+				then
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found notification types ${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]} for ${ordered_phase_with_state}."
+					notification "${ordered_phase_with_state}" "${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]}" "${_lfs_root_dir}"
+				fi
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Missing value for 'phase:state' ${ordered_phase_with_state:-} in NOTIFY_FOR_PHASE_WITH_STATE array in ${CFG_DIR}/${group}.cfg"
 				log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "No notification types specified for this 'phase:state' combinations: cannot send notifications."
 			fi
@@ -503,8 +533,8 @@ do
 	else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "This is a unknown status =>  ${status_notifications}"
 	fi
-	
-	
+
+
 done
 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished.'
