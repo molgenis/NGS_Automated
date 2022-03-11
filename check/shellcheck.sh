@@ -85,7 +85,7 @@ then
 	#
 	shellcheck -a -x -o all -f "${format}" "${MYDIR}"/../bin/*.sh \
 		| sed "s|${MYDIR}/../||g" \
-		| perl -lpe 's|\[(SC[0-9]+)\]|<a href="https://github.com/koalaman/shellcheck/wiki/\$1">[\$1</a>]|'
+		| perl -lpe 's|\[(SC[0-9]+)\]|<a href="https://github.com/koalaman/shellcheck/wiki/$1">[$1]</a>|'
 else
 	shellcheck -a -x -o all -f "${format}" "${MYDIR}"/../bin/*.sh \
 		| sed "s|${MYDIR}/../||g"
