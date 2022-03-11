@@ -1,5 +1,9 @@
 #!/bin/bash
 
+set -e
+set -u
+set -o pipefail
+
 #
 # Disable some shellcheck warnings:
 #  * SC2004: $/${} is unnecessary on arithmetic variables.
