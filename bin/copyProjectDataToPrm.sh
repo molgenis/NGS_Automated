@@ -489,7 +489,6 @@ else
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${project}/${run} calculateProjectMd5s not yet finished."
 				fi
 			done
-			
 		fi
 	done
 fi
