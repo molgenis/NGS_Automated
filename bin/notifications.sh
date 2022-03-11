@@ -204,19 +204,19 @@ function notification() {
 					then
 						maxTimeMin=$((${maxTime}*60))
 						timeStampPipeline=$(find "${_project_state_file}" -mmin +"${maxTimeMin}")
-						if [[ -z "${timeStampPipeline}" ]]
+						if [[ -z "${timeStampPipeline:-}" ]]
 						then
 							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The file ${_project_state_file} is not available or not older than ${maxTime} hours"
 							sendEmail='false'
 						else
-							echo -e "Dear HPC helpdesk,\n\nPlease check if there is something wrong with the ${_phase}.\nThe ${_phase} for project ${_project} is not finished after ${maxTime} hours.\n\nKind regards\nHPC Helpdesk" > "${_project_state_file}.mail"
+							echo -e "Dear HPC helpdesk,\n\nPlease check if there is something wrong with the ${_phase}.\nThe ${_phase} for project ${_project} is not finished after ${maxTime} hours.\n\nKind regards\nHPC Helpdesk" > "${_project_state_file}"
 							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_project_state_file} file is OLDER than ${maxTime} hours for project ${_project}"
 						fi
 					fi
 
 					if [[ "${sendEmail}" == 'true' ]]
 					then
-						sendEmail "${_project_state_file}" "${_project}" "${_run}" "${_phase}" "${_state}" "${_action}" "${_lfs_root_dir}" "${_controlFileBase}"
+						sendEmail "${_project_state_file}" "${_project}" "${_run}" "${_phase}" "${_state}" "${_lfs_root_dir}" "${_controlFileBase}"
 					fi
 				fi
 			else
@@ -324,9 +324,8 @@ function sendEmail() {
 	local	_run="${3}"
 	local	_phase="${4}"
 	local	_state="${5}"
-	local	_action="${6}"
-	local	_lfs_root_dir="${7}"
-	local	_controlFileBase="${8}"
+	local	_lfs_root_dir="${6}"
+	local	_controlFileBase="${7}"
 	local	_controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
 	#
 	# Check if email was already send.
@@ -507,24 +506,15 @@ do
 	then
 		for ordered_phase_with_state in "${NOTIFICATION_ORDER_PHASE_WITH_STATE[@]}"
 		do
-			if [[ "${selectedPhaseState}" == "all" ]]
+			if [[ -n "${ordered_phase_with_state:-}" && -n "${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]:-}" ]]
 			then
-				if [[ -n "${ordered_phase_with_state:-}" && -n "${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]:-}" ]]
+				if [[ "${selectedPhaseState}" == 'all' || "${selectedPhaseState}" == "${ordered_phase_with_state}" ]]
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found notification types ${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]} for ${ordered_phase_with_state}."
 					notification "${ordered_phase_with_state}" "${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]}" "${_lfs_root_dir}"
-				else
-					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Missing value for 'phase:state' ${ordered_phase_with_state:-} in NOTIFY_FOR_PHASE_WITH_STATE array in ${CFG_DIR}/${group}.cfg"
-					log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "No notification types specified for this 'phase:state' combinations: cannot send notifications."
 				fi
-			else
-				if [[ "${ordered_phase_with_state}" == "${selectedPhaseState}" ]]
-				then
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${ordered_phase_with_state} is ${selectedPhaseState}"
-					notification "${ordered_phase_with_state}" "${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]}" "${_lfs_root_dir}"
-				else
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${ordered_phase_with_state} is not ${selectedPhaseState}"
-				fi
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Missing value for 'phase:state' ${ordered_phase_with_state:-} in NOTIFY_FOR_PHASE_WITH_STATE array in ${CFG_DIR}/${group}.cfg"
+				log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "No notification types specified for this 'phase:state' combinations: cannot send notifications."
 			fi
 		done
 	else
