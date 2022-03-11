@@ -197,7 +197,7 @@ function notification() {
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Email disabled and not creating file: ${_project_state_file}.mailed"
 					continue
 				else
-					sendEmail='true'
+					sendingEmail='true'
 					IFS='/' read -r -a _traceSpecifications <<< "${_action}"
 					maxTime="${_traceSpecifications[1]:-0}" 
 					if [[ "${maxTime}" -ne '0' ]]
@@ -207,14 +207,14 @@ function notification() {
 						if [[ -z "${timeStampPipeline:-}" ]]
 						then
 							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The file ${_project_state_file} is not available or not older than ${maxTime} hours"
-							sendEmail='false'
+							sendingEmail='false'
 						else
 							echo -e "Dear HPC helpdesk,\n\nPlease check if there is something wrong with the ${_phase}.\nThe ${_phase} for project ${_project} is not finished after ${maxTime} hours.\n\nKind regards\nHPC Helpdesk" > "${_project_state_file}"
 							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_project_state_file} file is OLDER than ${maxTime} hours for project ${_project}"
 						fi
 					fi
 
-					if [[ "${sendEmail}" == 'true' ]]
+					if [[ "${sendingEmail}" == 'true' ]]
 					then
 						sendEmail "${_project_state_file}" "${_project}" "${_run}" "${_phase}" "${_state}" "${_lfs_root_dir}" "${_controlFileBase}"
 					fi
