@@ -64,14 +64,14 @@ which shellcheck 2>&1 >/dev/null \
 		exit 1
 	}
 
+MYDIR="$(cd -P "$(dirname "${0}")" && pwd)"
+
 #
 # Run ShellCheck for all Bash scripts in the bin/ subdir.
 #  * Includes sourced files, so the libraries from the lib/ subfolder 
 #    are checked too as long a they are used in at least one script.
-#  * Select format and output based on whether this script is 
-#    executed by Jenkins or by a regular user.
 #
-if [[ -n "${WORKSPACE:-}" ]]
+if [[ "${CIRCLECI}" == true ]]
 then
 	#
 	# Exclude SC2154 (warning for variables that are referenced but not assigned),
@@ -79,26 +79,17 @@ then
 	#
 	export SHELLCHECK_OPTS="${SHELLCHECK_OPTS} -e SC2154"
 	#
-	# ShellCheck for Jenkins.
+	# ShellCheck for CircleCI.
 	#
-	shellcheck -a -x -o all -f checkstyle "${WORKSPACE}"/bin/*.sh | tee checkstyle-result.xml
-	#
-	# Reformat the generated report to add hyperlinks to the ShellCheck issues on the wiki:
-	#	https://github.com/koalaman/shellcheck/wiki/SC${ISSUENUMBER}
-	# explaining what is wrong with the code / style and how to improve it.
-	#
-	perl -pi -e "s|message='([^']+)'\s+source='ShellCheck.(SC[0-9]+)'|message='&lt;a href=&quot;https://github.com/koalaman/shellcheck/wiki/\$2&quot;&gt;\$2: \$1&lt;/a&gt;' source='ShellCheck.\$2'|" checkstyle-result.xml
+	shellcheck -a -x -o all -f tty "${MYDIR}"/../bin/*.sh
 else
 	#
 	# ShellCheck for regular user on the commandline.
 	#
-	MYDIR="$(cd -P "$(dirname "${0}")" && pwd)"
 	if [[ "${verbose:-0}" -eq 1 ]]
 	then
-		cd "${MYDIR}/.."
-		shellcheck -a -x -o all -f tty bin/*.sh # cannot use the printf construct used below for non-vebose output as it destroys the terminal colors.
-		cd '-' # Goes back to previous directory before we changed to ${MYDIR}.
+		shellcheck -a -x -o all -f tty "${MYDIR}"/../bin/*.sh # cannot use the printf construct used below for non-vebose output as it destroys the terminal colors.
 	else
-		printf '%s\n' "$(cd "${MYDIR}/.." && shellcheck -a -x -o all -f gcc bin/*.sh)"
+		printf '%s\n' "$(shellcheck -a -x -o all -f gcc "${MYDIR}"/../bin/*.sh)"
 	fi
 fi

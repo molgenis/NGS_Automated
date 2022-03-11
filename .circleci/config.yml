@@ -1,0 +1,67 @@
+---
+#
+# Python CircleCI 2.0 configuration file
+# Check https://circleci.com/docs/2.0/language-python/ for more details.
+#
+version: 2.1
+orbs: 
+  shellcheck: circleci/shellcheck@3.1.0
+jobs:
+  build:
+    docker:
+      - image: cimg/base:stable
+    working_directory: ~/repo
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Install ShellCheck
+          command: |
+            set -e
+            set -u
+            set -o pipefail
+            # Check if we are root or need sudo.
+            if [[ ${EUID} == 0 ]]; then
+                export SUDO=''
+            else
+                export SUDO='sudo'
+            fi
+            SHELLCHECK_VERSION=0.8.0
+            wget -qO- "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" \
+                | tar -xJf -
+            cd "shellcheck-v${SHELLCHECK_VERSION}/"
+            ${SUDO} cp shellcheck /usr/local/bin/
+      - run:
+          name: Run IndentationCheck
+          shell: /bin/bash
+          command: |
+            set -e
+            set -u
+            set -o pipefail
+            check/indentationcheck.sh
+      - run:
+          name: Run ShellCheck
+          shell: /bin/bash
+          command: |
+            set -e
+            set -u
+            set -o pipefail
+            check/shellcheck.sh
+
+
+            if ansible-lint -p --nocolor playbook.yml > lint_results 2>&1; then
+              lint_errors=0
+            else
+              cat lint_results
+              #
+              # Parse number of errors from:
+              # Finished with [0-9][0-9]* failure(s), [0-9][0-9]* warning(s) on [0-9][0-9]* files
+              #
+              lint_status=$(grep '^Finished with' lint_results)
+              lint_errors=$(echo "${lint_status}" | sed 's|^Finished with \([0-9][0-9]*\) failure.*|\1|')
+            fi
+            echo '###############################################'
+            printf 'Counted %d ansible-lint error(s).\n' ${lint_errors}
+            echo '###############################################'
+            if (( ${lint_errors} > 0 )); then /bin/false; fi
+...
