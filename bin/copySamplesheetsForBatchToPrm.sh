@@ -48,7 +48,8 @@ function contains() {
 	local n=$#
 	local value=${!n}
 	for ((i=1;i < $#;i++)) {
-		if [ "${!i}" == "${value}" ]; then
+		if [[ "${!i}" == "${value}" ]]
+		then
 			echo "y"
 			return 0
 		fi
@@ -127,9 +128,9 @@ function processBatch() {
 		mv -v "${_controlFileBaseForFunction}."{started,failed}
 		return
 	}
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully rsynced samplesheets for batch ${_batch} to prm." \
-		&& rm -f "${_controlFileBaseForFunction}.failed" \
-		&& mv -v "${_controlFileBaseForFunction}."{started,finished}
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully rsynced samplesheets for batch ${_batch} to prm."
+	rm -f "${_controlFileBaseForFunction}.failed"
+	mv -v "${_controlFileBaseForFunction}."{started,finished}
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
 }
 
