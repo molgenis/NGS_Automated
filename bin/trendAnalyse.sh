@@ -342,22 +342,10 @@ function generateChronQCOutput() {
 #
 function generate_plots(){
 
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Generating ChronQC reports"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Generating ChronQC reports with reports.${HOSTNAME_SHORT}.cfg"
 
-		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p general -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Exoom  "${CHRONQC_TEMPLATE_DIRS}/chronqc.general.json"
-		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p AlignmentSummaryMetrics -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Exoom  "${CHRONQC_TEMPLATE_DIRS}/chronqc.AlignmentSummaryMetrics.json"
-		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p HsMetrics -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Exoom  "${CHRONQC_TEMPLATE_DIRS}/chronqc.HsMetrics.json"
-#		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p insertSize -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Exoom  "${CHRONQC_TEMPLATE_DIRS}/chronqc.insertSize.json"
-#		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p flagstat -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Exoom  "${CHRONQC_TEMPLATE_DIRS}/chronqc.flagstat.json"
-
-		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p Capturing -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Capturing  "${CHRONQC_TEMPLATE_DIRS}/chronqc.Capturing.json"
-		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p Concentratie -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Concentratie  "${CHRONQC_TEMPLATE_DIRS}/chronqc.Concentratie.json"
-		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p NGSInzetten -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" NGSInzetten  "${CHRONQC_TEMPLATE_DIRS}/chronqc.NGSInzetten.json"
-		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p SamplePrep -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" SamplePrep  "${CHRONQC_TEMPLATE_DIRS}/chronqc.SamplePrep.json"
-		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p ArrayInzetten -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" ArrayInzetten  "${CHRONQC_TEMPLATE_DIRS}/chronqc.ArrayInzetten.json"
-
-#		In order to use the sequence run chronQC, we need data first, so the NGS_Demultplexing has to be released first.
-#		chronqc plot  -o "${CHRONQC_REPORTS_DIRS}/" -p SequenceRun -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" NB501043  "${CHRONQC_TEMPLATE_DIRS}/chronqc.SequenceRun.json"
+		#include host specific report commands.
+		source "${CHRONQC_TEMPLATE_DIRS}/reports.${HOSTNAME_SHORT}.cfg"
 
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "ChronQC reports finished."
 }
