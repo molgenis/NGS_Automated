@@ -204,7 +204,7 @@ else
 	for gsBatch in "${gsBatchesSourceServer[@]}"
 	do
 		gsBatch="$(basename "${gsBatch}")"
-		if [ -e "/groups/${GROUP}/${TMP_LFS}/logs/${gsBatch}/${gsBatch}.processGsRawData.finished" ]
+		if [[ -e "/groups/${GROUP}/${TMP_LFS}/logs/${gsBatch}/${gsBatch}.processGsRawData.finished" ]]
 		then
 			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "${gsBatch} already processed, no need to transfer the data again."
 		else

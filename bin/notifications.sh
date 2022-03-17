@@ -91,7 +91,6 @@ function notification() {
 	#readarray -t -d '|' _actions <<< "${2}"
 	readarray -t _actions <<< "${2//|/$'\n'}"
 	local -a _project_state_files=()
-
 	#
 	# The path to phase state files must be:
 	#	"${TMP_ROOT_DIR}/logs/${project}/${run}.${_phase}.${_state}"
@@ -107,9 +106,7 @@ function notification() {
 	#	${project} = the 'project' name as specified in the sample sheet.
 	#	${run}     = the incremental 'analysis run number'. Starts with run01 and incremented in case of re-analysis.
 	#
-
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing projects with phase ${_phase} in state: ${_state}."
-
 	readarray -t _project_state_files < <(find "${_lfs_root_dir}/logs/" -maxdepth 2 -mindepth 2 -type f -name "*.${_phase}.${_state}*" -not -name "*.mailed")
 	if [[ "${#_project_state_files[@]:-0}" -eq '0' ]]
 	then
@@ -118,8 +115,6 @@ function notification() {
 	else
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found project state files: ${_project_state_files[*]}."
 	fi
-
-
 	#
 	# Create notifications.
 	#
@@ -151,7 +146,6 @@ function notification() {
 		# ${JOB_CONTROLE_FILE_BASE} is is used for tracking the overall succes of this notifiction script as a whole.
 		#
 		local _controlFileBase="${_lfs_root_dir}/logs/${_project}/${_run}"
-
 		#
 		# In case a pipeline failed check if jobs were already resubmitted
 		# and only notify if the failure was reproducible and the pipeline failed again.
@@ -186,7 +180,6 @@ function notification() {
 				# Notify Track and Trace MOLGENIS Database.
 				#
 				trackAndTrace "${_project_state_file}" "${_project}" "${_run}" "${_phase}" "${_state}" "${_action}" "${_controlFileBase}"
-
 			elif [[ "${_action}" == *'email'* ]]
 			then
 				#
@@ -213,7 +206,6 @@ function notification() {
 							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_project_state_file} file is OLDER than ${maxTime} hours for project ${_project}"
 						fi
 					fi
-
 					if [[ "${sendingEmail}" == 'true' ]]
 					then
 						sendEmail "${_project_state_file}" "${_project}" "${_run}" "${_phase}" "${_state}" "${_lfs_root_dir}" "${_controlFileBase}"
@@ -230,7 +222,6 @@ function notification() {
 		then 
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${SCRIPT_NAME} succeeded for the last processed phase:state combination (for which notifications were configured) of ${_project}/${_run}."
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Beware that notifications for previously processed phase:state combinations may have failed."
-
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${JOB_CONTROLE_FILE_BASE}.finished."
 		else
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to handle notifications for at least one phase:state combination of ${_project}/${_run}."
@@ -271,6 +262,7 @@ function trackAndTrace() {
 	printf '' > "${_controlFileBaseForFunction}.started"
 	if [[ "${_method}" == 'post' ]]
 	then
+		# shellcheck disable=2310
 		if trackAndTracePostFromFile "${_entity}" 'add_update_existing' "${_project_state_file}"
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Adding ${_run}.${_phase}.${_state} to ${_traceSucceededLog} ..."
@@ -281,7 +273,8 @@ function trackAndTrace() {
 			return
 		fi
 	elif [[ "${_method}" == 'put' ]]
-	then	
+	then
+		# shellcheck disable=2310
 		if trackAndTracePut "${_entity}" "${_project}" "${_field}" "${_state}"
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Adding ${_run}.${_phase}.${_state} to ${_traceSucceededLog} ..."
@@ -291,10 +284,9 @@ function trackAndTrace() {
 			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		fi
-
 	elif [[ "${_method}" == 'putFromFile' ]]
 	then
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "RUN=${_run}"
+		# shellcheck disable=2310
 		if trackAndTracePutFromFile "${_entity}" "${_project}" "${_field}" "${_project_state_file}"
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Adding ${_run}.${_phase}.${_state} to ${_traceSucceededLog}"
@@ -312,9 +304,9 @@ function trackAndTrace() {
 	#
 	# Signal succes.
 	#
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for ${_project}/${_run}.${_phase}.${_state}. See ${_controlFileBaseForFunction}.finished for details." \
-	&& rm -f "${_controlFileBaseForFunction}.failed" \
-	&& mv -v "${_controlFileBaseForFunction}."{started,finished}
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for ${_project}/${_run}.${_phase}.${_state}. See ${_controlFileBaseForFunction}.finished for details."
+	rm -f "${_controlFileBaseForFunction}.failed"
+	mv -v "${_controlFileBaseForFunction}."{started,finished}
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
 }
 
@@ -337,7 +329,6 @@ function sendEmail() {
 		return
 	fi
 	printf '' > "${_controlFileBaseForFunction}.started"
-
 	#
 	# Check if we have email addresses for the recipients of the notifications.
 	# Must be
@@ -386,9 +377,9 @@ function sendEmail() {
 	#
 	# Signal succes.
 	#
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for ${_project}/${_run}.${_phase}.${_state}. See ${_controlFileBaseForFunction}.finished for details." \
-		&& rm -f "${_controlFileBaseForFunction}.failed" \
-		&& mv -v "${_controlFileBaseForFunction}."{started,finished}
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for ${_project}/${_run}.${_phase}.${_state}. See ${_controlFileBaseForFunction}.finished for details."
+	rm -f "${_controlFileBaseForFunction}.failed"
+	mv -v "${_controlFileBaseForFunction}."{started,finished}
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
 }
 
@@ -491,17 +482,14 @@ done
 declare -a _lfs_root_dirs=("${TMP_ROOT_DIR:-}" "${SCR_ROOT_DIR:-}" "${PRM_ROOT_DIR:-}" "${DAT_ROOT_DIR:-}")
 for _lfs_root_dir in "${_lfs_root_dirs[@]}"
 do
-
 	if [[ -z "${_lfs_root_dir}" ]] || [[ ! -e "${_lfs_root_dir}" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "_lfs_root_dir ${_lfs_root_dir} is not set or does not exist."
 		continue
 	fi
-
 	export JOB_CONTROLE_FILE_BASE="${_lfs_root_dir}/logs/${SCRIPT_NAME}"
 	printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 	status_notifications="unknown"
-
 	if [[ -n "${NOTIFICATION_ORDER_PHASE_WITH_STATE[*]:-}" && "${#NOTIFICATION_ORDER_PHASE_WITH_STATE[@]:-0}" -ge 1 ]]
 	then
 		for ordered_phase_with_state in "${NOTIFICATION_ORDER_PHASE_WITH_STATE[@]}"
@@ -521,7 +509,6 @@ do
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Missing NOTIFICATION_ORDER_PHASE_WITH_STATE array in ${CFG_DIR}/${group}.cfg"
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "No 'phase:state' combinations for which notifications must be sent specified."
 	fi
-	
 	if [[ "${status_notifications}" == "failed" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "There is something wrong, please check ${JOB_CONTROLE_FILE_BASE}.failed"
@@ -533,8 +520,6 @@ do
 	else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "This is a unknown status =>  ${status_notifications}"
 	fi
-
-
 done
 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished.'

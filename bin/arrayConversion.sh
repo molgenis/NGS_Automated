@@ -174,9 +174,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "find ${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}"
 readarray -t sampleSheets< <(find "${SCR_ROOT_DIR}/Samplesheets/" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name '*.csv')
-########for i in $() PER samplesheet er door heen lopen? en dan kijken of alle glaasjes gefinished zijn en dan pas processing?
 
-####
 if [[ "${#sampleSheets[@]:-0}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found at ${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}."
@@ -184,7 +182,6 @@ else
 	for sampleSheet in "${sampleSheets[@]}"
 	do
 		project="$(basename "${sampleSheet}" ".csv")"
-		
 		#
 		# Create log dir with job control file for sequence run.
 		#
@@ -220,7 +217,7 @@ else
 		for plateNumber in "${plateNumbers[@]}"
 		do
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "check ${SCR_ROOT_DIR}/rawdata/array/IDAT/${plateNumber}/${plateNumber}_qc.txt"
-			if [ -e "${SCR_ROOT_DIR}/rawdata/array/IDAT/${plateNumber}/${plateNumber}_qc.txt" ]
+			if [[ -e "${SCR_ROOT_DIR}/rawdata/array/IDAT/${plateNumber}/${plateNumber}_qc.txt" ]]
 			then
 				if grep -q "<ScanSettings" "${SCR_ROOT_DIR}/rawdata/array/IDAT/${plateNumber}/${plateNumber}_qc.txt"
 				then
@@ -233,7 +230,7 @@ else
 			fi
 		done
 
-		if [ "${count}" == "${numberOfPlateNumbers}" ]
+		if [[ "${count}" == "${numberOfPlateNumbers}" ]]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Generating and submitting jobs for ${project} ..." | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 			echo "started: $(date +%FT%T%z)" > "${SCR_ROOT_DIR}/logs/${project}/run01.arrayConversion.totalRuntime"
