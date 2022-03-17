@@ -161,7 +161,7 @@ done
 
 HOMEDIRGAVIN="${TMP_ROOT_DIR}/GavinStandAlone/"
 
-if [ -d "${HOMEDIRGAVIN}" ]
+if [[ -d "${HOMEDIRGAVIN}" ]]
 then
 	find "${HOMEDIRGAVIN}/input/" -name '*.cleaned' -type f -mtime +7 -exec rm -- {} \;
 	if ls "${HOMEDIRGAVIN}/input/"*.vcf.finished 1> /dev/null 2>&1
@@ -174,7 +174,7 @@ then
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${TMP_ROOT_DIR}/tmp/Gavin_${name}/"
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "     and ${TMP_ROOT_DIR}/generatedscripts/Gavin_${name}"
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "     and ${TMP_ROOT_DIR}/projects/Gavin_${name}/"
-			if [ "${dryrun}" == "no" ]
+			if [[ "${dryrun}" == "no" ]]
 			then
 				rm -rf "${TMP_ROOT_DIR}/tmp/Gavin_${name}/"
 				rm -rf "${TMP_ROOT_DIR}/generatedscripts/Gavin_${name}/"
@@ -196,11 +196,11 @@ for i in "${projects[@]}"
 do
 	project=$(basename "${i}")
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "check ${project}"
-	if [ -f "${TMP_ROOT_DIR}/logs/${project}/${project}.projectDataCopiedToPrm" ]
+	if [[ -f "${TMP_ROOT_DIR}/logs/${project}/${project}.projectDataCopiedToPrm" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${GROUP_HOME}/projects/${project}/"
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "     and ${GROUP_HOME}/tmp/${project}/ ..."
-		if [ "${dryrun}" == "no" ]
+		if [[ "${dryrun}" == "no" ]]
 		then
 			rm -rf "${GROUP_HOME}/projects/${project}"
 			rm -rf "${GROUP_HOME}/tmp/${project}"
@@ -216,14 +216,14 @@ for i in "${ngsRuns[@]}"
 do
 	run=$(basename "${i}")
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "check ${run}"
-	if [ -f "${TMP_ROOT_DIR}/logs/${run}/${run}.dataCopiedToPrm" ]
+	if [[ -f "${TMP_ROOT_DIR}/logs/${run}/${run}.dataCopiedToPrm" ]]
 	then
 		countPrm=$(ssh calculon.hpc.rug.nl 'ls ${PRM_ROOT_DIR}/rawdata/ngs/${run}/${run}*.fq.gz* | wc -l')
 		countTmp="$(find "${TMP_ROOT_DIR}/rawdata/ngs/${run}/${run}" -name '*.fq.gz*' -type f | wc -l)"
-		if [ "${countPrm}" == "${countTmp}" ]
+		if [[ "${countPrm}" == "${countTmp}" ]]
 		then
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${TMP_ROOT_DIR}/rawdata/ngs/${run} ..."
-			if [ "${dryrun}" == "no" ]
+			if [[ "${dryrun}" == "no" ]]
 			then
 				rm -rf "${TMP_ROOT_DIR}/rawdata/ngs/${run}"
 			fi

@@ -179,9 +179,9 @@ function generateScripts () {
 	#
 	# Signal succes.
 	#
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for ${_project}/${_run}. See ${_controlFileBaseForFunction}.finished for details." \
-		&& rm -f "${_controlFileBaseForFunction}.failed" \
-		&& mv -v "${_controlFileBaseForFunction}."{started,finished}
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for ${_project}/${_run}. See ${_controlFileBaseForFunction}.finished for details."
+	rm -f "${_controlFileBaseForFunction}.failed"
+	mv -v "${_controlFileBaseForFunction}."{started,finished}
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
 }
 
@@ -283,9 +283,9 @@ function submitJobScripts () {
 	#
 	# Signal succes.
 	#
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for ${_project}/${_run}. See ${_controlFileBaseForFunction}.finished for details." \
-		&& rm -f "${_controlFileBaseForFunction}.failed" \
-		&& mv -v "${_controlFileBaseForFunction}."{started,finished}
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for ${_project}/${_run}. See ${_controlFileBaseForFunction}.finished for details."
+	rm -f "${_controlFileBaseForFunction}.failed"
+	mv -v "${_controlFileBaseForFunction}."{started,finished}
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
 }
 

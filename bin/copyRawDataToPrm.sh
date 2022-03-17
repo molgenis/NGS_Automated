@@ -48,7 +48,8 @@ function contains() {
 	local n=$#
 	local value=${!n}
 	for ((i=1;i < $#;i++)) {
-		if [ "${!i}" == "${value}" ]; then
+		if [[ "${!i}" == "${value}" ]]
+		then
 			echo "y"
 			return 0
 		fi
@@ -183,9 +184,9 @@ function rsyncRuns() {
 	# (Note: the content of *.finished will get inserted in the body of email notification messages,
 	# when enabled in <group>.cfg for use by notifications.sh)
 	#
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred ${_rawDataItem} to prm." \
-		&& rm -f "${_controlFileBaseForFunction}.failed" \
-		&& mv -v "${_controlFileBaseForFunction}."{started,finished}
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred ${_rawDataItem} to prm."
+	rm -f "${_controlFileBaseForFunction}.failed"
+	mv -v "${_controlFileBaseForFunction}."{started,finished}
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Setting track & trace state to finished :)."
 	#trackAndTracePut 'status_overview' "${_rawDataItem}" 'copy_raw_prm' 'finished'
@@ -313,7 +314,9 @@ function splitSamplesheetPerProject() {
 			#
 			# Skip project if demultiplexing only.
 			#
-			if [[ $(contains "${_demultiplexOnly[@]}" "${_project}") == "y" ]]
+			local _foundDemultiplexingOnly
+			_foundDemultiplexingOnly=$(set -e; contains "${_demultiplexOnly[@]}" "${_project}")
+			if [[ "${_foundDemultiplexingOnly}" == 'y' ]]
 			then
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "'Demultiplexing Only' detected for project: ${_project}; will not create project samplesheet."
 				continue

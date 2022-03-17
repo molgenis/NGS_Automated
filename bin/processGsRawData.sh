@@ -407,9 +407,9 @@ function sanityChecking() {
 	# (Note: the content of *.finished will get inserted in the body of email notification messages,
 	# when enabled in <group>.cfg for use by notifications.sh)
 	#
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for batch ${_batch}. See ${_controlFileBaseForFunction}.finished for details." \
-		&& rm -f "${_controlFileBaseForFunction}.failed" \
-		&& mv -v "${_controlFileBaseForFunction}."{started,finished}
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for batch ${_batch}. See ${_controlFileBaseForFunction}.finished for details."
+	rm -f "${_controlFileBaseForFunction}.failed"
+	mv -v "${_controlFileBaseForFunction}."{started,finished}
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
 }
 
@@ -475,9 +475,9 @@ function renameFastQs() {
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	}
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for batch ${_batch}. See ${_controlFileBaseForFunction}.finished for details." \
-		&& rm -f "${_controlFileBaseForFunction}.failed" \
-		&& mv -v "${_controlFileBaseForFunction}."{started,finished}
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for batch ${_batch}. See ${_controlFileBaseForFunction}.finished for details."
+	rm -f "${_controlFileBaseForFunction}.failed"
+	mv -v "${_controlFileBaseForFunction}."{started,finished}
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
 }
 
@@ -587,8 +587,8 @@ function processSamplesheetsAndMoveConvertedData() {
 			_flowcell="${BASH_REMATCH[1]}"
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Found flowcell ${_flowcell} in sequence run dir ${_runDir}."
 		else
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to parse flowcell from sequence run dir ${_runDir}." \
-				&& mv "${_controlFileBaseForFunction}."{started,failed}
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to parse flowcell from sequence run dir ${_runDir}."
+			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		fi
 		#
@@ -700,9 +700,9 @@ function processSamplesheetsAndMoveConvertedData() {
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Moving ${TMP_ROOT_DIR}/Samplesheets/new/${_project}.${SAMPLESHEET_EXT} -> ${TMP_ROOT_DIR}/Samplesheets/archive/ ..."
 		mv -v "${TMP_ROOT_DIR}/Samplesheets/new/${_project}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/Samplesheets/archive/"
 	done
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for batch ${_batch}. See ${_controlFileBaseForFunction}.finished for details." \
-		&& rm -f "${_controlFileBaseForFunction}.failed" \
-		&& mv -v "${_controlFileBaseForFunction}."{started,finished}
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for batch ${_batch}. See ${_controlFileBaseForFunction}.finished for details."
+	rm -f "${_controlFileBaseForFunction}.failed"
+	mv -v "${_controlFileBaseForFunction}."{started,finished}
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
 }
 

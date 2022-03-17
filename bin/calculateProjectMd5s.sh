@@ -110,17 +110,17 @@ function calculateMd5() {
 		|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" \
 				"Cannot access ${TMP_ROOT_DIR}/projects/${_project}/." \
-				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
-				&& mv "${JOB_CONTROLE_FILE_BASE}."{started,failed} \
-				&& return
+				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
+			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+			return
 		}
 	md5deep -r -j0 -o f -l "${_run}/" > "${_run}.md5" 2>> "${JOB_CONTROLE_FILE_BASE}.started" \
 		|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" \
 				"Checksum verification failed. See ${JOB_CONTROLE_FILE_BASE}.failed for details." \
-				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" \
-				&& mv "${JOB_CONTROLE_FILE_BASE}."{started,failed} \
-				&& return
+				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
+			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+			return
 		}
 	mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 }
