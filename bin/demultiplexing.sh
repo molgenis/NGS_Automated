@@ -179,20 +179,22 @@ for i in "${projects[@]}"
 do
 	project=$(basename "${i}")
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking ${project} ..."
-	export JOB_CONTROLE_FILE_BASE="${SCR_ROOT_DIR}/logs/${project}/run01.demultiplexing"
-	if [[ -f "${JOB_CONTROLE_FILE_BASE}.finished" ]]
-	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished: Skipping finished ${project}."
-		continue
-	elif [[ -f "${JOB_CONTROLE_FILE_BASE}.started" ]]
-	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.started: Skipping ${project}, which is already getting processed."
-		continue
-	elif [[ ! -f "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" ]]
-	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheet found: skipping ${project}."
-		continue
-	fi
+	#export JOB_CONTROLE_FILE_BASE="${SCR_ROOT_DIR}/logs/${project}/run01.demultiplexing"
+	demultiplexingJobControleFileBase="${SCR_ROOT_DIR}/logs/${project}/run01.demultiplexing"
+		if [[ -f "${demultiplexingJobControleFileBase}.finished" ]]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${demultiplexingJobControleFileBase}.finished: Skipping finished ${project}."
+			continue
+		elif [[ -f "${demultiplexingJobControleFileBase}.started" ]]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${demultiplexingJobControleFileBase}.started: Skipping ${project}, which is already getting processed."
+			continue
+		elif [[ ! -f "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" ]]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheet found: skipping ${project}."
+			continue
+		fi
+		export JOB_CONTROLE_FILE_BASE="${demultiplexingJobControleFileBase}"
 	#
 	# Create log dir with job control file for sequence run.
 	#

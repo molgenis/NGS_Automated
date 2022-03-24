@@ -314,9 +314,7 @@ function splitSamplesheetPerProject() {
 			#
 			# Skip project if demultiplexing only.
 			#
-			local _foundDemultiplexingOnly
-			_foundDemultiplexingOnly=$(set -e; contains "${_demultiplexOnly[@]}" "${_project}")
-			if [[ "${_foundDemultiplexingOnly}" == 'y' ]]
+			if [[ " ${_demultiplexOnly[*]} " == *" ${_project} "* ]]
 			then
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "'Demultiplexing Only' detected for project: ${_project}; will not create project samplesheet."
 				continue
