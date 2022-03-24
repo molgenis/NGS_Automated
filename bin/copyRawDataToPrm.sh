@@ -262,7 +262,7 @@ function splitSamplesheetPerProject() {
 		then
 			for _pipeline in "${_pipelines[@]}"
 			do
-				if [[ "${_pipeline^^}" == *'DEMULTIPLEXING ONLY'* ]]
+				if [[ "${_pipeline^^}" == *'NGS_Demultiplexing'* ]]
 				then
 					readarray -t _demultiplexOnly< <(awk -F "${SAMPLESHEET_SEP}" "{if (NR>1 && \$${_pipelineFieldIndex} ~ /${_pipeline}/) {print}}" "${_sampleSheet}" | awk "BEGIN{FS=\"${SAMPLESHEET_SEP}\"} {print \$${_projectFieldIndex}}" | sort -u)
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'Demultiplexing only detected.'
@@ -316,7 +316,7 @@ function splitSamplesheetPerProject() {
 			#
 			if [[ " ${_demultiplexOnly[*]} " == *" ${_project} "* ]]
 			then
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "'Demultiplexing Only' detected for project: ${_project}; will not create project samplesheet."
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "'NGS_Demultiplexing' detected for project: ${_project}; will not create project samplesheet."
 				continue
 			else
 				local _projectSampleSheet
