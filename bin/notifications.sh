@@ -501,6 +501,7 @@ do
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found notification types ${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]} for ${ordered_phase_with_state}."
 					notification "${ordered_phase_with_state}" "${NOTIFY_FOR_PHASE_WITH_STATE[${ordered_phase_with_state}]}" "${_lfs_root_dir}"
 				fi
+			else
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Missing value for 'phase:state' ${ordered_phase_with_state:-} in NOTIFY_FOR_PHASE_WITH_STATE array in ${CFG_DIR}/${group}.cfg"
 				log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "No notification types specified for this 'phase:state' combinations: cannot send notifications."
 			fi
