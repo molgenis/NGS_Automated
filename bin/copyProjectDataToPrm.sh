@@ -183,7 +183,7 @@ function rsyncProjectRun() {
 			then
 				if [[ "${_sampleType}" == 'GAP' ]]
 				then
-					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "_sampleType is GAF. Making symlinks for DiagnosticOutput folder."
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "_sampleType is GAP. Making symlinks for DiagnosticOutput folder."
 					#shellcheck disable=SC2153
 					cd "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/"
 					windowsPathDelimeter="\\"
