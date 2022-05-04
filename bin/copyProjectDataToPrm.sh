@@ -188,13 +188,6 @@ function rsyncProjectRun() {
 					cd "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/"
 					windowsPathDelimeter="\\"
 					#
-					# Create symlink for PennCNV project file (old style).
-					#
-					penncnvproject=$(ls "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/${_project}_PennCNV.txt")
-					#shellcheck disable=SC2250
-					echo "\\\\zkh\appdata\medgen\leucinezipper${penncnvproject//\//$windowsPathDelimeter}" > "${_project}_PennCNV.txt"
-					unix2dos "${_project}_PennCNV.txt"
-					#
 					# Create symlinks for PennCNV files per sample (new style).
 					#
 					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/ folder exists ..."
