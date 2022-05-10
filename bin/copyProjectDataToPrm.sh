@@ -184,7 +184,7 @@ function rsyncProjectRun() {
 				if [[ "${_sampleType}" == 'GAP' ]]
 				then
 					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "_sampleType is GAP. Making symlinks for DiagnosticOutput folder."
-					windowsPathDelimeter='\'
+					windowsPathDelimeter='\\'
 					linuxPathDelimeter='/'
 					#
 					# Create symlinks for PennCNV files per sample (new style).
@@ -194,6 +194,7 @@ function rsyncProjectRun() {
 					then
 						mapfile -t pennCNVFiles < <(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/" -name "*.txt")
 						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Number of PennCNV files: ${#pennCNVFiles[@]}."
+						#shellcheck disable=SC2153
 						mkdir -p "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/${_project}/"
 						for pennCNV in "${pennCNVFiles[@]}"
 						do
