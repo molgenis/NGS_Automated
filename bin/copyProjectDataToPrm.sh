@@ -184,6 +184,7 @@ function rsyncProjectRun() {
 				if [[ "${_sampleType}" == 'GAP' ]]
 				then
 					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "_sampleType is GAP. Making symlinks for DiagnosticOutput folder."
+					# shellcheck disable=SC1003 # No, we are not escaping a '
 					windowsPathDelimeter='\\'
 					linuxPathDelimeter='/'
 					#
