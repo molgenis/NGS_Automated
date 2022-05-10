@@ -184,9 +184,8 @@ function rsyncProjectRun() {
 				if [[ "${_sampleType}" == 'GAP' ]]
 				then
 					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "_sampleType is GAP. Making symlinks for DiagnosticOutput folder."
-					#shellcheck disable=SC2153
-					cd "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/"
-					windowsPathDelimeter="\\"
+					windowsPathDelimeter='\'
+					linuxPathDelimeter='/'
 					#
 					# Create symlinks for PennCNV files per sample (new style).
 					#
@@ -194,15 +193,13 @@ function rsyncProjectRun() {
 					if [[ -d "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/" ]]
 					then
 						mapfile -t pennCNVFiles < <(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/" -name "*.txt")
-#						declare -a pennCNVFiles=($(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/" -name "*.txt"))
 						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Number of PennCNV files: ${#pennCNVFiles[@]}."
 						mkdir -p "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/${_project}/"
 						for pennCNV in "${pennCNVFiles[@]}"
 						do
-							name=$(basename "${pennCNV}")	
-							#shellcheck disable=SC2250
-							echo "\\\\zkh\appdata\medgen\leucinezipper${pennCNV//\//$windowsPathDelimeter}" > "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/${_project}/${name}"
-							unix2dos "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/${_project}/${name}"
+							name=$(basename "${pennCNV}")
+							printf '%s%s\r\n' "${SMB_SHARE_NAMES["${GROUP}"]}" "${pennCNV//${linuxPathDelimeter}/${windowsPathDelimeter}}" \
+								> "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/${_project}/${name}"
 						done
 					fi
 					#
@@ -210,12 +207,8 @@ function rsyncProjectRun() {
 					# If any data is (still) missing after creating this symlink, processing will fail.
 					#
 					callrate=$(ls "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/Callrates_${_project}.txt")
-					#shellcheck disable=SC2250
-					echo "\\\\zkh\appdata\medgen\leucinezipper${callrate//\//$windowsPathDelimeter}" > "Callrates_${_project}.txt"
-					unix2dos "Callrates_${_project}.txt"
-					#
-					cd -
-					
+					printf '%s%s\r\n' "${SMB_SHARE_NAMES["${GROUP}"]}" "${callrate//${linuxPathDelimeter}/${windowsPathDelimeter}}" \
+						> "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/Callrates_${_project}.txt"
 				fi
 				echo "The results can be found in: ${PRM_ROOT_DIR}." \
 					>> "${JOB_CONTROLE_FILE_BASE}.started"
