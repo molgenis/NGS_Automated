@@ -225,7 +225,7 @@ then
 	samplesheetsLocation="${WORKING_DIR}/Samplesheets/"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "samplesheetsServerLocation set to ${samplesheetsServerLocation}."
 else
-	# shellcheck disable=SC153
+	# shellcheck disable=SC2154
 	samplesheetsLocation="/groups/${GROUP}/${TMP_LFS}/Samplesheets/"
 fi
 
