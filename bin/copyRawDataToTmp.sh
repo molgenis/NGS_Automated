@@ -52,7 +52,7 @@ function rsyncNGSRuns() {
 	do
 		## line is ${filePrefix/${filePrefix}_1.fq.gz
 		## removed '-tp' arguments in the rsync, since dm user is not able to set those
-		rsync -rlDvc "${WORKING_DIR}/./rawdata/ngs/${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
+		rsync -rlDvc --relative "${WORKING_DIR}/./rawdata/ngs/${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
 		|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from ${WORKING_DIR}/./rawdata/ngs/"
@@ -72,7 +72,8 @@ function rsyncArrayRuns() {
 	do
 		## line is ${sentrixBarcode_A}/${sentrixBarcode_A}_${sentrixPosition_A}.gtc
 		## removed '-tp' arguments in the rsync, since dm user is not able to set those
-		rsync -rlDvc "${WORKING_DIR}/./rawdata/array/GTC/${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "rsync -rlDvc ${WORKING_DIR}/./rawdata/array/GTC/${line}* ${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/"
+		rsync -rlDvc --relative "${WORKING_DIR}/./rawdata/array/GTC/${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
 		|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from ${WORKING_DIR}/./rawdata/array/GTC/"
@@ -328,9 +329,11 @@ else
 				if ssh "${samplesheetsServerLocation}" "grep 'SentrixBarcode_A' \"${sampleSheet}\""
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "this is array data"
+					## copy all the data from that run
 					rsync -rlptDvc "${WORKING_DIR}/./rawdata/array/GTC/${filePrefix}" "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/"
 				else		
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "this is NGS data"
+					## copy all the data from that run
 					rsync -rlptDvc "${WORKING_DIR}/./rawdata/ngs/${filePrefix}" "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/"
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${project} finished"
 				fi
