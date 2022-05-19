@@ -223,8 +223,9 @@ if [[ -z "${samplesheetsServerLocation:-}" ]]
 then
 	samplesheetsServerLocation="localhost"
 	samplesheetsLocation="${WORKING_DIR}/Samplesheets/"
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'samplesheetsServerLocation set to ${samplesheetsServerLocation}.'
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "samplesheetsServerLocation set to ${samplesheetsServerLocation}."
 else
+	# shellcheck disable=SC153
 	samplesheetsLocation="/groups/${GROUP}/${TMP_LFS}/Samplesheets/"
 fi
 
@@ -277,7 +278,6 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #	1. Loop over their analysis ("run") sub dirs and check if there are any we need to rsync.
 #	2. Optionally, split the samplesheets per project after the data was rsynced.
 #
-declare -a sampleSheetsFromSourceServer
 # shellcheck disable=SC2029
 
 readarray -t sampleSheetsFolder < <(ssh "${samplesheetsServerLocation}" "find \"${samplesheetsLocation}/\" -mindepth 1 -maxdepth 1 -type f -name '*.${SAMPLESHEET_EXT}'")
@@ -315,6 +315,7 @@ else
 			then
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${WORKING_DIR}/logs/${project}/${RAWDATAPROCESSINGFINISHED} present."
 				##Check if array or NGS run
+				# shellcheck disable=SC2029
 				if ssh "${samplesheetsServerLocation}" "grep 'SentrixBarcode_A' \"${sampleSheet}\""
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "this is array data"
@@ -332,6 +333,7 @@ else
 			fi
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Samplesheet is on destination machine: ${DESTINATION_DIAGNOSTICS_CLUSTER}"
+			# shellcheck disable=SC2029
 			if ssh "${DATA_MANAGER}"@"${DESTINATION_DIAGNOSTICS_CLUSTER}" test -e "${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested"
 			then
 				##Check if array or NGS run
