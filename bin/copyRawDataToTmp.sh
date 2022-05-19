@@ -48,7 +48,7 @@ function rsyncNGSRuns() {
 	local _samplesheet
 	_samplesheet="${1}"
 
-	while read line
+	while read -r line
 	do
 		## line is ${filePrefix/${filePrefix}_1.fq.gz
 		## removed '-tp' arguments in the rsync, since dm user is not able to set those
@@ -147,14 +147,9 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline argume
 declare archiveMode='false'
 declare group=''
 declare dryrun=''
-declare sourceServerFQDN=''
-declare sourceServerRootDir=''
 while getopts ":g:l:t:s:r:ahn" opt
 do
 	case "${opt}" in
-		a)
-			archiveMode='true'
-			;;
 		h)
 			showHelp
 			;;
@@ -303,9 +298,7 @@ else
 		#
 		project="$(basename "${sampleSheet%."${SAMPLESHEET_EXT}"}")"
 		controlFileBase="${WORKING_DIR}/logs/${project}/"
-		runPrefix="run01"
 		export JOB_CONTROLE_FILE_BASE="${controlFileBase}/${project}.${SCRIPT_NAME}"
-		rsyncData='false'
 
 		# shellcheck disable=SC2174
 		mkdir -m 2770 -p "${WORKING_DIR}/logs/${project}/"
