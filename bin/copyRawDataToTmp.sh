@@ -68,7 +68,7 @@ function rsyncArrayRuns() {
 	local _samplesheet
 	_samplesheet="${1}"
 
-	while read line
+	while read -r line
 	do
 		## line is ${sentrixBarcode_A}/${sentrixBarcode_A}_${sentrixPosition_A}.gtc
 		## removed '-tp' arguments in the rsync, since dm user is not able to set those
@@ -144,10 +144,9 @@ EOH
 # Get commandline arguments.
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
-declare archiveMode='false'
 declare group=''
 declare dryrun=''
-while getopts ":g:l:t:s:r:ahn" opt
+while getopts ":g:l:s:r:ahn" opt
 do
 	case "${opt}" in
 		h)
@@ -158,9 +157,6 @@ do
 			;;
 		s)
 			samplesheetsServerLocation="${OPTARG}"
-			;;
-		t)
-			trigger="{$OPTARG}"
 			;;
 		n)
 			dryrun='-n'
