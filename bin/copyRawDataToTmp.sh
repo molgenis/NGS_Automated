@@ -52,7 +52,7 @@ function rsyncNGSRuns() {
 	do
 		## line is ${filePrefix/${filePrefix}_1.fq.gz
 		## removed '-tp' arguments in the rsync, since dm user is not able to set those
-		rsync -rlDvc --relative "${WORKING_DIR}/./rawdata/ngs/${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
+		rsync -rlptDvc --relative --rsync-path="sudo -u umcg-atd-ateambot rsync" "${WORKING_DIR}/./rawdata/ngs/${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
 		|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from ${WORKING_DIR}/./rawdata/ngs/"
@@ -73,7 +73,7 @@ function rsyncArrayRuns() {
 		## line is ${sentrixBarcode_A}/${sentrixBarcode_A}_${sentrixPosition_A}.gtc
 		## removed '-tp' arguments in the rsync, since dm user is not able to set those
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "rsync -rlDvc ${WORKING_DIR}/./rawdata/array/GTC/${line}* ${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/"
-		rsync -rlDvc --relative "${WORKING_DIR}/./rawdata/array/GTC/${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
+		rsync -rlptDvc --relative --rsync-path="sudo -u umcg-atd-ateambot rsync" "${WORKING_DIR}/./rawdata/array/GTC/${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
 		|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from ${WORKING_DIR}/./rawdata/array/GTC/"
@@ -99,9 +99,6 @@ Usage:
 Options:
 
 	-h	Show this help.
-	-n	Dry-run: Do not perform actual sync, but only list changes instead.
-	-a	Archive mode: only copy the raw data to prm and do not split the flowcell based samplesheet
-		into project samplesheets to trigger the project-based analysis of the data with a subsequent pipeline.
 	-g [group]
 		Group for which to process data.
 	-w [workingDirectory]
@@ -146,7 +143,7 @@ EOH
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
 declare dryrun=''
-while getopts ":g:l:s:r:ahn" opt
+while getopts ":g:l:s:h" opt
 do
 	case "${opt}" in
 		h)
@@ -157,9 +154,6 @@ do
 			;;
 		s)
 			samplesheetsServerLocation="${OPTARG}"
-			;;
-		n)
-			dryrun='-n'
 			;;
 		l)
 			l4b_log_level="${OPTARG^^}"
@@ -183,10 +177,6 @@ done
 if [[ -z "${group:-}" ]]
 then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
-fi
-if [[ -n "${dryrun:-}" ]]
-then
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Enabled dryrun option for rsync.'
 fi
 
 #
@@ -218,7 +208,7 @@ do
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Config file ${configFile} missing or not accessible."
 	fi
 done
-
+## parsed after config files loaded
 if [[ -z "${samplesheetsServerLocation:-}" ]]
 then
 	samplesheetsServerLocation="localhost"
@@ -239,7 +229,7 @@ fi
 
 #
 # Make sure only one copy of this script runs simultaneously
-# per data collection we want to copy to prm -> one copy per group per combination of ${sourceServer} and ${SCR_ROOT_DIR}.
+# per data collection we want to copy to prm -> one copy per group per combination of ${samplesheetsServerLocation} and ${samplesheetsLocation}.
 # Therefore locking must be done after
 # * sourcing the file containing the lock function,
 # * sourcing config files,
@@ -247,9 +237,9 @@ fi
 # but before doing the actual data transfers.
 #
 # As servernames and folders may contain various characters that would require escaping in (lock) file names,
-# we compute a hash for the combination of ${sourceServer} and ${SCR_ROOT_DIR} to append to the ${SCRIPT_NAME}
-# for creating unique lock file. We write the combination of ${sourceServer} and ${SCR_ROOT_DIR} in the lock file
-# to make it easier to detect which combination of ${sourceServer} and ${SCR_ROOT_DIR} the lock file is for.
+# we compute a hash for the combination of ${samplesheetsServerLocation} and ${samplesheetsLocation} to append to the ${SCRIPT_NAME}
+# for creating unique lock file. We write the combination of ${samplesheetsServerLocation} and ${samplesheetsLocation} in the lock file
+# to make it easier to detect which combination of ${samplesheetsServerLocation}and ${samplesheetsLocation} the lock file is for.
 #
 hashedSource="$(printf '%s:%s' "${samplesheetsServerLocation}" "${samplesheetsLocation}" | md5sum | awk '{print $1}')"
 lockFile="${WORKING_DIR}/logs/${SCRIPT_NAME}_${hashedSource}.lock"
@@ -274,12 +264,10 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 
 #
-# Get a list of all samplesheets for this group on the specified sourceServer, where the raw data was generated, and
+# Get a list of all samplesheets for this group on the specified samplesheetsServerLocation, where the raw data was generated, and
 #	1. Loop over their analysis ("run") sub dirs and check if there are any we need to rsync.
 #	2. Optionally, split the samplesheets per project after the data was rsynced.
 #
-# shellcheck disable=SC2029
-
 readarray -t sampleSheetsFolder < <(ssh "${samplesheetsServerLocation}" "find \"${samplesheetsLocation}/\" -mindepth 1 -maxdepth 1 -type f -name '*.${SAMPLESHEET_EXT}'")
 
 ##ISSUE: this script should always be executed by the ateambot user (and not for chaperone with the dm user solely to write the logs)
