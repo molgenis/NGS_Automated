@@ -142,7 +142,6 @@ EOH
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
-declare dryrun=''
 while getopts ":g:l:s:h" opt
 do
 	case "${opt}" in
@@ -268,6 +267,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #	1. Loop over their analysis ("run") sub dirs and check if there are any we need to rsync.
 #	2. Optionally, split the samplesheets per project after the data was rsynced.
 #
+# shellcheck disable=SC2029
 readarray -t sampleSheetsFolder < <(ssh "${samplesheetsServerLocation}" "find \"${samplesheetsLocation}/\" -mindepth 1 -maxdepth 1 -type f -name '*.${SAMPLESHEET_EXT}'")
 
 ##ISSUE: this script should always be executed by the ateambot user (and not for chaperone with the dm user solely to write the logs)
