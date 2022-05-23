@@ -283,7 +283,7 @@ else
 		project="$(basename "${sampleSheet%."${SAMPLESHEET_EXT}"}")"
 		controlFileBase="${WORKING_DIR}/logs/${project}/"
 		export JOB_CONTROLE_FILE_BASE="${controlFileBase}/${project}.${SCRIPT_NAME}"
-
+		printf '%s\n' "Rsyncing ${project} dir ..." >> "${lockFile}"
 		# shellcheck disable=SC2174
 		mkdir -m 2770 -p "${WORKING_DIR}/logs/${project}/"
 		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
