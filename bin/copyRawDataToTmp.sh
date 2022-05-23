@@ -90,7 +90,7 @@ function showHelp() {
 	#
 	cat <<EOH
 ===============================================================================================================
-Script to copy (sync) data from a succesfully finished run from tmp to prm storage.
+Script to copy (sync) data from a raw data from prm to tmp.
 
 Usage:
 
@@ -332,19 +332,19 @@ else
 					rsync -vt "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested" "${WORKING_DIR}/logs/${project}/"
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested present, copying will start"
 					rsyncArrayRuns "${WORKING_DIR}/logs/${project}/${project}.data.requested"
-					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${project} finished"
+					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "data transfer for ${project} is finished"
 				else
 					rsync -vt "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested" "${WORKING_DIR}/logs/${project}/"
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested present, copying will start"
 					rsyncNGSRuns "${WORKING_DIR}/logs/${project}/${project}.data.requested"
-					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${project} finished"
+					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "data transfer for ${project} is finished"
 				fi
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested absent, it can be that the process already started (${TMP_ROOT_DIR}/logs/${project}/${project}.data.started)"
 				continue
 			fi
 		fi
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred the data from ${WORKING_DIR}/logs/${project}/${project}.data.requested to prm."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred the data from ${WORKING_DIR}/logs/${project}/${project}.data.requested to tmp."
 		rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 		mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 	done
