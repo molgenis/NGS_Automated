@@ -52,7 +52,7 @@ function rsyncNGSRuns() {
 	do
 		## line is ${filePrefix/${filePrefix}_1.fq.gz
 		## removed '-tp' arguments in the rsync, since dm user is not able to set those
-		rsync -rlptDvc --relative --rsync-path="sudo -u umcg-atd-ateambot rsync" "${WORKING_DIR}/./rawdata/ngs/${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
+		rsync -rlptDvc --relative --rsync-path="sudo -u umcg-${GROUP}-ateambot rsync" "${WORKING_DIR}/./rawdata/ngs/${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
 		|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from ${WORKING_DIR}/./rawdata/ngs/"
@@ -73,7 +73,7 @@ function rsyncArrayRuns() {
 		## line is ${sentrixBarcode_A}/${sentrixBarcode_A}_${sentrixPosition_A}.gtc
 		## removed '-tp' arguments in the rsync, since dm user is not able to set those
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "rsync -rlDvc ${WORKING_DIR}/./rawdata/array/GTC/${line}* ${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/"
-		rsync -rlptDvc --relative --rsync-path="sudo -u umcg-atd-ateambot rsync" "${WORKING_DIR}/./rawdata/array/GTC/${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
+		rsync -rlptDvc --relative --rsync-path="sudo -u umcg-${GROUP}-ateambot rsync" "${WORKING_DIR}/./rawdata/array/GTC/${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
 		|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from ${WORKING_DIR}/./rawdata/array/GTC/"
