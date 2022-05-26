@@ -99,21 +99,12 @@ Options:
 	-h	Show this help.
 	-g [group]
 		Group for which to process data.
-	-w [workingDirectory]
-		working directory a.k.a. rootDir/groupDir/LFS_dir
-		e.g. /groups/umcg-gd/prm06 or /groups/umcg-gap/scr01
 	-s [samplesheetServerLocation]
 		location of the samplesheet 
 		e.g. localhost (default) or wingedhelix
 	-l [level]
 		Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
-	-r [root]
-		Root dir on the server specified with -s and from where the raw data will be fetched (optional).
-		By default this is the SCR_ROOT_DIR variable, which is compiled from variables specified in the
-		<group>.cfg, <source_host>.cfg and sharedConfig.cfg config files (see below.)
-		You need to override SCR_ROOT_DIR when the data is to be fetched from a non default path,
-		which is for example the case when fetching data from another group.
 
 Config and dependencies:
 
@@ -208,10 +199,19 @@ done
 ## parsed after config files loaded
 if [[ -z "${samplesheetsServerLocation:-}" ]]
 then
+	if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]
+	then
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
+	fi
+	
 	samplesheetsServerLocation="localhost"
 	samplesheetsLocation="${WORKING_DIR}/Samplesheets/"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "samplesheetsServerLocation set to ${samplesheetsServerLocation}."
 else
+	if [[ "${ROLE_USER}" != "${DATA_MANAGER}" ]]; then
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${DATA_MANAGER}, but you are ${ROLE_USER} (${REAL_USER})."
+	fi
+	
 	# shellcheck disable=SC2153
 	samplesheetsLocation="/groups/${GROUP}/${TMP_LFS}/Samplesheets/"
 fi
@@ -220,9 +220,7 @@ fi
 #
 # Write access to prm storage requires data manager account.
 #
-if [[ "${ROLE_USER}" != "${DATA_MANAGER}" ]]; then
-	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${DATA_MANAGER}, but you are ${ROLE_USER} (${REAL_USER})."
-fi
+
 
 #
 # Make sure only one copy of this script runs simultaneously
@@ -281,7 +279,7 @@ else
 		project="$(basename "${sampleSheet%."${SAMPLESHEET_EXT}"}")"
 		controlFileBase="${WORKING_DIR}/logs/${project}/"
 		export JOB_CONTROLE_FILE_BASE="${controlFileBase}/${project}.${SCRIPT_NAME}"
-		printf '%s\n' "Rsyncing ${project} dir ..." >> "${lockFile}"
+		printf '%s\n' "Processing ${project} dir ..." >> "${lockFile}"
 		# shellcheck disable=SC2174
 		mkdir -m 2770 -p "${WORKING_DIR}/logs/${project}/"
 		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
@@ -306,11 +304,11 @@ else
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "this is array data"
 					## copy all the data from that run
-					rsync -rlptDvc "${WORKING_DIR}/./rawdata/array/GTC/${filePrefix}" "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/"
+					rsync -rlptDvc --relative "${WORKING_DIR}/./rawdata/array/GTC/${filePrefix}" "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/"
 				else		
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "this is NGS data"
 					## copy all the data from that run
-					rsync -rlptDvc "${WORKING_DIR}/./rawdata/ngs/${filePrefix}" "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/"
+					rsync -rlptDvc --relative "${WORKING_DIR}/./rawdata/ngs/${filePrefix}" "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/"
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${project} finished"
 				fi
 			else
