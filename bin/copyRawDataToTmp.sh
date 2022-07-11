@@ -212,7 +212,7 @@ else
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${DATA_MANAGER}, but you are ${ROLE_USER} (${REAL_USER})."
 	fi
 	
-	# shellcheck disable=SC2153
+	error# shellcheck disable=SC2153
 	samplesheetsLocation="/groups/${GROUP}/${TMP_LFS}/Samplesheets/"
 fi
 
