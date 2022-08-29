@@ -51,7 +51,8 @@ function rsyncNGSRuns() {
 	while read -r line
 	do
 		## line is ${filePrefix/${filePrefix}_1.fq.gz
-		rsync -rlptDvc --relative --rsync-path="sudo -u ${GROUP}-ateambot rsync" "${WORKING_DIR}/./rawdata/ngs/${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
+		##
+		rsync -rlptDvc --relative --rsync-path="sudo -u ${group}-ateambot rsync" "${WORKING_DIR}/./rawdata/ngs/${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
 		|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from ${WORKING_DIR}/./rawdata/ngs/"
@@ -71,7 +72,7 @@ function rsyncArrayRuns() {
 	do
 		## line is ${sentrixBarcode_A}/${sentrixBarcode_A}_${sentrixPosition_A}.gtc
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "rsync -rlDvc ${WORKING_DIR}/./rawdata/array/GTC/${line}* ${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/"
-		rsync -rlptDvc --relative --rsync-path="sudo -u ${GROUP}-ateambot rsync" "${WORKING_DIR}/./rawdata/array/GTC/${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
+		rsync -rlptDvc --relative --rsync-path="sudo -u ${group}-ateambot rsync" "${WORKING_DIR}/./rawdata/array/GTC/${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
 		|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from ${WORKING_DIR}/./rawdata/array/GTC/"
@@ -212,8 +213,8 @@ else
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${DATA_MANAGER}, but you are ${ROLE_USER} (${REAL_USER})."
 	fi
 	
-	error# shellcheck disable=SC2153
-	samplesheetsLocation="/groups/${GROUP}/${TMP_LFS}/Samplesheets/"
+	shellcheck disable=SC2153
+	samplesheetsLocation="/groups/${group}/${TMP_LFS}/Samplesheets/"
 fi
 
 
