@@ -236,13 +236,13 @@ else
 			echo "started: $(date +%FT%T%z)" > "${SCR_ROOT_DIR}/logs/${project}/run01.arrayConversion.totalRuntime"
 
 			{
-			mkdir -v -p "${SCR_ROOT_DIR}/generatedscripts/${project}/"
-			cd "${SCR_ROOT_DIR}/generatedscripts/${project}/"
+			mkdir -v -p "${SCR_ROOT_DIR}/generatedscripts_array/${project}/"
+			cd "${SCR_ROOT_DIR}/generatedscripts_array/${project}/"
 			cp -v "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" ./
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "copying ${EBROOTAGCT}/templates/generate_template.sh to ${SCR_ROOT_DIR}/generatedscripts/${project}/"
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "copying ${EBROOTAGCT}/templates/generate_template.sh to ${SCR_ROOT_DIR}/generatedscripts_array/${project}/"
 			cp -v "${EBROOTAGCT}/templates/generate_template.sh" ./
 			bash generate_template.sh 
-			cd "${SCR_ROOT_DIR}/projects/${project}/run01/jobs"
+			cd "${SCR_ROOT_DIR}/runs_array/${project}/run01/jobs"
 			bash submit.sh 
 			} >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "jobs submitted"

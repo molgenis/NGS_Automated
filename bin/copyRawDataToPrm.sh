@@ -575,11 +575,11 @@ else
 		# Determine whether an rsync is required for this run, which is the case when
 		# raw data production has finished successfully and this copy script has not.
 		#
-		if ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" test -e "${SCR_ROOT_DIR}/logs/${filePrefix}/${STEPBEFOREFINISHEDFILE}"
+		if ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" test -e "${SCR_ROOT_DIR}/logs/${filePrefix}/${RAWDATAPROCESSINGFINISHED}"
 		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/logs/${filePrefix}/${STEPBEFOREFINISHEDFILE} present."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/logs/${filePrefix}/${RAWDATAPROCESSINGFINISHED} present."
 		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/logs/${filePrefix}/${STEPBEFOREFINISHEDFILE} absent."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/logs/${filePrefix}/${RAWDATAPROCESSINGFINISHED} absent."
 			continue
 		fi
 		# shellcheck disable=SC2174

@@ -285,7 +285,7 @@ else
 				#
 				# Create an empty dir (source dir) to sync with the destination dir && then remove source dir.
 				#
-				mkdir "${HOME}/empty_dir/"
+				mkdir -p "${HOME}/empty_dir/"
 				rsync -a --delete "${HOME}/empty_dir/" "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}"
 				rmdir "${HOME}/empty_dir/"
 			else
