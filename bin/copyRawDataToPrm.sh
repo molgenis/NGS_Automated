@@ -241,7 +241,7 @@ function splitSamplesheetPerProject() {
 	local      _pipeline
 	declare -a _demultiplexOnly=("n")
 	IFS="${SAMPLESHEET_SEP}" read -r -a _sampleSheetColumnNames <<< "$(head -1 "${_sampleSheet}")"
-	for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]:-0} ; _offset++ ))
+	for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]} ; _offset++ ))
 	do
 		_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
 	done
@@ -252,13 +252,13 @@ function splitSamplesheetPerProject() {
 		_pipelineFieldIndex=$((${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]} + 1))
 		_projectFieldIndex=$((${_sampleSheetColumnOffsets["${PROJECTCOLUMN}"]} + 1))
 		readarray -t _pipelines < <(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_pipelineFieldIndex}" | sort | uniq )
-		if [[ "${#_pipelines[@]:-0}" -lt '1' ]]
+		if [[ "${#_pipelines[@]}" -lt '1' ]]
 		then
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} does not contain at least one value in the ${PIPELINECOLUMN} column."
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in samplesheet."
 			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
-		elif [[ "${#_pipelines[@]:-0}" -ge '1' ]]
+		elif [[ "${#_pipelines[@]}" -ge '1' ]]
 		then
 			for _pipeline in "${_pipelines[@]}"
 			do
@@ -280,7 +280,7 @@ function splitSamplesheetPerProject() {
 	if [[ -n "${_sampleSheetColumnOffsets["${PROJECTCOLUMN}"]+isset}" ]]; then
 		_projectFieldIndex=$((${_sampleSheetColumnOffsets["${PROJECTCOLUMN}"]} + 1))
 		readarray -t _projects< <(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_projectFieldIndex}" | sort | uniq )
-		if [[ "${#_projects[@]:-0}" -lt '1' ]]
+		if [[ "${#_projects[@]}" -lt '1' ]]
 		then
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} does not contain at least one value in the ${PROJECTCOLUMN} column."
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in samplesheet."
@@ -558,7 +558,7 @@ declare -a sampleSheetsFromSourceServer
 # shellcheck disable=SC2029
 readarray -t sampleSheetsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${SCR_ROOT_DIR}/Samplesheets/\" -mindepth 1 -maxdepth 1 -type f -name '*.${SAMPLESHEET_EXT}'")
 
-if [[ "${#sampleSheetsFromSourceServer[@]:-0}" -eq '0' ]]
+if [[ "${#sampleSheetsFromSourceServer[@]}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheets found at ${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}."
 else
