@@ -268,7 +268,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 readarray -t sampleSheetsFolder < <(ssh "${samplesheetsServerLocation}" "find \"${samplesheetsLocation}/\" -mindepth 1 -maxdepth 1 -type f -name '*.${SAMPLESHEET_EXT}'")
 
 ##ISSUE: this script should always be executed by the ateambot user (and not for chaperone with the dm user solely to write the logs)
-if [[ "${#sampleSheetsFolder[@]:-0}" -eq '0' ]]
+if [[ "${#sampleSheetsFolder[@]}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheets found at ${samplesheetsServerLocation} ${samplesheetsLocation}/*.${SAMPLESHEET_EXT}."
 else

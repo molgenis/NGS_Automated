@@ -278,7 +278,7 @@ function getSampleType(){
 	declare    sampleType='DNA' # Default when not specified in sample sheet.
 	declare    sampleTypeFieldIndex
 	IFS="${SAMPLESHEET_SEP}"  read -r -a sampleSheetColumnNames <<<"$(head -1 "${_sampleSheet}")"
-	for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]:-0} ; offset++ ))
+	for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]} ; offset++ ))
 	do
 		#
 		# Backwards compatibility for "Sample Type" including - the horror - a space and optionally quotes :o.
@@ -439,7 +439,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 # shellcheck disable=SC2029
 mapfile -t projects < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/\" -maxdepth 1 -mindepth 1 -type d")
-if [[ "${#projects[@]:-0}" -eq '0' ]]
+if [[ "${#projects[@]}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${TMP_ROOT_DIAGNOSTICS_DIR}/projects."
 else
@@ -449,7 +449,7 @@ else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project} ..."
 		# shellcheck disable=SC2029
 		mapfile -t runs < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${project}/\" -maxdepth 1 -mindepth 1 -type d")
-		if [[ "${#runs[@]:-0}" -eq '0' ]]
+		if [[ "${#runs[@]}" -eq '0' ]]
 		then
 			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found for project ${project}."
 		else
