@@ -482,6 +482,5 @@ else
 fi
 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished successfully!'
-echo "" > "${lockFile}"
 trap - EXIT
 exit 0
