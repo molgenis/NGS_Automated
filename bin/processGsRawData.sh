@@ -206,7 +206,7 @@ function sanityChecking() {
 	local      _projectFieldIndex
 	declare -a _projects=()
 	IFS="${SAMPLESHEET_SEP}" read -r -a _sampleSheetColumnNames <<< "$(head -1 "${_gsSampleSheet}")"
-	for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]:-0} ; _offset++ ))
+	for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]} ; _offset++ ))
 	do
 		_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
 	done
@@ -232,7 +232,7 @@ function sanityChecking() {
 	# The 835385 is the sampleProcessStepID, which has to be removed to get the project value.
 	#
 	readarray -t _projects < <(tail -n +2 "${_gsSampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_projectFieldIndex}" | sed 's/-[0-9][0-9]*$//' | sort | uniq)
-	if [[ "${#_projects[@]:-0}" -lt '1' ]]
+	if [[ "${#_projects[@]}" -lt '1' ]]
 	then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_gsSampleSheet} does not contain at least one project value."
 		mv "${_controlFileBaseForFunction}."{started,failed}
@@ -315,7 +315,7 @@ function sanityChecking() {
 		declare -a _sampleSheetColumnNames=()
 		declare -A _sampleSheetColumnOffsets=()
 		IFS="${SAMPLESHEET_SEP}" read -r -a _sampleSheetColumnNames <<< "$(head -1 "${_sampleSheet}")"
-		for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]:-0} ; _offset++ ))
+		for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]} ; _offset++ ))
 		do
 			_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
 		done
@@ -345,7 +345,7 @@ function sanityChecking() {
 				if [[ "${_requiredColumnValueState}" == 'present' ]]
 				then
 					readarray -t _requiredColumnValues < <(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_requiredColumnIndex}")
-					if [[ "${#_requiredColumnValues[@]:-0}" -ne "${_sampleSheetNumberOfRows}" ]]
+					if [[ "${#_requiredColumnValues[@]}" -ne "${_sampleSheetNumberOfRows}" ]]
 					then
 						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Column ${_requiredColumnName} in ${_sampleSheet} does NOT contain the expected amount of values: ${_sampleSheetNumberOfRows}."
 						mv "${_controlFileBaseForFunction}."{started,failed}
@@ -356,7 +356,7 @@ function sanityChecking() {
 				elif [[ "${_requiredColumnValueState}" == 'single' ]]
 				then
 					readarray -t _requiredColumnValues < <(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_requiredColumnIndex}" | sort | uniq )
-					if [[ "${#_requiredColumnValues[@]:-0}" -ne '1' ]]
+					if [[ "${#_requiredColumnValues[@]}" -ne '1' ]]
 					then
 						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Column ${_requiredColumnName} in ${_sampleSheet} must contain the same value for all samples/rows."
 						mv "${_controlFileBaseForFunction}."{started,failed}
@@ -368,7 +368,7 @@ function sanityChecking() {
 				elif [[ "${_requiredColumnValueState}" == 'empty' ]]
 				then
 					readarray -t _requiredColumnValues < <(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_requiredColumnIndex}" | sed '/^$/d')
-					if [[ "${#_requiredColumnValues[@]:-0}" -ne '0' ]]
+					if [[ "${#_requiredColumnValues[@]}" -ne '0' ]]
 					then
 						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Column ${_requiredColumnName} in ${_sampleSheet} must be empty for all samples/rows."
 						mv "${_controlFileBaseForFunction}."{started,failed}
@@ -540,7 +540,7 @@ function processSamplesheetsAndMoveConvertedData() {
 	declare -a _projects=()
 	_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/CSV_UMCG_"*".${SAMPLESHEET_EXT}.converted")
 	IFS="${SAMPLESHEET_SEP}" read -r -a _sampleSheetColumnNames <<< "$(head -1 "${_gsSampleSheet}")"
-	for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]:-0} ; _offset++ ))
+	for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]} ; _offset++ ))
 	do
 		_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
 	done
@@ -561,7 +561,7 @@ function processSamplesheetsAndMoveConvertedData() {
 	# and in format ${sequencingStartdate}_${sequencer}_${run}_${flowcell}
 	#
 	readarray -t _runDirs < <(cd "${TMP_ROOT_DIR}/${_batch}/" && find ./ -maxdepth 1 -mindepth 1 -type d -name '*[0-9][0-9]*_[A-Z0-9][A-Z0-9]*_[0-9][0-9]*_[A-Z0-9][A-Z0-9]*' -exec basename {} \;)
-	if [[ "${#_runDirs[@]:-0}" -lt '1' ]]
+	if [[ "${#_runDirs[@]}" -lt '1' ]]
 	then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Did not find any sequence run dirs in ${TMP_ROOT_DIR}/${_batch}/."
 		mv "${_controlFileBaseForFunction}."{started,failed}
@@ -867,7 +867,7 @@ declare -A requiredSamplesheetColumns=(
 readarray -t gsBatchDirs < <(find "${TMP_ROOT_DIR}/" -maxdepth 1 -mindepth 1 -type d -name "[0-9]*-[0-9]*")
 log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Found gsBatchDirs: ${gsBatchDirs[*]:-}"
 
-if [[ "${#gsBatchDirs[@]:-0}" -eq '0' ]]
+if [[ "${#gsBatchDirs[@]}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No batch directories found in ${TMP_ROOT_DIR}/"
 else

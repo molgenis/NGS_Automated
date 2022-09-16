@@ -84,7 +84,7 @@ function processBatch() {
 	#
 	# shellcheck disable=SC2029
 	readarray -t _flowcellDirsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${_batchDirFromSourceServer}\" -maxdepth 1 -mindepth 1 -type d -name '[^_]*_[^_]*_[^_]*_[^_]*'")
-	if [[ "${#_flowcellDirsFromSourceServer[@]:-0}" -eq '0' ]]
+	if [[ "${#_flowcellDirsFromSourceServer[@]}" -eq '0' ]]
 	then
 		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No flowcell directories found at ${DATA_MANAGER}@${sourceServerFQDN}:${_batchDirFromSourceServer}/[^_]*_[^_]*_[^_]*_[^_]*."
 		return
@@ -338,7 +338,7 @@ declare -a batchDirsFromSourceServer
 # shellcheck disable=SC2029
 readarray -t batchDirsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${SCR_ROOT_DIR}/\" -maxdepth 1 -mindepth 1 -type d -name '[0-9]*-[0-9]*'")
 
-if [[ "${#batchDirsFromSourceServer[@]:-0}" -eq '0' ]]
+if [[ "${#batchDirsFromSourceServer[@]}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No batch directories found at ${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/[0-9]*-[0-9]*."
 else

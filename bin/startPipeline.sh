@@ -399,7 +399,7 @@ printf 'Started at %s.\n' "$(date '+%Y-%m-%dT%H:%M:%S')" > "${TMP_ROOT_DIR}/logs
 declare -a sampleSheets
 # shellcheck disable=SC2029
 sampleSheets=( "$(ssh "${HOSTNAME_PRM}" "find \"${PRM_ROOT_DIR}/Samplesheets/\" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name '*.${SAMPLESHEET_EXT}'")" )
-if [[ "${#sampleSheets[@]:-0}" -eq '0' ]]
+if [[ "${#sampleSheets[@]}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No sample sheets found @ ${PRM_ROOT_DIR}/Samplesheets/: There is nothing to do."
 	trap - EXIT
@@ -415,7 +415,7 @@ fi
 #
 readarray -t sampleSheets < <(find "${TMP_ROOT_DIR}/Samplesheets/" -maxdepth 1 -mindepth 1 -type f -name "*.${SAMPLESHEET_EXT}")
 
-if [[ "${#sampleSheets[@]:-0}" -eq '0' ]]
+if [[ "${#sampleSheets[@]}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No samplesheets found in ${TMP_ROOT_DIR}/Samplesheets/"
 else
@@ -471,7 +471,7 @@ else
 		#
 		# Backwards compatibility for "Sample Type" including - the horror - a space and optionally quotes :o.
 		#
-		for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]:-0} ; offset++ ))
+		for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]} ; offset++ ))
 		do
 			regex='Sample Type'
 			if [[ "${sampleSheetColumnNames[${offset}]}" =~ ${regex} ]]
