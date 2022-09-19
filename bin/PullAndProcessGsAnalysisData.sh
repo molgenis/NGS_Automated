@@ -85,7 +85,7 @@ function sanityChecking(){
 
 	_countSamplesInSamplesheet=$(grep -o "${_batch}-[0-9][0-9]*" "${_gsSamplesheet}" | sort -u | wc -l)
 	_countBamFilesOnDisk=$(find "${TMP_ROOT_DIR}/tmp/${_batch}/" -maxdepth 2 -mindepth 2 -name '*bam' | wc -l)
-	_countgVcfFilesOnDisk=$(find "${TMP_ROOT_DIR}/${_batch}/" -maxdepth 1 -mindepth 1 -name '*.gvcf.gz' | wc -l)
+	_countgVcfFilesOnDisk=$(find "${TMP_ROOT_DIR}/tmp/${_batch}/" -maxdepth 1 -mindepth 1 -name '*.gvcf.gz' | wc -l)
 	if [[ "${_countBamFilesOnDisk}" -ne "${_countSamplesInSamplesheet}" ]]
 	then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Amount bam files (${_countBamFilesOnDisk}) is not the same as the number of lines in the samplesheet ${_countSamplesInSamplesheet} (${_countSamplesInSamplesheet})."
@@ -100,6 +100,7 @@ function sanityChecking(){
 	fi
 
 	for i in "${TMP_ROOT_DIR}/tmp/${_batch}/*/"
+	do
 		cd "${i}"  
 		for j in "${i}/"*".md5sum" 
 		do 
@@ -311,10 +312,17 @@ else
 			gsBatchUploadCompleted='false'
 			if rsync "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}/${gsBatch}.finished" 2>/dev/null
 			then
+				readarray -t testForEmptyDir < <(${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}/)
+				if [[ "${#testForEmptyDir[@]}" -gt 2 ]]
+				then
 				gsBatchUploadCompleted='true'
 				logTimeStamp=$(date '+%Y-%m-%d-T%H%M')
 				rsync "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}/Analysis/" \
 					> "${logDir}/${gsBatch}.uploadCompletedListing_${logTimeStamp}.log"
+				else
+					log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "${gsBatch}/ is empty, nothing to do."
+					return
+				fi
 			fi
 			#
 			# Rsync everything except the *.finished file and except any "hidden" files starting with a dot
