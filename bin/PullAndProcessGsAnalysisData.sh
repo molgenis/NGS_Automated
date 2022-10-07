@@ -55,6 +55,21 @@ function sanityChecking(){
 		printf '' > "${_controlFileBaseForFunction}.started"
 	fi
 	
+	cp "${_gsSampleSheet}"{,.converted} \
+		2>> "${_controlFileBaseForFunction}.started" \
+		&& printf '\n' \
+		2>> "${_controlFileBaseForFunction}.started" \
+		>> "${_gsSampleSheet}.converted" \
+		&& sed -i 's/\r/\n/g' "${_gsSampleSheet}.converted" \
+		2>> "${_controlFileBaseForFunction}.started" \
+		&& sed -i "/^[\s${SAMPLESHEET_SEP}]*$/d" "${_gsSampleSheet}.converted" \
+		2>> "${_controlFileBaseForFunction}.started" \
+	|| {
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to convert line end characters and/or remove empty lines for ${_gsSampleSheet}."
+		mv "${_controlFileBaseForFunction}."{started,failed}
+		return
+	}
+	
 	_numberOfSamplesheets=$(find "${TMP_ROOT_DIR}/tmp/${_batch}/" -maxdepth 1 -mindepth 1 -name 'CSV_UMCG_*.'"${SAMPLESHEET_EXT}" 2>/dev/null | wc -l)
 	if [[ "${_numberOfSamplesheets}" -eq 1 ]]
 	then
@@ -95,16 +110,27 @@ function sanityChecking(){
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	fi
-
-	for i in "${TMP_ROOT_DIR}/tmp/${_batch}/${analysisFolder}/"*"/"
+	mapfile -t sampleFolders < <(find ${TMP_ROOT_DIR}/tmp/${_batch}/${analysisFolder}/ -maxdepth 1 -mindepth 1 -type d)
+	if [[ ${#sampleFolders[@]} -eq '0']]
+	then
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "There is no data in ${TMP_ROOT_DIR}/tmp/${_batch}/${analysisFolder}/"
+		continue
+	fi
+	for sampleFolder in "${sampleFolders[@]}"
 	do
-		cd "${i}"
-		for j in "${i}/"*".md5sum" 
+		cd "${sampleFolder}"
+		mapfile -t checkSums < <(find ${TMP_ROOT_DIR}/tmp/${_batch}/${analysisFolder}/${sampleFolder}/ -name '*.md5sum' )
+		if [[ ${#checksums[@]} -eq '0']]
+		then
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "There is are no checksums (.md5sum) in ${TMP_ROOT_DIR}/tmp/${_batch}/${analysisFolder}/${sampleFolder}/"
+			continue
+		fi
+		for checksum in "${checksums[@]}/"*".md5sum" 
 		do 
-			filename=$(basename ${j%.md5sum})
-			awk -v filename="${filename}" '{print $0"  "filename}' "${j}" > "${i}/${filename}.md5"
+			filename=$(basename ${checksum%.md5sum})
+			awk -v filename="${filename}" '{print $0"  "filename}' "${checksum}" > "${sampleFolder}/${filename}.md5"
 			
-			_checksumVerification=$(cd "${i}/"
+			_checksumVerification=$(cd "${sampleFolder}/"
 				if md5sum -c "${filename}.md5" >> "${_controlFileBaseForFunction}.started" 2>&1
 				then
 					echo 'PASS'
