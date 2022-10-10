@@ -397,20 +397,7 @@ printf 'Started at %s.\n' "$(date '+%Y-%m-%dT%H:%M:%S')" > "${TMP_ROOT_DIR}/logs
 #       instead of on a research cluster to create them directly on tmp.
 #
 declare -a sampleSheets
-# shellcheck disable=SC2029
-sampleSheets=( "$(ssh "${HOSTNAME_PRM}" "find \"${PRM_ROOT_DIR}/Samplesheets/\" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name '*.${SAMPLESHEET_EXT}'")" )
-if [[ "${#sampleSheets[@]}" -eq '0' ]]
-then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No sample sheets found @ ${PRM_ROOT_DIR}/Samplesheets/: There is nothing to do."
-	trap - EXIT
-	exit 0
-else
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Fetching ${#sampleSheets[@]} sample sheets from ${PRM_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT} ..."
-	rsync -rltD \
-		"${HOSTNAME_PRM}:/${PRM_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}" \
-		"${TMP_ROOT_DIR}/Samplesheets/"
-fi
-#
+
 # Parse sample sheets.
 #
 readarray -t sampleSheets < <(find "${TMP_ROOT_DIR}/Samplesheets/" -maxdepth 1 -mindepth 1 -type f -name "*.${SAMPLESHEET_EXT}")
