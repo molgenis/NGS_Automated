@@ -39,7 +39,7 @@ function sanityChecking(){
 	local _batch="${1}"
 	local _controlFileBase="${2}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
-	local _gsSampleSheet
+	
 	#
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing batch ${_batch}..."
 	#
@@ -54,26 +54,38 @@ function sanityChecking(){
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
 		printf '' > "${_controlFileBaseForFunction}.started"
 	fi
-	
-	cp "${_gsSampleSheet}"{,.converted} \
-		2>> "${_controlFileBaseForFunction}.started" \
-		&& printf '\n' \
-		2>> "${_controlFileBaseForFunction}.started" \
-		>> "${_gsSampleSheet}.converted" \
-		&& sed -i 's/\r/\n/g' "${_gsSampleSheet}.converted" \
-		2>> "${_controlFileBaseForFunction}.started" \
-		&& sed -i "/^[\s${SAMPLESHEET_SEP}]*$/d" "${_gsSampleSheet}.converted" \
-		2>> "${_controlFileBaseForFunction}.started" \
-	|| {
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to convert line end characters and/or remove empty lines for ${_gsSampleSheet}."
-		mv "${_controlFileBaseForFunction}."{started,failed}
-		return
-	}
-	
+	local _numberOfSamplesheets
 	_numberOfSamplesheets=$(find "${TMP_ROOT_DIR}/tmp/${_batch}/" -maxdepth 1 -mindepth 1 -name 'CSV_UMCG_*.'"${SAMPLESHEET_EXT}" 2>/dev/null | wc -l)
 	if [[ "${_numberOfSamplesheets}" -eq 1 ]]
 	then
+		local _gsSampleSheet
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Found: one ${TMP_ROOT_DIR}/tmp/${_batch}/CSV_UMCG_*.${SAMPLESHEET_EXT} samplesheet."
+		_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/tmp/${_batch}/CSV_UMCG_"*".${SAMPLESHEET_EXT}")	
+		#
+		# Make sure:
+		#  1. The last line ends with a line end character.
+		#  2. We have the right line end character: convert any carriage return (\r) to newline (\n).
+		#  3. We remove empty lines: lines containing only white space and/or field separators are considered empty too.
+		#
+		cp "${_gsSampleSheet}"{,.converted} \
+			2>> "${_controlFileBaseForFunction}.started" \
+			&& printf '\n' \
+			2>> "${_controlFileBaseForFunction}.started" \
+			>> "${_gsSampleSheet}.converted" \
+			&& sed -i 's/\r/\n/g' "${_gsSampleSheet}.converted" \
+			2>> "${_controlFileBaseForFunction}.started" \
+			&& sed -i "/^[\s${SAMPLESHEET_SEP}]*$/d" "${_gsSampleSheet}.converted" \
+			2>> "${_controlFileBaseForFunction}.started" \
+		|| {
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to convert line end characters and/or remove empty lines for ${_gsSampleSheet}."
+			mv "${_controlFileBaseForFunction}."{started,failed}
+			return
+		}
+		#
+		# Continue with converted samplesheet.
+		#
+		_gsSampleSheet="${_gsSampleSheet}.converted"
+		
 	elif [[ "${_numberOfSamplesheets}" -gt 1 ]]
 	then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "More than one CSV_UMCG_*.${SAMPLESHEET_EXT} GS samplesheet present in ${TMP_ROOT_DIR}/${_batch}/."
@@ -85,7 +97,8 @@ function sanityChecking(){
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	fi
-	_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/tmp/${_batch}/CSV_UMCG_"*".${SAMPLESHEET_EXT}")
+	
+
 	
 	#
 	# Count Bam/gVCF files present on disk 
