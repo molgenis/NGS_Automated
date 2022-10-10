@@ -123,28 +123,30 @@ function sanityChecking(){
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	fi
-	mapfile -t sampleFolders < <(find ${TMP_ROOT_DIR}/tmp/${_batch}/${analysisFolder}/ -maxdepth 1 -mindepth 1 -type d)
-	if [[ ${#sampleFolders[@]} -eq '0']]
+	mapfile -t _sampleFolders < <(find "${TMP_ROOT_DIR}/tmp/${_batch}/${analysisFolder}/" -maxdepth 1 -mindepth 1 -type d)
+	if [[ "${#_sampleFolders[@]}" -eq '0' ]]
 	then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "There is no data in ${TMP_ROOT_DIR}/tmp/${_batch}/${analysisFolder}/"
 		continue
 	fi
-	for sampleFolder in "${sampleFolders[@]}"
+	local _sampleFolder 
+	for _sampleFolder in "${_sampleFolders[@]}"
 	do
-		cd "${sampleFolder}"
-		mapfile -t checkSums < <(find ${TMP_ROOT_DIR}/tmp/${_batch}/${analysisFolder}/${sampleFolder}/ -name '*.md5sum' )
-		if [[ ${#checksums[@]} -eq '0']]
+		mapfile -t checksumFiles < <(find "${TMP_ROOT_DIR}/tmp/${_batch}/${analysisFolder}/${_sampleFolder}/" -name '*.md5sum' )
+		if [[ "${#_checksumFiles[@]}" -eq '0' ]]
 		then
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "There is are no checksums (.md5sum) in ${TMP_ROOT_DIR}/tmp/${_batch}/${analysisFolder}/${sampleFolder}/"
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No checksum files (.md5sum) found in ${TMP_ROOT_DIR}/tmp/${_batch}/${analysisFolder}/${_sampleFolder}/"
 			continue
 		fi
-		for checksum in "${checksums[@]}/"*".md5sum" 
-		do 
-			filename=$(basename ${checksum%.md5sum})
-			awk -v filename="${filename}" '{print $0"  "filename}' "${checksum}" > "${sampleFolder}/${filename}.md5"
+		local _checksumFile
+		for _checksumFile in "${_checksumFiles[@]}"
+		do
+			local _filename
+			_filename="$(basename "${_checksumFile%.md5sum}")"
+			awk -v filename="${_filename}" '{print $0"  "filename}' "${_checksumFile}" > "${_sampleFolder}/${_filename}.md5"
 			
-			_checksumVerification=$(cd "${sampleFolder}/"
-				if md5sum -c "${filename}.md5" >> "${_controlFileBaseForFunction}.started" 2>&1
+			_checksumVerification=$(cd "${_sampleFolder}/"
+				if md5sum -c "${_filename}.md5" >> "${_controlFileBaseForFunction}.started" 2>&1
 				then
 					echo 'PASS'
 					touch "${_controlFileBaseForFunction}.md5.PASS"
@@ -155,9 +157,7 @@ function sanityChecking(){
 				fi
 			)
 		done
-		cd -
 	done
-	
 	mv -v "${_controlFileBaseForFunction}."{started,finished}
 }
 if [[ -f "${LIB_DIR}/sharedFunctions.bash" && -r "${LIB_DIR}/sharedFunctions.bash" ]]
