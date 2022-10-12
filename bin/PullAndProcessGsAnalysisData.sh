@@ -127,16 +127,16 @@ function sanityChecking(){
 	if [[ "${#_sampleFolders[@]}" -eq '0' ]]
 	then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "There is no data in ${TMP_ROOT_DIR}/tmp/${_batch}/${analysisFolder}/"
-		continue
+		return
 	fi
 	local _sampleFolder 
 	for _sampleFolder in "${_sampleFolders[@]}"
 	do
-		mapfile -t checksumFiles < <(find "${TMP_ROOT_DIR}/tmp/${_batch}/${analysisFolder}/${_sampleFolder}/" -name '*.md5sum' )
+		mapfile -t _checksumFiles < <(find "${TMP_ROOT_DIR}/tmp/${_batch}/${analysisFolder}/${_sampleFolder}/" -name '*.md5sum' )
 		if [[ "${#_checksumFiles[@]}" -eq '0' ]]
 		then
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No checksum files (.md5sum) found in ${TMP_ROOT_DIR}/tmp/${_batch}/${analysisFolder}/${_sampleFolder}/"
-			continue
+			return
 		fi
 		local _checksumFile
 		for _checksumFile in "${_checksumFiles[@]}"
@@ -145,17 +145,17 @@ function sanityChecking(){
 			_filename="$(basename "${_checksumFile%.md5sum}")"
 			awk -v filename="${_filename}" '{print $0"  "filename}' "${_checksumFile}" > "${_sampleFolder}/${_filename}.md5"
 			
-			_checksumVerification=$(cd "${_sampleFolder}/"
-				if md5sum -c "${_filename}.md5" >> "${_controlFileBaseForFunction}.started" 2>&1
-				then
-					echo 'PASS'
-					touch "${_controlFileBaseForFunction}.md5.PASS"
-				else
-					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Checksum verification failed. See ${_controlFileBaseForFunction}.failed for details."
-					mv "${_controlFileBaseForFunction}."{started,failed}
-					return
-				fi
-			)
+			cd "${_sampleFolder}/"
+			if md5sum -c "${_filename}.md5" >> "${_controlFileBaseForFunction}.started" 2>&1
+			then
+				echo 'PASS'
+				touch "${_controlFileBaseForFunction}.md5.PASS"
+			else
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Checksum verification failed. See ${_controlFileBaseForFunction}.failed for details."
+				mv "${_controlFileBaseForFunction}."{started,failed}
+				return
+			fi
+			cd -
 		done
 	done
 	mv -v "${_controlFileBaseForFunction}."{started,finished}
@@ -368,7 +368,7 @@ else
 			gsBatchUploadCompleted='false'
 			if rsync "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}/${gsBatch}.finished" 2>/dev/null
 			then
-				readarray -t testForEmptyDir < <(rsync ${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}/)
+				readarray -t testForEmptyDir < <(rsync "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}/")
 				if [[ "${#testForEmptyDir[@]}" -gt 2 ]]
 				then
 					gsBatchUploadCompleted='true'
@@ -392,9 +392,8 @@ else
 			# Combine samplesheets 
 			mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
 			teller=0
-			samplesheet=$(basename ${csvFile})
-			samplesheet=$(echo ${samplesheet#CSV_UMCG_})
-			echo "SAMPLESHEET: ${samplesheet}"
+			samplesheet=$(basename "${csvFile}")
+			samplesheet=${samplesheet#CSV_UMCG_}
 			for i in "${uniqProjects[@]}"
 			do
 				if [[ "${teller}" -eq '0' ]]
@@ -408,7 +407,7 @@ else
 			done
 			# Parse CSV file to get general project name
 			projectName=$(basename "${samplesheet}" '.csv')
-			awk -v projectName=${projectName} -v gsBatch="${gsBatch}" '{if (NR==1){print $0}else{print $0","projectName","gsBatch}}' "/groups/${group}/${TMP_LFS}/tmp/${gsBatch}/${samplesheet}" > "/groups/${group}/${TMP_LFS}/tmp/${gsBatch}/${samplesheet}.converted"
+			awk -v projectName="${projectName}" -v gsBatch="${gsBatch}" '{if (NR==1){print $0}else{print $0","projectName","gsBatch}}' "/groups/${group}/${TMP_LFS}/tmp/${gsBatch}/${samplesheet}" > "/groups/${group}/${TMP_LFS}/tmp/${gsBatch}/${samplesheet}.converted"
 			mv "/groups/${group}/${TMP_LFS}/tmp/${gsBatch}/${samplesheet}.converted" "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${samplesheet}"
 			#
 			# Rsync everything except the *.finished file and except any "hidden" files starting with a dot
