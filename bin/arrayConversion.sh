@@ -175,7 +175,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "find ${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}"
 readarray -t sampleSheets< <(find "${SCR_ROOT_DIR}/Samplesheets/" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name '*.csv')
 
-if [[ "${#sampleSheets[@]:-0}" -eq '0' ]]
+if [[ "${#sampleSheets[@]}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found at ${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}."
 else

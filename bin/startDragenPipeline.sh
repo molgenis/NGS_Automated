@@ -79,9 +79,8 @@ EOH
 function generateScripts () {
 	local _project="${1}"
 	local _run="${2}"
-	local _sampleType="${3}" ## DNA or RNA
-	local _generateShScript="${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh"
-	local _controlFileBase="${4}"
+	local _generateShScript="${TMP_ROOT_DIR}/generatedscripts/${_project}/generate_dragenScripts.sh"
+	local _controlFileBase="${3}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
 	#
 	# Check if function previously finished successfully for this data.
@@ -94,25 +93,11 @@ function generateScripts () {
 	else
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
 		printf '' > "${_controlFileBaseForFunction}.started"
-		printf 'Generating scripts (including copyPrmToTmpData) for project %s.\n' "${_project}" >> "${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
+		printf 'Generating scripts for project %s.\n' "${_project}" >> "${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
 		printf 'started: %s\n.' "$(date +%FT%T%z)" > "${_controlFileBase}.pipeline.totalRuntime"
 	fi
-	#
-	# Determine sample type and hence for which pipeline we need to fetch a copy of the generate_template.sh
-	#
-	if [[ "${_sampleType}" == "DNA" ]]
-	then
-		_pathToPipeline="${EBROOTNGS_DNA}"
-	elif [[ "${_sampleType}" == "RNA" ]]
-	then
-		_pathToPipeline="${EBROOTNGS_RNA}"
-	elif [[ "${_sampleType}" == "GAP" ]]
-	then
-		_pathToPipeline="${EBROOTGAP}"
-	else
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Unknown _sampleType: ${_sampleType}."
-	fi
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "_pathToPipeline is ${_pathToPipeline}"
+	_pathToPipeline="${EBROOTNGS_DNA}"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "_pathToPipeline is ${EBROOTNGS_DNA}"
 	#
 	# Create dir and fetch template to generate scripts.
 	#
@@ -124,8 +109,8 @@ function generateScripts () {
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	}
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Copying ${_pathToPipeline}/templates/generate_template.sh to ${_generateShScript} ..."
-	cp -v "${_pathToPipeline}/templates/generate_template.sh" "${_generateShScript}" \
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Copying ${_pathToPipeline}/templates/generate_dragenScripts.sh to ${_generateShScript} ..."
+	cp -v "${_pathToPipeline}/templates/generate_dragenScripts.sh" "${_generateShScript}" \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to copy generate_template.sh. See ${_controlFileBaseForFunction}.failed for details."
@@ -143,39 +128,26 @@ function generateScripts () {
 	#
 	# Fetch the (new) samplesheet.
 	#
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Copying ${TMP_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT} to ${TMP_ROOT_DIR}/generatedscripts/${_project}/ ..."
-	cp -v "${TMP_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/generatedscripts/${_project}/" \
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Copying ${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${_project}.${SAMPLESHEET_EXT} to ${TMP_ROOT_DIR}/generatedscripts/${_project}/ ..."
+	cp -v "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${_project}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/generatedscripts/${_project}/" \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to fetch samplesheet. See ${_controlFileBaseForFunction}.failed for details."
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	}
-	#
-	# Generate scripts for stage 1.
-	#
+
 	cd "${TMP_ROOT_DIR}/generatedscripts/${_project}/"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Navigated to $(pwd)."
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Executing: sh ${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh -p ${_project} -g ${group} -r ${_run}"
-	sh "${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh" -p "${_project}" -g "${group}" -r "${_run}" \
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Executing: bash ${TMP_ROOT_DIR}/generatedscripts/${_project}/generate_dragenScripts.sh -p ${_project} -g ${group} -r ${_run}"
+	bash "${TMP_ROOT_DIR}/generatedscripts/${_project}/generate_dragenScripts.sh" -p "${_project}" -g "${group}" -r "${_run}" \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to generate scripts for stage 1. See ${_controlFileBaseForFunction}.failed for details."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to generate scripts. See ${_controlFileBaseForFunction}.failed for details."
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	}
-	#
-	# Execute generated scripts from stage 1 to generate the stage 2 scripts.
-	#
-	cd 'scripts'
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Navigated to $(pwd)."
-	sh submit.sh \
-		>> "${_controlFileBaseForFunction}.started" 2>&1 \
-	|| {
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to generate scripts for stage 2. See ${_controlFileBaseForFunction}.failed for details."
-		mv "${_controlFileBaseForFunction}."{started,failed}
-		return
-	}
+	
 	#
 	# Signal succes.
 	#
@@ -184,17 +156,13 @@ function generateScripts () {
 	mv -v "${_controlFileBaseForFunction}."{started,finished}
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
 }
-
 function submitJobScripts () {
 	local _project="${1}"
 	local _run="${2}"
-	local _sampleType="${3}" ## DNA, RNA, GAP
-	local _priority="${4}"
-	local _capturingKit="${5}"
-	local _labRunID="${6}" # Either just ${project} for array data or ${_sequencingStartDate}_${_sequencer}_${_runId}_${_flowcell} for NGS data.
-	local _controlFileBase="${7}"
+	local _priority="${3}"
+	local _controlFileBase="${4}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
-	local _resubmitJobScripts="${8}"
+	local _resubmitJobScripts="${5}"
 	
 	#
 	# Check if function previously finished successfully for this data.
@@ -215,27 +183,6 @@ function submitJobScripts () {
 	#
 	cd "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Navigated to: $(pwd)."
-	#
-	# Track and Trace: project status.
-	#
-	local _url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
-	printf '%s,%s,%s,%s,%s,%s,%s,%s\n' 'project' 'run_id' 'pipeline' 'url' 'capturingKit' 'message' 'copy_results_prm' 'finishedDate' \
-		>  "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
-	printf '%s,%s,%s,%s,%s,%s,%s,%s\n' "${_project}" "${_labRunID}" "${_sampleType}" "${_url}" "${_capturingKit}" '' '' '' \
-		>> "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
-	#
-	# Track and Trace: jobs for this project.
-	#
-	local _jobName
-	readarray -t _jobNames < <(grep '^processJob' submit.sh  | cut -d ' ' -f 2 | tr -d '"')
-	_url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_samples&hideselect=true&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
-	printf '%s,%s,%s,%s,%s,%s,%s,%s\n' 'project_job' 'job' 'project' 'started_date' 'finished_date' 'status' 'url' 'step' \
-		>  "${JOB_CONTROLE_FILE_BASE}.trace_post_jobs.csv"
-	for _jobName in "${_jobNames[@]}"
-	do
-		printf '%s,%s,%s,%s,%s,%s,%s,%s\n' "${_project}_${_jobName}" "${_jobName}" "${_project}" '' '' '' "${_url}" "${_jobName%_*}" \
-			>> "${JOB_CONTROLE_FILE_BASE}.trace_post_jobs.csv"
-	done
 	#
 	# Determine submit options.
 	#
@@ -397,14 +344,13 @@ printf 'Started at %s.\n' "$(date '+%Y-%m-%dT%H:%M:%S')" > "${TMP_ROOT_DIR}/logs
 #       instead of on a research cluster to create them directly on tmp.
 #
 declare -a sampleSheets
-
-# Parse sample sheets.
-#
-readarray -t sampleSheets < <(find "${TMP_ROOT_DIR}/Samplesheets/" -maxdepth 1 -mindepth 1 -type f -name "*.${SAMPLESHEET_EXT}")
-
+# shellcheck disable=SC2029
+readarray -t sampleSheets < <(find "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/" -mindepth 1 -maxdepth 1 -name "*.${SAMPLESHEET_EXT}" )
 if [[ "${#sampleSheets[@]}" -eq '0' ]]
 then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No samplesheets found in ${TMP_ROOT_DIR}/Samplesheets/"
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No sample sheets found @ ${TMP_ROOT_DIR}/Samplesheets/DRAGEN/: There is nothing to do."
+	trap - EXIT
+	exit 0
 else
 	for sampleSheet in "${sampleSheets[@]}"
 	do
@@ -507,60 +453,21 @@ else
 		# Get additional meta-data from samplesheet.
 		# (Not required for generating and submitting job scripts; only used for track and trace.)
 		#
-		capturingKit='NA' # Default.
-		labRunID='NA'     # Default.
-		if [[ "${sampleType}" == 'DNA' || "${sampleType}" == 'RNA' ]]
-		then
-			#
-			# Check if capturing kit was used.
-			#
-			capturingKit='None' # Default for NGS data.
-			if [[ "${sampleType}" == 'DNA' ]]
-			then
-				sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['capturingKit']} + 1))
-				capturingKit=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}' | head -1)
-			fi
-			#
-			# Determine which lab run ID this is: ${sequencingStartDate}_${sequencer}_${incrementalRunNumber}_${flowcell}
-			#
-			if [[ -n "${sampleSheetColumnOffsets['sequencingStartDate']+isset}" ]]
-			then
-				sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['sequencingStartDate']} + 1))
-				sequencingStartDate=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}' | head -1)
-			fi
-			if [[ -n "${sampleSheetColumnOffsets['sequencer']+isset}" ]]
-			then
-				sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['sequencer']} + 1))
-				sequencer=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}' | head -1)
-			fi
-			if [[ -n "${sampleSheetColumnOffsets['run']+isset}" ]]
-			then
-				sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['run']} + 1))
-				incrementalRunNumber=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}' | head -1)
-			fi
-			if [[ -n "${sampleSheetColumnOffsets['flowcell']+isset}" ]]
-			then
-				sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['flowcell']} + 1))
-				flowcell=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}' | head -1)
-			fi
-			labRunID="${sequencingStartDate}_${sequencer}_${incrementalRunNumber}_${flowcell}"
-		elif [[ "${sampleType}" == 'GAP' ]]
-		then
-			labRunID="${project}"
-		else
-			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Unknown sampleType: ${sampleType}."
-		fi
+
+		sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['capturingKit']} + 1))
+		capturingKit=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}' | head -1)
+			
 		#
 		# Step 1: Generate scripts (per sample sheet).
 		#
-		generateScripts "${project}" "${pipelineRun}" "${sampleType}" "${controlFileBase}"
+		generateScripts "${project}" "${pipelineRun}" "${controlFileBase}"
 		#
 		# Step 2: Submit generated job scripts (per project).
 		#
 		if [[ -e "${controlFileBase}.generateScripts.finished" ]]
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.generateScripts.finished present -> generateScripts completed; let's submitScripts for ${project}/${pipelineRun} ..."
-			submitJobScripts "${project}" "${pipelineRun}" "${sampleType}" "${priority}" "${capturingKit}" "${labRunID}" "${controlFileBase}" "${resubmitJobScripts}"
+			submitJobScripts "${project}" "${pipelineRun}" "${priority}" "${controlFileBase}" "${resubmitJobScripts}"
 		else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.generateScripts.finished absent -> generateScripts failed."
 		fi

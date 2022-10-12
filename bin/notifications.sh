@@ -108,7 +108,7 @@ function notification() {
 	#
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing projects with phase ${_phase} in state: ${_state}."
 	readarray -t _project_state_files < <(find "${_lfs_root_dir}/logs/" -maxdepth 2 -mindepth 2 -type f -name "*.${_phase}.${_state}*" -not -name "*.mailed")
-	if [[ "${#_project_state_files[@]:-0}" -eq '0' ]]
+	if [[ "${#_project_state_files[@]}" -eq '0' ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No *.${_phase}.${_state} files present in ${_lfs_root_dir}/logs/*/."
 		return
@@ -490,7 +490,7 @@ do
 	export JOB_CONTROLE_FILE_BASE="${_lfs_root_dir}/logs/${SCRIPT_NAME}"
 	printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 	status_notifications="unknown"
-	if [[ -n "${NOTIFICATION_ORDER_PHASE_WITH_STATE[*]:-}" && "${#NOTIFICATION_ORDER_PHASE_WITH_STATE[@]:-0}" -ge 1 ]]
+	if [[ -n "${NOTIFICATION_ORDER_PHASE_WITH_STATE[*]:-}" && "${#NOTIFICATION_ORDER_PHASE_WITH_STATE[@]}" -ge 1 ]]
 	then
 		for ordered_phase_with_state in "${NOTIFICATION_ORDER_PHASE_WITH_STATE[@]}"
 		do

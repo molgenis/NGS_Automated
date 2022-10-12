@@ -203,7 +203,7 @@ fi
 # Find samplesheets.
 #
 readarray -t samplesheets < <(find "${samplesheetsSource}" -maxdepth 1 -mindepth 1 -type f -name "*.${SAMPLESHEET_EXT}")
-if [[ "${#samplesheets[@]:-0}" -eq '0' ]]
+if [[ "${#samplesheets[@]}" -eq '0' ]]
 then
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No samplesheets found in ${samplesheetsSource}."
 	mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}

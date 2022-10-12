@@ -215,7 +215,7 @@ module load "hashdeep/${HASHDEEP_VERSION}" || log4Bash 'FATAL' "${LINENO}" "${FU
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "$(module list)"
 
 readarray -t projects < <(find "${TMP_ROOT_DIR}/projects/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${TMP_ROOT_DIR}/projects/||")
-if [[ "${#projects[@]:-0}" -eq '0' ]]
+if [[ "${#projects[@]}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${TMP_ROOT_DIR}/projects/."
 else
@@ -224,7 +224,7 @@ else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project} ..."
 		echo "Working on ${project}" > "${lockFile}"
 		readarray -t runs < <(find "${TMP_ROOT_DIR}/projects/${project}/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${TMP_ROOT_DIR}/projects/${project}/||")
-		if [[ "${#runs[@]:-0}" -eq '0' ]]
+		if [[ "${#runs[@]}" -eq '0' ]]
 		then
 			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found for project ${project}."
 		else

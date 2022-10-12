@@ -183,7 +183,7 @@ declare -a sampleSheetsFromSourceServer
 # shellcheck disable=SC2029
 readarray -t sampleSheetsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${SCR_ROOT_DIR}/Samplesheets/\" -mindepth 1 -maxdepth 1 -type f -name '*.${SAMPLESHEET_EXT}'")
 
-if [[ "${#sampleSheetsFromSourceServer[@]:-0}" -eq '0' ]]
+if [[ "${#sampleSheetsFromSourceServer[@]}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found at ${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}."
 else
