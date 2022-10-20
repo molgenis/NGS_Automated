@@ -57,10 +57,12 @@ Usage:
 
 Options:
 
-	-h   Show this help.
-	-g   Group.
-	-n   Dry-run: Do not perform actual sync, but only list changes instead.
-	-l   Log level.
+	-h	Show this help.
+	-g	Group.
+	-p	[pipeline]
+		from which pipeline is the data coming from (NGS_Demultiplexing, GAP)
+	-n	Dry-run: Do not perform actual sync, but only list changes instead.
+	-l	Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
 Config and dependencies:
@@ -104,7 +106,7 @@ function rsyncProjectRun() {
 	#
 	local _countFilesProjectRunDirTmp
 	# shellcheck disable=SC2029
-	_countFilesProjectRunDirTmp=$(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}/results/\"* -type f -o -type l | wc -l")
+	_countFilesProjectRunDirTmp=$(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}/results/\"* -type f -o -type l | wc -l")
 	
 	# Perform rsync.
 	#  1. For ${_run} dir: recursively with "default" archive (-a),
@@ -124,11 +126,11 @@ function rsyncProjectRun() {
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run} dir ..." \
 	2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" 
 	rsync -av --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' "${dryrun:---progress}" \
-		"${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}" \
+		"${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}" \
 		"${PRM_ROOT_DIR}/projects/${_project}/" \
 	|| {
 		mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Failed to rsync ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run} dir. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Failed to rsync ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run} dir. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
 		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${JOB_CONTROLE_FILE_BASE}.failed for details." \
 			>> "${JOB_CONTROLE_FILE_BASE}.failed" \
 		_transferSoFarSoGood='false'
@@ -136,7 +138,7 @@ function rsyncProjectRun() {
 	
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run}.md5 checksums ..."
 	rsync -acv --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' "${dryrun:---progress}" \
-		"${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}.md5" \
+		"${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}.md5" \
 		"${PRM_ROOT_DIR}/projects/${_project}/" \
 	|| {
 		mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
@@ -162,7 +164,7 @@ function rsyncProjectRun() {
 			
 			find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/"* -type f -o -type l | sort -V > "${JOB_CONTROLE_FILE_BASE}.countPrmFiles.txt"
 			# shellcheck disable=SC2029
-			ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}/results/\"* -type f -o -type l | sort -V" > "${JOB_CONTROLE_FILE_BASE}.countTmpFiles.txt"
+			ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}/results/\"* -type f -o -type l | sort -V" > "${JOB_CONTROLE_FILE_BASE}.countTmpFiles.txt"
 			
 			echo "diff -q ${JOB_CONTROLE_FILE_BASE}.countPrmFiles.txt ${JOB_CONTROLE_FILE_BASE}.countTmpFiles.txt" >> "${JOB_CONTROLE_FILE_BASE}.started"
 			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectRunDirTmp}) and prm (${_countFilesProjectRunDirPrm}) is NOT the same!" \
@@ -328,7 +330,7 @@ function getSampleType(){
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
 declare dryrun=''
-while getopts ":g:l:hn" opt
+while getopts ":g:l:p:hn" opt
 do
 	case "${opt}" in
 		h)
@@ -336,6 +338,9 @@ do
 			;;
 		g)
 			group="${OPTARG}"
+			;;
+		p)
+			pipeline="${OPTARG}"
 			;;
 		n)
 			dryrun='-n'
@@ -366,6 +371,9 @@ if [[ -n "${dryrun:-}" ]]
 then
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Enabled dryrun option for rsync.'
 fi
+if [[ -z "${pipeline:-}" ]]
+then
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a pipeline with -p.'
 
 #
 # Source config files.
@@ -438,17 +446,17 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 # Get a list of all projects for this group, loop over their run analysis ("run") sub dirs and check if there are any we need to rsync.
 #
 # shellcheck disable=SC2029
-mapfile -t projects < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/\" -maxdepth 1 -mindepth 1 -type d")
+mapfile -t projects < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/\" -maxdepth 1 -mindepth 1 -type d")
 if [[ "${#projects[@]}" -eq '0' ]]
 then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${TMP_ROOT_DIAGNOSTICS_DIR}/projects."
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/."
 else
 	for project in "${projects[@]}"
 	do
 		project=$(basename "${project}")
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project} ..."
 		# shellcheck disable=SC2029
-		mapfile -t runs < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${project}/\" -maxdepth 1 -mindepth 1 -type d")
+		mapfile -t runs < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${project}/\" -maxdepth 1 -mindepth 1 -type d")
 		if [[ "${#runs[@]}" -eq '0' ]]
 		then
 			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found for project ${project}."
@@ -458,7 +466,7 @@ else
 				run=$(basename "${run}")
 				controlFileBase="${PRM_ROOT_DIR}/logs/${project}/${run}"
 				export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
-				calculateProjectMd5sFinishedFile="ssh ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${run}.calculateProjectMd5s.finished"
+				calculateProjectMd5sFinishedFile="ssh ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/logs//${project}/${run}.calculateProjectMd5s.finished"
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${PRM_ROOT_DIR}/logs/${project}/"
 				mkdir -p "${PRM_ROOT_DIR}/logs/${project}/"
 				if ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${run}.calculateProjectMd5s.finished"
@@ -467,7 +475,7 @@ else
 					then
 						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${project}/${run}."
 					else
-						rsync -av "${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${project}/${run}/jobs/${project}.${SAMPLESHEET_EXT}" "${PRM_ROOT_DIR}/Samplesheets/archive/"
+						rsync -av "${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${project}/${run}/jobs/${project}.${SAMPLESHEET_EXT}" "${PRM_ROOT_DIR}/Samplesheets/archive/"
 						sampleType="$(set -e; getSampleType "${PRM_ROOT_DIR}/Samplesheets/${project}.${SAMPLESHEET_EXT}")"
 						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sampleType =${sampleType}"
 						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/${run} ..."

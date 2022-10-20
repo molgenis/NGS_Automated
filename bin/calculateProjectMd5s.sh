@@ -82,7 +82,7 @@ function calculateMd5() {
 	local _controlFileBase
 	_project="${1}"
 	_run="${2}"
-	_controlFileBase="${TMP_ROOT_DIR}/logs/${_project}/${_run}"
+	_controlFileBase="${TMP_ROOT_DIR}/logs/${_project}/${pipeline}/${_run}"
 	#
 	export JOB_CONTROLE_FILE_BASE="${_controlFileBase}.${SCRIPT_NAME}"
 	#
@@ -104,12 +104,12 @@ function calculateMd5() {
 	# All checks passed: start computing checksums.
 	#
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
-		"Creating checksums for ${TMP_ROOT_DIR}/projects/${_project}/${_run}/ ... " \
+		"Creating checksums for ${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/ ... " \
 		2>&1 | tee "${JOB_CONTROLE_FILE_BASE}.started"
-	cd "${TMP_ROOT_DIR}/projects/${_project}/" \
+	cd "${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/" \
 		|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" \
-				"Cannot access ${TMP_ROOT_DIR}/projects/${_project}/." \
+				"Cannot access ${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/." \
 				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			return
@@ -136,7 +136,7 @@ function calculateMd5() {
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
-while getopts ":g:l:h" opt
+while getopts ":g:l:p:h" opt
 do
 	case ${opt} in
 		h)
@@ -145,6 +145,9 @@ do
 		g)
 			group="${OPTARG}"
 			;;
+		p)
+			pipeline="${OPTARG}"
+			;;	
 		l)
 			l4b_log_level="${OPTARG^^}"
 			l4b_log_level_prio="${l4b_log_levels["${l4b_log_level}"]}"
@@ -167,6 +170,11 @@ done
 if [[ -z "${group:-}" ]]
 then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
+fi
+
+if [[ -z "${pipeline:-}" ]]
+then
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a pipeline with -p.'
 fi
 
 #
@@ -214,16 +222,16 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 module load "hashdeep/${HASHDEEP_VERSION}" || log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" "${?}" 'Failed to load hashdeep module.'
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "$(module list)"
 
-readarray -t projects < <(find "${TMP_ROOT_DIR}/projects/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${TMP_ROOT_DIR}/projects/||")
+readarray -t projects < <(find "${TMP_ROOT_DIR}/projects/${pipeline}/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${TMP_ROOT_DIR}/projects/${pipeline}/||")
 if [[ "${#projects[@]}" -eq '0' ]]
 then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${TMP_ROOT_DIR}/projects/."
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${TMP_ROOT_DIR}/projects/${pipeline}/."
 else
 	for project in "${projects[@]}"
 	do
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project} ..."
 		echo "Working on ${project}" > "${lockFile}"
-		readarray -t runs < <(find "${TMP_ROOT_DIR}/projects/${project}/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${TMP_ROOT_DIR}/projects/${project}/||")
+		readarray -t runs < <(find "${TMP_ROOT_DIR}/projects/${project}/${pipeline}/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${TMP_ROOT_DIR}/projects/${project}/${pipeline}/||")
 		if [[ "${#runs[@]}" -eq '0' ]]
 		then
 			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found for project ${project}."
