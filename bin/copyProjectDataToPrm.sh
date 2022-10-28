@@ -374,7 +374,7 @@ fi
 if [[ -z "${pipeline:-}" ]]
 then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a pipeline with -p.'
-
+fi
 #
 # Source config files.
 #
