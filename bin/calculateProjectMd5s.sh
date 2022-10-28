@@ -56,6 +56,7 @@ Usage:
 Options:
 	-h	Show this help.
 	-g	Group.
+	-p pipeline (which pipeline to run NGS_DNA / GAP)
 	-l	Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
