@@ -158,7 +158,7 @@ function generateScripts () {
 	cd "${TMP_ROOT_DIR}/generatedscripts/${pipeline}/${_project}/"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Navigated to $(pwd)."
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Executing: sh ${TMP_ROOT_DIR}/generatedscripts/${pipeline}/${_project}/generate.sh -p ${_project} -g ${group} -r ${_run}"
-	sh "${TMP_ROOT_DIR}/generatedscripts/${pipeline}/${_project}/generate.sh" -p "${_project}" -g "${group}" -r "${_run}" \
+	bash "${TMP_ROOT_DIR}/generatedscripts/${pipeline}/${_project}/generate.sh" -p "${_project}" -g "${group}" -r "${_run}" \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to generate scripts for stage 1. See ${_controlFileBaseForFunction}.failed for details."
@@ -170,7 +170,7 @@ function generateScripts () {
 	#
 	cd 'scripts'
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Navigated to $(pwd)."
-	sh submit.sh \
+	bash submit.sh \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to generate scripts for stage 2. See ${_controlFileBaseForFunction}.failed for details."

@@ -60,7 +60,7 @@ Options:
 	-h	Show this help.
 	-g	Group.
 	-p	[pipeline]
-		from which pipeline is the data coming from (NGS_Demultiplexing, GAP)
+		Pipeline that produced the project data that needs to be transferred to prm. (NGS_Demultiplexing, GAP)
 	-n	Dry-run: Do not perform actual sync, but only list changes instead.
 	-l	Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
