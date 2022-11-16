@@ -58,6 +58,7 @@ Options:
 
 	-h	Show this help.
 	-r	Run number / runID (default is run01)
+	-p pipeline (which pipeline to run NGS_DNA / GAP)
 	-g	Group.
 	-l	Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
@@ -80,7 +81,7 @@ function generateScripts () {
 	local _project="${1}"
 	local _run="${2}"
 	local _sampleType="${3}" ## DNA or RNA
-	local _generateShScript="${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh"
+	local _generateShScript="${TMP_ROOT_DIR}/generatedscripts/${pipeline}/${_project}/generate.sh"
 	local _controlFileBase="${4}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
 	#
@@ -116,8 +117,8 @@ function generateScripts () {
 	#
 	# Create dir and fetch template to generate scripts.
 	#
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Creating directory: ${TMP_ROOT_DIR}/generatedscripts/${_project}/ ..."
-	mkdir -p -v "${TMP_ROOT_DIR}/generatedscripts/${_project}/" \
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Creating directory: ${TMP_ROOT_DIR}/generatedscripts/${pipeline}/${_project}/ ..."
+	mkdir -p -v "${TMP_ROOT_DIR}/generatedscripts/${pipeline}/${_project}/" \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create directory for generated scripts. See ${_controlFileBaseForFunction}.failed for details."
@@ -135,16 +136,16 @@ function generateScripts () {
 	#
 	# Check if we need to remove a previously used potentially wrong samplesheet.
 	#
-	if [[ -e "${TMP_ROOT_DIR}/generatedscripts/${_project}/${_project}.${SAMPLESHEET_EXT}" ]]
+	if [[ -e "${TMP_ROOT_DIR}/generatedscripts/${pipeline}/${_project}/${_project}.${SAMPLESHEET_EXT}" ]]
 	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/generatedscripts/${_project}/${_project}.${SAMPLESHEET_EXT} already exists and will be removed ..."
-		rm -f "${TMP_ROOT_DIR}/generatedscripts/${_project}/${_project}.${SAMPLESHEET_EXT}"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/generatedscripts/${pipeline}/${_project}/${_project}.${SAMPLESHEET_EXT} already exists and will be removed ..."
+		rm -f "${TMP_ROOT_DIR}/generatedscripts/${pipeline}/${_project}/${_project}.${SAMPLESHEET_EXT}"
 	fi
 	#
 	# Fetch the (new) samplesheet.
 	#
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Copying ${TMP_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT} to ${TMP_ROOT_DIR}/generatedscripts/${_project}/ ..."
-	cp -v "${TMP_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/generatedscripts/${_project}/" \
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Copying ${TMP_ROOT_DIR}/Samplesheets/${pipeline}/${_project}.${SAMPLESHEET_EXT} to ${TMP_ROOT_DIR}/generatedscripts/${_project}/ ..."
+	cp -v "${TMP_ROOT_DIR}/Samplesheets/${pipeline}/${_project}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/generatedscripts/${pipeline}/${_project}/" \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to fetch samplesheet. See ${_controlFileBaseForFunction}.failed for details."
@@ -154,10 +155,10 @@ function generateScripts () {
 	#
 	# Generate scripts for stage 1.
 	#
-	cd "${TMP_ROOT_DIR}/generatedscripts/${_project}/"
+	cd "${TMP_ROOT_DIR}/generatedscripts/${pipeline}/${_project}/"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Navigated to $(pwd)."
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Executing: sh ${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh -p ${_project} -g ${group} -r ${_run}"
-	sh "${TMP_ROOT_DIR}/generatedscripts/${_project}/generate.sh" -p "${_project}" -g "${group}" -r "${_run}" \
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Executing: sh ${TMP_ROOT_DIR}/generatedscripts/${pipeline}/${_project}/generate.sh -p ${_project} -g ${group} -r ${_run}"
+	bash "${TMP_ROOT_DIR}/generatedscripts/${pipeline}/${_project}/generate.sh" -p "${_project}" -g "${group}" -r "${_run}" \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to generate scripts for stage 1. See ${_controlFileBaseForFunction}.failed for details."
@@ -169,7 +170,7 @@ function generateScripts () {
 	#
 	cd 'scripts'
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Navigated to $(pwd)."
-	sh submit.sh \
+	bash submit.sh \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to generate scripts for stage 2. See ${_controlFileBaseForFunction}.failed for details."
@@ -213,7 +214,7 @@ function submitJobScripts () {
 	#
 	# Go to scripts dir.
 	#
-	cd "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/"
+	cd "${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/jobs/"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Navigated to: $(pwd)."
 	#
 	# Track and Trace: project status.
@@ -294,7 +295,7 @@ function submitJobScripts () {
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
-while getopts ":g:l:r:h" opt; do
+while getopts ":g:l:r:p:h" opt; do
 	case "${opt}" in
 		h)
 			showHelp
@@ -304,6 +305,9 @@ while getopts ":g:l:r:h" opt; do
 			;;
 		r)
 			pipelineRun="${OPTARG}"
+			;;
+		p)
+			pipeline="${OPTARG}"
 			;;
 		l)
 			l4b_log_level="${OPTARG^^}"
@@ -333,6 +337,10 @@ if [[ -z "${pipelineRun:-}" ]]
 then
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' 'no runID is given, default is taken (run01).'
 	pipelineRun="run01"
+fi
+if [[ -z "${pipeline:-}" ]]
+then
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a pipeline with -p.'
 fi
 #
 # Source config files.
@@ -400,11 +408,11 @@ declare -a sampleSheets
 
 # Parse sample sheets.
 #
-readarray -t sampleSheets < <(find "${TMP_ROOT_DIR}/Samplesheets/" -maxdepth 1 -mindepth 1 -type f -name "*.${SAMPLESHEET_EXT}")
+readarray -t sampleSheets < <(find "${TMP_ROOT_DIR}/Samplesheets/${pipeline}/" -maxdepth 1 -mindepth 1 -type f -name "*.${SAMPLESHEET_EXT}")
 
 if [[ "${#sampleSheets[@]}" -eq '0' ]]
 then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No samplesheets found in ${TMP_ROOT_DIR}/Samplesheets/"
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No samplesheets found in ${TMP_ROOT_DIR}/Samplesheets/${pipeline}/"
 else
 	for sampleSheet in "${sampleSheets[@]}"
 	do

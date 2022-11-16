@@ -96,6 +96,7 @@ do
 			l4b_log_level="${OPTARG^^}"
 			l4b_log_level_prio="${l4b_log_levels["${l4b_log_level}"]}"
 			;;
+			
 		\?)
 			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Invalid option -${OPTARG}. Try $(basename "${0}") -h for help."
 			;;
@@ -175,6 +176,8 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "find ${SEQ_DIR}/ -mindepth 1 -maxdepth 1 -type d -o -type l"
 mapfile -t projects < <(find "${SEQ_DIR}/" -mindepth 1 -maxdepth 1 -type d -o -type l)
 
+pipeline='NGS_Demultiplexing'
+
 for i in "${projects[@]}"
 do
 	project=$(basename "${i}")
@@ -189,7 +192,7 @@ do
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${demultiplexingJobControleFileBase}.started: Skipping ${project}, which is already getting processed."
 		continue
-	elif [[ ! -f "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" ]]
+	elif [[ ! -f "${SCR_ROOT_DIR}/Samplesheets/${pipeline}/${project}.csv" ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheet found: skipping ${project}."
 		continue
@@ -227,12 +230,12 @@ do
 		2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 	echo "started: $(date +%FT%T%z)" > "${SCR_ROOT_DIR}/logs/${project}/run01.demultiplexing.totalRuntime"
 	{
-		mkdir -v -p "${SCR_ROOT_DIR}/generatedscripts/${project}/"
-		cd "${SCR_ROOT_DIR}/generatedscripts/${project}/"
-		cp -v "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" "${project}.csv"
+		mkdir -v -p "${SCR_ROOT_DIR}/generatedscripts/${pipeline}/${project}/"
+		cd "${SCR_ROOT_DIR}/generatedscripts/${pipeline}/${project}/"
+		cp -v "${SCR_ROOT_DIR}/Samplesheets/${pipeline}/${project}.csv" "${project}.csv"
 		cp -v "${EBROOTNGS_DEMULTIPLEXING}/generate_template.sh" ./ 
 		bash generate_template.sh "${project}" "${SCR_ROOT_DIR}" "${group}"
-		cd "${SCR_ROOT_DIR}/runs/${project}/jobs"
+		cd "${SCR_ROOT_DIR}/runs/${pipeline}/${project}/jobs"
 		bash submit.sh
 	} >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "jobs submitted"
