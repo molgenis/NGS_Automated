@@ -147,7 +147,7 @@ function processRawdataToDB() {
 
 function processProjectToDB() {
 	local _project="${1}"
-	local _run="${2}"=
+	local _run="${2}"
 	CHRONQC_TMP="${TMP_TRENDANALYSE_DIR}/tmp/"
 	CHRONQC_DATABASE_NAME="${TMP_TRENDANALYSE_DIR}/database/"
 	PRM_MULTIQCPROJECT_DIR="${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/multiqc_data"
@@ -159,6 +159,7 @@ function processProjectToDB() {
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run} ..." \
 			2>&1 | tee -a "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.started"
 	fi
+	echo "________________${PRM_MULTIQCPROJECT_DIR}/${_project}.run_date_info.csv_____________"
 	if [[ -e "${PRM_MULTIQCPROJECT_DIR}/${_project}.run_date_info.csv" ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "found ${PRM_MULTIQCPROJECT_DIR}/${_project}.run_date_info.csv. Updating ChronQC database with ${_project}."
@@ -177,13 +178,14 @@ function processProjectToDB() {
 			elif [[ "${_metrics}" == multiqc_general_stats.txt ]]
 			then
 				cp "${PRM_MULTIQCPROJECT_DIR}/${_metrics}" "${CHRONQC_TMP}/${_project}.${_metrics}"
-				head -1 "${CHRONQC_TMP}/${_project}.${_metrics}" > "${CHRONQC_TMP}/${_project}.${_metrics}.tmp"
-				#for sample in $(grep HsMetrics "${CHRONQC_TMP}/${_project}.multiqc_sources.txt" | awk -v p="${_project}" '{print $3}'); do grep $sample "${CHRONQC_TMP}/${_project}.${_metrics}" >> "${CHRONQC_TMP}/${_project}.${_metrics}.tmp" ;done
-				while read -r sample
-				do
-					grep "${sample}" "${CHRONQC_TMP}/${_project}.${_metrics}" >> "${CHRONQC_TMP}/${_project}.${_metrics}.tmp"
-				done < <(grep HsMetrics "${CHRONQC_TMP}/${_project}.multiqc_sources.txt" | awk -v p="${_project}" '{print $3}')
-				mv "${CHRONQC_TMP}/${_project}.${_metrics}.tmp" "${CHRONQC_TMP}/${_project}.2.${_metrics}"
+#				head -1 "${CHRONQC_TMP}/${_project}.${_metrics}" > "${CHRONQC_TMP}/${_project}.${_metrics}.tmp"
+#				#for sample in $(grep HsMetrics "${CHRONQC_TMP}/${_project}.multiqc_sources.txt" | awk -v p="${_project}" '{print $3}'); do grep $sample "${CHRONQC_TMP}/${_project}.${_metrics}" >> "${CHRONQC_TMP}/${_project}.${_metrics}.tmp" ;done
+#				while read -r sample
+#				do
+#					grep "${sample}" "${CHRONQC_TMP}/${_project}.${_metrics}" >> "${CHRONQC_TMP}/${_project}.${_metrics}.tmp"
+#				done < <(grep HsMetrics "${CHRONQC_TMP}/${_project}.multiqc_sources.txt" | awk -v p="${_project}" '{print $3}')
+#				mv "${CHRONQC_TMP}/${_project}.${_metrics}.tmp" "${CHRONQC_TMP}/${_project}.2.${_metrics}"
+				cp "${CHRONQC_TMP}/${_project}.${_metrics}" "${CHRONQC_TMP}/${_project}.2.${_metrics}"
 			else
 				cp "${PRM_MULTIQCPROJECT_DIR}/${_metrics}" "${CHRONQC_TMP}/${_project}.${_metrics}"
 				perl -pe 's|SAMPLE\t|SAMPLE_NAME2\t|' "${CHRONQC_TMP}/${_project}.${_metrics}" > "${CHRONQC_TMP}/${_project}.2.${_metrics}"
@@ -193,6 +195,23 @@ function processProjectToDB() {
 		# Rename one of the duplicated SAMPLE column names to make it work.
 		#
 		cp "${CHRONQC_TMP}/${_project}.run_date_info.csv" "${CHRONQC_TMP}/${_project}.2.run_date_info.csv"
+
+		#
+		# This part will add the per lane sample name to the run_date_info.csv, inorder to view the GC % in chronQC
+		#
+		IFS=$'\t' read -ra perLaneSample <<< "$(awk '$1 ~ /.recoded/ {print $1}' "${PRM_MULTIQCPROJECT_DIR}/multiqc_general_stats.txt" | tr '\n' '\t')"
+
+
+		for i in "${perLaneSample[@]}"
+		do
+			runDate=$(awk 'BEGIN {NR==2}{FS=","}{OFS=","};END {print $2,$3}' "${CHRONQC_TMP}/${_project}.run_date_info.csv")
+			echo "${i}"
+			echo "${runDate}"
+			echo -e "${i},${runDate}" >> "${CHRONQC_TMP}/${_project}.2.run_date_info.csv"
+		done
+
+
+
 		#
 		# Get all the samples processed with FastQC form the MultiQC multi_source file,
 		# because samplenames differ from regular samplesheet at that stage in th epipeline.
@@ -308,7 +327,7 @@ function generateChronQCOutput() {
 ## Generates a QC report based in the '-p tablename', and a possible subselection of that table. This is done based on a panel, for example 'Exoom'.
 ## The layout of the report is configured by the given json config file.
 #
-function generate_plots(){
+function generate_plots() {
 	declare configFile="${CHRONQC_TEMPLATE_DIRS}/reports.${HOSTNAME_SHORT}.cfg"
 	if [[ -f "${configFile}" && -r "${configFile}" ]]
 	then
@@ -552,7 +571,7 @@ done < <(find "${IMPORT_DIR}"/ -maxdepth 1 -type f -iname "*runinfo*.csv")
 generate_plots
 
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "cleanup ${CHRONQC_TMP}* ..."
-rm "${CHRONQC_TMP}/"*
+#rm "${CHRONQC_TMP}/"*
 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished successfully!'
 echo "" > "${lockFile}"
