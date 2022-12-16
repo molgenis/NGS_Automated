@@ -1,10 +1,9 @@
 [
     {
-        "table_name": "general",
+        "table_name": "fastqc",
         "chart_type": "time_series_with_mean_and_stdev",
         "chart_properties": {
-            "chart_title": "Percent GC",
-            "y_value": "FastQC_mqc-generalstats-fastqc-percent_gc"
+            "y_value": "%GC"
         }
     },
     {
