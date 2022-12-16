@@ -217,7 +217,7 @@ function splitSamplesheetPerProject() {
 	rsync -vrltD "${dryrun:---progress}" \
 		--log-file="${_controlFileBaseForFunction}.started" \
 		--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
-		"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}" \
+		"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/${pipeline}/${_run}.${SAMPLESHEET_EXT}" \
 		"${PRM_ROOT_DIR}/Samplesheets/archive/" \
 	|| {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
@@ -245,35 +245,7 @@ function splitSamplesheetPerProject() {
 	do
 		_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
 	done
-	#
-	# Get pipeline/analysis values from samplesheet.
-	#
-	if [[ -n "${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]+isset}" ]]; then
-		_pipelineFieldIndex=$((${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]} + 1))
-		_projectFieldIndex=$((${_sampleSheetColumnOffsets["${PROJECTCOLUMN}"]} + 1))
-		readarray -t _pipelines < <(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_pipelineFieldIndex}" | sort | uniq )
-		if [[ "${#_pipelines[@]}" -lt '1' ]]
-		then
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} does not contain at least one value in the ${PIPELINECOLUMN} column."
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in samplesheet."
-			mv "${_controlFileBaseForFunction}."{started,failed}
-			return
-		elif [[ "${#_pipelines[@]}" -ge '1' ]]
-		then
-			for _pipeline in "${_pipelines[@]}"
-			do
-				if [[ "${_pipeline^^}" == *'NGS_Demultiplexing'* ]]
-				then
-					readarray -t _demultiplexOnly< <(awk -F "${SAMPLESHEET_SEP}" "{if (NR>1 && \$${_pipelineFieldIndex} ~ /${_pipeline}/) {print}}" "${_sampleSheet}" | awk "BEGIN{FS=\"${SAMPLESHEET_SEP}\"} {print \$${_projectFieldIndex}}" | sort -u)
-					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'Demultiplexing only detected.'
-				fi
-			done
-		fi
-	else
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}, because ${PIPELINECOLUMN} column is missing in samplesheet."
-		mv "${_controlFileBaseForFunction}."{started,failed}
-		return
-	fi
+	
 	#
 	# Get project values from samplesheet.
 	#
@@ -314,18 +286,54 @@ function splitSamplesheetPerProject() {
 			#
 			# Skip project if demultiplexing only.
 			#
-			if [[ " ${_demultiplexOnly[*]} " == *" ${_project} "* ]]
-			then
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "'NGS_Demultiplexing' detected for project: ${_project}; will not create project samplesheet."
-				continue
+			local _projectSampleSheet
+			_projectSampleSheet="${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}"
+			head -1 "${_sampleSheet}" > "${_projectSampleSheet}.tmp"
+			grep "${_project}" "${_sampleSheet}" >> "${_projectSampleSheet}.tmp"
+			mv "${_projectSampleSheet}"{.tmp,}
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Created ${_projectSampleSheet}."
+			#
+			# Get pipeline/analysis values from samplesheet.
+			#
+			IFS="${SAMPLESHEET_SEP}" read -r -a _sampleSheetColumnNames <<< "$(head -1 "${_projectSampleSheet}")"
+			for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]} ; _offset++ ))
+			do
+				_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
+			done
+			if [[ -n "${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]+isset}" ]]; then
+				_pipelineFieldIndex=$((${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]} + 1))
+				_projectFieldIndex=$((${_sampleSheetColumnOffsets["${PROJECTCOLUMN}"]} + 1))
+				readarray -t _pipelines < <(tail -n +2 "${_projectSampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_pipelineFieldIndex}" | sort | uniq )
+				if [[ "${#_pipelines[@]}" -lt '1' ]]
+				then
+					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} does not contain at least one value in the ${PIPELINECOLUMN} column."
+					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in samplesheet."
+					mv "${_controlFileBaseForFunction}."{started,failed}
+					return
+				elif [[ "${#_pipelines[@]}" -ge '1' ]]
+				then
+					for _pipeline in "${_pipelines[@]}"
+					do
+						if [[ "${_pipeline^^}" == *'NGS_DNA'* ]]
+						then
+							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "NGS_DNA is detected, copying samplesheet to ${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/NGS_DNA/"
+							rsync -vrltD "${_sampleSheet}" "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/NGS_DNA/"
+						elif [[ "${_pipeline^^}" == *'GAP'* ]]
+						then
+							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "GAP is detected, copying samplesheet to ${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/GAP/"
+							rsync -vrltD "${_sampleSheet}" "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/GAP/"
+						else
+							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "No regular pipeline detected to continue the automated pipeline (${_pipeline^^}), we are done here."
+						fi
+					done
+				fi
 			else
-				local _projectSampleSheet
-				_projectSampleSheet="${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}"
-				head -1 "${_sampleSheet}" > "${_projectSampleSheet}.tmp"
-				grep "${_project}" "${_sampleSheet}" >> "${_projectSampleSheet}.tmp"
-				mv "${_projectSampleSheet}"{.tmp,}
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Created ${_projectSampleSheet}."
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}, because ${PIPELINECOLUMN} column is missing in samplesheet."
+				mv "${_controlFileBaseForFunction}."{started,failed}
+				return
 			fi
+			
+			
 		fi
 	done
 	#
@@ -339,7 +347,7 @@ function splitSamplesheetPerProject() {
 	# Move samplesheet to archive on sourceServerFQDN
 	#
 	# shellcheck disable=SC2029
-	if ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "mv \"${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}\"* \"${SCR_ROOT_DIR}/Samplesheets/archive/\""
+	if ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "mv \"${SCR_ROOT_DIR}/Samplesheets/${pipeline}/${_run}.${SAMPLESHEET_EXT}\"* \"${SCR_ROOT_DIR}/Samplesheets/archive/\""
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}.${SAMPLESHEET_EXT} moved to ${SCR_ROOT_DIR}/Samplesheets/archive/ on ${sourceServerFQDN}."
 		mv "${_controlFileBaseForFunction}."{started,finished}
@@ -367,16 +375,18 @@ Options:
 	-n	Dry-run: Do not perform actual sync, but only list changes instead.
 	-a	Archive mode: only copy the raw data to prm and do not split the flowcell based samplesheet
 		into project samplesheets to trigger the project-based analysis of the data with a subsequent pipeline.
-	-g [group]
+	-g	[group]
 		Group for which to process data.
-	-l [level]
+	-p	[pipeline]
+		from which pipeline is the data coming from (NGS_Demultiplexing, GAP)
+	-l	[level]
 		Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
-	-s [server]
+	-s	[server]
 		Source server address from where the rawdate will be fetched
 		Must be a Fully Qualified Domain Name (FQDN).
 		E.g. gattaca01.gcc.rug.nl or gattaca02.gcc.rug.nl
-	-r [root]
+	-r	[root]
 		Root dir on the server specified with -s and from where the raw data will be fetched (optional).
 		By default this is the SCR_ROOT_DIR variable, which is compiled from variables specified in the
 		<group>.cfg, <source_host>.cfg and sharedConfig.cfg config files (see below.)
@@ -412,7 +422,7 @@ declare group=''
 declare dryrun=''
 declare sourceServerFQDN=''
 declare sourceServerRootDir=''
-while getopts ":g:l:s:r:ahn" opt
+while getopts ":g:l:s:r:p:ahn" opt
 do
 	case "${opt}" in
 		a)
@@ -427,6 +437,9 @@ do
 		n)
 			dryrun='-n'
 			;;
+		p)
+			pipeline="${OPTARG}"
+			;;			
 		s)
 			sourceServerFQDN="${OPTARG}"
 			sourceServer="${sourceServerFQDN%%.*}"
@@ -456,6 +469,10 @@ done
 if [[ -z "${group:-}" ]]
 then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
+fi
+if [[ -z "${pipeline:-}" ]]
+then
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a pipeline with -p.'
 fi
 if [[ -z "${sourceServerFQDN:-}" ]]
 then
@@ -556,11 +573,11 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 declare -a sampleSheetsFromSourceServer
 # shellcheck disable=SC2029
-readarray -t sampleSheetsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${SCR_ROOT_DIR}/Samplesheets/\" -mindepth 1 -maxdepth 1 -type f -name '*.${SAMPLESHEET_EXT}'")
+readarray -t sampleSheetsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${SCR_ROOT_DIR}/Samplesheets/${pipeline}/\" -mindepth 1 -maxdepth 1 -type f -name '*.${SAMPLESHEET_EXT}'")
 
 if [[ "${#sampleSheetsFromSourceServer[@]}" -eq '0' ]]
 then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheets found at ${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}."
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheets found at ${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/${pipeline}/*.${SAMPLESHEET_EXT}."
 else
 	for sampleSheet in "${sampleSheetsFromSourceServer[@]}"
 	do
@@ -669,6 +686,12 @@ else
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process ${filePrefix}."
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 		fi
+		
+		#
+		# Parsing the samplesheet and push samplesheets to the diagnostic cluster if the analysis column is saying so
+		#
+		
+		
 	done
 fi
 

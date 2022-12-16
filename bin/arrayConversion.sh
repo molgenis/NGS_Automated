@@ -172,12 +172,12 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 # Sequencer is writing to this location: ${SEQ_DIR}
 # Looping through sub dirs to see if all files.
 #
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "find ${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}"
-readarray -t sampleSheets< <(find "${SCR_ROOT_DIR}/Samplesheets/" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name '*.csv')
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "find ${SCR_ROOT_DIR}/Samplesheets/AGCT/*.${SAMPLESHEET_EXT}"
+readarray -t sampleSheets< <(find "${SCR_ROOT_DIR}/Samplesheets/AGCT/" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name '*.csv')
 
 if [[ "${#sampleSheets[@]}" -eq '0' ]]
 then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found at ${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}."
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found at ${SCR_ROOT_DIR}/Samplesheets/AGCT/*.${SAMPLESHEET_EXT}."
 else
 	for sampleSheet in "${sampleSheets[@]}"
 	do
@@ -198,7 +198,7 @@ else
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.started: Skipping ${project}, which is already getting processed."
 			continue
-		elif [[ ! -f "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" ]]
+		elif [[ ! -f "${SCR_ROOT_DIR}/Samplesheets/AGCT/${project}.csv" ]]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheet found: skipping ${project}."
 			continue
@@ -236,13 +236,13 @@ else
 			echo "started: $(date +%FT%T%z)" > "${SCR_ROOT_DIR}/logs/${project}/run01.arrayConversion.totalRuntime"
 
 			{
-			mkdir -v -p "${SCR_ROOT_DIR}/generatedscripts_array/${project}/"
-			cd "${SCR_ROOT_DIR}/generatedscripts_array/${project}/"
-			cp -v "${SCR_ROOT_DIR}/Samplesheets/${project}.csv" ./
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "copying ${EBROOTAGCT}/templates/generate_template.sh to ${SCR_ROOT_DIR}/generatedscripts_array/${project}/"
+			mkdir -v -p "${SCR_ROOT_DIR}/generatedscripts/AGCT/${project}/"
+			cd "${SCR_ROOT_DIR}/generatedscripts/AGCT/${project}/"
+			cp -v "${SCR_ROOT_DIR}/Samplesheets/AGCT/${project}.csv" ./
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "copying ${EBROOTAGCT}/templates/generate_template.sh to ${SCR_ROOT_DIR}/generatedscripts/AGCT/${project}/"
 			cp -v "${EBROOTAGCT}/templates/generate_template.sh" ./
 			bash generate_template.sh 
-			cd "${SCR_ROOT_DIR}/runs_array/${project}/run01/jobs"
+			cd "${SCR_ROOT_DIR}/runs/AGCT/${project}/run01/jobs"
 			bash submit.sh 
 			} >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "jobs submitted"

@@ -132,7 +132,7 @@ EOH
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
-while getopts ":g:l:s:h" opt
+while getopts ":g:l:s:p:h" opt
 do
 	case "${opt}" in
 		h)
@@ -144,6 +144,9 @@ do
 		s)
 			samplesheetsServerLocation="${OPTARG}"
 			;;
+		p)
+			pipeline="${OPTARG}"
+			;;			
 		l)
 			l4b_log_level="${OPTARG^^}"
 			l4b_log_level_prio="${l4b_log_levels["${l4b_log_level}"]}"
@@ -167,7 +170,10 @@ if [[ -z "${group:-}" ]]
 then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
 fi
-
+if [[ -z "${pipeline:-}" ]]
+then
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a pipeline with -p.'
+fi
 #
 # Source config files.
 #
@@ -206,15 +212,15 @@ then
 	fi
 	
 	samplesheetsServerLocation="localhost"
-	samplesheetsLocation="${WORKING_DIR}/Samplesheets/"
+	samplesheetsLocation="${WORKING_DIR}/Samplesheets/${pipeline}/"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "samplesheetsServerLocation set to ${samplesheetsServerLocation}."
 else
 	if [[ "${ROLE_USER}" != "${DATA_MANAGER}" ]]; then
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${DATA_MANAGER}, but you are ${ROLE_USER} (${REAL_USER})."
 	fi
 	
-	shellcheck disable=SC2153
-	samplesheetsLocation="/groups/${group}/${TMP_LFS}/Samplesheets/"
+	#shellcheck disable=SC2153
+	samplesheetsLocation="/groups/${group}/${TMP_LFS}/Samplesheets/${pipeline}/"
 fi
 
 
@@ -240,7 +246,7 @@ fi
 hashedSource="$(printf '%s:%s' "${samplesheetsServerLocation}" "${samplesheetsLocation}" | md5sum | awk '{print $1}')"
 lockFile="${WORKING_DIR}/logs/${SCRIPT_NAME}_${hashedSource}.lock"
 thereShallBeOnlyOne "${lockFile}"
-printf 'Lock file for %s instance that pushes data to %s:%s\n' "${SCRIPT_NAME}" "${samplesheetsServerLocation}" "${samplesheetsLocation}" > "${lockFile}"
+#printf 'Lock file for %s instance that pushes data to %s:%s\n' "${SCRIPT_NAME}" "${samplesheetsServerLocation}" "${samplesheetsLocation}" > "${lockFile}"
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile} ..."
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${WORKING_DIR}/logs ..."
 
@@ -280,7 +286,7 @@ else
 		project="$(basename "${sampleSheet%."${SAMPLESHEET_EXT}"}")"
 		controlFileBase="${WORKING_DIR}/logs/${project}/"
 		export JOB_CONTROLE_FILE_BASE="${controlFileBase}/${project}.${SCRIPT_NAME}"
-		printf '%s\n' "Processing ${project} dir ..." >> "${lockFile}"
+#		printf '%s\n' "Processing ${project} dir ..." >> "${lockFile}"
 		# shellcheck disable=SC2174
 		mkdir -m 2770 -p "${WORKING_DIR}/logs/${project}/"
 		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
@@ -305,11 +311,11 @@ else
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "this is array data"
 					## copy all the data from that run
-					rsync -rlptDvc --relative "${WORKING_DIR}/./rawdata/array/GTC/${filePrefix}" "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/"
+					rsync -rlptDvc --relative "${WORKING_DIR}/./rawdata/array/GTC/${filePrefix}" "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/"
 				else		
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "this is NGS data"
 					## copy all the data from that run
-					rsync -rlptDvc --relative "${WORKING_DIR}/./rawdata/ngs/${filePrefix}" "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/"
+					rsync -rlptDvc --relative "${WORKING_DIR}/./rawdata/ngs/${filePrefix}" "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/"
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${project} finished"
 				fi
 			else
@@ -317,7 +323,7 @@ else
 				continue
 			fi
 		else
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Samplesheet is on destination machine: ${DESTINATION_DIAGNOSTICS_CLUSTER}"
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Samplesheet is on destination machine: ${samplesheetsServerLocation}"
 			# shellcheck disable=SC2029
 			if ssh "${DATA_MANAGER}"@"${DESTINATION_DIAGNOSTICS_CLUSTER}" test -e "${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested"
 			then
@@ -326,13 +332,13 @@ else
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "this is array data"
 					## copy the requested file to the ${WORKING_DIR}
-					rsync -vt "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested" "${WORKING_DIR}/logs/${project}/"
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested present, copying will start"
+					rsync -vt "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested" "${WORKING_DIR}/logs/${project}/"
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested present, copying will start"
 					rsyncArrayRuns "${WORKING_DIR}/logs/${project}/${project}.data.requested"
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "data transfer for ${project} is finished"
 				else
-					rsync -vt "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested" "${WORKING_DIR}/logs/${project}/"
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested present, copying will start"
+					rsync -vt "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested" "${WORKING_DIR}/logs/${project}/"
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested present, copying will start"
 					rsyncNGSRuns "${WORKING_DIR}/logs/${project}/${project}.data.requested"
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "data transfer for ${project} is finished"
 				fi
@@ -348,7 +354,7 @@ else
 fi
 
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished.'
-printf '%s\n' "Finished." >> "${lockFile}"
+#printf '%s\n' "Finished." >> "${lockFile}"
 
 trap - EXIT
 exit 0

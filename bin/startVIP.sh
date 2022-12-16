@@ -49,81 +49,27 @@ function showHelp() {
 	# Display commandline help on STDOUT.
 	#
 	cat <<EOH
-===============================================================================================================
-Script to calculate the checksums of the project 
+======================================================================================================================
+Script to start VIP pipeline and corresponding samplesheet is available.
+
 Usage:
 	$(basename "${0}") OPTIONS
 Options:
 	-h	Show this help.
 	-g	Group.
-	-p pipeline (which pipeline to run NGS_DNA / GAP)
 	-l	Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
 Config and dependencies:
-
-	This script needs 3 config files, which must be located in ${CFG_DIR}:
+	This script needs 4 config files, which must be located in ${CFG_DIR}:
 	1. <group>.cfg       for the group specified with -g
-	2. <host>.cfg        for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
+	2. <this_host>.cfg   for this server. E.g.: "${HOSTNAME_SHORT}.cfg"
 	3. sharedConfig.cfg  for all groups and all servers.
 	In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
 ===============================================================================================================
 EOH
 	trap - EXIT
 	exit 0
-}
-
-
-#
-# Compute checksums recursively for a given project folder.
-#
-function calculateMd5() {
-	local _project
-	local _run
-	local _controlFileBase
-	_project="${1}"
-	_run="${2}"
-	_controlFileBase="${TMP_ROOT_DIR}/logs/${_project}/${pipeline}/${_run}"
-	#
-	export JOB_CONTROLE_FILE_BASE="${_controlFileBase}.${SCRIPT_NAME}"
-	#
-	# Check if we should create checksums for this run of this project .
-	#
-	if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
-	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
-			"Found ${JOB_CONTROLE_FILE_BASE}.finished: skipping ${_project}/${_run}/ ... "
-		return
-	fi
-	if [[ ! -e "${_controlFileBase}.pipeline.finished" ]]
-	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
-			"Cannot find ${_controlFileBase}.pipeline.finished: skipping ${_project}/${_run}/ ... "
-		return
-	fi
-	#
-	# All checks passed: start computing checksums.
-	#
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
-		"Creating checksums for ${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/ ... " \
-		2>&1 | tee "${JOB_CONTROLE_FILE_BASE}.started"
-	cd "${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/" \
-		|| {
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" \
-				"Cannot access ${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/." \
-				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
-			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-			return
-		}
-	md5deep -r -j0 -o f -l "${_run}/" > "${_run}.md5" 2>> "${JOB_CONTROLE_FILE_BASE}.started" \
-		|| {
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" \
-				"Checksum verification failed. See ${JOB_CONTROLE_FILE_BASE}.failed for details." \
-				2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
-			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-			return
-		}
-	mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 }
 
 #
@@ -137,18 +83,15 @@ function calculateMd5() {
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
-while getopts ":g:l:p:h" opt
+while getopts "g:l:h" opt
 do
-	case ${opt} in
+	case "${opt}" in
 		h)
 			showHelp
 			;;
 		g)
 			group="${OPTARG}"
 			;;
-		p)
-			pipeline="${OPTARG}"
-			;;	
 		l)
 			l4b_log_level="${OPTARG^^}"
 			l4b_log_level_prio="${l4b_log_levels["${l4b_log_level}"]}"
@@ -173,11 +116,6 @@ then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
 fi
 
-if [[ -z "${pipeline:-}" ]]
-then
-	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a pipeline with -p.'
-fi
-
 #
 # Source config files.
 #
@@ -186,7 +124,9 @@ declare -a configFiles=(
 	"${CFG_DIR}/${group}.cfg"
 	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
 	"${CFG_DIR}/sharedConfig.cfg"
+	"${HOME}/molgenis.cfg"
 )
+
 for configFile in "${configFiles[@]}"
 do
 	if [[ -f "${configFile}" && -r "${configFile}" ]]
@@ -208,45 +148,77 @@ do
 done
 
 #
-# Execution of this script requires ateambot account.
+# Make sure to use an account for cron jobs and *without* write access to prm storage.
 #
 if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]
 then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
 fi
 
+#
+# Make sure only one copy of this script runs simultaneously per group.
+# Therefore locking must be done after
+# * sourcing the file containing the lock function,
+# * sourcing config files,
+# * and parsing commandline arguments,
+# but before doing the actual data transfers.
+#
 lockFile="${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
 thereShallBeOnlyOne "${lockFile}"
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile} ..."
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${TMP_ROOT_DIR}/logs ..."
 
-module load "hashdeep/${HASHDEEP_VERSION}" || log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" "${?}" 'Failed to load hashdeep module.'
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "$(module list)"
+#
+# Sequencer is writing to this location: ${SEQ_DIR}
+# Looping through sub dirs to see if all files.
+#
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "find ${TMP_ROOT_DIR}/Samplesheets/VIP/*.${SAMPLESHEET_EXT}"
+readarray -t sampleSheets< <(find "${TMP_ROOT_DIR}/Samplesheets/VIP/" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name '*.csv')
 
-readarray -t projects < <(find "${TMP_ROOT_DIR}/projects/${pipeline}/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${TMP_ROOT_DIR}/projects/${pipeline}/||")
-if [[ "${#projects[@]}" -eq '0' ]]
+if [[ "${#sampleSheets[@]}" -eq '0' ]]
 then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${TMP_ROOT_DIR}/projects/${pipeline}/."
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found at ${TMP_ROOT_DIR}/Samplesheets/VIP/*.${SAMPLESHEET_EXT}."
 else
-	for project in "${projects[@]}"
+	for sampleSheet in "${sampleSheets[@]}"
 	do
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project} ..."
-		echo "Working on ${project}" > "${lockFile}"
-		readarray -t runs < <(find "${TMP_ROOT_DIR}/projects/${project}/${pipeline}/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${TMP_ROOT_DIR}/projects/${project}/${pipeline}/||")
-		if [[ "${#runs[@]}" -eq '0' ]]
+		project="$(basename "${sampleSheet}" ".csv")"
+		#
+		# Create log dir with job control file for sequence run.
+		#
+		if [[ ! -d "${TMP_ROOT_DIR}/logs/${project}/" ]]
 		then
-			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found for project ${project}."
-		else
-			for run in "${runs[@]}"
-			do
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/${run} ..."
-				calculateMd5 "${project}" "${run}"
-			done
+			mkdir "${TMP_ROOT_DIR}/logs/${project}/"
 		fi
+		controlFileBase="${TMP_ROOT_DIR}/logs/${project}/vip"
+		export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
+		if [[ -f "${JOB_CONTROLE_FILE_BASE}.finished" ]]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished: Skipping finished ${project}."
+			continue
+		elif [[ -f "${JOB_CONTROLE_FILE_BASE}.started" ]]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.started: Skipping ${project}, which is already getting processed."
+			continue
+		elif [[ ! -f "${TMP_ROOT_DIR}/Samplesheets/VIP/${project}.csv" ]]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheet found: skipping ${project}."
+			continue
+		fi
+		
+		export TRACE_FAILED="${TMP_ROOT_DIR}/logs/${project}/trace.failed"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project} ..."
+
+		# QUESTIONS:
+		# where will it run (outputfolder--> endproduct)
+		# using own logging?
+		# do you need calculateChecksums? do you need copyProjectDataToPrm?
+		# how to start vip?
+
+
+		bash runVIPPipeline.sh
+		touch "${JOB_CONTROLE_FILE_BASE}.finished"
+		## vip pipeline should return a ${TMP_ROOT_DIR}/logs/${project}/vip.pipeline.finished to get automatically picked up by the calculateProjectMd5s and then the copyProjectDataToPrm script
 	done
 fi
-
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished successfully!'
-echo "" > "${lockFile}"
 trap - EXIT
 exit 0
