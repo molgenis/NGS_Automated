@@ -613,7 +613,7 @@ done < <(find "${IMPORT_DIR}"/ -maxdepth 1 -type f -iname "*runinfo*.csv")
 generate_plots
 
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "cleanup ${CHRONQC_TMP}* ..."
-#rm "${CHRONQC_TMP}/"*
+rm "${CHRONQC_TMP}/"*
 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished successfully!'
 echo "" > "${lockFile}"
