@@ -165,9 +165,9 @@ function processProjectToDB() {
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "found ${PRM_MULTIQCPROJECT_DIR}/${_project}.run_date_info.csv. Updating ChronQC database with ${_project}."
 		cp "${PRM_MULTIQCPROJECT_DIR}/${_project}.run_date_info.csv" "${CHRONQC_TMP}/${_project}.run_date_info.csv"
 		cp "${PRM_MULTIQCPROJECT_DIR}/multiqc_sources.txt" "${CHRONQC_TMP}/${_project}.multiqc_sources.txt"
-		for i in "${MULTIQC_METRICS_TO_PLOT[@]}"
+		for multiQC in "${MULTIQC_METRICS_TO_PLOT[@]}"
 		do
-			local _metrics="${i%:*}"
+			local _metrics="${multiQC%:*}"
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "using _metrics: ${_metrics}"
 			if [[ "${_metrics}" == multiqc_picard_insertSize.txt ]]
 			then
@@ -194,12 +194,12 @@ function processProjectToDB() {
 				echo -e 'Sample,Run,Date' >> "${CHRONQC_TMP}/${_project}.lane.run_date_info.csv"
 				IFS=$'\t' read -ra perLaneSample <<< "$(awk '$1 ~ /.recoded/ {print $1}' "${CHRONQC_TMP}/${_project}.${_metrics}" | tr '\n' '\t')"
 
-				for i in "${perLaneSample[@]}"
+				for laneSample in "${perLaneSample[@]}"
 				do
-					runDate=$(echo "${i}" | cut -d "_" -f 1)
-					#echo "${i}"
+					runDate=$(echo "${laneSample}" | cut -d "_" -f 1)
+					#echo "${laneSample}"
 					#echo "${runDate}"
-					echo -e "${i},${_project},${runDate}" >> "${CHRONQC_TMP}/${_project}.lane.run_date_info.csv"
+					echo -e "${laneSample},${_project},${runDate}" >> "${CHRONQC_TMP}/${_project}.lane.run_date_info.csv"
 				done
 				cp "${CHRONQC_TMP}/${_project}.${_metrics}" "${CHRONQC_TMP}/${_project}.2.${_metrics}"
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "using _metrics: ${_metrics} to create ${_project}.lane.run_date_info.csv"
