@@ -516,70 +516,80 @@ module load "chronqc/${CHRONQC_VERSION}"
 
 #
 ## Loops over all rawdata folders and checks if it is already in chronQC database. If not than call function 'processRawdataToDB "${rawdata}" to process this project.'
-#
-readarray -t rawdata < <(find "${PRM_ROOT_DIR}/rawdata/ngs/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${PRM_ROOT_DIR}/rawdata/ngs/||")
-if [[ "${#rawdata[@]:-0}" -eq '0' ]]
-then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${PRM_ROOT_DIR}/rawdata/ngs/."
-else
-	for rawdat in "${rawdata[@]}"
-	do
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing rawdat ${rawdat} ..."
-		echo "Working on ${rawdat}" > "${lockFile}"
-		export TMP_TRENDANALYSE_DIR="${TMP_ROOT_DIR}/trendanalysis"
-		export TMP_TRENDANALYSE_LOGS_DIR="${TMP_TRENDANALYSE_DIR}/logs"
-		controlFileBase="${TMP_TRENDANALYSE_DIR}/logs/${rawdat}"
-		export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
-		export PROCESSRAWDATATODB_CONTROLE_FILE_BASE="${TMP_TRENDANALYSE_DIR}/logs/${rawdat}/${rawdat}.processRawdataToDB"
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${TMP_TRENDANALYSE_DIR}/logs/${rawdat}/"
-		mkdir -p "${TMP_TRENDANALYSE_DIR}/logs/${rawdat}"
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${rawdat} ..."
-		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]] && [[ "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.finished" -ot "${JOB_CONTROLE_FILE_BASE}.finished" ]]
-		then
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${rawdat}."
-		else
-			processRawdataToDB "${rawdat}"
-		fi
-	done
-fi
+#MULTIPLE_PRMS
+
+for prm_dir in "${MULTIPLE_PRMS[@]}"
+do
+	PRM_ROOT_DIR="/groups/${group}/${prm_dir}/"
+	readarray -t rawdata < <(find "${PRM_ROOT_DIR}/rawdata/ngs/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${PRM_ROOT_DIR}/rawdata/ngs/||")
+	if [[ "${#rawdata[@]:-0}" -eq '0' ]]
+	then
+		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${PRM_ROOT_DIR}/rawdata/ngs/."
+	else
+		for rawdat in "${rawdata[@]}"
+		do
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing rawdat ${rawdat} ..."
+			echo "Working on ${rawdat}" > "${lockFile}"
+			export TMP_TRENDANALYSE_DIR="${TMP_ROOT_DIR}/trendanalysis"
+			export TMP_TRENDANALYSE_LOGS_DIR="${TMP_TRENDANALYSE_DIR}/logs"
+			controlFileBase="${TMP_TRENDANALYSE_DIR}/logs/${rawdat}"
+			export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
+			export PROCESSRAWDATATODB_CONTROLE_FILE_BASE="${TMP_TRENDANALYSE_DIR}/logs/${rawdat}/${rawdat}.processRawdataToDB"
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${TMP_TRENDANALYSE_DIR}/logs/${rawdat}/"
+			mkdir -p "${TMP_TRENDANALYSE_DIR}/logs/${rawdat}"
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${rawdat} ..."
+			if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]] && [[ "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.finished" -ot "${JOB_CONTROLE_FILE_BASE}.finished" ]]
+			then
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${rawdat}."
+			else
+				processRawdataToDB "${rawdat}"
+			fi
+		done
+	fi
+done
 
 #
 ## Loops over all runs and projects and checks if it is already in chronQC database. If not than call function 'processProjectToDB "${project}" "${run}" to process this project.'
 #
-readarray -t projects < <(find "${PRM_ROOT_DIR}/projects/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${PRM_ROOT_DIR}/projects/||")
-if [[ "${#projects[@]:-0}" -eq '0' ]]
-then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${PRM_ROOT_DIR}/projects/."
-else
-	for project in "${projects[@]}"
-	do
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project} ..."
-		echo "Working on ${project}" > "${lockFile}"
-		readarray -t runs < <(find "${PRM_ROOT_DIR}/projects/${project}/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${PRM_ROOT_DIR}/projects/${project}/||")
-		if [[ "${#runs[@]:-0}" -eq '0' ]]
-		then
-			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found for project ${project}."
-		else
-			for run in "${runs[@]}"
-			do
-				export TMP_TRENDANALYSE_DIR="${TMP_ROOT_DIR}/trendanalysis"
-				export TMP_TRENDANALYSE_LOGS_DIR="${TMP_TRENDANALYSE_DIR}/logs"
-				controlFileBase="${TMP_TRENDANALYSE_DIR}/logs/${project}/${run}"
-				export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
-				export PROCESSPROJECTTODB_CONTROLE_FILE_BASE="${TMP_TRENDANALYSE_DIR}/logs/${project}/${run}.processProjectToDB"
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${TMP_TRENDANALYSE_DIR}/logs/${project}/"
-				mkdir -p "${TMP_TRENDANALYSE_DIR}/logs/${project}"
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/${run} ..."
-				if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]] && [[ "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.finished" -ot "${JOB_CONTROLE_FILE_BASE}.finished" ]]
-				then
-					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${project}/${run}."
-				else
-					processProjectToDB "${project}" "${run}"
-				fi
-			done
-		fi
-	done
-fi
+
+for prm_dir in "${MULTIPLE_PRMS[@]}"
+do
+	PRM_ROOT_DIR="/groups/${group}/${prm_dir}/"
+	readarray -t projects < <(find "${PRM_ROOT_DIR}/projects/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${PRM_ROOT_DIR}/projects/||")
+	if [[ "${#projects[@]:-0}" -eq '0' ]]
+	then
+		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${PRM_ROOT_DIR}/projects/."
+	else
+		for project in "${projects[@]}"
+		do
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project} ..."
+			echo "Working on ${project}" > "${lockFile}"
+			readarray -t runs < <(find "${PRM_ROOT_DIR}/projects/${project}/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${PRM_ROOT_DIR}/projects/${project}/||")
+			if [[ "${#runs[@]:-0}" -eq '0' ]]
+			then
+				log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found for project ${project}."
+			else
+				for run in "${runs[@]}"
+				do
+					export TMP_TRENDANALYSE_DIR="${TMP_ROOT_DIR}/trendanalysis"
+					export TMP_TRENDANALYSE_LOGS_DIR="${TMP_TRENDANALYSE_DIR}/logs"
+					controlFileBase="${TMP_TRENDANALYSE_DIR}/logs/${project}/${run}"
+					export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
+					export PROCESSPROJECTTODB_CONTROLE_FILE_BASE="${TMP_TRENDANALYSE_DIR}/logs/${project}/${run}.processProjectToDB"
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${TMP_TRENDANALYSE_DIR}/logs/${project}/"
+					mkdir -p "${TMP_TRENDANALYSE_DIR}/logs/${project}"
+					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/${run} ..."
+					if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]] && [[ "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.finished" -ot "${JOB_CONTROLE_FILE_BASE}.finished" ]]
+					then
+						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${project}/${run}."
+					else
+						processProjectToDB "${project}" "${run}"
+					fi
+				done
+			fi
+		done
+	fi
+done
 
 #
 ## Checks directory ${IMPORT_DIR} for new Darwin import files. Than calls function 'generateChronQCOutput "${i}" "${importDir}/${tableFile}" "${fileType}"'
