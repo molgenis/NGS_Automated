@@ -19,5 +19,26 @@
         "chart_properties": {
             "y_value": "Percentage>=Q30"
         }
+    },
+    {
+        "table_name": "SequenceRun",
+        "chart_type": "time_series_with_box_whisker_plot",
+        "chart_properties": {
+            "y_value": "ClusterDensity(K/mm2)"
+        }
+    },
+    {
+        "table_name": "SequenceRun",
+        "chart_type": "time_series_with_box_whisker_plot",
+        "chart_properties": {
+            "y_value": "ClustersPassingFilter(%)"
+        }
+    },
+    {
+        "table_name": "SequenceRun",
+        "chart_type": "time_series_with_box_whisker_plot",
+        "chart_properties": {
+            "y_value": "Percentage>=Q30"
+        }
     }
 ]
