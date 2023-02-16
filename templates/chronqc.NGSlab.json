@@ -1,0 +1,63 @@
+[
+    {
+        "table_name": "NGSInzetten",
+        "chart_type": "time_series_with_absolute_threshold",
+        "chart_properties": {
+            "chart_title": "A260_230 (Mean per run)",
+            "lower_threshold": 1.4,
+            "upper_threshold": 2.2,
+            "y_value": "A260_230"
+        }
+    },
+    {
+        "table_name": "NGSInzetten",
+        "chart_type": "time_series_with_absolute_threshold",
+        "chart_properties": {
+            "chart_title": "A260_280 (Mean per run)",
+            "lower_threshold": 1.4,
+            "upper_threshold": 2.2,
+            "y_value": "A260_280"
+        }
+    },
+    {
+        "table_name": "NGSInzetten",
+        "chart_type": "time_series_with_absolute_threshold",
+        "chart_properties": {
+            "chart_title": "Concentration ng/ul (Mean per run)",
+            "lower_threshold": 80,
+            "y_value": "Concentration"
+        }
+    },
+    {
+        "table_name": "SamplePrep",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "chart_title": "Concentration ng/ul",
+            "y_value": "CONCENTRATION"
+        }
+    },
+    {
+        "table_name": "SamplePrep",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "chart_title": "Molarity nmol/l",
+            "y_value": "MOLARITY"
+        }
+    },
+    {
+        "table_name": "Capturing",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "chart_title": "Concentration ng/ul",
+            "y_value": "CONCENTRATION"
+        }
+    },
+    {
+        "table_name": "Capturing",
+        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_properties": {
+            "chart_title": "Molarity nmol/L",
+            "y_value": "MOLARITY"
+        }
+    }
+]

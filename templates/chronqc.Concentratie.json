@@ -1,4 +1,5 @@
 [
+
     {
         "table_name": "Concentratie",
         "chart_type": "time_series_with_absolute_threshold",
@@ -25,6 +26,14 @@
         "chart_properties": {
             "chart_title": "YIELD ng/ul (Mean per run)",
             "lower_threshold": 80,
+            "y_value": "YIELD"
+        }
+    },
+    {
+        "table_name": "Concentratie",
+        "chart_type": "time_series_with_box_whisker_plot",
+        "chart_properties": {
+            "chart_title": "YIELD ng/ul (Mean per run)",
             "y_value": "YIELD"
         }
     }
