@@ -82,11 +82,11 @@ function splitPerProject(){
 		rsync -vrltD "${dryrun:---progress}" \
 		--log-file="${_controlFileBaseForFunction}.started" \
 		--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
-		"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/${pipeline}/${_run}.${SAMPLESHEET_EXT}" \
+		"${DATA_MANAGER}@${sourceServerFQDN}:${TMP_ROOT_DIR}/Samplesheets/${pipeline}/${_run}.${SAMPLESHEET_EXT}" \
 			"${PRM_ROOT_DIR}/Samplesheets/archive/" \
 		|| {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
-			"Failed to rsync ${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}. See ${_controlFileBaseForFunction}.failed for details."
+			"Failed to rsync ${TMP_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}. See ${_controlFileBaseForFunction}.failed for details."
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 		}
@@ -116,7 +116,7 @@ function splitPerProject(){
 	# Check if the samplesheet needs to be splitted
 	#
 	_pipelineFieldIndex=$((${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]} + 1))
-	readarray -t valueInSamplesheet < <(tail -n +2 "${samplesheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_pipelineFieldIndex}" | sort | uniq )
+	readarray -t valueInSamplesheet < <(tail -n +2 "${_sampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_pipelineFieldIndex}" | sort | uniq )
 	if [[ "${valueInSamplesheet[0]}" != *"NGS_DNA"*  && "${valueInSamplesheet[0]}" != *"GAP"* ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no next step detected in the samplesheet, no need to continue splitting"
@@ -166,8 +166,10 @@ function splitPerProject(){
 		mv "${_projectSampleSheet}"{.tmp,}
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Created ${_projectSampleSheet}."
 
-	fi
-done
+	done
+
+	mv "${_controlFileBaseForFunction}."{started,finished}
+}
 
 function showHelp() {
 	#
@@ -192,15 +194,11 @@ Options:
 	-l	[level]
 		Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
-	-s	[server]
-		Source server address from where the rawdate will be fetched
-		Must be a Fully Qualified Domain Name (FQDN).
-		E.g. gattaca01.gcc.rug.nl or gattaca02.gcc.rug.nl
 	-r	[root]
 		Root dir on the server specified with -s and from where the raw data will be fetched (optional).
-		By default this is the SCR_ROOT_DIR variable, which is compiled from variables specified in the
+		By default this is the TMP_ROOT_DIR variable, which is compiled from variables specified in the
 		<group>.cfg, <source_host>.cfg and sharedConfig.cfg config files (see below.)
-		You need to override SCR_ROOT_DIR when the data is to be fetched from a non default path,
+		You need to override TMP_ROOT_DIR when the data is to be fetched from a non default path,
 		which is for example the case when fetching data from another group.
 
 Config and dependencies:
@@ -273,7 +271,7 @@ then
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '1' 'No pipeline specified, default is NGS_Demultiplexing'
 	pipeline="NGS_Demultiplexing"
 fi
-if [[ -z "${archiveSamplesheet:}" ]]
+if [[ -z "${archiveSamplesheet:-}" ]]
 then
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'no archiving of samplesheet'
 	archiveSamplesheet='false'
@@ -287,7 +285,6 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files ..."
 declare -a configFiles=(
 	"${CFG_DIR}/${group}.cfg"
 	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
-	"${CFG_DIR}/${sourceServer}.cfg"
 	"${CFG_DIR}/sharedConfig.cfg"
 	"${HOME}/molgenis.cfg"
 )
@@ -311,44 +308,42 @@ do
 	fi
 done
 
-#
-# Overrule group's SCR_ROOT_DIR if necessary.
-#
-if [[ -n "${sourceServerRootDir:-}" ]]
-then
-	SCR_ROOT_DIR="${sourceServerRootDir}"
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Using alternative sourceServerRootDir ${sourceServerRootDir} as SCR_ROOT_DIR."
-fi
 
-#
-# Write access to prm storage requires data manager account.
-#
-if [[ "${ROLE_USER}" != "${DATA_MANAGER}" ]]; then
-	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${DATA_MANAGER}, but you are ${ROLE_USER} (${REAL_USER})."
-fi
 
-hashedSource="$(printf '%s:%s' "${sourceServer}" "${SCR_ROOT_DIR}" | md5sum | awk '{print $1}')"
-lockFile="${PRM_ROOT_DIR}/logs/${SCRIPT_NAME}_${hashedSource}.lock"
+hashedSource="$(printf '%s:%s' "${TMP_ROOT_DIR}" | md5sum | awk '{print $1}')"
+lockFile="${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}_${hashedSource}.lock"
 thereShallBeOnlyOne "${lockFile}"
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile} ..."
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${PRM_ROOT_DIR}/logs ..."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${TMP_ROOT_DIR}/logs ..."
 
 declare -a sampleSheets
 # shellcheck disable=SC2029
-readarray -t sampleSheets< <(find "\"${SCR_ROOT_DIR}/Samplesheets/${pipeline}/\" -mindepth 1 -maxdepth 1 -type f -name '*.${SAMPLESHEET_EXT}'")
+readarray -t sampleSheets< <(find "${TMP_ROOT_DIR}/Samplesheets/${pipeline}/" -mindepth 1 -maxdepth 1 -type f -name '*.csv')
 
 if [[ "${#sampleSheets[@]}" -eq '0' ]]
 then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheets found at ${SCR_ROOT_DIR}/Samplesheets/${pipeline}/*.${SAMPLESHEET_EXT}."
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheets found at ${TMP_ROOT_DIR}/Samplesheets/${pipeline}/*.csv."
 else
 	for sampleSheet in "${sampleSheets[@]}"
 	do
 		filePrefix="$(basename "${sampleSheet%."${SAMPLESHEET_EXT}"}")"
+		runPrefix='run01'
 		# THIS HAS TO CHANGE IF WE WANT TO REUSE THIS SCRIPT ON PRM
 		controlFileBase="${TMP_ROOT_DIR}/logs/${filePrefix}/"
-		splitPerProject "${sampleSheet}" "${filePrefix}" "${controlFileBase}/run01"
+		export JOB_CONTROLE_FILE_BASE="${controlFileBase}/${runPrefix}.${SCRIPT_NAME}"
 		
-		if [[ -e "${controlFileBase}/${runPrefix}.splitSamplesheetPerProject.finished" ]]
+		printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
+		
+		if [[ -f "${TMP_ROOT_DIR}/logs/${filePrefix}/${RAWDATAPROCESSINGFINISHED}" ]]
+		then
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${filePrefix}/${RAWDATAPROCESSINGFINISHED} present."
+		else
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${filePrefix}/${RAWDATAPROCESSINGFINISHED} absent."
+			continue
+		fi	
+		splitPerProject "${sampleSheet}" "${filePrefix}" "${controlFileBase}/${runPrefix}"
+		
+		if [[ -e "${controlFileBase}/${runPrefix}.splitPerProject.finished" ]]
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}/${runPrefix}.splitSamplesheetPerProject.finished present."
 			rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
@@ -359,10 +354,6 @@ else
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process ${filePrefix}."
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 		fi
-		
-		#
-		# Parsing the samplesheet and push samplesheets to the diagnostic cluster if the analysis column is saying so
-		#
 		
 		
 	done
