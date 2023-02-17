@@ -218,14 +218,6 @@ do
 		mv "${samplesheet}.tmp" "${samplesheet}"
 		firstStepOfPipeline="${REPLACEDPIPELINECOLUMN%%+*}"
 	else
-		if [[ " ${array[*]} " =~ " SentrixPosition_A " ]]
-		then
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Samplesheet contains SentrixPosition_A, our best guess this is an array samplesheet"
-			pipeline="GAP"
-		else
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Samplesheet does not contain SentrixPosition_A, this is probably an NGS_DNA samplesheet"
-			pipeline="NGS_DNA"
-		fi
 		awk -v pipeline="${REPLACEDPIPELINECOLUMN}" -v pipelineColumn="${PIPELINECOLUMN}" 'BEGIN {FS=","}{if (NR==1){print $0",pipelineColumn}{else print $0","pipeline}'
 	fi
 
