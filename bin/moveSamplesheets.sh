@@ -229,24 +229,12 @@ do
 		awk -v pipeline="${REPLACEDPIPELINECOLUMN}" -v pipelineColumn="${PIPELINECOLUMN}" 'BEGIN {FS=","}{if (NR==1){print $0",pipelineColumn}{else print $0","pipeline}'
 	fi
 
-	#
-	# Determine source and destination location for the samplesheets.
-	#
+	samplesheetsDestination="${HOSTNAME_TMP}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/${firstStepOfPipeline}/new/"
 
-	if [[ "${LAB}" == 'internal' ]]
-	then
-		# shellcheck disable=SC2153
-		sampleheetsDestination="${HOSTNAME_PREPROCESSING_INTERNAL}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/${firstStepOfPipeline}/new/"
-	elif [[ "${LAB}" == 'external' ]]
-	then
-		sampleheetsDestination="${HOSTNAME_PREPROCESSING_EXTERNAL}:/groups/${GROUP}/${TMP_LFS}/Samplesheets/${firstStepOfPipeline}/new/"
-	else
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Unhandled value for \${LAB}: ${LAB}. Expected either internal or external. Please fix ${CFG_DIR}/${group}.cfg"
-	fi
 	#
 	# Move samplesheets with rsync
 	#
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pushing samplesheets using rsync to ${sampleheetsDestination} ..."
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pushing samplesheets using rsync to ${samplesheetsDestination} ..."
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "See ${logDir}/rsync.log for details ..."
 	transactionStatus='Ok'
 	
@@ -256,7 +244,7 @@ do
 		--omit-dir-times \
 		--omit-link-times \
 		"${samplesheet}" \
-		"${sampleheetsDestination}" \
+		"${samplesheetsDestination}" \
 	&& rm -v "${samplesheet}" >> "${JOB_CONTROLE_FILE_BASE}.started" \
 	|| {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to move ${samplesheet}."
