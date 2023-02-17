@@ -174,53 +174,49 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 # Looping through sub dirs to see if all files.
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "find ${SEQ_DIR}/ -mindepth 1 -maxdepth 1 -type d -o -type l"
-mapfile -t projects < <(find "${SEQ_DIR}/" -mindepth 1 -maxdepth 1 -type d -o -type l)
+mapfile -t runs < <(find "${SEQ_DIR}/" -mindepth 1 -maxdepth 1 -type d -o -type l)
 
 pipeline='NGS_Demultiplexing'
 
-for i in "${projects[@]}"
+for i in "${runs[@]}"
 do
-	project=$(basename "${i}")
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking ${project} ..."
+	run=$(basename "${i}")
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking ${run} ..."
 	#export JOB_CONTROLE_FILE_BASE="${SCR_ROOT_DIR}/logs/${project}/run01.demultiplexing"
 	demultiplexingJobControleFileBase="${SCR_ROOT_DIR}/logs/${project}/run01.demultiplexing"
 	if [[ -f "${demultiplexingJobControleFileBase}.finished" ]]
 	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${demultiplexingJobControleFileBase}.finished: Skipping finished ${project}."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${demultiplexingJobControleFileBase}.finished: Skipping finished ${run}."
 		continue
 	elif [[ -f "${demultiplexingJobControleFileBase}.started" ]]
 	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${demultiplexingJobControleFileBase}.started: Skipping ${project}, which is already getting processed."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${demultiplexingJobControleFileBase}.started: Skipping ${run}, which is already getting processed."
 		continue
-	elif [[ ! -f "${SCR_ROOT_DIR}/Samplesheets/${pipeline}/${project}.csv" ]]
+	elif [[ ! -f "${SCR_ROOT_DIR}/Samplesheets/${pipeline}/${run}.csv" ]]
 	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheet found: skipping ${project}."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheet found: skipping ${run}."
 		continue
 	fi
 	export JOB_CONTROLE_FILE_BASE="${demultiplexingJobControleFileBase}"
-	#
-	# Create log dir with job control file for sequence run.
-	#
-	if [[ ! -d "${SCR_ROOT_DIR}/logs/${project}/" ]]
-	then
-		mkdir "${SCR_ROOT_DIR}/logs/${project}/"
-	fi
+
+	mkdir -p "${SCR_ROOT_DIR}/logs/${run}/"
+
 	#
 	# Check if the run has already completed.
 	#
-	sequencer=$(echo "${project}" | awk 'BEGIN {FS="_"} {print $2}')
+	sequencer=$(echo "${run}" | awk 'BEGIN {FS="_"} {print $2}')
 	miSeqCompleted='no'
 	miSeqNameRegex='^M[0-9][0-9]*$'
-	if [[ -f "${SEQ_DIR}/${project}/RTAComplete.txt" ]] && [[ "${sequencer}" =~ ${miSeqNameRegex} ]]
+	if [[ -f "${SEQ_DIR}/${run}/RTAComplete.txt" ]] && [[ "${sequencer}" =~ ${miSeqNameRegex} ]]
 	then
 		miSeqCompleted='yes'
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Miseq run detected: miSeqCompleted=yes for ${project}."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Miseq run detected: miSeqCompleted=yes for ${run}."
 	fi
 	if [[ -f "${SEQ_DIR}/${project}/RunCompletionStatus.xml" || "${miSeqCompleted}" == 'yes' ]]
 	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer has completed data generation for: ${project}."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer has completed data generation for: ${run}."
 	else
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer is busy producing data: skipping ${project}."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer is busy producing data: skipping ${run}."
 		continue
 	fi
 	#
@@ -230,12 +226,12 @@ do
 		2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 	echo "started: $(date +%FT%T%z)" > "${SCR_ROOT_DIR}/logs/${project}/run01.demultiplexing.totalRuntime"
 	{
-		mkdir -v -p "${SCR_ROOT_DIR}/generatedscripts/${pipeline}/${project}/"
-		cd "${SCR_ROOT_DIR}/generatedscripts/${pipeline}/${project}/"
-		cp -v "${SCR_ROOT_DIR}/Samplesheets/${pipeline}/${project}.csv" "${project}.csv"
+		mkdir -v -p "${SCR_ROOT_DIR}/generatedscripts/${pipeline}/${run}/"
+		cd "${SCR_ROOT_DIR}/generatedscripts/${pipeline}/${run}/"
+		cp -v "${SCR_ROOT_DIR}/Samplesheets/${pipeline}/${run}.csv" "${run}.csv"
 		cp -v "${EBROOTNGS_DEMULTIPLEXING}/generate_template.sh" ./ 
-		bash generate_template.sh "${project}" "${SCR_ROOT_DIR}" "${group}"
-		cd "${SCR_ROOT_DIR}/runs/${pipeline}/${project}/jobs"
+		bash generate_template.sh "${run}" "${SCR_ROOT_DIR}" "${group}"
+		cd "${SCR_ROOT_DIR}/runs/${pipeline}/${run}/jobs"
 		bash submit.sh
 	} >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "jobs submitted"
@@ -245,7 +241,7 @@ do
 	timeStamp="$(date +%FT%T%z)"
 	printf '%s\n' 'run_id,group,process_raw_data,copy_raw_prm,projects,date' \
 		> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
-	printf '%s\n' "${project},${group},started,,,${timeStamp}" \
+	printf '%s\n' "${run},${group},started,,,${timeStamp}" \
 		>> "${JOB_CONTROLE_FILE_BASE}.trace_post_overview.csv"
 done
 
