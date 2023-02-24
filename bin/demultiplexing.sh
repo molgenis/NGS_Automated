@@ -183,7 +183,7 @@ do
 	run=$(basename "${i}")
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking ${run} ..."
 	#export JOB_CONTROLE_FILE_BASE="${SCR_ROOT_DIR}/logs/${project}/run01.demultiplexing"
-	demultiplexingJobControleFileBase="${SCR_ROOT_DIR}/logs/${project}/run01.demultiplexing"
+	demultiplexingJobControleFileBase="${SCR_ROOT_DIR}/logs/${run}/run01.demultiplexing"
 	if [[ -f "${demultiplexingJobControleFileBase}.finished" ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${demultiplexingJobControleFileBase}.finished: Skipping finished ${run}."

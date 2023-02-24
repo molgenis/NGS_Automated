@@ -202,13 +202,35 @@ for samplesheet in "${samplesheets[@]}"
 do
 	declare -a _sampleSheetColumnNames=()
 	declare -A _sampleSheetColumnOffsets=()
-	
+
 	IFS="${SAMPLESHEET_SEP}" read -r -a _sampleSheetColumnNames <<< "$(head -1 "${samplesheet}")"
 	
 	for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]} ; _offset++ ))
 	do
 		_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
 	done
+	
+	if [[ -n "${_sampleSheetColumnOffsets["SentrixBarcode_A"]+isset}" ]] 
+	then
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a GAP samplesheet, there is at this moment no samplesheetCheck"
+	else
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a NGS samplesheet, lets check if the samplesheet is correct"
+		if checkSampleSheet.py --input "${sampleSheet}.converted" --log "${sampleSheet}.converted.log"
+		then
+			check=$(cat "${sampleSheet}.converted.log")
+		fi
+	
+		if [[ "${check}" == 'OK' ]]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Samplesheet is correct, continue"
+		else
+			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is not correct, see ${sampleSheet}.converted.log."
+			
+			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+			continue
+		fi
+	fi
+	
 	if [[ -n "${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]+isset}" ]] 
 	then
 		_pipelineFieldIndex=$((${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]} + 1))
@@ -221,7 +243,7 @@ do
 	fi
 	firstStepOfPipeline="${REPLACEDPIPELINECOLUMN%%+*}"
 	#shellcheck disable=SC2153
-	samplesheetsDestination="${HOSTNAME_TMP}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/${firstStepOfPipeline}/new/"
+	samplesheetsDestination="${HOSTNAME_TMP}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/${firstStepOfPipeline}"
 
 	#
 	# Move samplesheets with rsync
