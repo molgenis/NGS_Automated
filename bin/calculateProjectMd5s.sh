@@ -83,7 +83,7 @@ function calculateMd5() {
 	local _controlFileBase
 	_project="${1}"
 	_run="${2}"
-	_controlFileBase="${TMP_ROOT_DIR}/logs/${_project}/${pipeline}/${_run}"
+	_controlFileBase="${TMP_ROOT_DIR}/logs/${_project}/${_run}"
 	#
 	export JOB_CONTROLE_FILE_BASE="${_controlFileBase}.${SCRIPT_NAME}"
 	#
@@ -115,6 +115,7 @@ function calculateMd5() {
 			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			return
 		}
+		
 	md5deep -r -j0 -o f -l "${_run}/" > "${_run}.md5" 2>> "${JOB_CONTROLE_FILE_BASE}.started" \
 		|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" \
@@ -232,7 +233,7 @@ else
 	do
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project} ..."
 		echo "Working on ${project}" > "${lockFile}"
-		readarray -t runs < <(find "${TMP_ROOT_DIR}/projects/${project}/${pipeline}/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${TMP_ROOT_DIR}/projects/${project}/${pipeline}/||")
+		readarray -t runs < <(find "${TMP_ROOT_DIR}/projects/${pipeline}/${project}/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${TMP_ROOT_DIR}/projects/${pipeline}/${project}/||")
 		if [[ "${#runs[@]}" -eq '0' ]]
 		then
 			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found for project ${project}."

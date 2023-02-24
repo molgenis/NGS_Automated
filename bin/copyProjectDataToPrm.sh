@@ -122,7 +122,6 @@ function rsyncProjectRun() {
 	#
 	local _transferSoFarSoGood
 	_transferSoFarSoGood='true'
-	echo "working on ${_project}/${_run}" > "${lockFile}"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run} dir ..." \
 	2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" 
 	rsync -av --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' "${dryrun:---progress}" \
