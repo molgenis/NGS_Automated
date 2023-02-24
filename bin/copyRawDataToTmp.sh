@@ -246,7 +246,7 @@ fi
 hashedSource="$(printf '%s:%s' "${samplesheetsServerLocation}" "${samplesheetsLocation}" | md5sum | awk '{print $1}')"
 lockFile="${WORKING_DIR}/logs/${SCRIPT_NAME}_${hashedSource}.lock"
 thereShallBeOnlyOne "${lockFile}"
-#printf 'Lock file for %s instance that pushes data to %s:%s\n' "${SCRIPT_NAME}" "${samplesheetsServerLocation}" "${samplesheetsLocation}" > "${lockFile}"
+#printf 'Lock file for %s instance that pushes data to %s:%s\n' "${SCRIPT_NAME}" "${samplesheetsServerLocation}" 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile} ..."
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${WORKING_DIR}/logs ..."
 
@@ -286,7 +286,6 @@ else
 		project="$(basename "${sampleSheet%."${SAMPLESHEET_EXT}"}")"
 		controlFileBase="${WORKING_DIR}/logs/${project}/"
 		export JOB_CONTROLE_FILE_BASE="${controlFileBase}/${project}.${SCRIPT_NAME}"
-#		printf '%s\n' "Processing ${project} dir ..." >> "${lockFile}"
 		# shellcheck disable=SC2174
 		mkdir -m 2770 -p "${WORKING_DIR}/logs/${project}/"
 		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
@@ -354,7 +353,7 @@ else
 fi
 
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished.'
-#printf '%s\n' "Finished." >> "${lockFile}"
+
 
 trap - EXIT
 exit 0

@@ -184,21 +184,8 @@ touch "${logDir}"
 export JOB_CONTROLE_FILE_BASE="${logDir}/${logTimeStamp}.${SCRIPT_NAME}"
 printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 
-#
-# Determine source and destination location for the samplesheets.
-#
-samplesheetsSource="${DAT_ROOT_DIR}/samplesheets/new/"
-if [[ "${LAB}" == 'internal' ]]
-then
-	# shellcheck disable=SC2153
-	sampleheetsDestination="${HOSTNAME_PREPROCESSING_INTERNAL}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/new/"
-elif [[ "${LAB}" == 'external' ]]
-then
-	sampleheetsDestination="${HOSTNAME_PREPROCESSING_EXTERNAL}:/groups/${GROUP}/${TMP_LFS}/Samplesheets/new/"
-else
-	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Unhandled value for \${LAB}: ${LAB}. Expected either internal or external. Please fix ${CFG_DIR}/${group}.cfg"
-fi
 
+samplesheetsSource="${DAT_ROOT_DIR}/samplesheets/new/"
 #
 # Find samplesheets.
 #
@@ -211,21 +198,45 @@ then
 	exit 0
 fi
 
-#
-# Move samplesheets with rsync
-#
-log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pushing samplesheets using rsync to ${sampleheetsDestination} ..."
-log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "See ${logDir}/rsync.log for details ..."
-transactionStatus='Ok'
 for samplesheet in "${samplesheets[@]}"
 do
+	declare -a _sampleSheetColumnNames=()
+	declare -A _sampleSheetColumnOffsets=()
+	
+	IFS="${SAMPLESHEET_SEP}" read -r -a _sampleSheetColumnNames <<< "$(head -1 "${samplesheet}")"
+	
+	for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]} ; _offset++ ))
+	do
+		_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
+	done
+	if [[ -n "${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]+isset}" ]] 
+	then
+		_pipelineFieldIndex=$((${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]} + 1))
+		## In future this valueInSamplesheet will be replaced by DARWIN to the real value.
+		readarray -t valueInSamplesheet < <(tail -n +2 "${samplesheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_pipelineFieldIndex}" | sort | uniq )
+		perl -p -e "s|${valueInSamplesheet[0]}|${REPLACEDPIPELINECOLUMN}|" "${samplesheet}" > "${samplesheet}.tmp"
+		mv "${samplesheet}.tmp" "${samplesheet}"
+	else
+		awk -v pipeline="${REPLACEDPIPELINECOLUMN}" -v pipelineColumn="${PIPELINECOLUMN}" 'BEGIN {FS=","}{if (NR==1){print $0",pipelineColumn}{else print $0","pipeline}'
+	fi
+	firstStepOfPipeline="${REPLACEDPIPELINECOLUMN%%+*}"
+	#shellcheck disable=SC2153
+	samplesheetsDestination="${HOSTNAME_TMP}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/${firstStepOfPipeline}/new/"
+
+	#
+	# Move samplesheets with rsync
+	#
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pushing samplesheets using rsync to ${samplesheetsDestination} ..."
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "See ${logDir}/rsync.log for details ..."
+	transactionStatus='Ok'
+	
 	/usr/bin/rsync -vt \
 		--log-file="${logDir}/rsync.log" \
 		--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
 		--omit-dir-times \
 		--omit-link-times \
 		"${samplesheet}" \
-		"${sampleheetsDestination}" \
+		"${samplesheetsDestination}" \
 	&& rm -v "${samplesheet}" >> "${JOB_CONTROLE_FILE_BASE}.started" \
 	|| {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to move ${samplesheet}."
