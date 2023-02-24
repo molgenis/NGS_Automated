@@ -215,6 +215,17 @@ do
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a GAP samplesheet, there is at this moment no samplesheetCheck"
 	else
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a NGS samplesheet, lets check if the samplesheet is correct"
+		cp "${sampleSheet}"{,.converted}
+	
+		#
+		# Make sure
+		#  1. The last line ends with a line end character.
+		#  2. We have the right line end character: convert any carriage return (\r) to newline (\n).
+		#  3. We remove empty lines.
+		#
+		printf '\n'     >> "${sampleSheet}.converted"
+		sed -i 's/\r/\n/g' "${sampleSheet}.converted"
+		sed -i '/^\s*$/d'  "${sampleSheet}.converted"
 		if checkSampleSheet.py --input "${samplesheet}.converted" --log "${samplesheet}.converted.log"
 		then
 			check=$(cat "${samplesheet}.converted.log")
