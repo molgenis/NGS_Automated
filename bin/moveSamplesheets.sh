@@ -215,16 +215,16 @@ do
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a GAP samplesheet, there is at this moment no samplesheetCheck"
 	else
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a NGS samplesheet, lets check if the samplesheet is correct"
-		if checkSampleSheet.py --input "${sampleSheet}.converted" --log "${sampleSheet}.converted.log"
+		if checkSampleSheet.py --input "${samplesheet}.converted" --log "${samplesheet}.converted.log"
 		then
-			check=$(cat "${sampleSheet}.converted.log")
+			check=$(cat "${samplesheet}.converted.log")
 		fi
 	
 		if [[ "${check}" == 'OK' ]]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Samplesheet is correct, continue"
 		else
-			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is not correct, see ${sampleSheet}.converted.log."
+			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is not correct, see ${samplesheet}.converted.log."
 			
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			continue
