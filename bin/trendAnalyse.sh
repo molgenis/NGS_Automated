@@ -358,10 +358,31 @@ function generateChronQCOutput() {
 	local _runinfo="${1}"
 	local _tablefile="${2}"
 	local _filetype="${3}"
-	chronqc database -f --create --run-date-info "${_runinfo}" -o "${CHRONQC_DATABASE_NAME}" --db-table "${_filetype}" "${_tablefile}" "${_filetype}"
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "database filled with ${_runinfo}"
+	local _fileDate="${4}"
+	CHRONQC_TMP="${TMP_TRENDANALYSE_DIR}/tmp/"
+	echo "_tablefile=${_tablefile}, _filetype=${_filetype}"
+	if [[ "${_filetype}"  == 'ArrayInzetten' ]]
+	then
+		chronqc database -f --create --run-date-info "${_runinfo}" -o "${CHRONQC_DATABASE_NAME}" --db-table "${_filetype}" "${_tablefile}" "${_filetype}"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "database filled with ${_runinfo}"
+	elif [[ "${_filetype}" == 'Concentratie' ]]
+	then
+		head -1 "${_runinfo}" > "${CHRONQC_TMP}/ConcentratieNimbus_runinfo_${_fileDate}.csv"
+		head -1 "${_tablefile}" > "${CHRONQC_TMP}/ConcentratieNimbus_${_fileDate}.csv"
+
+		grep Nimbus "${_runinfo}" >> "${CHRONQC_TMP}/ConcentratieNimbus_runinfo_${_fileDate}.csv"
+		grep Nimbus "${_tablefile}" >> "${CHRONQC_TMP}/ConcentratieNimbus_${_fileDate}.csv"
+		
+		# for now the database will be filled with only information from the Nimbus2000	
+		chronqc database -f --create --run-date-info "${CHRONQC_TMP}/ConcentratieNimbus_runinfo_${_fileDate}.csv" -o "${CHRONQC_DATABASE_NAME}" --db-table "${_filetype}" "${CHRONQC_TMP}/ConcentratieNimbus_${_fileDate}.csv" Nimbus
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "database filled with ConcentratieNimbus_${_fileDate}.csv"
+	else
+		chronqc database -f --create --run-date-info "${_runinfo}" -o "${CHRONQC_DATABASE_NAME}" --db-table "${_filetype}" "${_tablefile}" 'NGSlab'
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "database filled with ${_runinfo}"
+	fi		
 	mv "${_runinfo}" "${ARCHIVE_DIR}"
 	mv "${_tablefile}" "${ARCHIVE_DIR}"
+
 }
 
 
@@ -591,6 +612,8 @@ do
 	fi
 done
 
+
+
 #
 ## Checks directory ${IMPORT_DIR} for new Darwin import files. Than calls function 'generateChronQCOutput "${i}" "${importDir}/${tableFile}" "${fileType}"'
 ## to process files. After precession the files are moved to archive.
@@ -609,7 +632,7 @@ do
 			fileType=$(cut -d '_' -f1 <<< "${runinfoFile}")
 			fileDate=$(cut -d '_' -f3 <<< "${runinfoFile}")
 			tableFile="${fileType}_${fileDate}.csv"
-			generateChronQCOutput "${i}" "${IMPORT_DIR}/${tableFile}" "${fileType}"
+			generateChronQCOutput "${i}" "${IMPORT_DIR}/${tableFile}" "${fileType}" "${fileDate}"
 			touch "${TMP_TRENDANALYSE_LOGS_DIR}/darwin/${runinfoFile}.finished"
 		fi
 	else
@@ -617,13 +640,15 @@ do
 	fi
 done < <(find "${IMPORT_DIR}"/ -maxdepth 1 -type f -iname "*runinfo*.csv")
 
+log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "cleanup ${CHRONQC_TMP}* ..."
+
+rm "${CHRONQC_TMP}/"*
+
 #
 ## Function for generating a list of ChronQC plots.
 #
 generate_plots
 
-log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "cleanup ${CHRONQC_TMP}* ..."
-rm "${CHRONQC_TMP}/"*
 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished successfully!'
 echo "" > "${lockFile}"
