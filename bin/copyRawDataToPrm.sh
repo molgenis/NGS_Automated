@@ -487,21 +487,6 @@ fi
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files ..."
 
-if [[ "${sourceServer}" == *"+"* ]]
-then
-	sourceServerNoJumphost="${sourceServer##*+}"
-else
-	sourceServerNoJumphost="${sourceServer}"
-fi
-
-#declare -a configFiles=(
-#	"${CFG_DIR}/${group}.cfg"
-#	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
-#	"${CFG_DIR}/${sourceServerNoJumphost}.cfg"
-#	"${CFG_DIR}/sharedConfig.cfg"
-#	"${HOME}/molgenis.cfg"
-#)
-
 declare -a configFiles=(
 	"${CFG_DIR}/${group}.cfg"
 	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
