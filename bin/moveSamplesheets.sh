@@ -216,11 +216,10 @@ do
 		readarray -t valueInSamplesheet < <(tail -n +2 "${samplesheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_pipelineFieldIndex}" | sort | uniq )
 		perl -p -e "s|${valueInSamplesheet[0]}|${REPLACEDPIPELINECOLUMN}|" "${samplesheet}" > "${samplesheet}.tmp"
 		mv "${samplesheet}.tmp" "${samplesheet}"
-		firstStepOfPipeline="${REPLACEDPIPELINECOLUMN%%+*}"
 	else
 		awk -v pipeline="${REPLACEDPIPELINECOLUMN}" -v pipelineColumn="${PIPELINECOLUMN}" 'BEGIN {FS=","}{if (NR==1){print $0",pipelineColumn}{else print $0","pipeline}'
 	fi
-
+	firstStepOfPipeline="${REPLACEDPIPELINECOLUMN%%+*}"
 	#shellcheck disable=SC2153
 	samplesheetsDestination="${HOSTNAME_TMP}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/${firstStepOfPipeline}/new/"
 

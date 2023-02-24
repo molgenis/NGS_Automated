@@ -25,8 +25,6 @@ INSTALLATION_DIR="$(cd -P "$(dirname "${0}")/.." && pwd)"
 LIB_DIR="${INSTALLATION_DIR}/lib"
 CFG_DIR="${INSTALLATION_DIR}/etc"
 HOSTNAME_SHORT="$(hostname -s)"
-ROLE_USER="$(whoami)"
-REAL_USER="$(logname 2>/dev/null || echo 'no login name')"
 
 #
 ##
@@ -120,7 +118,7 @@ function splitPerProject(){
 	if [[ "${valueInSamplesheet[0]}" != *"NGS_DNA"*  && "${valueInSamplesheet[0]}" != *"GAP"* ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no next step detected in the samplesheet, no need to continue splitting"
-		continue
+		return
 	elif [[ "${valueInSamplesheet[0]}" == *"NGS_DNA"* ]]
 	then 
 		nextStep='NGS_DNA'
@@ -227,7 +225,7 @@ EOH
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
 
-while getopts ":g:l:hs" opt
+while getopts ":g:l:p:hs" opt
 do
 	case "${opt}" in
 
@@ -310,7 +308,7 @@ done
 
 
 
-hashedSource="$(printf '%s:%s' "${TMP_ROOT_DIR}" | md5sum | awk '{print $1}')"
+hashedSource="$(printf '%s' "${TMP_ROOT_DIR}" | md5sum | awk '{print $1}')"
 lockFile="${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}_${hashedSource}.lock"
 thereShallBeOnlyOne "${lockFile}"
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile} ..."
