@@ -239,9 +239,8 @@ do
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Samplesheet is correct, continue"
 		else
-			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is not correct, see ${samplesheet}.converted.log."
-			
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is not correct, see ${samplesheet}.converted.log."
 			continue
 		fi
 	fi
@@ -279,16 +278,19 @@ do
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to move ${samplesheet}."
 		transactionStatus='Failed'
 	}
-done
-if [[ "${transactionStatus}" == 'Ok' ]]
-then
-	rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
-	mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+
+	if [[ "${transactionStatus}" == 'Ok' ]]
+	then
+		rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
+		mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 	
-else
-	rm -f "${JOB_CONTROLE_FILE_BASE}.finished"
-	mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-fi
+	else
+		rm -f "${JOB_CONTROLE_FILE_BASE}.finished"
+		mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+	fi
+
+done
+
 
 #
 # Clean exit.
