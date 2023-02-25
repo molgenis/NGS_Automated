@@ -232,7 +232,7 @@ do
 		then
 			check=$(cat "${samplesheet}.converted.log")
 		else
-			check="NOT OK"
+			check=$(cat "${samplesheet}.converted.log")
 		fi
 	
 		if [[ "${check}" == 'OK' ]]
