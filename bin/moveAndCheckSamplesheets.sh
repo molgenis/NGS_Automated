@@ -239,8 +239,8 @@ do
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Samplesheet is correct, continue"
 		else
+			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet ${samplesheet} is not correct: ${check}."
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is not correct, see ${samplesheet}.converted.log."
 			continue
 		fi
 	fi
