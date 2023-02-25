@@ -47,7 +47,7 @@ for number, row in enumerate(reader,1):
 	#
 	# Check if the required columns are present.
 	#
-	for columnName in ('externalSampleID','project','sequencer','sequencingStartDate','flowcell','run','flowcell','lane','seqType','prepKit','capturingKit','barcode','barcodeType'):
+	for columnName in ('externalSampleID','project','sequencer','sequencingStartDate','flowcell','run','flowcell','lane','seqType','capturingKit','barcode','barcodeType'):
 		if columnName not in row.keys():
 			sanityCheckOk=False
 			if not alreadyErrored:
