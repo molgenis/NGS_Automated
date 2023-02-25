@@ -224,8 +224,10 @@ do
 		#  3. We remove empty lines.
 		#
 		printf '\n'     >> "${samplesheet}.converted"
-		sed -i 's/\r/\n/g' "${samplesheet}.converted"
-		sed -i '/^\s*$/d'  "${samplesheet}.converted"
+		sed 's/\r/\n/g' "${samplesheet}.converted" > "${samplesheet}.converted.tmp"
+		sed '/^\s*$/d'  "${samplesheet}.converted.tmp" > "${samplesheet}.converted.tmp2"
+		rm "${samplesheet}.converted.tmp"
+		mv "${samplesheet}.converted.tmp2" "${samplesheet}.converted"
 		if checkSampleSheet.py --input "${samplesheet}.converted" --log "${samplesheet}.converted.log"
 		then
 			check=$(cat "${samplesheet}.converted.log")
