@@ -231,6 +231,8 @@ do
 		if checkSampleSheet.py --input "${samplesheet}.converted" --log "${samplesheet}.converted.log"
 		then
 			check=$(cat "${samplesheet}.converted.log")
+		else
+			check="NOT OK"
 		fi
 	
 		if [[ "${check}" == 'OK' ]]
