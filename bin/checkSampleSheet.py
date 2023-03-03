@@ -22,10 +22,10 @@ inputFileNameBase = re.sub('\..*$', '', inputFileName)
 #
 # Parse meta-data from the filename. 
 #
-#inputFileNameComponents = inputFileNameBase.split('_')
+inputFileNameComponents = inputFileNameBase.split('_')
 rawdataSamplesheet=False
-sequencingStartDate = inputFileNameComponents[0]
 if len(inputFileNameComponents) > 3:
+	sequencingStartDate = inputFileNameComponents[0]
 	rawdataSamplesheet=True
 	sequencer= inputFileNameComponents[1]
 	run = inputFileNameComponents[2]
