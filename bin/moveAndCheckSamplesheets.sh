@@ -258,9 +258,11 @@ do
 	
 	if [[ -n "${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]+isset}" ]] 
 	then
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' ""
 		_pipelineFieldIndex=$((${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]} + 1))
 		## In future this valueInSamplesheet will be replaced by DARWIN to the real value.
 		readarray -t valueInSamplesheet < <(tail -n +2 "${samplesheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_pipelineFieldIndex}" | sort | uniq )
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "renaming ${valueInSamplesheet[0]} into ${REPLACEDPIPELINECOLUMN}"
 		perl -p -e "s|${valueInSamplesheet[0]}|${REPLACEDPIPELINECOLUMN}|" "${samplesheet}" > "${samplesheet}.tmp"
 		mv "${samplesheet}.tmp" "${samplesheet}"
 	else
