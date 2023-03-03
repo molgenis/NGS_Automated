@@ -239,8 +239,10 @@ do
 		mv "${samplesheet}.converted.tmp2" "${samplesheet}.converted"
 		if checkSampleSheet.py --input "${samplesheet}.converted" --log "${samplesheet}.converted.log"
 		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "samplesheet is correct"
 			check=$(cat "${samplesheet}.converted.log")
 		else
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "samplesheet is not correct"
 			check=$(cat "${samplesheet}.converted.log")
 		fi
 	
