@@ -23,17 +23,20 @@ inputFileNameBase = re.sub('\..*$', '', inputFileName)
 # Parse meta-data from the filename. 
 #
 #inputFileNameComponents = inputFileNameBase.split('_')
-#sequencingStartDate = inputFileNameComponents[0]
-#sequencer= inputFileNameComponents[1]
-#run = inputFileNameComponents[2]
-#flowcell = inputFileNameComponents[3]
+rawdataSamplesheet=False
+sequencingStartDate = inputFileNameComponents[0]
+if len(inputFileNameComponents) > 3:
+	rawdataSamplesheet=True
+	sequencer= inputFileNameComponents[1]
+	run = inputFileNameComponents[2]
+	flowcell = inputFileNameComponents[3]
 
-#if len(inputFileNameComponents) > 4:
-#	for i in range(4,len(inputFileNameComponents)):
-#		flowcell+="_"+ str(inputFileNameComponents[i])
-#
-#w = open(args.log, 'w')
-#print("INFO: log   = " + args.log)
+	if len(inputFileNameComponents) > 4:
+		for i in range(4,len(inputFileNameComponents)):
+			flowcell+="_"+ str(inputFileNameComponents[i])
+
+			w = open(args.log, 'w')
+			print("INFO: log   = " + args.log)
 sanityCheckOk=True
 alreadyErrored=False
 hasRows = False
@@ -69,18 +72,19 @@ for number, row in enumerate(reader,1):
 	#
 	# Check if the data inside the file matches the expected filename.
 	#
-	if row['sequencer'] != sequencer and 'sequencer' in row.keys():
-		sanityCheckOk=False
-		listOfErrors.append('ERROR on line ' + str(number) + ': sequencer value in samplesheet (' + row['sequencer'] + ') does not match sequencer in filename (' + sequencer + ').')
-	if row['sequencingStartDate'] != sequencingStartDate and 'sequencingStartDate' in row.keys():
-		sanityCheckOk=False
-		listOfErrors.append('ERROR on line ' + str(number) + ': sequencingStartDate value in samplesheet (' + row['sequencingStartDate'] + ') does not match sequencingStartDate in filename (' + sequencingStartDate + ').')
-	if row['run'] != run  and 'run' in row.keys():
-		sanityCheckOk=False
-		listOfErrors.append('ERROR on line ' + str(number) + ': run value in samplesheet (' + row['run'] + ') does not match run in filename (' + run + ').')
-	if row['flowcell'] != flowcell and 'flowcell' in row.keys():
-		sanityCheckOk=False
-		listOfErrors.append('ERROR on line ' + str(number) + ': flowcell value in samplesheet ' + row['flowcell'] + ' does not match flowcell in filename (' + flowcell + ').')
+	if rawdataSamplesheet == True:
+		if row['sequencer'] != sequencer and 'sequencer' in row.keys():
+			sanityCheckOk=False
+			listOfErrors.append('ERROR on line ' + str(number) + ': sequencer value in samplesheet (' + row['sequencer'] + ') does not match sequencer in filename (' + sequencer + ').')
+			if row['sequencingStartDate'] != sequencingStartDate and 'sequencingStartDate' in row.keys():
+				sanityCheckOk=False
+				listOfErrors.append('ERROR on line ' + str(number) + ': sequencingStartDate value in samplesheet (' + row['sequencingStartDate'] + ') does not match sequencingStartDate in filename (' + sequencingStartDate + ').')
+				if row['run'] != run  and 'run' in row.keys():
+					sanityCheckOk=False
+					listOfErrors.append('ERROR on line ' + str(number) + ': run value in samplesheet (' + row['run'] + ') does not match run in filename (' + run + ').')
+					if row['flowcell'] != flowcell and 'flowcell' in row.keys():
+						sanityCheckOk=False
+						listOfErrors.append('ERROR on line ' + str(number) + ': flowcell value in samplesheet ' + row['flowcell'] + ' does not match flowcell in filename (' + flowcell + ').')
 
 f.close()
 
