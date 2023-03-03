@@ -49,7 +49,7 @@ function showHelp() {
 	#
 	cat <<EOH
 ===============================================================================================================
-Script to move samplesheets to another location potentially on another server.
+	Script to check samplesheets and move to another location potentially on another server.
 
 Usage:
 	$(basename "${0}") OPTIONS
@@ -176,13 +176,6 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 # which would not get cleaned up / reset during the next attempt to rsync data.
 # Therefore we define a JOB_CONTROLE_FILE_BASE per day, which will ensure we get notified once a day if something goes wrong.
 #
-logTimeStamp="$(date "+%Y-%m-%d")"
-logDir="${DAT_ROOT_DIR}/logs/${logTimeStamp}/"
-# shellcheck disable=SC2174
-mkdir -m 2770 -p "${logDir}"
-touch "${logDir}"
-export JOB_CONTROLE_FILE_BASE="${logDir}/${logTimeStamp}.${SCRIPT_NAME}"
-printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 
 
 samplesheetsSource="${DAT_ROOT_DIR}/samplesheets/new/"
@@ -192,14 +185,30 @@ samplesheetsSource="${DAT_ROOT_DIR}/samplesheets/new/"
 readarray -t samplesheets < <(find "${samplesheetsSource}" -maxdepth 1 -mindepth 1 -type f -name "*.${SAMPLESHEET_EXT}")
 if [[ "${#samplesheets[@]}" -eq '0' ]]
 then
+#	logTimeStamp="$(date "+%Y-%m-%d")"
+#	logDir="${DAT_ROOT_DIR}/logs/${logTimeStamp}/"
+	# shellcheck disable=SC2174
+#	mkdir -m 2770 -p "${logDir}"
+#	touch "${logDir}"
+#	export JOB_CONTROLE_FILE_BASE="${logDir}/${logTimeStamp}.${SCRIPT_NAME}"
+#	printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
+	
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No samplesheets found in ${samplesheetsSource}."
-	mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+#	mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 	trap - EXIT
 	exit 0
 fi
 
 for samplesheet in "${samplesheets[@]}"
 do
+	sampleSheetName=$(basename ${sampleSheet%%.*})
+	logDir="${DAT_ROOT_DIR}/logs/${sampleSheetName}/"
+	# shellcheck disable=SC2174
+	mkdir -m 2770 -p "${logDir}"
+	touch "${logDir}"
+	export JOB_CONTROLE_FILE_BASE="${logDir}/${sampleSheetName}.${SCRIPT_NAME}"
+	printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
+	
 	declare -a _sampleSheetColumnNames=()
 	declare -A _sampleSheetColumnOffsets=()
 
@@ -257,12 +266,12 @@ do
 	fi
 	firstStepOfPipeline="${REPLACEDPIPELINECOLUMN%%+*}"
 	#shellcheck disable=SC2153
-	samplesheetsDestination="${HOSTNAME_TMP}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/${firstStepOfPipeline}"
+	samplesheetDestination="${HOSTNAME_TMP}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/${firstStepOfPipeline}/"
 
 	#
 	# Move samplesheets with rsync
 	#
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pushing samplesheets using rsync to ${samplesheetsDestination} ..."
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pushing samplesheets using rsync to ${samplesheetDestination} ..."
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "See ${logDir}/rsync.log for details ..."
 	transactionStatus='Ok'
 	
@@ -272,7 +281,7 @@ do
 		--omit-dir-times \
 		--omit-link-times \
 		"${samplesheet}" \
-		"${samplesheetsDestination}" \
+		"${samplesheetDestination}" \
 	&& rm -v "${samplesheet}" >> "${JOB_CONTROLE_FILE_BASE}.started" \
 	|| {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to move ${samplesheet}."

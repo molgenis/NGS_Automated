@@ -47,21 +47,41 @@ fi
 function rsyncNGSRuns() {
 	local _samplesheet
 	_samplesheet="${1}"
-
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Working on ${_samplesheet}"
 	while read -r line
 	do
 		## line is ${filePrefix/${filePrefix}_1.fq.gz
 		##
-		rsync -rlptDvc --relative --rsync-path="sudo -u ${group}-ateambot rsync" "${WORKING_DIR}/./rawdata/ngs/${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
-		|| {
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}"
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from ${WORKING_DIR}/./rawdata/ngs/"
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    to ${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/rawdata/ngs/"
-			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-			return
-		}
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Looping through all prm mounts"
+		copied="no"
+		for prm in "${ALL_PRM[@]}"
+		do
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Checking for ${line} on ${prm} and if it still needs to be processed"
+			if [[ -f "/groups/${group}/${prm}/rawdata/ngs/${line}" && "${copied}" == "no" ]]
+			then	
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${line} found on ${prm}, start rsyncing.."
+				rsync -rlptDvc --relative --rsync-path="sudo -u ${group}-ateambot rsync" "/groups/${group}/${prm}/./rawdata/ngs/${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
+				|| {
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}"
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from /groups/${group}/${prm}/rawdata/ngs/"
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    to ${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/rawdata/ngs/"
+				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+				return
+				}
+				copied="yes"
+			else
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${line} not found on ${prm} OR data has been copied already and we can skip the step"
+			fi
+			## if data is still not being copied it is apparently not on prm
+			if [[ "${copied}" == "no" ]]
+			then
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}, it is not found on any prm [${ALL_PRM[@]}]"
+				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+				exit 1
+			fi
+		done
 	done<"${_samplesheet}"
-	
+
 }
 
 function rsyncArrayRuns() {
@@ -70,16 +90,34 @@ function rsyncArrayRuns() {
 
 	while read -r line
 	do
-		## line is ${sentrixBarcode_A}/${sentrixBarcode_A}_${sentrixPosition_A}.gtc
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "rsync -rlDvc ${WORKING_DIR}/./rawdata/array/GTC/${line}* ${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/"
-		rsync -rlptDvc --relative --rsync-path="sudo -u ${group}-ateambot rsync" "${WORKING_DIR}/./rawdata/array/GTC/${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
-		|| {
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}"
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from ${WORKING_DIR}/./rawdata/array/GTC/"
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    to ${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/rawdata/array/GTC/"
-			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-			return
-		}
+		copied="no"
+		for prm in "${ALL_PRM[@]}"
+		do
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Checking for ${line} on ${prm} and if it still needs to be processed"
+			if [[ -f "/groups/${group}/${prm}/rawdata/array/GTC/${line}" && "${copied}" == "no" ]]
+			then
+				## line is ${sentrixBarcode_A}/${sentrixBarcode_A}_${sentrixPosition_A}.gtc
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "rsync -rlDvc /groups/${group}/${prm}/./rawdata/array/GTC/${line}{,.md5} ${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/"
+				rsync -rlptDvc --relative --rsync-path="sudo -u ${group}-ateambot rsync" "/groups/${group}/${prm}/./rawdata/array/GTC/${line}"{,.md5} "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
+				|| {
+					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}"
+					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from /groups/${group}/${prm}/./rawdata/array/GTC/"
+					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    to ${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/rawdata/array/GTC/"
+					mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+					return
+				}
+				copied="yes"
+			else
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${line} not found on ${prm} OR data has been copied already and we can skip the step"
+			fi
+			## if data is still not being copied it is apparently not on prm
+			if [[ "${copied}" == "no" ]]
+			then
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}, it is not found on any prm [${ALL_PRM[@]}]"
+				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+				return
+			fi
+		done
 	done<"${_samplesheet}"
 }
 
@@ -336,6 +374,7 @@ else
 					rsyncArrayRuns "${WORKING_DIR}/logs/${project}/${project}.data.requested"
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "data transfer for ${project} is finished"
 				else
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "this is NGS data"
 					rsync -vt "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested" "${WORKING_DIR}/logs/${project}/"
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested present, copying will start"
 					rsyncNGSRuns "${WORKING_DIR}/logs/${project}/${project}.data.requested"
