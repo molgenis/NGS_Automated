@@ -35,8 +35,8 @@ if len(inputFileNameComponents) > 3:
 		for i in range(4,len(inputFileNameComponents)):
 			flowcell+="_"+ str(inputFileNameComponents[i])
 
-			w = open(args.log, 'w')
-			print("INFO: log   = " + args.log)
+w = open(args.log, 'w')
+print("INFO: log   = " + args.log)
 sanityCheckOk=True
 alreadyErrored=False
 hasRows = False
