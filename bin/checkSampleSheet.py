@@ -34,7 +34,7 @@ if len(inputFileNameComponents) > 3:
 	if len(inputFileNameComponents) > 4:
 		for i in range(4,len(inputFileNameComponents)):
 			flowcell+="_"+ str(inputFileNameComponents[i])
-
+	
 w = open(args.log, 'w')
 print("INFO: log   = " + args.log)
 sanityCheckOk=True
@@ -94,7 +94,9 @@ if not hasRows:
 	listOfErrors.append("File is empty?!")
 
 if sanityCheckOk:
-	w.write("OK")
+	w.write("OKAY")
+	if rawdataSamplesheet == False:
+		w.write("projectSamplesheet")
 	w.close()
 	sys.exit(0)
 else:

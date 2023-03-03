@@ -221,7 +221,7 @@ do
 	
 	if [[ -n "${_sampleSheetColumnOffsets["SentrixBarcode_A"]+isset}" ]] 
 	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a GAP samplesheet, there is at this moment no samplesheetCheck"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a GAP samplesheet, there is no samplesheetCheck at this moment"
 	else
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a NGS samplesheet, lets check if the samplesheet is correct"
 		cp "${samplesheet}"{,.converted}
@@ -245,10 +245,15 @@ do
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "samplesheet is not correct"
 			check=$(cat "${samplesheet}.converted.log")
 		fi
-	
-		if [[ "${check}" == 'OK' ]]
+		projectSamplesheet="false"
+		if [[ "${check}" == *'OKAY'* ]]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Samplesheet is correct, continue"
+			if [[ "${check}" == *'projectSamplesheet'* ]]
+			then
+				projectSamplesheet="true"
+			fi
+				
 		else
 			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "${check} for samplesheet: ${samplesheet}"
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
@@ -269,7 +274,16 @@ do
 		awk -v pipeline="${REPLACEDPIPELINECOLUMN}" -v pipelineColumn="${PIPELINECOLUMN}" 'BEGIN {FS=","}{if (NR==1){print $0",pipelineColumn}{else print $0","pipeline}'
 	fi
 	firstStepOfPipeline="${REPLACEDPIPELINECOLUMN%%+*}"
-	#shellcheck disable=SC2153
+
+
+	# Check whether the samplesheet is a project samplesheet (no NGS_Demultiplexing)
+	# needs an update when we are going to use VIP into production
+	if [[ ${projectSamplesheet} == "true" ]]
+	then
+		firstStepOfPipeline="NGS_DNA"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "the samplesheet is a project samplesheet (no NGS_Demultiplexing), samplesheet moved to ${firstStepOfPipeline}"
+	fi
+
 	samplesheetDestination="${HOSTNAME_TMP}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/${firstStepOfPipeline}/"
 
 	#
