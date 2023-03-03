@@ -22,18 +22,18 @@ inputFileNameBase = re.sub('\..*$', '', inputFileName)
 #
 # Parse meta-data from the filename. 
 #
-inputFileNameComponents = inputFileNameBase.split('_')
-sequencingStartDate = inputFileNameComponents[0]
-sequencer= inputFileNameComponents[1]
-run = inputFileNameComponents[2]
-flowcell = inputFileNameComponents[3]
+#inputFileNameComponents = inputFileNameBase.split('_')
+#sequencingStartDate = inputFileNameComponents[0]
+#sequencer= inputFileNameComponents[1]
+#run = inputFileNameComponents[2]
+#flowcell = inputFileNameComponents[3]
 
-if len(inputFileNameComponents) > 4:
-	for i in range(4,len(inputFileNameComponents)):
-		flowcell+="_"+ str(inputFileNameComponents[i])
-
-w = open(args.log, 'w')
-print("INFO: log   = " + args.log)
+#if len(inputFileNameComponents) > 4:
+#	for i in range(4,len(inputFileNameComponents)):
+#		flowcell+="_"+ str(inputFileNameComponents[i])
+#
+#w = open(args.log, 'w')
+#print("INFO: log   = " + args.log)
 sanityCheckOk=True
 alreadyErrored=False
 hasRows = False
