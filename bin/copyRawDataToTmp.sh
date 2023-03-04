@@ -71,15 +71,15 @@ function rsyncNGSRuns() {
 				copied="yes"
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${line} not found on ${prm} OR data has been copied already and we can skip the step"
-			fi
-			## if data is still not being copied it is apparently not on prm
-			if [[ "${copied}" == "no" ]]
-			then
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}, it is not found on any prm. Searched on: [${ALL_PRM[*]}]"
-				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-				exit 1
-			fi
+			fi	
 		done
+		## if data is still not being copied it is apparently not on prm
+		if [[ "${copied}" == "no" ]]
+		then
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}, it is not found on any prm. Searched on: [${ALL_PRM[*]}]"
+			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+			exit 1
+		fi
 	done<"${_samplesheet}"
 
 }
@@ -111,14 +111,15 @@ function rsyncArrayRuns() {
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${line} not found on ${prm} OR data has been copied already and we can skip the step"
 			fi
-			## if data is still not being copied it is apparently not on prm
-			if [[ "${copied}" == "no" ]]
-			then
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}, it is not found on any prm [${ALL_PRM[@]}]"
-				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-				return
-			fi
+
 		done
+		## if data is still not being copied it is apparently not on prm
+		if [[ "${copied}" == "no" ]]
+		then
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}, it is not found on any prm [${ALL_PRM[@]}]"
+			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+			return
+		fi
 	done<"${_samplesheet}"
 }
 
