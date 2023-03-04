@@ -120,7 +120,11 @@ function rsyncArrayRuns() {
 		## if data is still not being copied it is apparently not on prm
 		if [[ "${copied}" == "no" ]]
 		then
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}, it is not found on any prm [${ALL_PRM[@]}]"
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}, it is not found on any prm.. Searched for:"
+			for prm in "${ALL_PRM[@]}"
+			do
+				 log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "\t\t/groups/${group}/${prm}/rawdata/array/GTC/${line}"
+			done
 			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			return
 		fi
