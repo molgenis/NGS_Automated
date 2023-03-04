@@ -75,7 +75,7 @@ function rsyncNGSRuns() {
 			## if data is still not being copied it is apparently not on prm
 			if [[ "${copied}" == "no" ]]
 			then
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}, it is not found on any prm [${ALL_PRM[*]}]"
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}, it is not found on any prm. Searched on: [${ALL_PRM[*]}]"
 				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 				exit 1
 			fi
