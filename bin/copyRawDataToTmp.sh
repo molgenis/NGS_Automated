@@ -99,7 +99,7 @@ function rsyncArrayRuns() {
 			then
 				## line is ${sentrixBarcode_A}/${sentrixBarcode_A}_${sentrixPosition_A}.gtc
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "rsync -rlDvc /groups/${group}/${prm}/./rawdata/array/GTC/${line}{,.md5} ${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/"
-				rsync -rlptDvc --relative --rsync-path="sudo -u ${group}-ateambot rsync" "/groups/${group}/${prm}/./rawdata/array/GTC/${line}"{,.md5} "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
+				rsync -rlDvc --relative --rsync-path="sudo -u ${group}-ateambot rsync" "/groups/${group}/${prm}/./rawdata/array/GTC/${line}"{,.md5} "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
 				|| {
 					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}"
 					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from /groups/${group}/${prm}/./rawdata/array/GTC/"
