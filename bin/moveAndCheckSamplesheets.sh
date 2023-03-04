@@ -201,7 +201,7 @@ fi
 
 for samplesheet in "${samplesheets[@]}"
 do
-	sampleSheetName=$(basename ${samplesheet%%.*})
+	sampleSheetName=$(basename "${samplesheet%%.*}")
 	logDir="${DAT_ROOT_DIR}/logs/${sampleSheetName}/"
 	# shellcheck disable=SC2174
 	mkdir -m 2770 -p "${logDir}"
@@ -283,7 +283,7 @@ do
 		firstStepOfPipeline="NGS_DNA"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "the samplesheet is a project samplesheet (no NGS_Demultiplexing), samplesheet moved to ${firstStepOfPipeline}"
 	fi
-
+	# shellcheck disable=SC2153
 	samplesheetDestination="${HOSTNAME_TMP}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/${firstStepOfPipeline}/"
 
 	#
