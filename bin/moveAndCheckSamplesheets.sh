@@ -263,7 +263,7 @@ do
 	
 	if [[ -n "${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]+isset}" ]] 
 	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' ""
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "column [${PIPELINECOLUMN}] is found in the samplesheet"
 		_pipelineFieldIndex=$((${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]} + 1))
 		## In future this valueInSamplesheet will be replaced by DARWIN to the real value.
 		readarray -t valueInSamplesheet < <(tail -n +2 "${samplesheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_pipelineFieldIndex}" | sort | uniq )
