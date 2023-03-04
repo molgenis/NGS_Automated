@@ -76,10 +76,10 @@ function rsyncNGSRuns() {
 		## if data is still not being copied it is apparently not on prm
 		if [[ "${copied}" == "no" ]]
 		then
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}, it is not found on any prm.. Searched for:"
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsync failed, data is not found! Searched for the following:"
 			for prm in "${ALL_PRM[@]}"
 			do
-				 log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "\t\t/groups/${group}/${prm}/./rawdata/ngs/${line}"
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "/groups/${group}/${prm}/rawdata/ngs/${line}"
 			done
 			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			exit 1
@@ -120,10 +120,10 @@ function rsyncArrayRuns() {
 		## if data is still not being copied it is apparently not on prm
 		if [[ "${copied}" == "no" ]]
 		then
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsync failed, data it is not found on any prm:"
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsync failed, data is not found! Searched for the following:"
 			for prm in "${ALL_PRM[@]}"
 			do
-				 log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "/groups/${group}/${prm}/rawdata/array/GTC/${line}"
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "/groups/${group}/${prm}/rawdata/array/GTC/${line}"
 			done
 			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			return
