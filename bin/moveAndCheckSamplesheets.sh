@@ -49,7 +49,7 @@ function showHelp() {
 	#
 	cat <<EOH
 ===============================================================================================================
-	Script to check samplesheets and move to another location potentially on another server.
+	Script to check samplesheets and move them to another location, potentially on another server.
 
 Usage:
 	$(basename "${0}") OPTIONS
@@ -174,7 +174,6 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 # so we cannot create a log file per batch/experiment/sample/project to signal *.finished or *.failed.
 # Using a single log file for this script, would mean we would only get an email notification for *.failed once,
 # which would not get cleaned up / reset during the next attempt to rsync data.
-# Therefore we define a JOB_CONTROLE_FILE_BASE per day, which will ensure we get notified once a day if something goes wrong.
 #
 
 
@@ -194,7 +193,6 @@ then
 #	printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 	
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No samplesheets found in ${samplesheetsSource}."
-#	mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 	trap - EXIT
 	exit 0
 fi
@@ -221,9 +219,9 @@ do
 	
 	if [[ -n "${_sampleSheetColumnOffsets["SentrixBarcode_A"]+isset}" ]] 
 	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a GAP samplesheet, there is no samplesheetCheck at this moment"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a GAP samplesheet. There is no samplesheetCheck at this moment."
 	else
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a NGS samplesheet, lets check if the samplesheet is correct"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a NGS samplesheet. Lets check if the samplesheet is correct."
 		cp "${samplesheet}"{,.converted}
 	
 		#
@@ -237,24 +235,20 @@ do
 		sed '/^\s*$/d'  "${samplesheet}.converted.tmp" > "${samplesheet}.converted.tmp2"
 		rm "${samplesheet}.converted.tmp"
 		mv "${samplesheet}.converted.tmp2" "${samplesheet}.converted"
+		projectSamplesheet="false"
+		
 		if checkSampleSheet.py --input "${samplesheet}.converted" --log "${samplesheet}.converted.log"
 		then
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "samplesheet is correct"
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Samplesheet ${samplesheet}.converted is correct."
 			check=$(cat "${samplesheet}.converted.log")
-		else
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "samplesheet is not correct"
-			check=$(cat "${samplesheet}.converted.log")
-		fi
-		projectSamplesheet="false"
-		if [[ "${check}" == *'OKAY'* ]]
-		then
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Samplesheet is correct, continue"
 			if [[ "${check}" == *'projectSamplesheet'* ]]
 			then
 				projectSamplesheet="true"
 			fi
-				
 		else
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Samplesheet ${samplesheet}.converted contains errors."
+			check=$(cat "${samplesheet}.converted.log")
+			
 			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "${check} for samplesheet: ${samplesheet}"
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			continue
@@ -275,13 +269,14 @@ do
 	fi
 	firstStepOfPipeline="${REPLACEDPIPELINECOLUMN%%+*}"
 
-
+	#
 	# Check whether the samplesheet is a project samplesheet (no NGS_Demultiplexing)
 	# needs an update when we are going to use VIP into production
+	#
 	if [[ ${projectSamplesheet} == "true" ]]
 	then
 		firstStepOfPipeline="NGS_DNA"
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "the samplesheet is a project samplesheet (no NGS_Demultiplexing), samplesheet moved to ${firstStepOfPipeline}"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a project samplesheet (no NGS_Demultiplexing); firstStepOfPipeline was set to ${firstStepOfPipeline}."
 	fi
 	# shellcheck disable=SC2153
 	samplesheetDestination="${HOSTNAME_TMP}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/${firstStepOfPipeline}/"
@@ -296,7 +291,7 @@ do
 	/usr/bin/rsync -vt \
 		--log-file="${logDir}/rsync.log" \
 		--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
-		--omit-dir-times \
+		--omit-dir-timestamp \
 		--omit-link-times \
 		"${samplesheet}" \
 		"${samplesheetDestination}" \
