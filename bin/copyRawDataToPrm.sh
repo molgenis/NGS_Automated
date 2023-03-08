@@ -313,16 +313,13 @@ function splitSamplesheetPerProject() {
 				then
 					for _pipeline in "${_pipelines[@]}"
 					do
-						if [[ "${_pipeline^^}" == *'NGS_DNA'* ]]
+						if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${_project}/${_project}.rawDataCopiedToPrm.finished"
 						then
-							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "NGS_DNA is detected, copying samplesheet to ${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/NGS_DNA/"
-							rsync -vrltD "${_sampleSheet}" "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/NGS_DNA/"
-						elif [[ "${_pipeline^^}" == *'GAP'* ]]
-						then
-							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "GAP is detected, copying samplesheet to ${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/GAP/"
-							rsync -vrltD "${_sampleSheet}" "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/GAP/"
+							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${SCR_ROOT_DIR}/logs/${_project}/${_project}.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
 						else
-							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "No regular pipeline detected to continue the automated pipeline (${_pipeline^^}), we are done here."
+							log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${SCR_ROOT_DIR}/logs/${_project}/${_project}.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
+							mv "${_controlFileBaseForFunction}."{started,failed}
+							return
 						fi
 					done
 				fi
@@ -330,9 +327,7 @@ function splitSamplesheetPerProject() {
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}, because ${PIPELINECOLUMN} column is missing in samplesheet."
 				mv "${_controlFileBaseForFunction}."{started,failed}
 				return
-			fi
-			
-			
+			fi	
 		fi
 	done
 	#
