@@ -639,6 +639,7 @@ function processSamplesheetsAndMoveConvertedData() {
 		# Move converted FastQs with accompanying samplesheets per sequencing run to .../rawdata/ngs/${_runDir}/
 		#
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Moving ${TMP_ROOT_DIR}/${_batch}/${_runDir}/* -> ${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/ ..."
+		# shellcheck disable=SC2174
 		mkdir -m 2770 -p "${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/" \
 			>> "${_controlFileBaseForFunction}.started" 2>&1 \
 			&& mv -f -v "${TMP_ROOT_DIR}/${_batch}/${_runDir}/"* "${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/" \

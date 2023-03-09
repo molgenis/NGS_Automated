@@ -185,7 +185,7 @@ else
 		#
 		# Create log dir with job control file for sequence run.
 		#
-
+		# shellcheck disable=SC2174
 		mkdir -m 2770 -p "${SCR_ROOT_DIR}/logs/${project}/"
 		
 		export JOB_CONTROLE_FILE_BASE="${SCR_ROOT_DIR}/logs/${project}/run01.arrayConversion"
@@ -235,6 +235,7 @@ else
 			echo "started: $(date +%FT%T%z)" > "${SCR_ROOT_DIR}/logs/${project}/run01.arrayConversion.totalRuntime"
 
 			{
+			# shellcheck disable=SC2174
 			mkdir -m 2770 -v -p "${SCR_ROOT_DIR}/generatedscripts/AGCT/${project}/"
 			cd "${SCR_ROOT_DIR}/generatedscripts/AGCT/${project}/"
 			cp -v "${SCR_ROOT_DIR}/Samplesheets/AGCT/${project}.csv" ./
