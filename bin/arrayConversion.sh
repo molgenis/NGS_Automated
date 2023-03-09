@@ -187,7 +187,7 @@ else
 		#
 
 		mkdir -m 2770 -p "${SCR_ROOT_DIR}/logs/${project}/"
-		fi
+		
 		export JOB_CONTROLE_FILE_BASE="${SCR_ROOT_DIR}/logs/${project}/run01.arrayConversion"
 		if [[ -f "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 		then
