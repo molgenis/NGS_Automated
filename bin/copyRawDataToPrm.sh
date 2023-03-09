@@ -313,6 +313,7 @@ function splitSamplesheetPerProject() {
 				then
 					for _pipeline in "${_pipelines[@]}"
 					do
+						# shellcheck disable=SC2029
 						if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${_project}/${_project}.rawDataCopiedToPrm.finished"
 						then
 							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${SCR_ROOT_DIR}/logs/${_project}/${_project}.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
