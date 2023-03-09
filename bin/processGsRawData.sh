@@ -654,7 +654,7 @@ function processSamplesheetsAndMoveConvertedData() {
 		#
 		# Make symlinks from rawdata/ngs folder to ${TMP_ROOT_DIR}/runs/${_runDir}/results/
 		#
-		mkdir -m 2770 -p "${TMP_ROOT_DIR}/runs/${_runDir}/results/"
+		mkdir -p "${TMP_ROOT_DIR}/runs/${_runDir}/results/"
 		cd "${TMP_ROOT_DIR}/runs/${_runDir}/results/"
 		readarray -t files < <(find "${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name "*.fq.gz" -o -name "*.fq.gz.md5" -o -name "*.log" -o -name "*.csv")
 		for i in "${files[@]}"
@@ -672,6 +672,7 @@ function processSamplesheetsAndMoveConvertedData() {
 			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		}
+		# shellcheck disable=SC2174
 		mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${_runDir}" \
 			&& touch "${TMP_ROOT_DIR}/logs/${_runDir}/run01.demultiplexing.finished" \
 			>> "${_controlFileBaseForFunction}.started" 2>&1 \
@@ -694,6 +695,7 @@ function processSamplesheetsAndMoveConvertedData() {
 	#
 	# Cleanup uploaded samplesheets per project.
 	#
+	# shellcheck disable=SC2174
 	mkdir -m 2770 -p "${TMP_ROOT_DIR}/Samplesheets/archive/"
 	for _project in "${_projects[@]}"
 	do

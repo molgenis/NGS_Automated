@@ -198,8 +198,8 @@ do
 	fi
 	export JOB_CONTROLE_FILE_BASE="${demultiplexingJobControleFileBase}"
 
-	mkdir -m 2770 -p "${SCR_ROOT_DIR}/logs/${run}/"
-
+	mkdir -p "${SCR_ROOT_DIR}/logs/${run}/"
+	chmod -R 770 "${SCR_ROOT_DIR}/logs/"
 	#
 	# Check if the run has already completed.
 	#
@@ -225,7 +225,7 @@ do
 		2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
 	echo "started: $(date +%FT%T%z)" > "${SCR_ROOT_DIR}/logs/${run}/run01.demultiplexing.totalRuntime"
 	{
-		mkdir -m 2770 -v -p "${SCR_ROOT_DIR}/generatedscripts/${pipeline}/${run}/"
+		mkdir -v -p "${SCR_ROOT_DIR}/generatedscripts/${pipeline}/${run}/"
 		cd "${SCR_ROOT_DIR}/generatedscripts/${pipeline}/${run}/"
 		cp -v "${SCR_ROOT_DIR}/Samplesheets/${pipeline}/${run}.csv" "${run}.csv"
 		cp -v "${EBROOTNGS_DEMULTIPLEXING}/generate_template.sh" ./ 
