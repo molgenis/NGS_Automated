@@ -220,6 +220,7 @@ do
 	if [[ -n "${_sampleSheetColumnOffsets["SentrixBarcode_A"]+isset}" ]] 
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a GAP samplesheet. There is no samplesheetCheck at this moment."
+		projectSamplesheet="false"
 	else
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a NGS samplesheet. Lets check if the samplesheet is correct."
 		cp "${samplesheet}"{,.converted}
@@ -273,7 +274,7 @@ do
 	# Check whether the samplesheet is a project samplesheet (no NGS_Demultiplexing)
 	# needs an update when we are going to use VIP into production
 	#
-	if [[ ${projectSamplesheet} == "true" ]]
+	if [[ "${projectSamplesheet}" == "true" ]]
 	then
 		firstStepOfPipeline="NGS_DNA"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a project samplesheet (no NGS_Demultiplexing); firstStepOfPipeline was set to ${firstStepOfPipeline}."
@@ -291,7 +292,6 @@ do
 	/usr/bin/rsync -vt \
 		--log-file="${logDir}/rsync.log" \
 		--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
-		--omit-dir-timestamp \
 		--omit-link-times \
 		"${samplesheet}" \
 		"${samplesheetDestination}" \

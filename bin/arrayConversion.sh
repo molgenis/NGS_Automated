@@ -185,9 +185,8 @@ else
 		#
 		# Create log dir with job control file for sequence run.
 		#
-		if [[ ! -d "${SCR_ROOT_DIR}/logs/${project}/" ]]
-		then
-			mkdir "${SCR_ROOT_DIR}/logs/${project}/"
+
+		mkdir -m 2770 -p "${SCR_ROOT_DIR}/logs/${project}/"
 		fi
 		export JOB_CONTROLE_FILE_BASE="${SCR_ROOT_DIR}/logs/${project}/run01.arrayConversion"
 		if [[ -f "${JOB_CONTROLE_FILE_BASE}.finished" ]]
@@ -236,7 +235,7 @@ else
 			echo "started: $(date +%FT%T%z)" > "${SCR_ROOT_DIR}/logs/${project}/run01.arrayConversion.totalRuntime"
 
 			{
-			mkdir -v -p "${SCR_ROOT_DIR}/generatedscripts/AGCT/${project}/"
+			mkdir -m 2770 -v -p "${SCR_ROOT_DIR}/generatedscripts/AGCT/${project}/"
 			cd "${SCR_ROOT_DIR}/generatedscripts/AGCT/${project}/"
 			cp -v "${SCR_ROOT_DIR}/Samplesheets/AGCT/${project}.csv" ./
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "copying ${EBROOTAGCT}/templates/generate_template.sh to ${SCR_ROOT_DIR}/generatedscripts/AGCT/${project}/"
