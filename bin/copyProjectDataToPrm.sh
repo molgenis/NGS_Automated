@@ -472,6 +472,7 @@ else
 				if ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${project}.rawDataCopiedToPrm.finished"
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "found: ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${project}.rawDataCopiedToPrm.finished"
+					# shellcheck disable=SC2244	
 					if ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${run}.calculateProjectMd5s.finished"
 					then
 						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "found: ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${run}.calculateProjectMd5s.finished"
