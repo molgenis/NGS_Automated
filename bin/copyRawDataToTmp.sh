@@ -59,7 +59,7 @@ function rsyncRuns() {
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Checking for ${line} on ${prm} and if it still needs to be processed"
 			if [[ -f "/groups/${group}/${prm}/${line}" && "${copied}" == "no" ]]
 			then
-				ssh "${samplesheetsServerLocation}" "touch ${TMP_ROOT_DIR}/logs/${project}/${project}.dataFromPrm.started"
+				rsync -av "${WORKING_DIR}/logs/${project}/${project}.dataFromPrm.requested" "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.dataFromPrm.started"
 				touch "${JOB_CONTROLE_FILE_BASE}.started"
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${line} found on ${prm}, start rsyncing.."
 				rsync -rltDvc --relative --rsync-path="sudo -u ${group}-ateambot rsync" "/groups/${group}/${prm}/./${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
