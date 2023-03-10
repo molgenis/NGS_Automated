@@ -48,6 +48,7 @@ function rsyncRuns() {
 	local _samplesheet
 	_samplesheet="${1}"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Working on ${_samplesheet}"
+	# shellcheck disable=SC2029
 	ssh "${samplesheetsServerLocation}" "mv ${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.{requested,started}"
 	while read -r line
 	do
@@ -92,6 +93,7 @@ function rsyncRuns() {
 	done<"${_samplesheet}"
 	
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "copying ${project} finished "
+	# shellcheck disable=SC2029
 	ssh "${samplesheetsServerLocation}" "mv ${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.{started,finished}"
 
 }

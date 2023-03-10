@@ -487,6 +487,7 @@ else
 							log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/${run} ..."
 							rsyncProjectRun "${project}" "${run}" "${sampleType}"
 							log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "removing ${project}.csv from "
+							# shellcheck disable=SC2029
 							if ssh "${DATA_MANAGER}@${HOSTNAME_TMP}" "rm -f ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/${project}.${SAMPLESHEET_EXT}"
 							then
 								log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/${project}.${SAMPLESHEET_EXT} removed on ${HOSTNAME_TMP}"
