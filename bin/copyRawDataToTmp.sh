@@ -330,19 +330,19 @@ else
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Samplesheet is on destination machine: ${samplesheetsServerLocation}"
 			# shellcheck disable=SC2029
-			if ssh "${DATA_MANAGER}"@"${DESTINATION_DIAGNOSTICS_CLUSTER}" test -e "${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested"
+			if ssh "${DATA_MANAGER}"@"${DESTINATION_DIAGNOSTICS_CLUSTER}" test -e "${TMP_ROOT_DIR}/logs/${project}/${project}.dataFromPrm.requested"
 			then
 				## copy the requested file to the ${WORKING_DIR}
-				rsync -vt "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested" "${WORKING_DIR}/logs/${project}/"
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested present, copying will start"
-				rsyncRuns "${WORKING_DIR}/logs/${project}/${project}.data.requested"
+				rsync -vt "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.dataFromPrm.requested" "${WORKING_DIR}/logs/${project}/"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.dataFromPrm.requested present, copying will start"
+				rsyncRuns "${WORKING_DIR}/logs/${project}/${project}.dataFromPrm.requested"
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "data transfer for ${project} is finished"
 			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested absent, it can be that the process already started (${TMP_ROOT_DIR}/logs/${project}/${project}.data.started)"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${project}/${project}.dataFromPrm.requested absent, it can be that the process already started (${TMP_ROOT_DIR}/logs/${project}/${project}.dataFromPrm.started)"
 				continue
 			fi
 		fi
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred the data from ${WORKING_DIR}/logs/${project}/${project}.data.requested to tmp."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred the data from ${WORKING_DIR}/logs/${project}/${project}.dataFromPrm.requested to tmp."
 		rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 		mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 	done

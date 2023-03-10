@@ -416,7 +416,6 @@ then
 else
 	for sampleSheet in "${sampleSheets[@]}"
 	do
-		mac2unix "${sampleSheet}"
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing sample sheet: ${sampleSheet} ..."
 		project="$(basename "${sampleSheet}" ".${SAMPLESHEET_EXT}")"
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing: ${project} ..."

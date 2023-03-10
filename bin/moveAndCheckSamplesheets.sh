@@ -200,6 +200,7 @@ fi
 for samplesheet in "${samplesheets[@]}"
 do
 	sampleSheetName=$(basename "${samplesheet%%.*}")
+	mac2unix "${samplesheet}"
 	logDir="${DAT_ROOT_DIR}/logs/${sampleSheetName}/"
 	# shellcheck disable=SC2174
 	mkdir -m 2770 -p "${logDir}"
