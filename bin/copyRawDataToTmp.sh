@@ -48,13 +48,14 @@ function rsyncRuns() {
 	local _samplesheet
 	_samplesheet="${1}"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Working on ${_samplesheet}"
+	ssh "${samplesheetsServerLocation}" "mv ${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.{requested,started}"
 	while read -r line
 	do
 		## line is ${filePrefix/${filePrefix}_1.fq.gz
 		##
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Looping through all prm mounts"
 		copied="no"
-		ssh "${samplesheetsServerLocation}" "mv ${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.{requested,started}"
+		
 		for prm in "${ALL_PRM[@]}"
 		do
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Checking for ${line} on ${prm} and if it still needs to be processed"
@@ -87,11 +88,11 @@ function rsyncRuns() {
 			done
 			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			return
-		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "copying ${project} finished "
-			ssh "${samplesheetsServerLocation}" "mv ${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.{started,finished}"
 		fi
 	done<"${_samplesheet}"
+	
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "copying ${project} finished "
+	ssh "${samplesheetsServerLocation}" "mv ${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.{started,finished}"
 
 }
 
