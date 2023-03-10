@@ -59,8 +59,8 @@ function rsyncRuns() {
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Checking for ${line} on ${prm} and if it still needs to be processed"
 			if [[ -f "/groups/${group}/${prm}/${line}" && "${copied}" == "no" ]]
 			then
-				ssh "${samplesheetsServerLocation}" "mv ${TMP_ROOT_DIR}/logs/${project}/${project}.dataFromPrm.{requested,started}"
-				rsync -av "${WORKING_DIR}/logs/${project}/${project}.dataFromPrm.requested" "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.dataFromPrm.started"
+				ssh "${samplesheetsServerLocation}" "mv ${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.{requested,started}"
+				rsync -av "${WORKING_DIR}/logs/${project}/${project}.copyDataFromPrm.requested" "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.started"
 				touch "${JOB_CONTROLE_FILE_BASE}.started"
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${line} found on ${prm}, start rsyncing.."
 				rsync -rltDvc --relative --rsync-path="sudo -u ${group}-ateambot rsync" "/groups/${group}/${prm}/./${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
@@ -71,6 +71,7 @@ function rsyncRuns() {
 				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 				return
 				}
+				ssh "${samplesheetsServerLocation}" "mv ${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.{started,finished}"
 				copied="yes"
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${line} not found on ${prm} OR data has been copied already and we can skip the step"
@@ -332,19 +333,19 @@ else
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Samplesheet is on destination machine: ${samplesheetsServerLocation}"
 			# shellcheck disable=SC2029
-			if ssh "${DATA_MANAGER}"@"${DESTINATION_DIAGNOSTICS_CLUSTER}" test -e "${TMP_ROOT_DIR}/logs/${project}/${project}.dataFromPrm.requested"
+			if ssh "${DATA_MANAGER}"@"${DESTINATION_DIAGNOSTICS_CLUSTER}" test -e "${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.requested"
 			then
 				## copy the requested file to the ${WORKING_DIR}
-				rsync -vt "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.dataFromPrm.requested" "${WORKING_DIR}/logs/${project}/"
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.dataFromPrm.requested present, copying will start"
-				rsyncRuns "${WORKING_DIR}/logs/${project}/${project}.dataFromPrm.requested"
+				rsync -vt "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.requested" "${WORKING_DIR}/logs/${project}/"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.requested present, copying will start"
+				rsyncRuns "${WORKING_DIR}/logs/${project}/${project}.copyDataFromPrm.requested"
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "data transfer for ${project} is finished"
 			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${project}/${project}.dataFromPrm.requested absent, it can be that the process already started (${TMP_ROOT_DIR}/logs/${project}/${project}.dataFromPrm.started)"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.requested absent, it can be that the process already started (${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.started)"
 				continue
 			fi
 		fi
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred the data from ${WORKING_DIR}/logs/${project}/${project}.dataFromPrm.requested to tmp."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred the data from ${WORKING_DIR}/logs/${project}/${project}.copyDataFromPrm.requested to tmp."
 		rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 		mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 	done
