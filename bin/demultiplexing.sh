@@ -198,8 +198,8 @@ do
 	fi
 	export JOB_CONTROLE_FILE_BASE="${demultiplexingJobControleFileBase}"
 
-	mkdir -p "${SCR_ROOT_DIR}/logs/${run}/"
-	chmod -R 770 "${SCR_ROOT_DIR}/logs/"
+	mkdir -m 770 -p "${SCR_ROOT_DIR}/logs/${run}/"
+
 	#
 	# Check if the run has already completed.
 	#
