@@ -469,6 +469,7 @@ else
 				rawDataCopiedToPrmFinishedFile="ssh ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${project}.rawDataCopiedToPrm.finished"
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${PRM_ROOT_DIR}/logs/${project}/"
 				mkdir -p "${PRM_ROOT_DIR}/logs/${project}/"
+
 				if ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${project}.rawDataCopiedToPrm.finished"
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "found: ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${project}.rawDataCopiedToPrm.finished"

@@ -88,14 +88,10 @@ function rsyncRuns() {
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "/groups/${group}/${prm}/${line}"
 			done
 			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+			ssh "${samplesheetsServerLocation}" "mv ${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.{started,failed}"
 			return
 		fi
 	done<"${_samplesheet}"
-	
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "copying ${project} finished "
-	# shellcheck disable=SC2029
-	ssh "${samplesheetsServerLocation}" "mv ${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.{started,finished}"
-
 }
 
 function showHelp() {
@@ -321,17 +317,8 @@ else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${WORKING_DIR}/logs/${project}/${RAWDATAPROCESSINGFINISHED} present."
 				##Check if array or NGS run
 				# shellcheck disable=SC2029
-				if ssh "${samplesheetsServerLocation}" "grep 'SentrixBarcode_A' \"${sampleSheet}\""
-				then
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "this is array data"
-					## copy all the data from that run
-					rsync -rlptDvc --relative "${WORKING_DIR}/./rawdata/array/GTC/${filePrefix}" "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/"
-				else		
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "this is NGS data"
-					## copy all the data from that run
-					rsync -rlptDvc --relative "${WORKING_DIR}/./rawdata/ngs/${filePrefix}" "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/"
-					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${project} finished"
-				fi
+				
+				rsync -rltDvc --relative --rsync-path="sudo -u ${group}-ateambot rsync" "${WORKING_DIR}/./${line}"* "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/"
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${WORKING_DIR}/logs/${project}/${RAWDATAPROCESSINGFINISHED} absent."
 				continue

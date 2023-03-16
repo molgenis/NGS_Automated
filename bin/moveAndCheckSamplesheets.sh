@@ -199,7 +199,7 @@ fi
 
 for samplesheet in "${samplesheets[@]}"
 do
-	sampleSheetName=$(basename "${samplesheet%%.*}")
+	sampleSheetName=$(basename "${samplesheet%.*}")
 	logDir="${DAT_ROOT_DIR}/logs/${sampleSheetName}/"
 	# shellcheck disable=SC2174
 	mkdir -m 2770 -p "${logDir}"
@@ -266,7 +266,7 @@ do
 		perl -p -e "s|${valueInSamplesheet[0]}|${REPLACEDPIPELINECOLUMN}|" "${samplesheet}" > "${samplesheet}.tmp"
 		mv "${samplesheet}.tmp" "${samplesheet}"
 	else
-		awk -v pipeline="${REPLACEDPIPELINECOLUMN}" -v pipelineColumn="${PIPELINECOLUMN}" 'BEGIN {FS=","}{if (NR==1){print $0",pipelineColumn}{else print $0","pipeline}'
+		awk -v pipeline="${REPLACEDPIPELINECOLUMN}" -v pipelineColumn="${PIPELINECOLUMN}" 'BEGIN {FS=","}{if (NR==1){print $0","pipelineColumn}else{ print $0","pipeline}}'
 	fi
 	firstStepOfPipeline="${REPLACEDPIPELINECOLUMN%%+*}"
 
@@ -277,6 +277,8 @@ do
 	if [[ "${projectSamplesheet}" == "true" ]]
 	then
 		firstStepOfPipeline="NGS_DNA"
+		perl -p -e "s|${REPLACEDPIPELINECOLUMN}|${firstStepOfPipeline}|" "${samplesheet}" > "${samplesheet}.tmp"
+		mv "${samplesheet}.tmp" "${samplesheet}"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a project samplesheet (no NGS_Demultiplexing); firstStepOfPipeline was set to ${firstStepOfPipeline}."
 	fi
 	# shellcheck disable=SC2153
