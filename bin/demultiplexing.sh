@@ -197,7 +197,7 @@ do
 		continue
 	fi
 	export JOB_CONTROLE_FILE_BASE="${demultiplexingJobControleFileBase}"
-
+	# shellcheck disable=SC2174
 	mkdir -m 770 -p "${SCR_ROOT_DIR}/logs/${run}/"
 
 	#

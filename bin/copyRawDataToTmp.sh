@@ -49,7 +49,7 @@ function rsyncRuns() {
 	_samplesheet="${1}"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Working on ${_samplesheet}"
 	# shellcheck disable=SC2029
-	ssh "${samplesheetsServerLocation}" "mv ${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.{requested,started}"
+	ssh -n "${samplesheetsServerLocation}" "mv ${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.{requested,started}"
 	while read -r line
 	do
 		## line is ${filePrefix/${filePrefix}_1.fq.gz
@@ -88,7 +88,8 @@ function rsyncRuns() {
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "/groups/${group}/${prm}/${line}"
 			done
 			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-			ssh "${samplesheetsServerLocation}" "mv ${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.{started,failed}"
+			# shellcheck disable=SC2029
+			ssh -n "${samplesheetsServerLocation}" "mv ${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.{started,failed}"
 			return
 		fi
 	done<"${_samplesheet}"

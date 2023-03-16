@@ -511,13 +511,16 @@ else
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "High priority requested for at least one sample in samplesheet for project ${project}."
 			fi
 		fi
-		if [[ -n "${sampleSheetColumnOffsets['analysis']+isset}" ]]; then
+		if [[ -n "${sampleSheetColumnOffsets['analysis']+isset}" ]]
+		then
 			sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['analysis']} + 1))
 			analysisPipeline=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}' | head -1)
-		if [[ "${analysisPipeline}" == "${pipeline}" ]]
-		then
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "There was no preprocessing step, creating a rawDataCopiedToPrm.finished file to prevent a stuck automated pipeline (copyProjectDataToPrm can only copy data if ${TMP_ROOT_DIR}/logs/${project}/${project}.rawDataCopiedToPrm.finished is there)"
-			touch "${TMP_ROOT_DIR}/logs/${project}/${project}.rawDataCopiedToPrm.finished"
+			if [[ "${analysisPipeline}" == "${pipeline}" ]]
+			then
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "There was no preprocessing step, creating a rawDataCopiedToPrm.finished file to prevent a stuck automated pipeline (copyProjectDataToPrm can only copy data if ${TMP_ROOT_DIR}/logs/${project}/${project}.rawDataCopiedToPrm.finished is there)"
+				touch "${TMP_ROOT_DIR}/logs/${project}/${project}.rawDataCopiedToPrm.finished"
+			fi
+		fi
 		#
 		# Get additional meta-data from samplesheet.
 		# (Not required for generating and submitting job scripts; only used for track and trace.)
