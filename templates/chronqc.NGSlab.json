@@ -38,17 +38,9 @@
     },
     {
         "table_name": "SamplePrep",
-        "chart_type": "time_series_with_mean_and_stdev",
+        "chart_type": "time_series_with_box_whisker_plot",
         "chart_properties": {
-            "chart_title": "Molarity nmol/l",
-            "y_value": "MOLARITY"
-        }
-    },
-    {
-        "table_name": "Capturing",
-        "chart_type": "time_series_with_mean_and_stdev",
-        "chart_properties": {
-            "chart_title": "Concentration ng/ul",
+            "chart_title": "Concentration ng/ul boxplot",
             "y_value": "CONCENTRATION"
         }
     },
@@ -57,6 +49,14 @@
         "chart_type": "time_series_with_mean_and_stdev",
         "chart_properties": {
             "chart_title": "Molarity nmol/L",
+            "y_value": "MOLARITY"
+        }
+    },
+    {
+        "table_name": "Capturing",
+        "chart_type": "time_series_with_box_whisker_plot",
+        "chart_properties": {
+            "chart_title": "Molarity nmol/L boxplot",
             "y_value": "MOLARITY"
         }
     }

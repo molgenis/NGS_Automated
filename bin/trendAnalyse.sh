@@ -363,22 +363,94 @@ function generateChronQCOutput() {
 	echo "_tablefile=${_tablefile}, _filetype=${_filetype}"
 	if [[ "${_filetype}"  == 'ArrayInzetten' ]]
 	then
-		chronqc database -f --create --run-date-info "${_runinfo}" -o "${CHRONQC_DATABASE_NAME}" --db-table "${_filetype}" "${_tablefile}" "${_filetype}"
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "database filled with ${_runinfo}"
+
+		head -1 "${_runinfo}" > "${CHRONQC_TMP}/ArrayInzettenLabpassed_runinfo_${_fileDate}.csv"
+		head -1 "${_tablefile}" > "${CHRONQC_TMP}/ArrayInzettenLabpassed_${_fileDate}.csv"
+		
+		grep labpassed "${_runinfo}" >> "${CHRONQC_TMP}/ArrayInzettenLabpassed_runinfo_${_fileDate}.csv"
+		grep labpassed "${_tablefile}" >> "${CHRONQC_TMP}/ArrayInzettenLabpassed_${_fileDate}.csv"
+		
+
+		if [[ -e "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" ]]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "updating database with ${CHRONQC_TMP}/${_filetype}_${_fileDate}.csv"
+			chronqc database -f --update \
+				--db "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" \
+				--run-date-info "${_runinfo}" \
+				-o "${CHRONQC_DATABASE_NAME}" \
+				--db-table "${_filetype}All" \
+				"${_tablefile}" all
+
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "updating database with ${CHRONQC_TMP}/${_filetype}Labpassed_${_fileDate}.csv"
+			chronqc database -f --update \
+				--db "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" \
+				--run-date-info "${CHRONQC_TMP}/ArrayInzettenLabpassed_runinfo_${_fileDate}.csv" \
+				-o "${CHRONQC_DATABASE_NAME}" \
+				--db-table "${_filetype}Labpassed" \
+				"${CHRONQC_TMP}/ArrayInzettenLabpassed_${_fileDate}.csv" labpassed
+		else
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "creating database starting with ${CHRONQC_TMP}/${_filetype}_${_fileDate}.csv"
+			chronqc database -f --create \
+				--run-date-info "${_runinfo}" \
+				--o "${CHRONQC_DATABASE_NAME}" \
+				--db-table "${_filetype}All" \
+				"${_tablefile}" all
+			
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "creating database starting with ${CHRONQC_TMP}/${_filetype}Labpassed_${_fileDate}.csv"
+			chronqc database -f --create \
+				--run-date-info "${CHRONQC_TMP}/ArrayInzettenLabpassed_runinfo_${_fileDate}.csv" \
+				--o "${CHRONQC_DATABASE_NAME}" \
+				--db-table "${_filetype}Labpassed" \
+				"${CHRONQC_TMP}/ArrayInzettenLabpassed_${_fileDate}.csv" labpassed
+		fi
+		
 	elif [[ "${_filetype}" == 'Concentratie' ]]
 	then
+		# for now the database will be filled with only the concentration information from the Nimbus2000	
+
 		head -1 "${_runinfo}" > "${CHRONQC_TMP}/ConcentratieNimbus_runinfo_${_fileDate}.csv"
 		head -1 "${_tablefile}" > "${CHRONQC_TMP}/ConcentratieNimbus_${_fileDate}.csv"
 
 		grep Nimbus "${_runinfo}" >> "${CHRONQC_TMP}/ConcentratieNimbus_runinfo_${_fileDate}.csv"
 		grep Nimbus "${_tablefile}" >> "${CHRONQC_TMP}/ConcentratieNimbus_${_fileDate}.csv"
 		
-		# for now the database will be filled with only information from the Nimbus2000	
-		chronqc database -f --create --run-date-info "${CHRONQC_TMP}/ConcentratieNimbus_runinfo_${_fileDate}.csv" -o "${CHRONQC_DATABASE_NAME}" --db-table "${_filetype}" "${CHRONQC_TMP}/ConcentratieNimbus_${_fileDate}.csv" Nimbus
+		if [[ -e "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" ]]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "updating database with ${CHRONQC_TMP}/${_filetype}Nimbus_${_fileDate}.csv"
+			chronqc database -f --update \
+				--db "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" \
+				--run-date-info "${CHRONQC_TMP}/ConcentratieNimbus_runinfo_${_fileDate}.csv" \
+				-o "${CHRONQC_DATABASE_NAME}" \
+				--db-table "${_filetype}" \
+				"${CHRONQC_TMP}/ConcentratieNimbus_${_fileDate}.csv" Nimbus
+		else
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "creating database starting with ${CHRONQC_TMP}/${_filetype}Nimbus_${_fileDate}.csv"
+			chronqc database -f --create \
+				--run-date-info "${CHRONQC_TMP}/ConcentratieNimbus_runinfo_${_fileDate}.csv" \
+				--o "${CHRONQC_DATABASE_NAME}" \
+				--db-table "${_filetype}" \
+				"${CHRONQC_TMP}/ConcentratieNimbus_${_fileDate}.csv" Nimbus
+		fi
+
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "database filled with ConcentratieNimbus_${_fileDate}.csv"
 	else
-		chronqc database -f --create --run-date-info "${_runinfo}" -o "${CHRONQC_DATABASE_NAME}" --db-table "${_filetype}" "${_tablefile}" 'NGSlab'
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "database filled with ${_runinfo}"
+		if [[ -e "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" ]]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "updating database with ${CHRONQC_TMP}/${_filetype}_${_fileDate}.csv"
+			chronqc database -f --update \
+				--db "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" \
+				--run-date-info "${_runinfo}" \
+				-o "${CHRONQC_DATABASE_NAME}" \
+				--db-table "${_filetype}" \
+				"${_tablefile}" NGSlab
+		else
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "creating database starting with ${CHRONQC_TMP}/${_filetype}_${_fileDate}.csv"
+			chronqc database -f --create \
+				--run-date-info "${_runinfo}" \
+				--o "${CHRONQC_DATABASE_NAME}" \
+				--db-table "${_filetype}" \
+				"${_tablefile}" NGSlab
+		fi
 	fi		
 	mv "${_runinfo}" "${ARCHIVE_DIR}"
 	mv "${_tablefile}" "${ARCHIVE_DIR}"
