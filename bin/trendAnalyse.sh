@@ -159,7 +159,7 @@ function processProjectToDB() {
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run} ..." \
 			2>&1 | tee -a "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.started"
 	fi
-	echo "________________${PRM_MULTIQCPROJECT_DIR}/${_project}.run_date_info.csv_____________"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "________________${PRM_MULTIQCPROJECT_DIR}/${_project}.run_date_info.csv_____________"
 	if [[ -e "${PRM_MULTIQCPROJECT_DIR}/${_project}.run_date_info.csv" ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "found ${PRM_MULTIQCPROJECT_DIR}/${_project}.run_date_info.csv. Updating ChronQC database with ${_project}."
@@ -197,8 +197,6 @@ function processProjectToDB() {
 				for laneSample in "${perLaneSample[@]}"
 				do
 					runDate=$(echo "${laneSample}" | cut -d "_" -f 1)
-					#echo "${laneSample}"
-					#echo "${runDate}"
 					echo -e "${laneSample},${_project},${runDate}" >> "${CHRONQC_TMP}/${_project}.lane.run_date_info.csv"
 				done
 				cp "${CHRONQC_TMP}/${_project}.${_metrics}" "${CHRONQC_TMP}/${_project}.2.${_metrics}"
@@ -227,10 +225,10 @@ function processProjectToDB() {
 		# Check if the date in the run_date_info.csv file is in correct format, dd/mm/yyyy
 		#
 		_checkdate=$(awk 'BEGIN{FS=OFS=","} NR==2 {print $3}' "${CHRONQC_TMP}/${_project}.2.run_date_info.csv.tmp")
-		echo "_checkdate:${_checkdate}"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "_checkdate:${_checkdate}"
 		mv "${CHRONQC_TMP}/${_project}.2.run_date_info.csv.tmp" "${CHRONQC_TMP}/${_project}.2.run_date_info.csv"
 		_checkdate=$(awk 'BEGIN{FS=OFS=","} NR==2 {print $3}' "${CHRONQC_TMP}/${_project}.lane.run_date_info.csv.tmp")
-		echo "_checkdate:${_checkdate}"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "_checkdate:${_checkdate}"
 		mv "${CHRONQC_TMP}/${_project}.lane.run_date_info.csv.tmp" "${CHRONQC_TMP}/${_project}.lane.run_date_info.csv"
 
 		#
@@ -256,7 +254,7 @@ function processProjectToDB() {
 		else
 			_panel="${array[0]}"
 		fi
-		echo "PANEL= ${_panel}"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "PANEL= ${_panel}"
 		if [[ "${_checkdate}"  =~ [0-9] ]]
 		then
 			if [[ -e "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" ]]
@@ -267,7 +265,7 @@ function processProjectToDB() {
 					local _metrics="${i%:*}"
 					local _table="${i#*:}"
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Importing ${_project}.${_metrics}, and using table ${_table}"
-					echo "________________${_metrics}________${_table}_____________"
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "________________${_metrics}________${_table}_____________"
 					if [[ "${_metrics}" == multiqc_fastqc.txt ]]
 					then
 						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "updating  database using _metrics ${_metrics} and _table ${_table}"
@@ -360,7 +358,9 @@ function generateChronQCOutput() {
 	local _filetype="${3}"
 	local _fileDate="${4}"
 	CHRONQC_TMP="${TMP_TRENDANALYSE_DIR}/tmp/"
-	echo "_tablefile=${_tablefile}, _filetype=${_filetype}"
+	
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "local variables generateChronQCOutput:_runinfo=${_runinfo},_tablefile=${_tablefile}, _filetype=${_filetype}, _fileDate=${_fileDate}"
+	
 	if [[ "${_filetype}"  == 'ArrayInzetten' ]]
 	then
 
