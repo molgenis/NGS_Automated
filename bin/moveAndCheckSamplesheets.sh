@@ -49,7 +49,7 @@ function showHelp() {
 	#
 	cat <<EOH
 ===============================================================================================================
-Script to move samplesheets to another location potentially on another server.
+	Script to check samplesheets and move them to another location, potentially on another server.
 
 Usage:
 	$(basename "${0}") OPTIONS
@@ -174,15 +174,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 # so we cannot create a log file per batch/experiment/sample/project to signal *.finished or *.failed.
 # Using a single log file for this script, would mean we would only get an email notification for *.failed once,
 # which would not get cleaned up / reset during the next attempt to rsync data.
-# Therefore we define a JOB_CONTROLE_FILE_BASE per day, which will ensure we get notified once a day if something goes wrong.
 #
-logTimeStamp="$(date "+%Y-%m-%d")"
-logDir="${DAT_ROOT_DIR}/logs/${logTimeStamp}/"
-# shellcheck disable=SC2174
-mkdir -m 2770 -p "${logDir}"
-touch "${logDir}"
-export JOB_CONTROLE_FILE_BASE="${logDir}/${logTimeStamp}.${SCRIPT_NAME}"
-printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 
 
 samplesheetsSource="${DAT_ROOT_DIR}/samplesheets/new/"
@@ -192,66 +184,138 @@ samplesheetsSource="${DAT_ROOT_DIR}/samplesheets/new/"
 readarray -t samplesheets < <(find "${samplesheetsSource}" -maxdepth 1 -mindepth 1 -type f -name "*.${SAMPLESHEET_EXT}")
 if [[ "${#samplesheets[@]}" -eq '0' ]]
 then
+#	logTimeStamp="$(date "+%Y-%m-%d")"
+#	logDir="${DAT_ROOT_DIR}/logs/${logTimeStamp}/"
+	# shellcheck disable=SC2174
+#	mkdir -m 2770 -p "${logDir}"
+#	touch "${logDir}"
+#	export JOB_CONTROLE_FILE_BASE="${logDir}/${logTimeStamp}.${SCRIPT_NAME}"
+#	printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
+	
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No samplesheets found in ${samplesheetsSource}."
-	mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 	trap - EXIT
 	exit 0
 fi
 
 for samplesheet in "${samplesheets[@]}"
 do
+	sampleSheetName=$(basename "${samplesheet%.*}")
+	logDir="${DAT_ROOT_DIR}/logs/${sampleSheetName}/"
+	# shellcheck disable=SC2174
+	mkdir -m 2770 -p "${logDir}"
+	touch "${logDir}"
+	export JOB_CONTROLE_FILE_BASE="${logDir}/${sampleSheetName}.${SCRIPT_NAME}"
+	printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
+	
 	declare -a _sampleSheetColumnNames=()
 	declare -A _sampleSheetColumnOffsets=()
-	
+
 	IFS="${SAMPLESHEET_SEP}" read -r -a _sampleSheetColumnNames <<< "$(head -1 "${samplesheet}")"
 	
 	for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]} ; _offset++ ))
 	do
 		_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
 	done
+	
+	if [[ -n "${_sampleSheetColumnOffsets["SentrixBarcode_A"]+isset}" ]] 
+	then
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a GAP samplesheet. There is no samplesheetCheck at this moment."
+		projectSamplesheet="false"
+	else
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a NGS samplesheet. Lets check if the samplesheet is correct."
+		cp "${samplesheet}"{,.converted}
+	
+		#
+		# Make sure
+		#  1. The last line ends with a line end character.
+		#  2. We have the right line end character: convert any carriage return (\r) to newline (\n).
+		#  3. We remove empty lines.
+		#
+		printf '\n'     >> "${samplesheet}.converted"
+		sed 's/\r/\n/g' "${samplesheet}.converted" > "${samplesheet}.converted.tmp"
+		sed '/^\s*$/d'  "${samplesheet}.converted.tmp" > "${samplesheet}.converted.tmp2"
+		rm "${samplesheet}.converted.tmp"
+		mv "${samplesheet}.converted.tmp2" "${samplesheet}.converted"
+		projectSamplesheet="false"
+		
+		if checkSampleSheet.py --input "${samplesheet}.converted" --log "${samplesheet}.converted.log"
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Samplesheet ${samplesheet}.converted is correct."
+			check=$(cat "${samplesheet}.converted.log")
+			if [[ "${check}" == *'projectSamplesheet'* ]]
+			then
+				projectSamplesheet="true"
+			fi
+		else
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Samplesheet ${samplesheet}.converted contains errors."
+			check=$(cat "${samplesheet}.converted.log")
+			
+			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "${check} for samplesheet: ${samplesheet}"
+			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+			continue
+		fi
+	fi
+	
 	if [[ -n "${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]+isset}" ]] 
 	then
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "column [${PIPELINECOLUMN}] is found in the samplesheet"
 		_pipelineFieldIndex=$((${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]} + 1))
 		## In future this valueInSamplesheet will be replaced by DARWIN to the real value.
 		readarray -t valueInSamplesheet < <(tail -n +2 "${samplesheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_pipelineFieldIndex}" | sort | uniq )
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "renaming ${valueInSamplesheet[0]} into ${REPLACEDPIPELINECOLUMN}"
 		perl -p -e "s|${valueInSamplesheet[0]}|${REPLACEDPIPELINECOLUMN}|" "${samplesheet}" > "${samplesheet}.tmp"
 		mv "${samplesheet}.tmp" "${samplesheet}"
 	else
-		awk -v pipeline="${REPLACEDPIPELINECOLUMN}" -v pipelineColumn="${PIPELINECOLUMN}" 'BEGIN {FS=","}{if (NR==1){print $0",pipelineColumn}{else print $0","pipeline}'
+		awk -v pipeline="${REPLACEDPIPELINECOLUMN}" -v pipelineColumn="${PIPELINECOLUMN}" 'BEGIN {FS=","}{if (NR==1){print $0","pipelineColumn}else{ print $0","pipeline}}'
 	fi
 	firstStepOfPipeline="${REPLACEDPIPELINECOLUMN%%+*}"
-	#shellcheck disable=SC2153
-	samplesheetsDestination="${HOSTNAME_TMP}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/${firstStepOfPipeline}/new/"
+
+	#
+	# Check whether the samplesheet is a project samplesheet (no NGS_Demultiplexing)
+	# needs an update when we are going to use VIP into production
+	#
+	if [[ "${projectSamplesheet}" == "true" ]]
+	then
+		firstStepOfPipeline="NGS_DNA"
+		perl -p -e "s|${REPLACEDPIPELINECOLUMN}|${firstStepOfPipeline}|" "${samplesheet}" > "${samplesheet}.tmp"
+		mv "${samplesheet}.tmp" "${samplesheet}"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a project samplesheet (no NGS_Demultiplexing); firstStepOfPipeline was set to ${firstStepOfPipeline}."
+	fi
+	# shellcheck disable=SC2153
+	samplesheetDestination="${HOSTNAME_TMP}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/${firstStepOfPipeline}/"
 
 	#
 	# Move samplesheets with rsync
 	#
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pushing samplesheets using rsync to ${samplesheetsDestination} ..."
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pushing samplesheets using rsync to ${samplesheetDestination} ..."
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "See ${logDir}/rsync.log for details ..."
 	transactionStatus='Ok'
 	
 	/usr/bin/rsync -vt \
 		--log-file="${logDir}/rsync.log" \
 		--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
-		--omit-dir-times \
 		--omit-link-times \
 		"${samplesheet}" \
-		"${samplesheetsDestination}" \
+		"${samplesheetDestination}" \
 	&& rm -v "${samplesheet}" >> "${JOB_CONTROLE_FILE_BASE}.started" \
 	|| {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to move ${samplesheet}."
 		transactionStatus='Failed'
 	}
-done
-if [[ "${transactionStatus}" == 'Ok' ]]
-then
-	rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
-	mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+
+	if [[ "${transactionStatus}" == 'Ok' ]]
+	then
+		rm -f "${samplesheet}.converted"{,.log}
+		rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
+		mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 	
-else
-	rm -f "${JOB_CONTROLE_FILE_BASE}.finished"
-	mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-fi
+	else
+		rm -f "${JOB_CONTROLE_FILE_BASE}.finished"
+		mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+	fi
+
+done
+
 
 #
 # Clean exit.

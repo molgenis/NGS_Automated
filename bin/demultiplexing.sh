@@ -182,8 +182,7 @@ for i in "${runs[@]}"
 do
 	run=$(basename "${i}")
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking ${run} ..."
-	#export JOB_CONTROLE_FILE_BASE="${SCR_ROOT_DIR}/logs/${project}/run01.demultiplexing"
-	demultiplexingJobControleFileBase="${SCR_ROOT_DIR}/logs/${project}/run01.demultiplexing"
+	demultiplexingJobControleFileBase="${SCR_ROOT_DIR}/logs/${run}/run01.demultiplexing"
 	if [[ -f "${demultiplexingJobControleFileBase}.finished" ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${demultiplexingJobControleFileBase}.finished: Skipping finished ${run}."
@@ -198,8 +197,8 @@ do
 		continue
 	fi
 	export JOB_CONTROLE_FILE_BASE="${demultiplexingJobControleFileBase}"
-
-	mkdir -p "${SCR_ROOT_DIR}/logs/${run}/"
+	# shellcheck disable=SC2174
+	mkdir -m 770 -p "${SCR_ROOT_DIR}/logs/${run}/"
 
 	#
 	# Check if the run has already completed.
@@ -212,7 +211,7 @@ do
 		miSeqCompleted='yes'
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Miseq run detected: miSeqCompleted=yes for ${run}."
 	fi
-	if [[ -f "${SEQ_DIR}/${project}/RunCompletionStatus.xml" || "${miSeqCompleted}" == 'yes' ]]
+	if [[ -f "${SEQ_DIR}/${run}/RunCompletionStatus.xml" || "${miSeqCompleted}" == 'yes' ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer has completed data generation for: ${run}."
 	else
@@ -220,11 +219,11 @@ do
 		continue
 	fi
 	#
-	# All ingredients are present and the project has not been processed yet: generate FastQ files.
+	# All ingredients are present and the run has not been processed yet: generate FastQ files.
 	#
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Generating and submitting jobs for ${project} ..." \
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Generating and submitting jobs for ${run} ..." \
 		2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
-	echo "started: $(date +%FT%T%z)" > "${SCR_ROOT_DIR}/logs/${project}/run01.demultiplexing.totalRuntime"
+	echo "started: $(date +%FT%T%z)" > "${SCR_ROOT_DIR}/logs/${run}/run01.demultiplexing.totalRuntime"
 	{
 		mkdir -v -p "${SCR_ROOT_DIR}/generatedscripts/${pipeline}/${run}/"
 		cd "${SCR_ROOT_DIR}/generatedscripts/${pipeline}/${run}/"

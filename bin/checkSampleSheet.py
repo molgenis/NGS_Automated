@@ -1,49 +1,107 @@
 #!/usr/bin/env python
-import argparse
-import csv     # imports the csv module
-import sys
-from collections import defaultdict
 
-parser = argparse.ArgumentParser(description='Process some integers.')
+import argparse
+import os
+import csv
+import sys
+import re
+from collections import defaultdict
+from os.path import basename
+parser = argparse.ArgumentParser(description='Process commandline opts.')
 parser.add_argument("--input")
-parser.add_argument("--logfile")
+parser.add_argument("--log")
 args = parser.parse_args()
 
 columns = defaultdict(list)
-f = open(args.input, 'r') # opens the csv file
-print("inputfile:" + args.input)
-reader = csv.DictReader(f)  # creates the reader object
+f = open(args.input, 'r') # opens the samplesheet file.
+print("INFO: input = " + args.input)
+reader = csv.DictReader(f)  # creates the reader object.
+inputFileName=(basename(args.input))
+inputFileNameBase = re.sub('\..*$', '', inputFileName)
 
-w = open(args.logfile, 'w')
-print("logfile:" + args.logfile)
+#
+# Parse meta-data from the filename. 
+#
+inputFileNameComponents = inputFileNameBase.split('_')
+rawdataSamplesheet=False
+if len(inputFileNameComponents) > 3:
+	sequencingStartDate = inputFileNameComponents[0]
+	rawdataSamplesheet=True
+	sequencer= inputFileNameComponents[1]
+	run = inputFileNameComponents[2]
+	flowcell = inputFileNameComponents[3]
 
-alreadyErrored="false"
+	if len(inputFileNameComponents) > 4:
+		for i in range(4,len(inputFileNameComponents)):
+			flowcell+="_"+ str(inputFileNameComponents[i])
+	
+w = open(args.log, 'w')
+print("INFO: log   = " + args.log)
+sanityCheckOk=True
+alreadyErrored=False
 hasRows = False
-for number, row in enumerate(reader,1):   # iterates the rows of the file in orders
-        hasRows = True
-        for sleutel in ('externalSampleID','project','sequencer','sequencingStartDate','flowcell','run','flowcell','lane','seqType','prepKit','capturingKit','barcode','barcodeType'):
-                if sleutel not in row.keys():
-                        if alreadyErrored == "false":
+listOfErrors=[]
 
-                                w.write("One of the headers is missing: (externalSampleID,project,sequencer,sequencingStartDate,flowcell,run,flowcell,lane,seqType,prepKit,capturingKit,barcode,barcodeType)")
-                                print("One of the headers is missing: (externalSampleID,project,sequencer,sequencingStartDate,flowcell,run,flowcell,lane,seqType,prepKit,capturingKit,barcode,barcodeType) in " + args.input)
-                                alreadyErrored="true"
-                else:
-                     	if row[sleutel] == "":
-                                if sleutel in ('capturingKit','barcode','barcodeType'):
-                                        if alreadyErrored == "false":
-                                                w.write("The variable " + sleutel + " on line " + str(number) +  " is empty! Please fill in None (this to be sure that is not missing)")
-                                                print("The variable " + sleutel + " on line " + str(number) +  " is empty! Please fill in None (this to be sure that is not missing) in "+ args.input)
-                                                alreadyErrored="true"
-                                else:
-                                     	if alreadyErrored == "false":
-                                                print("The variable " + sleutel + " on line " + str(number) +  " is empty! in "+ args.input)
-                                                w.write("The variable " + sleutel + " on line " + str(number) +  " is empty!")
-                                                alreadyErrored="true"
+#
+# Iterate over the rows of the file.
+#
+for number, row in enumerate(reader,1):
+	hasRows = True
+	#
+	# Check if the required columns are present.
+	#
+	for columnName in ('externalSampleID','project','sequencer','sequencingStartDate','flowcell','run','flowcell','lane','seqType','capturingKit','barcode','barcodeType'):
+		if columnName not in row.keys():
+			sanityCheckOk=False
+			if not alreadyErrored:
+				listOfErrors.append('ERROR: Required column is missing (or has a trailing space): ' + columnName + '.')
+				alreadyErrored=True
+		else:
+			if row[columnName] == "":
+				sanityCheckOk=False
+				if columnName in ('capturingKit','barcode','barcodeType'):
+					listOfErrors.append('ERROR on line ' + str(number) + ': Variable ' + columnName + ' is empty! Please fill in "None" (to make sure it is not missing).')
+				else:
+					listOfErrors.append('ERROR on line ' + str(number) + ': Variable ' + columnName + ' is empty!')
+
+	if not sanityCheckOk:
+		print('\n'.join(listOfErrors))
+		w.write('\n'.join(listOfErrors))
+		w.close()
+		sys.exit(1)
+	#
+	# Check if the data inside the file matches the expected filename.
+	#
+	if rawdataSamplesheet == True:
+		if row['sequencer'] != sequencer and 'sequencer' in row.keys():
+			sanityCheckOk=False
+			listOfErrors.append('ERROR on line ' + str(number) + ': sequencer value in samplesheet (' + row['sequencer'] + ') does not match sequencer in filename (' + sequencer + ').')
+			if row['sequencingStartDate'] != sequencingStartDate and 'sequencingStartDate' in row.keys():
+				sanityCheckOk=False
+				listOfErrors.append('ERROR on line ' + str(number) + ': sequencingStartDate value in samplesheet (' + row['sequencingStartDate'] + ') does not match sequencingStartDate in filename (' + sequencingStartDate + ').')
+				if row['run'] != run  and 'run' in row.keys():
+					sanityCheckOk=False
+					listOfErrors.append('ERROR on line ' + str(number) + ': run value in samplesheet (' + row['run'] + ') does not match run in filename (' + run + ').')
+					if row['flowcell'] != flowcell and 'flowcell' in row.keys():
+						sanityCheckOk=False
+						listOfErrors.append('ERROR on line ' + str(number) + ': flowcell value in samplesheet ' + row['flowcell'] + ' does not match flowcell in filename (' + flowcell + ').')
+
+f.close()
 
 if not hasRows:
-        print("The complete file is empty?! in "+ args.input)
-        w.write("The complete file is empty?!")
+	sanityCheckOk=False
+	print("File is empty?!")
+	listOfErrors.append("File is empty?!")
 
-w.close()
-f.close()      # closing
+if sanityCheckOk:
+	w.write("OKAY")
+	if rawdataSamplesheet == False:
+		w.write("projectSamplesheet")
+	w.close()
+	sys.exit(0)
+else:
+	print('\n'.join(listOfErrors))
+	w.write('\n'.join(listOfErrors))
+	w.close()
+	sys.exit(1)
+

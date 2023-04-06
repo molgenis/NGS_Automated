@@ -44,42 +44,54 @@ else
 	exit 1
 fi
 
-function rsyncNGSRuns() {
+function rsyncRuns() {
 	local _samplesheet
 	_samplesheet="${1}"
-
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Working on ${_samplesheet}"
+	# shellcheck disable=SC2029
+	ssh -n "${samplesheetsServerLocation}" "mv ${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.{requested,started}"
 	while read -r line
 	do
 		## line is ${filePrefix/${filePrefix}_1.fq.gz
 		##
-		rsync -rlptDvc --relative --rsync-path="sudo -u ${group}-ateambot rsync" "${WORKING_DIR}/./rawdata/ngs/${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
-		|| {
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}"
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from ${WORKING_DIR}/./rawdata/ngs/"
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    to ${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/rawdata/ngs/"
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Looping through all prm mounts"
+		copied="no"
+		
+		for prm in "${ALL_PRM[@]}"
+		do
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Checking for ${line} on ${prm} and if it still needs to be processed"
+			if [[ -f "/groups/${group}/${prm}/${line}" && "${copied}" == "no" ]]
+			then
+				rsync -av "${WORKING_DIR}/logs/${project}/${project}.copyDataFromPrm.requested" "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.started"
+				touch "${JOB_CONTROLE_FILE_BASE}.started"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${line} found on ${prm}, start rsyncing.."
+				rsync -rltDvc --relative --rsync-path="sudo -u ${group}-ateambot rsync" "/groups/${group}/${prm}/./${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
+				|| {
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}"
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from /groups/${group}/${prm}/"
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    to ${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/"
+				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+				return
+				}
+				
+				copied="yes"
+			else
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${line} not found on ${prm} OR data has been copied already and we can skip the step"
+			fi	
+		done
+		## if data is still not being copied it is apparently not on prm
+		if [[ "${copied}" == "no" ]]
+		then
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsync failed, data is not found! Searched for the following:"
+			for prm in "${ALL_PRM[@]}"
+			do
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "/groups/${group}/${prm}/${line}"
+			done
 			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+			# shellcheck disable=SC2029
+			ssh -n "${samplesheetsServerLocation}" "mv ${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.{started,failed}"
 			return
-		}
-	done<"${_samplesheet}"
-	
-}
-
-function rsyncArrayRuns() {
-	local _samplesheet
-	_samplesheet="${1}"
-
-	while read -r line
-	do
-		## line is ${sentrixBarcode_A}/${sentrixBarcode_A}_${sentrixPosition_A}.gtc
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "rsync -rlDvc ${WORKING_DIR}/./rawdata/array/GTC/${line}* ${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/"
-		rsync -rlptDvc --relative --rsync-path="sudo -u ${group}-ateambot rsync" "${WORKING_DIR}/./rawdata/array/GTC/${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
-		|| {
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}"
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from ${WORKING_DIR}/./rawdata/array/GTC/"
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    to ${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/rawdata/array/GTC/"
-			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-			return
-		}
+		fi
 	done<"${_samplesheet}"
 }
 
@@ -306,17 +318,8 @@ else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${WORKING_DIR}/logs/${project}/${RAWDATAPROCESSINGFINISHED} present."
 				##Check if array or NGS run
 				# shellcheck disable=SC2029
-				if ssh "${samplesheetsServerLocation}" "grep 'SentrixBarcode_A' \"${sampleSheet}\""
-				then
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "this is array data"
-					## copy all the data from that run
-					rsync -rlptDvc --relative "${WORKING_DIR}/./rawdata/array/GTC/${filePrefix}" "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/"
-				else		
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "this is NGS data"
-					## copy all the data from that run
-					rsync -rlptDvc --relative "${WORKING_DIR}/./rawdata/ngs/${filePrefix}" "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/"
-					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${project} finished"
-				fi
+				
+				rsync -rltDvc --relative --rsync-path="sudo -u ${group}-ateambot rsync" "${WORKING_DIR}/./${line}"* "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/"
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${WORKING_DIR}/logs/${project}/${RAWDATAPROCESSINGFINISHED} absent."
 				continue
@@ -324,29 +327,19 @@ else
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Samplesheet is on destination machine: ${samplesheetsServerLocation}"
 			# shellcheck disable=SC2029
-			if ssh "${DATA_MANAGER}"@"${DESTINATION_DIAGNOSTICS_CLUSTER}" test -e "${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested"
+			if ssh "${DATA_MANAGER}"@"${DESTINATION_DIAGNOSTICS_CLUSTER}" test -e "${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.requested"
 			then
-				##Check if array or NGS run
-				if ssh "${samplesheetsServerLocation}" "grep 'SentrixBarcode_A' \"${sampleSheet}\""
-				then
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "this is array data"
-					## copy the requested file to the ${WORKING_DIR}
-					rsync -vt "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested" "${WORKING_DIR}/logs/${project}/"
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested present, copying will start"
-					rsyncArrayRuns "${WORKING_DIR}/logs/${project}/${project}.data.requested"
-					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "data transfer for ${project} is finished"
-				else
-					rsync -vt "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested" "${WORKING_DIR}/logs/${project}/"
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested present, copying will start"
-					rsyncNGSRuns "${WORKING_DIR}/logs/${project}/${project}.data.requested"
-					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "data transfer for ${project} is finished"
-				fi
+				## copy the requested file to the ${WORKING_DIR}
+				rsync -vt "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.requested" "${WORKING_DIR}/logs/${project}/"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.requested present, copying will start"
+				rsyncRuns "${WORKING_DIR}/logs/${project}/${project}.copyDataFromPrm.requested"
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "data transfer for ${project} is finished"
 			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${project}/${project}.data.requested absent, it can be that the process already started (${TMP_ROOT_DIR}/logs/${project}/${project}.data.started)"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.requested absent, it can be that the process already started (${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.started)"
 				continue
 			fi
 		fi
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred the data from ${WORKING_DIR}/logs/${project}/${project}.data.requested to tmp."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred the data from ${WORKING_DIR}/logs/${project}/${project}.copyDataFromPrm.requested to tmp."
 		rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 		mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 	done

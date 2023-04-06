@@ -72,12 +72,12 @@ function sanityChecking() {
 	# Check if one sane GS samplesheet is present.
 	#
 	local _numberOfSamplesheets
-	_numberOfSamplesheets=$(find "${TMP_ROOT_DIR}/${_batch}/" -maxdepth 1 -mindepth 1 -name 'CSV_UMCG_*.'"${SAMPLESHEET_EXT}" 2>/dev/null | wc -l)
+	_numberOfSamplesheets=$(find "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/" -maxdepth 1 -mindepth 1 -name 'CSV_UMCG_*.'"${SAMPLESHEET_EXT}" 2>/dev/null | wc -l)
 	if [[ "${_numberOfSamplesheets}" -eq 1 ]]
 	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Found: one ${TMP_ROOT_DIR}/${_batch}/CSV_UMCG_*.${SAMPLESHEET_EXT} samplesheet."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Found: one ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/CSV_UMCG_*.${SAMPLESHEET_EXT} samplesheet."
 		local _gsSampleSheet
-		_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/CSV_UMCG_"*".${SAMPLESHEET_EXT}")
+		_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/CSV_UMCG_"*".${SAMPLESHEET_EXT}")
 		#
 		# Make sure:
 		#  1. The last line ends with a line end character.
@@ -104,12 +104,12 @@ function sanityChecking() {
 		_gsSampleSheet="${_gsSampleSheet}.converted"
 	elif [[ "${_numberOfSamplesheets}" -gt 1 ]]
 	then
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "More than one CSV_UMCG_*.${SAMPLESHEET_EXT} GS samplesheet present in ${TMP_ROOT_DIR}/${_batch}/."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "More than one CSV_UMCG_*.${SAMPLESHEET_EXT} GS samplesheet present in ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/."
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	elif [[ "${_numberOfSamplesheets}" -lt 1 ]]
 	then
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No GS samplesheet present in ${TMP_ROOT_DIR}/${_batch}/."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No GS samplesheet present in ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/."
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	fi
@@ -118,8 +118,8 @@ function sanityChecking() {
 	#
 	local _countFastQ1FilesOnDisk
 	local _countFastQ2FilesOnDisk
-	_countFastQ1FilesOnDisk=$(find "${TMP_ROOT_DIR}/${_batch}/" -maxdepth 1 -mindepth 1 -name '*_R1.fastq.gz' | wc -l)
-	_countFastQ2FilesOnDisk=$(find "${TMP_ROOT_DIR}/${_batch}/" -maxdepth 1 -mindepth 1 -name '*_R2.fastq.gz' | wc -l)
+	_countFastQ1FilesOnDisk=$(find "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/" -maxdepth 1 -mindepth 1 -name '*_R1.fastq.gz' | wc -l)
+	_countFastQ2FilesOnDisk=$(find "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/" -maxdepth 1 -mindepth 1 -name '*_R2.fastq.gz' | wc -l)
 	if [[ "${_countFastQ1FilesOnDisk}" -ne "${_countFastQ2FilesOnDisk}" ]]
 	then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Amount of R1 FastQ files (${_countFastQ1FilesOnDisk}) is not the same as R2 FastQ files (${_countFastQ2FilesOnDisk})."
@@ -132,7 +132,7 @@ function sanityChecking() {
 	#
 	local _checksumFile
 	local _countFastQFilesInChecksumFile
-	_checksumFile="${TMP_ROOT_DIR}/${_batch}/checksums.md5"
+	_checksumFile="${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/checksums.md5"
 	_countFastQFilesInChecksumFile='0'
 	if [[ -e "${_checksumFile}" && -r "${_checksumFile}" ]]
 	then
@@ -148,7 +148,7 @@ function sanityChecking() {
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Amount of FastQ files in checksum file and amount of *_R[1|2].fastq.gz files on disk is the same for ${_batch}: ${_countFastQFilesInChecksumFile}."
 		fi
 	else
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No ${_checksumFile} file present in ${TMP_ROOT_DIR}/${_batch}/."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No ${_checksumFile} file present in ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/."
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	fi
@@ -156,8 +156,8 @@ function sanityChecking() {
 	# Count and make sure all samples for which we received FastQ files on disk are present in the samplesheet and vice versa.
 	# _insaneSamples is a string of sample IDs only present either on disk or on the samplesheet.
 	#
-	readarray -t _samplesOnDisk < <(find "${TMP_ROOT_DIR}/${_batch}/" -maxdepth 1 -mindepth 1 -name '*.fastq.gz' | grep -o "${_batch}-[0-9][0-9]*" | sort -u)
-	readarray -t _samplesInSamplesheet < <(grep -o "${_batch}-[0-9][0-9]*" "${TMP_ROOT_DIR}/${_batch}/CSV_UMCG_"*".${SAMPLESHEET_EXT}.converted" | sort -u)
+	readarray -t _samplesOnDisk < <(find "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/" -maxdepth 1 -mindepth 1 -name '*.fastq.gz' | grep -o "${_batch}-[0-9][0-9]*" | sort -u)
+	readarray -t _samplesInSamplesheet < <(grep -o "${_batch}-[0-9][0-9]*" "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/CSV_UMCG_"*".${SAMPLESHEET_EXT}.converted" | sort -u)
 	local _insaneSamples
 	_insaneSamples="$(echo "${_samplesOnDisk[@]:-}" "${_samplesInSamplesheet[@]:-}" | tr ' ' '\n' | sort | uniq -u | tr '\n' ' ')"
 	if [[ -n "${_insane_samples:-}" ]]
@@ -180,8 +180,8 @@ function sanityChecking() {
 	else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.md5.PASS absent -> start checksum verification..."
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' \
-			"Started verification of checksums by ${ATEAMBOTUSER}@${HOSTNAME_SHORT} using checksums from ${TMP_ROOT_DIR}/${_batch}/${_checksumFile}"
-		_checksumVerification=$(cd "${TMP_ROOT_DIR}/${_batch}/"
+			"Started verification of checksums by ${ATEAMBOTUSER}@${HOSTNAME_SHORT} using checksums from ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_checksumFile}"
+		_checksumVerification=$(cd "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/"
 			if md5sum -c "${_checksumFile}" >> "${_controlFileBaseForFunction}.started" 2>&1
 			then
 				echo 'PASS'
@@ -261,7 +261,7 @@ function sanityChecking() {
 		# ToDo: change location of sample sheet per project back to ${TMP_ROOT_DIR} once we have a 
 		#       proper prm mount on the GD clusters and this script can run a GD cluster.
 		#
-		_sampleSheet="${TMP_ROOT_DIR}/Samplesheets/new/${_project}.${SAMPLESHEET_EXT}"
+		_sampleSheet="${TMP_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}"
 		_archivedSampleSheet="${TMP_ROOT_DIR}/Samplesheets/archive/${_project}.${SAMPLESHEET_EXT}"
 		if [[ -f "${_sampleSheet}" && -r "${_sampleSheet}" ]]
 		then
@@ -273,7 +273,7 @@ function sanityChecking() {
 			# or there were other QC issues and the samples were re-sequenced;
 			# Check if we have a samplesheet from the previous sequence run in the archive.
 			#
-			log4Bash 'WARN' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Samplesheet for project ${_project} is missing from .../Samplesheets/new/, but we have one in .../Samplesheets/archive/ and will re-use that one."
+			log4Bash 'WARN' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Samplesheet for project ${_project} is missing from .../Samplesheets/, but we have one in .../Samplesheets/archive/ and will re-use that one."
 			log4Bash 'WARN' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Moving ${_archivedSampleSheet} to ${_sampleSheet} ..."
 			mv "${_archivedSampleSheet}" "${_sampleSheet}" \
 				2>> "${_controlFileBaseForFunction}.started" \
@@ -421,7 +421,7 @@ function renameFastQs() {
 	_batch="${1}"
 	_controlFileBase="${2}"
 	_controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
-	_batchDir="${TMP_ROOT_DIR}/${_batch}/"
+	_batchDir="${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/"
 	#
 	# Check if function previously finished successfully for this data.
 	#
@@ -521,9 +521,9 @@ function processSamplesheetsAndMoveConvertedData() {
 	# Combine GenomeScan samplesheet per batch with inhouse samplesheet(s) per project.
 	#
 	createInhouseSamplesheetFromGS.py \
-		--genomeScanInputDir "${TMP_ROOT_DIR}/${_batch}/" \
-		--inhouseSamplesheetsInputDir "${TMP_ROOT_DIR}/Samplesheets/new/" \
-		--samplesheetsOutputDir "${TMP_ROOT_DIR}/${_batch}/" \
+		--genomeScanInputDir "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/" \
+		--inhouseSamplesheetsInputDir "${TMP_ROOT_DIR}/Samplesheets/" \
+		--samplesheetsOutputDir "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/" \
 		--logLevel "${_pythonLogLevel}" \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
@@ -538,7 +538,7 @@ function processSamplesheetsAndMoveConvertedData() {
 	declare -A _sampleSheetColumnOffsets=()
 	local      _projectFieldIndex
 	declare -a _projects=()
-	_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/CSV_UMCG_"*".${SAMPLESHEET_EXT}.converted")
+	_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/CSV_UMCG_"*".${SAMPLESHEET_EXT}.converted")
 	IFS="${SAMPLESHEET_SEP}" read -r -a _sampleSheetColumnNames <<< "$(head -1 "${_gsSampleSheet}")"
 	for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]} ; _offset++ ))
 	do
@@ -560,10 +560,10 @@ function processSamplesheetsAndMoveConvertedData() {
 	# Get a list of sequencing run dirs (created by renameFastQs.bash)
 	# and in format ${sequencingStartdate}_${sequencer}_${run}_${flowcell}
 	#
-	readarray -t _runDirs < <(cd "${TMP_ROOT_DIR}/${_batch}/" && find ./ -maxdepth 1 -mindepth 1 -type d -name '*[0-9][0-9]*_[A-Z0-9][A-Z0-9]*_[0-9][0-9]*_[A-Z0-9][A-Z0-9]*' -exec basename {} \;)
+	readarray -t _runDirs < <(cd "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/" && find ./ -maxdepth 1 -mindepth 1 -type d -name '*[0-9][0-9]*_[A-Z0-9][A-Z0-9]*_[0-9][0-9]*_[A-Z0-9][A-Z0-9]*' -exec basename {} \;)
 	if [[ "${#_runDirs[@]}" -lt '1' ]]
 	then
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Did not find any sequence run dirs in ${TMP_ROOT_DIR}/${_batch}/."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Did not find any sequence run dirs in ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/."
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	else
@@ -577,7 +577,7 @@ function processSamplesheetsAndMoveConvertedData() {
 	_regex='[0-9]+_[A-Z0-9]+_[0-9]+_([A-Z0-9]+)'
 	for _runDir in "${_runDirs[@]}"
 	do
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Creating ${TMP_ROOT_DIR}/${_batch}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}..."
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Creating ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}..."
 		#
 		# Get flowcell for this run.
 		#
@@ -594,20 +594,20 @@ function processSamplesheetsAndMoveConvertedData() {
 		#
 		# Create header line for new sequencing run samplesheet based on the one from the first project samplesheet.
 		#
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Creating header ${TMP_ROOT_DIR}/${_batch}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}..."
-		head -1 "${TMP_ROOT_DIR}/${_batch}/${_projects[0]}.${SAMPLESHEET_EXT}" > "${TMP_ROOT_DIR}/${_batch}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}"
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Creating header ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}..."
+		head -1 "${TMP_ROOT_DIR}/${_batch}/${_projects[0]}.${SAMPLESHEET_EXT}" > "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}"
 		#
 		# Extract lines for this sequencing run from all project samplesheets based on the flowcell ID.
 		#
 		for _project in "${_projects[@]}"
 		do
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Appending rows for ${_flowcell} from project ${_project} to ${TMP_ROOT_DIR}/${_batch}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}..."
-			if grep "${_flowcell}" "${TMP_ROOT_DIR}/${_batch}/${_project}.${SAMPLESHEET_EXT}" >/dev/null
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Appending rows for ${_flowcell} from project ${_project} to ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}..."
+			if grep "${_flowcell}" "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_project}.${SAMPLESHEET_EXT}" >/dev/null
 			then
-				grep "${_flowcell}" "${TMP_ROOT_DIR}/${_batch}/${_project}.${SAMPLESHEET_EXT}" >> "${TMP_ROOT_DIR}/${_batch}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}"
+				grep "${_flowcell}" "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_project}.${SAMPLESHEET_EXT}" >> "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}"
 			fi
 		done
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished creating ${TMP_ROOT_DIR}/${_batch}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}."
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished creating ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}."
 	done
 	#
 	# Sanity check: count if the amount of sample lines in the GenomeScan samplesheet 
@@ -619,7 +619,7 @@ function processSamplesheetsAndMoveConvertedData() {
 	_flowcellLaneBarcodeLinesRuns='0'
 	for _runDir in "${_runDirs[@]}"
 	do
-		_flowcellLaneBarcodeLinesRuns=$(( ${_flowcellLaneBarcodeLinesRuns} + $(tail -n +2 "${TMP_ROOT_DIR}/${_batch}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}" | wc -l) ))
+		_flowcellLaneBarcodeLinesRuns=$(( ${_flowcellLaneBarcodeLinesRuns} + $(tail -n +2 "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}" | wc -l) ))
 	done
 	if [[ "${_flowcellLaneBarcodeLinesRuns}" -lt "${_sampleLinesGS}" ]]
 	then
@@ -638,8 +638,9 @@ function processSamplesheetsAndMoveConvertedData() {
 		#
 		# Move converted FastQs with accompanying samplesheets per sequencing run to .../rawdata/ngs/${_runDir}/
 		#
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Moving ${TMP_ROOT_DIR}/${_batch}/${_runDir}/* -> ${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/ ..."
-		mkdir -p "${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/" \
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Moving ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_runDir}/* -> ${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/ ..."
+		# shellcheck disable=SC2174
+		mkdir -m 2770 -p "${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/" \
 			>> "${_controlFileBaseForFunction}.started" 2>&1 \
 			&& mv -f -v "${TMP_ROOT_DIR}/${_batch}/${_runDir}/"* "${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/" \
 			>> "${_controlFileBaseForFunction}.started" 2>&1 \
@@ -672,7 +673,8 @@ function processSamplesheetsAndMoveConvertedData() {
 			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		}
-		mkdir -p "${TMP_ROOT_DIR}/logs/${_runDir}" \
+		# shellcheck disable=SC2174
+		mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${_runDir}" \
 			&& touch "${TMP_ROOT_DIR}/logs/${_runDir}/run01.demultiplexing.finished" \
 			>> "${_controlFileBaseForFunction}.started" 2>&1 \
 		|| {
@@ -691,15 +693,7 @@ function processSamplesheetsAndMoveConvertedData() {
 			>> "${TMP_ROOT_DIR}/logs/${_runDir}/run01.${SCRIPT_NAME}.trace_post_overview.csv"
 		touch "${TMP_ROOT_DIR}/logs/${_runDir}/run01.${SCRIPT_NAME}.finished"
 	done
-	#
-	# Cleanup uploaded samplesheets per project.
-	#
-	mkdir -p "${TMP_ROOT_DIR}/Samplesheets/archive/"
-	for _project in "${_projects[@]}"
-	do
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Moving ${TMP_ROOT_DIR}/Samplesheets/new/${_project}.${SAMPLESHEET_EXT} -> ${TMP_ROOT_DIR}/Samplesheets/archive/ ..."
-		mv -v "${TMP_ROOT_DIR}/Samplesheets/new/${_project}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/Samplesheets/archive/"
-	done
+
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for batch ${_batch}. See ${_controlFileBaseForFunction}.finished for details."
 	rm -f "${_controlFileBaseForFunction}.failed"
 	mv -v "${_controlFileBaseForFunction}."{started,finished}

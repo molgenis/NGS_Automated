@@ -416,7 +416,6 @@ then
 else
 	for sampleSheet in "${sampleSheets[@]}"
 	do
-		mac2unix "${sampleSheet}"
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing sample sheet: ${sampleSheet} ..."
 		project="$(basename "${sampleSheet}" ".${SAMPLESHEET_EXT}")"
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing: ${project} ..."
@@ -463,6 +462,7 @@ else
 		declare    sampleSheetFieldIndex
 		declare    sampleSheetFieldValueCount
 		IFS="${SAMPLESHEET_SEP}" read -r -a sampleSheetColumnNames <<< "$(head -1 "${sampleSheet}")"
+		
 		#
 		# Backwards compatibility for "Sample Type" including - the horror - a space and optionally quotes :o.
 		#
@@ -509,6 +509,16 @@ else
 			then
 				priority='true'
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "High priority requested for at least one sample in samplesheet for project ${project}."
+			fi
+		fi
+		if [[ -n "${sampleSheetColumnOffsets['analysis']+isset}" ]]
+		then
+			sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['analysis']} + 1))
+			analysisPipeline=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}' | head -1)
+			if [[ "${analysisPipeline}" == "${pipeline}" ]]
+			then
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "There was no preprocessing step, creating a rawDataCopiedToPrm.finished file to prevent a stuck automated pipeline (copyProjectDataToPrm can only copy data if ${TMP_ROOT_DIR}/logs/${project}/${project}.rawDataCopiedToPrm.finished is there)"
+				touch "${TMP_ROOT_DIR}/logs/${project}/${project}.rawDataCopiedToPrm.finished"
 			fi
 		fi
 		#
@@ -579,6 +589,7 @@ else
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.submitJobScripts.finished present -> processing completed for ${project}/${pipelineRun} ..."
 			rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
+
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing ${project}/${pipelineRun}."
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 			if [[ "${resubmitJobScripts}" == 'true' ]]
