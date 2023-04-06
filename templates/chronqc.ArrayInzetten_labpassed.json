@@ -1,0 +1,40 @@
+[
+    {
+        "table_name": "ArrayInzettenLabpassed",
+        "chart_type": "time_series_with_absolute_threshold",
+        "chart_properties": {
+            "chart_title": "CallRate per project (absolute threshold)",
+            "y_value": "CallRate",
+            "lower_threshold": 97
+        }
+    },
+    {
+        "table_name": "ArrayInzettenLabpassed",
+        "chart_type": "time_series_with_absolute_threshold",
+        "chart_properties": {
+            "chart_title": "StdDev per project (absolute threshold)",
+            "y_value": "StdDev",
+            "upper_threshold": 0.2
+        }
+    },
+    {
+     	"table_name": "ArrayInzettenLabpassed",
+        "chart_type": "time_series_with_absolute_threshold",
+        "chart_properties": {
+            "chart_title": "CallRate per sample",
+            "lower_threshold": 97,
+            "y_value": "CallRate",
+            "per_sample":"True"
+        }
+    },
+    {
+     	"table_name": "ArrayInzettenLabpassed",
+        "chart_type": "time_series_with_absolute_threshold",
+        "chart_properties": {
+            "chart_title": "StdDev per sample",
+            "upper_threshold": 0.2,
+            "y_value": "StdDev",
+       	    "per_sample":"True"
+        }
+    }
+]

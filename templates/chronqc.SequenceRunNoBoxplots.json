@@ -11,14 +11,6 @@
     },
     {
         "table_name": "SequenceRun",
-        "chart_type": "time_series_with_box_whisker_plot",
-        "chart_properties": {
-            "chart_title": "Cluster Density(K/mm2)",
-            "y_value": "ClusterDensity(K/mm2)"
-        }
-    },
-    {
-        "table_name": "SequenceRun",
         "chart_type": "time_series_with_absolute_threshold",
         "chart_properties": {
             "chart_title": "Cluster Passing Filter (%)",
@@ -28,26 +20,10 @@
     },
     {
         "table_name": "SequenceRun",
-        "chart_type": "time_series_with_box_whisker_plot",
-        "chart_properties": {
-            "chart_title": "Cluster Passing Filter (%)",
-            "y_value": "ClustersPassingFilter(%)"
-        }
-    },
-    {
-        "table_name": "SequenceRun",
         "chart_type": "time_series_with_absolute_threshold",
         "chart_properties": {
             "chart_title": "Percentage>=Q30",
             "lower_threshold": 75,
-            "y_value": "Percentage>=Q30"
-        }
-    },
-    {
-        "table_name": "SequenceRun",
-        "chart_type": "time_series_with_box_whisker_plot",
-        "chart_properties": {
-            "chart_title": "Percentage>=Q30",
             "y_value": "Percentage>=Q30"
         }
     }
