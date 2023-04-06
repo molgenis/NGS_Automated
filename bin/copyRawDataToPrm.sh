@@ -313,6 +313,9 @@ function splitSamplesheetPerProject() {
 				then
 					for _pipeline in "${_pipelines[@]}"
 					do
+						#
+						## create a rawDataCopiedToPrm.finished file to tell the copyProjectDataToPrm that the copying of the rawdata to prm for this project has been finished
+						#
 						# shellcheck disable=SC2029
 						if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${_project}/${_project}.rawDataCopiedToPrm.finished"
 						then
@@ -664,6 +667,7 @@ else
 		if [[ "${processedRawDataItems}" == "${totalRawDataItems}" ]]
 		then
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "All raw data items (${processedRawDataItems}/${totalRawDataItems}) were copied to prm."
+			ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/sequencerun/${filePrefix}.copyRawDataToPrm.finished"
 			splitSamplesheetPerProject "${PRM_ROOT_DIR}/Samplesheets/archive/${filePrefix}.${SAMPLESHEET_EXT}" "${filePrefix}" "${controlFileBase}/${runPrefix}"
 		fi
 		#

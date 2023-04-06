@@ -391,9 +391,9 @@ function sanityChecking() {
 	#
 	local _sequencingStartDateFile
 	_sequencingStartDateFile="${_controlFileBase}.sequencingStartDate"
-	if [[ -e "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished" ]]
+	if [[ -e "${TMP_ROOT_DIR}/${gsBatch}/${rawdataFolder}/${gsBatch}.finished" ]]
 	then
-		date -d "@$(stat -c '%Y' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished")" +'%y%m%d' > "${_sequencingStartDateFile}"
+		date -d "@$(stat -c '%Y' "${TMP_ROOT_DIR}/${gsBatch}/${rawdataFolder}/${gsBatch}.finished")" +'%y%m%d' > "${_sequencingStartDateFile}"
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Fetched sequencingStartDate from last modification time stamp of ${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished."
 	else
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished is missing or not accessible."
