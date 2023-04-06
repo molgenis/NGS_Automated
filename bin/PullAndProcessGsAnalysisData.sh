@@ -239,26 +239,26 @@ function mergeSamplesheets(){
 	# Combine samplesheets 
 	mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
 	teller=0
-	samplesheet=$(basename "${csvFile}")
-	#Renaming samplesheet to solely the GS_XX (e.g. GS_182.. so without the A,B,C etc suffix)
-	samplesheet=${samplesheet#CSV_UMCG_}
+	local _projectName
 	for i in "${uniqProjects[@]}"
 	do
 		if [[ "${teller}" -eq '0' ]]
 		then
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Creating new combined samplesheet for the processing of the Analysis data"
+			#Renaming samplesheet to solely the GS_XX (e.g. GS_182.. so without the A,B,C etc suffix)
+			_projectName=$(echo "${i}" | grep -Eo GS_[0-9]+)
 			# create a combined samplesheet header, renamed project to originalproject and added new project column
-			head -1 "${TMP_ROOT_DIR}/Samplesheets/${i}.csv" | perl -p -e 's|project|originalproject|' | awk '{print $0",project,gsBatch"}' > "${TMP_ROOT_DIR}/${gsBatch}/${samplesheet}"
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "new samplesheet name: ${_projectName}.csv"
+			head -1 "${TMP_ROOT_DIR}/Samplesheets/${i}.csv" | perl -p -e 's|project|originalproject|' | awk '{print $0",project,gsBatch"}' > "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
 			teller=$((${teller}+1))
 		else
-			tail -n+2 "${TMP_ROOT_DIR}/Samplesheets/${i}.csv" >> "${TMP_ROOT_DIR}/${gsBatch}/${samplesheet}"
+			tail -n+2 "${TMP_ROOT_DIR}/Samplesheets/${i}.csv" >> "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
 		fi
 	done
-
-	# Parse CSV file to get general project name
-	projectName=$(basename "${samplesheet}" '.csv')
-	awk -v projectName="${projectName}" -v gsBatch="${gsBatch}" '{if (NR==1){print $0}else{print $0","projectName","gsBatch}}' "${TMP_ROOT_DIR}/${gsBatch}/${samplesheet}" > "${TMP_ROOT_DIR}/${gsBatch}/${samplesheet}.converted"
-	mv "${TMP_ROOT_DIR}/${gsBatch}/${samplesheet}.converted" "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${samplesheet}"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Adding projectName ${_projectName} and gsBatch:${gsBatch} to the samplesheet and put the samplesheet ${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${_projectName}.csv"
 	
+	awk -v projectName="${_projectName}" -v gsBatch="${_batch}" '{if (NR==1){print $0}else{print $0","projectName","gsBatch}}' "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv" > "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${_projectName}.csv"
+	rm "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
 	mv -v "${_controlFileBaseForFunction}."{started,finished}
 }
 
@@ -515,16 +515,17 @@ else
 		controlFileBase="${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}"
 		export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing batch ${gsBatch}..."
-		# shellcheck disable=SC2174
-		mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/"
-		# shellcheck disable=SC2174
-		mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${gsBatch}/"
-		printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
+		
 		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${gsBatch} already processed, no need process the data again."
 			continue
 		else
+			# shellcheck disable=SC2174
+			mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/"
+			# shellcheck disable=SC2174
+			mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${gsBatch}/"
+			printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 			if [[ -e "${controlFileBase}.rsyncData.finished" ]]
 			then
 				if [[ -e "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished" ]]
@@ -581,23 +582,30 @@ else
 		for gsBatch in "${gsBatchesSourceServer[@]}"
 		do
 			gsBatch="$(basename "${gsBatch}")"
-			#
-			# Convert date to seconds for easier calculation of the date difference.
-			# 86400 = 1 day in seconds.
-			#
-			dateInSecProject="$(date -d"$(rsync "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}/Analysis" | awk '{print $3}')" +%s)"
-			dateInSecNow=$(date +%s)
-			if [[ $(((dateInSecNow - dateInSecProject) / 86400)) -gt 14 ]]
+			controlFileBase="${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}.${SCRIPT_NAME}.cleanup"
+			if [[ -f "${TMP_ROOT_DIR}/logs/${gsBatch}.PullAndProcessGsAnalysisData.finished" ]]
 			then
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${gsBatch} because it is older than 14 days"
+				touch "${controlFileBase}.started"
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pulling data and Preprocessing of ${gsBatch} has been finished, removing Analysis data from the datastaging server: ${HOSTNAME_DATA_STAGING}"
 				#
 				# Create an empty dir (source dir) to sync with the destination dir && then remove source dir.
 				#
-				mkdir -p "${HOME}/empty_dir/"
-				rsync -a --delete "${HOME}/empty_dir/" "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}"
-				rmdir "${HOME}/empty_dir/"
+				##
+				### Enable and execute this once it is tested properly
+				##
+				#
+				#mkdir -p "${HOME}/empty_dir/"
+				#if rsync -a --delete "${HOME}/empty_dir/" "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}/Analysis"
+				#then
+				#	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully removed ${gsBatch}/Analysis from ${HOSTNAME_DATA_STAGING}"
+				#	rmdir "${HOME}/empty_dir/"
+				#else
+				# log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "An error occured while removing ${gsBatch}/Analysis from ${HOSTNAME_DATA_STAGING}"
+				# mv "${controlFileBase}".{started,failed}
+				#fi
+				mv "${controlFileBase}".{started,finished}
 			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "the batch ${gsBatch} is only $(((dateInSecNow - dateInSecProject) / 86400)) days old"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "the processing of batch ${gsBatch} is not yet finished"
 			fi
 		done
 	fi

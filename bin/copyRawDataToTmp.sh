@@ -64,7 +64,7 @@ function rsyncRuns() {
 			then
 				rsync -av "${WORKING_DIR}/logs/${project}/${project}.copyDataFromPrm.requested" "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.started"
 				touch "${JOB_CONTROLE_FILE_BASE}.started"
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${line} found on ${prm}, start rsyncing.."
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${line} found on ${prm}, start rsyncing.."
 				rsync -rltDvc --relative --rsync-path="sudo -u ${group}-ateambot rsync" "/groups/${group}/${prm}/./${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
 				|| {
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}"
@@ -76,7 +76,7 @@ function rsyncRuns() {
 				
 				copied="yes"
 			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${line} not found on ${prm} OR data has been copied already and we can skip the step"
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${line} not found on ${prm} OR data has been copied already and we can skip the step"
 			fi	
 		done
 		## if data is still not being copied it is apparently not on prm
@@ -89,7 +89,10 @@ function rsyncRuns() {
 			done
 			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			# shellcheck disable=SC2029
-			ssh -n "${samplesheetsServerLocation}" "mv ${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.{started,failed}"
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "created ${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.failed"
+			
+			rsync -av "${JOB_CONTROLE_FILE_BASE}.failed" "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.failed"
+			ssh -n "${samplesheetsServerLocation}" "rm ${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.started"
 			return
 		fi
 	done<"${_samplesheet}"

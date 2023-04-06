@@ -62,6 +62,12 @@ Options:
 	-p	[pipeline]
 		Pipeline that produced the project data that needs to be transferred to prm. (NGS_Demultiplexing, GAP)
 	-n	Dry-run: Do not perform actual sync, but only list changes instead.
+	-r	[root]
+		Root dir on the server specified with -s and from where the project data will be fetched (optional).
+		By default this is the SCR_ROOT_DIR variable, which is compiled from variables specified in the
+		<group>.cfg, <source_host>.cfg and sharedConfig.cfg config files (see below.)
+		You need to override SCR_ROOT_DIR when the data is to be fetched from a non default path,
+		which is for example the case when fetching data from another group.
 	-l	Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
@@ -329,7 +335,7 @@ function getSampleType(){
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
 declare dryrun=''
-while getopts ":g:l:p:hn" opt
+while getopts ":g:l:p:r:hn" opt
 do
 	case "${opt}" in
 		h)
@@ -343,6 +349,9 @@ do
 			;;
 		n)
 			dryrun='-n'
+			;;
+		r)
+			sourceServerRootDir="${OPTARG}"
 			;;
 		l)
 			l4b_log_level="${OPTARG^^}"
@@ -403,6 +412,15 @@ do
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Config file ${configFile} missing or not accessible."
 	fi
 done
+
+#
+# Overrule group's SCR_ROOT_DIR if necessary.
+#
+if [[ -n "${sourceServerRootDir:-}" ]]
+then
+	SCR_ROOT_DIR="${sourceServerRootDir}"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Using alternative sourceServerRootDir ${sourceServerRootDir} as SCR_ROOT_DIR."
+fi
 
 #
 # Write access to prm storage requires data manager account.

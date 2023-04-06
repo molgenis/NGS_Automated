@@ -79,7 +79,7 @@ EOH
 function generateScripts () {
 	local _project="${1}"
 	local _run="${2}"
-	local _generateShScript="${TMP_ROOT_DIR}/generatedscripts/${_project}/generate_dragenScripts.sh"
+	local _generateShScript="${TMP_ROOT_DIR}/generatedscripts/NGS_DNA/${_project}/generate_dragenScripts.sh"
 	local _controlFileBase="${3}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
 	#
@@ -101,8 +101,8 @@ function generateScripts () {
 	#
 	# Create dir and fetch template to generate scripts.
 	#
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Creating directory: ${TMP_ROOT_DIR}/generatedscripts/${_project}/ ..."
-	mkdir -p -v "${TMP_ROOT_DIR}/generatedscripts/${_project}/" \
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Creating directory: ${TMP_ROOT_DIR}/generatedscripts/NGS_DNA/${_project}/ ..."
+	mkdir -p -v "${TMP_ROOT_DIR}/generatedscripts/NGS_DNA/${_project}/" \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create directory for generated scripts. See ${_controlFileBaseForFunction}.failed for details."
@@ -120,16 +120,16 @@ function generateScripts () {
 	#
 	# Check if we need to remove a previously used potentially wrong samplesheet.
 	#
-	if [[ -e "${TMP_ROOT_DIR}/generatedscripts/${_project}/${_project}.${SAMPLESHEET_EXT}" ]]
+	if [[ -e "${TMP_ROOT_DIR}/generatedscripts/NGS_DNA/${_project}/${_project}.${SAMPLESHEET_EXT}" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/generatedscripts/${_project}/${_project}.${SAMPLESHEET_EXT} already exists and will be removed ..."
-		rm -f "${TMP_ROOT_DIR}/generatedscripts/${_project}/${_project}.${SAMPLESHEET_EXT}"
+		rm -f "${TMP_ROOT_DIR}/generatedscripts/NGS_DNA/${_project}/${_project}.${SAMPLESHEET_EXT}"
 	fi
 	#
 	# Fetch the (new) samplesheet.
 	#
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Copying ${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${_project}.${SAMPLESHEET_EXT} to ${TMP_ROOT_DIR}/generatedscripts/${_project}/ ..."
-	cp -v "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${_project}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/generatedscripts/${_project}/" \
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Copying ${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${_project}.${SAMPLESHEET_EXT} to ${TMP_ROOT_DIR}/generatedscripts/NGS_DNA/${_project}/ ..."
+	cp -v "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${_project}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/generatedscripts/NGS_DNA/${_project}/" \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to fetch samplesheet. See ${_controlFileBaseForFunction}.failed for details."
@@ -137,10 +137,10 @@ function generateScripts () {
 		return
 	}
 
-	cd "${TMP_ROOT_DIR}/generatedscripts/${_project}/"
+	cd "${TMP_ROOT_DIR}/generatedscripts/NGS_DNA/${_project}/"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Navigated to $(pwd)."
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Executing: bash ${TMP_ROOT_DIR}/generatedscripts/${_project}/generate_dragenScripts.sh -p ${_project} -g ${group} -r ${_run}"
-	bash "${TMP_ROOT_DIR}/generatedscripts/${_project}/generate_dragenScripts.sh" -p "${_project}" -g "${group}" -r "${_run}" \
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Executing: bash ${TMP_ROOT_DIR}/generatedscripts/NGS_DNA/${_project}/generate_dragenScripts.sh -p ${_project} -g ${group} -r ${_run}"
+	bash "${TMP_ROOT_DIR}/generatedscripts/NGS_DNA/${_project}/generate_dragenScripts.sh" -p "${_project}" -g "${group}" -r "${_run}" \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to generate scripts. See ${_controlFileBaseForFunction}.failed for details."
@@ -181,7 +181,7 @@ function submitJobScripts () {
 	#
 	# Go to scripts dir.
 	#
-	cd "${TMP_ROOT_DIR}/projects/${_project}/${_run}/jobs/"
+	cd "${TMP_ROOT_DIR}/projects/NGS_DNA/${_project}/${_run}/jobs/"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Navigated to: $(pwd)."
 	#
 	# Determine submit options.

@@ -941,5 +941,53 @@ fi
 
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' 'Finished processing all batches.'
 
+if [[ "${CLEANUP}" == "false" ]]
+then
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "this is a testgroup, data should not be removed"
+else
+	#
+	# Cleanup old data if data transfer with rsync finished successfully (and hence did not crash this script).
+	#
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting data that has been processed completely"
+	#
+	# Get the batch name by parsing the ${GENOMESCAN_HOME_DIR} folder, directories only and no empty or '.'
+	#
+	readarray -t gsBatchesSourceServer< <(rsync -f"+ */" -f"- *" "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}" | awk '{if ($5 != "" && $5 != "."){print $5}}')
+	if [[ "${#gsBatchesSourceServer[@]}" -eq '0' ]]
+	then
+		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No batches found at ${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/"
+	else
+		for gsBatch in "${gsBatchesSourceServer[@]}"
+		do
+			gsBatch="$(basename "${gsBatch}")"
+			controlFileBase="${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}.${SCRIPT_NAME}.cleanup"
+			if [[ -f "${TMP_ROOT_DIR}/logs/${gsBatch}.processGsRawData.finished" ]]
+			then
+				touch "${controlFileBase}.started"
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pulling data and Preprocessing of ${gsBatch} has been finished, removing Rawdata data from the datastaging server: ${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}/Raw_data"
+				#
+				# Create an empty dir (source dir) to sync with the destination dir && then remove source dir.
+				#
+				##
+				### Enable and execute this once it is tested properly
+				##
+				#mkdir -p "${HOME}/empty_dir/"
+				#if rsync -a --delete "${HOME}/empty_dir/" "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}/Raw_data"
+				#then
+				#	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully removed ${gsBatch}/Raw_data from ${HOSTNAME_DATA_STAGING}"
+				#	rmdir "${HOME}/empty_dir/"
+				#else
+				# log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "An error occured while removing ${gsBatch}/Raw_data from ${HOSTNAME_DATA_STAGING}"
+				# mv "${controlFileBase}".{started,failed}
+				#fi
+				mv "${controlFileBase}".{started,finished}
+			else
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "the processing of batch ${gsBatch} is not yet finished"
+			fi
+		done
+	fi
+fi
+
+
 trap - EXIT
 exit 0

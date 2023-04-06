@@ -330,8 +330,6 @@ else
 		controlFileBase="${TMP_ROOT_DIR}/logs/${filePrefix}/"
 		export JOB_CONTROLE_FILE_BASE="${controlFileBase}/${runPrefix}.${SCRIPT_NAME}"
 		
-		printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
-		
 		if [[ -f "${TMP_ROOT_DIR}/logs/${filePrefix}/${RAWDATAPROCESSINGFINISHED}" ]]
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${filePrefix}/${RAWDATAPROCESSINGFINISHED} present."
@@ -339,6 +337,7 @@ else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${filePrefix}/${RAWDATAPROCESSINGFINISHED} absent."
 			continue
 		fi	
+		printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 		splitPerProject "${sampleSheet}" "${filePrefix}" "${controlFileBase}/${runPrefix}"
 		
 		if [[ -e "${controlFileBase}/${runPrefix}.splitPerProject.finished" ]]
