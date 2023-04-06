@@ -607,6 +607,10 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 
 module load "chronqc/${CHRONQC_VERSION}"
 
+# make sure the /trendanalyse/tmp/* is empty before you start filling the database
+rm "${CHRONQC_TMP}/"*
+
+
 #
 ## Loops over all rawdata folders and checks if it is already in chronQC database. If not than call function 'processRawdataToDB "${rawdata}" to process this project.'
 #MULTIPLE_PRMS
