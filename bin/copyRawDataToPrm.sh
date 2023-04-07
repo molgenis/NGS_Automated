@@ -470,7 +470,8 @@ then
 fi
 if [[ -z "${pipeline:-}" ]]
 then
-	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a pipeline with -p.'
+	pipeline=''
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'pipeline is not set, default is set to empty string'
 fi
 if [[ -z "${sourceServerFQDN:-}" ]]
 then
