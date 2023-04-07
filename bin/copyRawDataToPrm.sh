@@ -667,7 +667,6 @@ else
 		if [[ "${processedRawDataItems}" == "${totalRawDataItems}" ]]
 		then
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "All raw data items (${processedRawDataItems}/${totalRawDataItems}) were copied to prm."
-			ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/sequencerun/${filePrefix}.copyRawDataToPrm.finished"
 			splitSamplesheetPerProject "${PRM_ROOT_DIR}/Samplesheets/archive/${filePrefix}.${SAMPLESHEET_EXT}" "${filePrefix}" "${controlFileBase}/${runPrefix}"
 		fi
 		#

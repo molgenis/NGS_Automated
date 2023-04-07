@@ -391,9 +391,9 @@ function sanityChecking() {
 	#
 	local _sequencingStartDateFile
 	_sequencingStartDateFile="${_controlFileBase}.sequencingStartDate"
-	if [[ -e "${TMP_ROOT_DIR}/${gsBatch}/${rawdataFolder}/${gsBatch}.finished" ]]
+	if [[ -e "${TMP_ROOT_DIR}/${gsBatch}//${gsBatch}.finished" ]]
 	then
-		date -d "@$(stat -c '%Y' "${TMP_ROOT_DIR}/${gsBatch}/${rawdataFolder}/${gsBatch}.finished")" +'%y%m%d' > "${_sequencingStartDateFile}"
+		date -d "@$(stat -c '%Y' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished")" +'%y%m%d' > "${_sequencingStartDateFile}"
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Fetched sequencingStartDate from last modification time stamp of ${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished."
 	else
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished is missing or not accessible."
@@ -452,12 +452,12 @@ function renameFastQs() {
 	#
 	# Load ngs-utils.
 	#
-	module load ngs-utils/"${NGS_UTILS_VERSION}" \
+	module load ngs-utils \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 		&& module list \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Cannot load ngs-utils/${NGS_UTILS_VERSION}. See ${_controlFileBaseForFunction}.failed for details."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Cannot load ngs-utils. See ${_controlFileBaseForFunction}.failed for details."
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	}
@@ -595,7 +595,7 @@ function processSamplesheetsAndMoveConvertedData() {
 		# Create header line for new sequencing run samplesheet based on the one from the first project samplesheet.
 		#
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Creating header ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}..."
-		head -1 "${TMP_ROOT_DIR}/${_batch}/${_projects[0]}.${SAMPLESHEET_EXT}" > "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}"
+		head -1 "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_projects[0]}.${SAMPLESHEET_EXT}" > "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}"
 		#
 		# Extract lines for this sequencing run from all project samplesheets based on the flowcell ID.
 		#
@@ -642,7 +642,7 @@ function processSamplesheetsAndMoveConvertedData() {
 		# shellcheck disable=SC2174
 		mkdir -m 2770 -p "${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/" \
 			>> "${_controlFileBaseForFunction}.started" 2>&1 \
-			&& mv -f -v "${TMP_ROOT_DIR}/${_batch}/${_runDir}/"* "${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/" \
+			&& mv -f -v "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_runDir}/"* "${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/" \
 			>> "${_controlFileBaseForFunction}.started" 2>&1 \
 			&& printf '%s\n' "Demultplex statistics not present. See external QC report." \
 			2>> "${_controlFileBaseForFunction}.started" \
