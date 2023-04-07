@@ -87,7 +87,7 @@ function processRawdataToDB() {
 
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "removing files from ${CHRONQC_TMP}"
 
-	rm -rf "${CHRONQC_TMP:?}"/*
+	rm -rf "${CHRONQC_TMP:-missing}"/*
 
 	if [[ -e "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.finished" ]]
 	then
