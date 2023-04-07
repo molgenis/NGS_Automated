@@ -83,13 +83,13 @@ function processBatch() {
 	# E.g. 210419_A00379_0361_H3C3GDSX2
 	#
 	# shellcheck disable=SC2029
-	readarray -t _flowcellDirsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${_batchDirFromSourceServer}\" -maxdepth 1 -mindepth 1 -type d -name '[^_]*_[^_]*_[^_]*_[^_]*'")
+	readarray -t _flowcellDirsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${_batchDirFromSourceServer}/${rawdataFolder}/\" -maxdepth 1 -mindepth 1 -type d -name '[^_]*_[^_]*_[^_]*_[^_]*'")
 	if [[ "${#_flowcellDirsFromSourceServer[@]}" -eq '0' ]]
 	then
-		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No flowcell directories found at ${DATA_MANAGER}@${sourceServerFQDN}:${_batchDirFromSourceServer}/[^_]*_[^_]*_[^_]*_[^_]*."
+		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No flowcell directories found at ${DATA_MANAGER}@${sourceServerFQDN}:${_batchDirFromSourceServer}/${rawdataFolder}/[^_]*_[^_]*_[^_]*_[^_]*."
 		return
 	else
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found at least one flowcell dir at ${DATA_MANAGER}@${sourceServerFQDN}:${_batchDirFromSourceServer}/[^_]*_[^_]*_[^_]*_[^_]*."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found at least one flowcell dir at ${DATA_MANAGER}@${sourceServerFQDN}:${_batchDirFromSourceServer}/${rawdataFolder}/[^_]*_[^_]*_[^_]*_[^_]*."
 	fi
 	#
 	# Step 2: check if flowcells were already successfully transferred to prm by copyRawDataToPrm.sh
@@ -131,7 +131,7 @@ function processBatch() {
 	#
 	## 
 	#
-	ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/${_batch}/${_batch}.copyBatchRawDataToPrm.finished"
+	ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${_batch}/${_batch}.copyBatchRawDataToPrm.finished"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully rsynced samplesheets for batch ${_batch} to prm."
 	rm -f "${_controlFileBaseForFunction}.failed"
 	mv -v "${_controlFileBaseForFunction}."{started,finished}
