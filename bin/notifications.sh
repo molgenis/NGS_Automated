@@ -480,6 +480,7 @@ else
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' 'DAT_DIR is set to ${dat_dir}'
 fi
 
+
 #
 # Notify for specific colon separated combinations of "phase:state".
 #

@@ -118,8 +118,6 @@ then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
 fi
 
-
-
 #
 # Source config files.
 #
@@ -153,10 +151,10 @@ done
 
 if [[ -z "${dat_dir:-}" ]]
 then
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' 'default DAT_DIR'
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' 'default (${DAT_ROOT_DIR})'
 else
-	DAT_LFS="${dat_dir}"
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' 'DAT_DIR is set to ${dat_dir}'
+	DAT_ROOT_DIR="/groups/${GROUP}/${dat_dir}"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' 'DAT_ROOT_DIR is set to ${DAT_ROOT_DIR}'
 fi
 
 #
