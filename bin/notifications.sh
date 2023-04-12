@@ -54,6 +54,7 @@ Usage:
 Options:
 	-h   Show this help.
 	-g   Group.
+	-d   DAT_DIR
 	-e   Enable email notification. (Disabled by default.)
 	-s   run specific phase:state (see cfg files which combinations can be selected)
 	-l   Log level.
@@ -396,7 +397,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline argume
 declare group=''
 declare email='false'
 declare selectedPhaseState='all'
-while getopts ":g:l:s:he" opt; do
+while getopts ":g:l:s:d:he" opt; do
 	case "${opt}" in
 		h)
 			showHelp
@@ -406,6 +407,9 @@ while getopts ":g:l:s:he" opt; do
 			;;
 		e)
 			email='true'
+			;;
+		d)
+			dat_dir="${OPTARG}"
 			;;
 		s)
 			selectedPhaseState="${OPTARG}"
@@ -467,6 +471,14 @@ do
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Config file ${configFile} missing or not accessible."
 	fi
 done
+
+if [[ -z "${dat_dir:-}" ]]
+then
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' 'default DAT_DIR'
+else
+	DAT_LFS="${dat_dir}"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' 'DAT_DIR is set to ${dat_dir}'
+fi
 
 #
 # Notify for specific colon separated combinations of "phase:state".

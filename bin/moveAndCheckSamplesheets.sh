@@ -55,6 +55,7 @@ Usage:
 	$(basename "${0}") OPTIONS
 Options:
 	-h	Show this help.
+	-d DAT_DIR
 	-g	Group.
 	-l	Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
@@ -82,7 +83,7 @@ EOH
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
-while getopts ":g:l:h" opt
+while getopts ":g:l:d:h" opt
 do
 	case "${opt}" in
 		h)
@@ -90,6 +91,9 @@ do
 			;;
 		g)
 			group="${OPTARG}"
+			;;
+		d)
+			dat_dir="${OPTARG}"
 			;;
 		l)
 			l4b_log_level="${OPTARG^^}"
@@ -113,6 +117,8 @@ if [[ -z "${group:-}" ]]
 then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
 fi
+
+
 
 #
 # Source config files.
@@ -144,6 +150,14 @@ do
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Config file ${configFile} missing or not accessible."
 	fi
 done
+
+if [[ -z "${dat_dir:-}" ]]
+then
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' 'default DAT_DIR'
+else
+	DAT_LFS="${dat_dir}"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' 'DAT_DIR is set to ${dat_dir}'
+fi
 
 #
 # Make sure to use an account for cron jobs and *without* write access to prm storage.

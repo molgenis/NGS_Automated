@@ -59,6 +59,7 @@ Options:
 
 	-h	Show this help.
 	-g	Group.
+	-d DAT_DIR
 	-p	[pipeline]
 		Pipeline that produced the project data that needs to be transferred to prm. (NGS_Demultiplexing, GAP)
 	-n	Dry-run: Do not perform actual sync, but only list changes instead.
@@ -335,7 +336,7 @@ function getSampleType(){
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
 declare dryrun=''
-while getopts ":g:l:p:r:hn" opt
+while getopts ":g:l:p:d:r:hn" opt
 do
 	case "${opt}" in
 		h)
@@ -349,6 +350,9 @@ do
 			;;
 		n)
 			dryrun='-n'
+			;;
+		d)
+			dat_dir="${OPTARG}"
 			;;
 		r)
 			sourceServerRootDir="${OPTARG}"
@@ -420,6 +424,14 @@ if [[ -n "${sourceServerRootDir:-}" ]]
 then
 	SCR_ROOT_DIR="${sourceServerRootDir}"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Using alternative sourceServerRootDir ${sourceServerRootDir} as SCR_ROOT_DIR."
+fi
+
+if [[ -z "${dat_dir:-}" ]]
+then
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' 'default DAT_DIR'
+else
+	DAT_LFS="${dat_dir}"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' 'DAT_DIR is set to ${dat_dir}'
 fi
 
 #
