@@ -160,7 +160,7 @@ else
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' '${DAT_ROOT_DIR} is available'
 		
 	else
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' '${DAT_ROOT_DIR} does not exist, exit!'
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' '${DAT_ROOT_DIR} does not exist, exit!'
 	fi
 fi
 
