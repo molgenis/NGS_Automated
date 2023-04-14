@@ -259,9 +259,9 @@ then
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "this is a testgroup, data should not be removed after 14 days"
 else
 	#
-	# Cleanup old data if data transfer with rsync finished successfully (and hence did not crash this script).
+	# Cleanup old data if data transfer with rsync finished successfully and the rawdata is on prm for atleast 2 days..
 	#
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting data older than 14 days from ${HOSTNAME_DATA_STAGING%%.*}:/groups/${GROUP}/${SCR_LFS}/ ..."
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting data older than 2 days from ${HOSTNAME_DATA_STAGING%%.*}:/groups/${GROUP}/${SCR_LFS}/ ..."
 	#
 	# Get the batch name by parsing the ${GENOMESCAN_HOME_DIR} folder, directories only and no empty or '.'
 	#
@@ -277,11 +277,14 @@ else
 			# Convert date to seconds for easier calculation of the date difference.
 			# 86400 = 1 day in seconds.
 			#
-			dateInSecProject="$(date -d"$(rsync "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}" | awk '{print $3}')" +%s)"
+			# The copySamplesheetForBatchToPrm.sh will generate a log file when all flowcells of a genomescan batch ar copied to prm.
+			# If this file is older than 2 days, the genomescan batch will be removed from the data staging machine.
+			#
+			dateInSecBatchFile="$(date -d"$(rsync "${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}.copyBatchRawDataToPrm.finished" | awk '{print $3}')" +%s)"
 			dateInSecNow=$(date +%s)
-			if [[ $(((dateInSecNow - dateInSecProject) / 86400)) -gt 14 ]]
+			if [[ $(((dateInSecNow - dateInSecBatchFile) / 86400)) -gt 2 ]]
 			then
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${gsBatch} because it is older than 14 days"
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${gsBatch} because it is copied to prm and older than 2 days"
 				#
 				# Create an empty dir (source dir) to sync with the destination dir && then remove source dir.
 				#
@@ -289,7 +292,7 @@ else
 				rsync -a --delete "${HOME}/empty_dir/" "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}"
 				rmdir "${HOME}/empty_dir/"
 			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "the batch ${gsBatch} is only $(((dateInSecNow - dateInSecProject) / 86400)) days old"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "the batch ${gsBatch} is only $(((dateInSecNow - dateInSecBatchFile) / 86400)) days old"
 			fi
 		done
 	fi
