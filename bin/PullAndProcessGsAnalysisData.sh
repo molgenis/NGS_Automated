@@ -35,7 +35,8 @@ REAL_USER="$(logname 2>/dev/null || echo 'no login name')"
 function rsyncData(){
 	local _batch="${1}"
 	local _controlFileBase="${2}"
-	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
+	local _dataType="${3}"
+	local _controlFileBaseForFunction="${_controlFileBase}.${_dataType}_${FUNCNAME[0]}"
 
 	if [[ -e "${_controlFileBaseForFunction}.finished" ]]
 	then
@@ -52,15 +53,15 @@ function rsyncData(){
 	# this may be an incompletely uploaded batch, but we already rsync everything we've got so far.
 	#
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing everything but the .finished file for ${gsBatch} ..."
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/./${gsBatch}/${analysisFolder} to ${TMP_ROOT_DIR}"
-	/usr/bin/rsync -vrltD \
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/./${gsBatch}/${_dataType} to ${TMP_ROOT_DIR}"
+	/usr/bin/rsync -e 'ssh -p 443' -vrltD \
 		--log-file="${logDir}/rsync-from-${HOSTNAME_DATA_STAGING%%.*}.log" \
 		--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
 		--omit-dir-times \
 		--omit-link-times \
 		--exclude='*.finished' \
 		--exclude='.*' \
-		--relative "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/./${gsBatch}/${analysisFolder}" \
+		--relative "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/./${gsBatch}/${_dataType}" \
 		"${TMP_ROOT_DIR}/"
 	#
 	# Rsync the .finished file last if the upload was complete.
@@ -68,25 +69,25 @@ function rsyncData(){
 	if [[ "${gsBatchUploadCompleted}" == 'true' ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing only the .finished file for ${gsBatch} ..."
-		/usr/bin/rsync -vrltD \
+		/usr/bin/rsync -e 'ssh -p 443' -vrltD \
 			--log-file="${logDir}/rsync-from-${HOSTNAME_DATA_STAGING%%.*}.log" \
 			--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
 			--omit-dir-times \
 			--omit-link-times \
-			"${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}/${gsBatch}.finished" \
-			"${TMP_ROOT_DIR}/${gsBatch}/"
+			"${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${gsBatch}.finished" \
+			"${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished"
 	else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No .finished file for ${gsBatch} present yet: nothing to sync."
 	fi
 	
 	mv "${_controlFileBaseForFunction}."{started,finished}
+
 }
-
-function sanityChecking(){ 
-
+function sanityChecking(){
 	local _batch="${1}"
 	local _controlFileBase="${2}"
-	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
+	local _dataType="${3}"
+	local _controlFileBaseForFunction="${_controlFileBase}.${_dataType}_${FUNCNAME[0]}"
 	
 	#
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing batch ${_batch}..."
@@ -217,12 +218,12 @@ function sanityChecking(){
 	done
 	mv -v "${_controlFileBaseForFunction}."{started,finished}
 }
-
 function mergeSamplesheets(){
 	
 	local _batch="${1}"
 	local _controlFileBase="${2}"
-	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
+	local _dataType="${3}"
+	local _controlFileBaseForFunction="${_controlFileBase}.${_dataType}_${FUNCNAME[0]}"
 	
 	if [[ -e "${_controlFileBaseForFunction}.finished" ]]
 	then
@@ -424,8 +425,9 @@ log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pulling data from data stag
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "See ${logDir}/rsync-from-${HOSTNAME_DATA_STAGING%%.*}.log for details ..."
 declare -a gsBatchesSourceServer
 
-##only get directories from /home/umcg-ndewater/files/
-if "rsync ${HOSTNAME_DATA_STAGING}"
+##
+log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "HOSTNAME: ${HOSTNAME_DATA_STAGING}"
+if rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::"
 then
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "server is up"
 	server='up'
@@ -433,13 +435,19 @@ else
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "server is down"
 	server='down'
 fi
+
+#
+##
+### Get Analysis data 
+##
+#
 if [[ "${server}" == 'up' ]]	
 then
-	readarray -t gsBatchesSourceServer< <(rsync -f"+ */" -f"- *" "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/" | awk '{if ($5 != "" && $5 != "." && $5 ~/-/){print $5}}')
+	readarray -t gsBatchesSourceServer< <(rsync -f"+ */" -f"- *" -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/" | awk '{if ($5 != "" && $5 != "." && $5 ~/-/){print $5}}')
 
 	if [[ "${#gsBatchesSourceServer[@]}" -eq '0' ]]
 	then
-		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No batches found at ${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/"
+		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No batches found at ${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/"
 	else
 		for gsBatch in "${gsBatchesSourceServer[@]}"
 		do
@@ -459,7 +467,7 @@ then
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${gsBatch} already processed, no need to transfer the data again."
 				continue
 			else
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing batch ${gsBatch}..."
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing pulling analysis batch ${gsBatch}..."
 				# shellcheck disable=SC2174
 				mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/"
 				# shellcheck disable=SC2174
@@ -470,28 +478,32 @@ then
 				# Check if gsBatch is supposed to be complete (*.finished present).
 				#
 				gsBatchUploadCompleted='false'
-				if rsync "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}/${gsBatch}.finished" 2>/dev/null
+				if rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${gsBatch}.finished" 2>/dev/null
 				then
-					readarray -t testForEmptyDir < <(rsync "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}/")
+					readarray -t testForEmptyDir < <(rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/")
 					if [[ "${#testForEmptyDir[@]}" -gt 2 ]]
 					then
 						gsBatchUploadCompleted='true'
 						logTimeStamp=$(date '+%Y-%m-%d-T%H%M')
-						rsync "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}/Analysis/" \
+						rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${analysisFolder}/" \
 						> "${logDir}/${gsBatch}.uploadCompletedListing_${logTimeStamp}.log"
 					else
 						log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "${gsBatch}/ is empty, nothing to do."
 						continue
 					fi
+				else
+					log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "${GENOMESCAN_HOME_DIR}/${gsBatch}/${gsBatch}.finished does not exist"
+					continue
 				fi
 				# First parse samplesheet to see where the data should go
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing only the CSV_UMCG samplesheet file for ${gsBatch} to ${group}..."
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}/CSV_UMCG_*.csv"
-				/usr/bin/rsync -vrltD \
-					"${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}/CSV_UMCG_"*".csv" \
-					"${TMP_ROOT_DIR}/${gsBatch}/"
+			#	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing only the CSV_UMCG samplesheet file for ${gsBatch} to ${group}..."
+		#		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}/CSV_UMCG_*.csv"
+			#	/usr/bin/rsync -e 'ssh -p 443' -vrltD \
+		#			"${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}/CSV_UMCG_"*".csv" \
+		#			"${TMP_ROOT_DIR}/${gsBatch}/"
 				
-				rsyncData "${gsBatch}" "${controlFileBase}"
+				rsyncData "${gsBatch}" "${controlFileBase}" "${analysisFolder}"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "rsyncing done"
 			fi
 		done
 	fi
@@ -501,7 +513,7 @@ fi
 
 #
 ##
-### 
+### process Analysis data
 ##
 #
 readarray -t gsBatches< <(rsync -f"+ */" -f"- *" "${TMP_ROOT_DIR}/" | awk '{if ($5 != "" && $5 != "." && $5 ~/-/){print $5}}')
@@ -514,7 +526,7 @@ else
 		gsBatch="$(basename "${gsBatch}")"
 		controlFileBase="${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}"
 		export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing batch ${gsBatch}..."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing process analysis batch ${gsBatch}..."
 		
 		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 		then
@@ -526,29 +538,29 @@ else
 			# shellcheck disable=SC2174
 			mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${gsBatch}/"
 			printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
-			if [[ -e "${controlFileBase}.rsyncData.finished" ]]
+			if [[ -e "${controlFileBase}.${analysisFolder}_rsyncData.finished" ]]
 			then
 				if [[ -e "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished" ]]
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished present -> Data transfer completed; let's process batch ${gsBatch}..."
-					sanityChecking "${gsBatch}" "${controlFileBase}"
+					sanityChecking "${gsBatch}" "${controlFileBase}" "${analysisFolder}"
 				else
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished absent -> Data transfer not yet completed; skipping batch ${gsBatch}."
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Data transfer not yet completed; skipping batch ${gsBatch}."
 					break
 				fi
-				if [[ -e "${controlFileBase}.sanityChecking.finished" ]]
+				if [[ -e "${controlFileBase}.${analysisFolder}_sanityChecking.finished" ]]
 				then
-					mergeSamplesheets "${gsBatch}" "${controlFileBase}"
+					mergeSamplesheets "${gsBatch}" "${controlFileBase}" "${analysisFolder}"
 				else
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.sanityChecking.finished absent -> sanityChecking failed."
 				fi
 			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.rsyncData.finished absent, waiting for ${gsBatch} to finish rsyncing before starting to sanity check"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.${analysisFolder}_rsyncData.finished absent, waiting for ${gsBatch} to finish rsyncing before starting to sanity check"
 				break
 			fi
 		fi
-		if [[ -e "${controlFileBase}.mergeSamplesheets.finished" ]]
+		if [[ -e "${controlFileBase}.${analysisFolder}_mergeSamplesheets.finished" ]]
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.mergeSamplesheets.finished present -> processing completed for batch ${gsBatch}..."
 			rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
@@ -559,7 +571,6 @@ else
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process batch ${gsBatch}."
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 		fi
-		
 	done
 fi
 
@@ -574,15 +585,15 @@ else
 	#
 	# Get the batch name by parsing the ${GENOMESCAN_HOME_DIR} folder, directories only and no empty or '.'
 	#
-	readarray -t gsBatchesSourceServer< <(rsync -f"+ */" -f"- *" "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}" | awk '{if ($5 != "" && $5 != "."){print $5}}')
+	readarray -t gsBatchesSourceServer< <(rsync -f"+ */" -f"- *" -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}" | awk '{if ($5 != "" && $5 != "."){print $5}}')
 	if [[ "${#gsBatchesSourceServer[@]}" -eq '0' ]]
 	then
-		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No batches found at ${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/"
+		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No batches found at ${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/"
 	else
 		for gsBatch in "${gsBatchesSourceServer[@]}"
 		do
 			gsBatch="$(basename "${gsBatch}")"
-			controlFileBase="${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}.${SCRIPT_NAME}.cleanup"
+			controlFileBase="${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}.${SCRIPT_NAME}_cleanup"
 			if [[ -f "${TMP_ROOT_DIR}/logs/${gsBatch}.PullAndProcessGsAnalysisData.finished" ]]
 			then
 				touch "${controlFileBase}.started"
