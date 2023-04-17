@@ -481,6 +481,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 # Get a list of all projects for this group, loop over their run analysis ("run") sub dirs and check if there are any we need to rsync.
 #
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Searching for projects as ${DATA_MANAGER} on ${HOSTNAME_TMP} in ${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}"
 # shellcheck disable=SC2029
 mapfile -t projects < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/\" -maxdepth 1 -mindepth 1 -type d")
 if [[ "${#projects[@]}" -eq '0' ]]
