@@ -423,6 +423,7 @@ done
 if [[ -n "${sourceServerRootDir:-}" ]]
 then
 	SCR_ROOT_DIR="${sourceServerRootDir}"
+	TMP_ROOT_DIAGNOSTICS_DIR="${SCR_ROOT_DIR}"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Using alternative sourceServerRootDir ${sourceServerRootDir} as SCR_ROOT_DIR."
 fi
 
