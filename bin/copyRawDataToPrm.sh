@@ -420,7 +420,7 @@ declare group=''
 declare dryrun=''
 declare sourceServerFQDN=''
 declare sourceServerRootDir=''
-while getopts ":g:l:s:r:p:ahn" opt
+while getopts ":g:l:s:f:r:p:ahn" opt
 do
 	case "${opt}" in
 		a)
@@ -441,6 +441,8 @@ do
 		s)
 			sourceServerFQDN="${OPTARG}"
 			sourceServer="${sourceServerFQDN%%.*}"
+			;;
+		f) finishedPrevStep="${OPTARG}"
 			;;
 		r)
 			sourceServerRootDir="${OPTARG}"
@@ -472,6 +474,13 @@ if [[ -z "${pipeline:-}" ]]
 then
 	pipeline=''
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'pipeline is not set, default is set to empty string'
+fi
+if [[ -z "${finishedPrevStep:-}" ]]
+then
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'Previous step is: ${RAWDATAPROCESSINGFINISHED}'
+else
+	RAWDATAPROCESSINGFINISHED="${finishedPrevStep}"
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'Previous step is: ${RAWDATAPROCESSINGFINISHED}'
 fi
 if [[ -z "${sourceServerFQDN:-}" ]]
 then
