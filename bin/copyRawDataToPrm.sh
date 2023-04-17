@@ -475,13 +475,7 @@ then
 	pipeline=''
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'pipeline is not set, default is set to empty string'
 fi
-if [[ -z "${finishedPrevStep:-}" ]]
-then
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'Previous step is: ${RAWDATAPROCESSINGFINISHED}'
-else
-	RAWDATAPROCESSINGFINISHED="${finishedPrevStep}"
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'Previous step is: ${RAWDATAPROCESSINGFINISHED}'
-fi
+
 if [[ -z "${sourceServerFQDN:-}" ]]
 then
 log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a Fully Qualified Domain Name (FQDN) for sourceServer with -s.'
@@ -529,6 +523,13 @@ if [[ -n "${sourceServerRootDir:-}" ]]
 then
 	SCR_ROOT_DIR="${sourceServerRootDir}"
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Using alternative sourceServerRootDir ${sourceServerRootDir} as SCR_ROOT_DIR."
+fi
+if [[ -z "${finishedPrevStep:-}" ]]
+then
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'Previous step is: ${RAWDATAPROCESSINGFINISHED}'
+else
+	RAWDATAPROCESSINGFINISHED="${finishedPrevStep}"
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'Previous step is: ${RAWDATAPROCESSINGFINISHED}'
 fi
 
 #
