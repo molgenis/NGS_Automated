@@ -128,8 +128,8 @@ function generateScripts () {
 	#
 	# Fetch the (new) samplesheet.
 	#
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Copying ${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${_project}.${SAMPLESHEET_EXT} to ${TMP_ROOT_DIR}/generatedscripts/NGS_DNA/${_project}/ ..."
-	cp -v "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${_project}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/generatedscripts/NGS_DNA/${_project}/" \
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Copying ${TMP_ROOT_DIR}/Samplesheets/NGS_DNA/${_project}.${SAMPLESHEET_EXT} to ${TMP_ROOT_DIR}/generatedscripts/NGS_DNA/${_project}/ ..."
+	cp -v "${TMP_ROOT_DIR}/Samplesheets/NGS_DNA/${_project}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/generatedscripts/NGS_DNA/${_project}/" \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to fetch samplesheet. See ${_controlFileBaseForFunction}.failed for details."
@@ -345,10 +345,10 @@ printf 'Started at %s.\n' "$(date '+%Y-%m-%dT%H:%M:%S')" > "${TMP_ROOT_DIR}/logs
 #
 declare -a sampleSheets
 # shellcheck disable=SC2029
-readarray -t sampleSheets < <(find "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/" -mindepth 1 -maxdepth 1 -name "*.${SAMPLESHEET_EXT}" )
+readarray -t sampleSheets < <(find "${TMP_ROOT_DIR}/Samplesheets/NGS_DNA/" -mindepth 1 -maxdepth 1 -name "*.${SAMPLESHEET_EXT}" )
 if [[ "${#sampleSheets[@]}" -eq '0' ]]
 then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No sample sheets found @ ${TMP_ROOT_DIR}/Samplesheets/DRAGEN/: There is nothing to do."
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No sample sheets found @ ${TMP_ROOT_DIR}/Samplesheets/NGS_DNA/: There is nothing to do."
 	trap - EXIT
 	exit 0
 else

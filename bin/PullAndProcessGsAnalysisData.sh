@@ -256,9 +256,9 @@ function mergeSamplesheets(){
 			tail -n+2 "${TMP_ROOT_DIR}/Samplesheets/${i}.csv" >> "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
 		fi
 	done
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Adding projectName ${_projectName} and gsBatch:${gsBatch} to the samplesheet and put the samplesheet ${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${_projectName}.csv"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Adding projectName ${_projectName} and gsBatch:${gsBatch} to the samplesheet and put the samplesheet ${TMP_ROOT_DIR}/Samplesheets/NGS_DNA/${_projectName}.csv"
 	
-	awk -v projectName="${_projectName}" -v gsBatch="${_batch}" '{if (NR==1){print $0}else{print $0","projectName","gsBatch}}' "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv" > "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${_projectName}.csv"
+	awk -v projectName="${_projectName}" -v gsBatch="${_batch}" '{if (NR==1){print $0}else{print $0","projectName","gsBatch}}' "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv" > "${TMP_ROOT_DIR}/Samplesheets/NGS_DNA/${_projectName}.csv"
 	rm "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
 	mv -v "${_controlFileBaseForFunction}."{started,finished}
 }
