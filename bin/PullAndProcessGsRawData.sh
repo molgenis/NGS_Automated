@@ -1093,6 +1093,13 @@ else
 				rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing batch ${gsBatch}."
 				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+				#####
+				# Combine samplesheets 
+				mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
+				projectName=$(echo "${uniqProjects[0]}" | grep -Eo GS_[0-9]+)
+				mkdir -p "${TMP_ROOT_DIR}/logs/${projectName}/"
+				touch "${TMP_ROOT_DIR}/logs/${projectName}/${RAWDATAPROCESSINGFINISHED}
+				#########
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.${rawdataFolder}_processSamplesheetsAndMoveConvertedData.finished absent -> processing failed for batch ${gsBatch}."
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process batch ${gsBatch}."
