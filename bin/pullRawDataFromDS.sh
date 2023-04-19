@@ -259,7 +259,7 @@ then
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "this is a testgroup, data should not be removed after 14 days"
 else
 	#
-	# Cleanup old data if data transfer with rsync finished successfully and the rawdata is on prm for atleast 2 days..
+	# Cleanup old data if data transfer with rsync finished successfully and the rawdata is on prm for at least 2 days.
 	#
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting data older than 2 days from ${HOSTNAME_DATA_STAGING%%.*}:/groups/${GROUP}/${SCR_LFS}/ ..."
 	#
@@ -280,19 +280,21 @@ else
 			# The copySamplesheetForBatchToPrm.sh will generate a log file when all flowcells of a genomescan batch ar copied to prm.
 			# If this file is older than 2 days, the genomescan batch will be removed from the data staging machine.
 			#
-			dateInSecBatchFile="$(date -d"$(rsync "${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}.copyBatchRawDataToPrm.finished" | awk '{print $3}')" +%s)"
+			dateInSecRawData="$(date -d"$(rsync "${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}.copyBatchRawDataToPrm.finished" | awk '{print $3}')" +%s)"
+			dateInSecAnalysisData="$(date -d"$(rsync "${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}.PullAndProcessGsAnalysisData.finished" | awk '{print $3}')" +%s)"
 			dateInSecNow=$(date +%s)
-			if [[ $(((dateInSecNow - dateInSecBatchFile) / 86400)) -gt 2 ]]
+			if [[ $(((dateInSecNow - dateInSecRawData) / 86400)) -gt 2 ]] && [[ $(((dateInSecNow - dateInSecAnalysisData) / 86400)) -gt 2 ]]
 			then
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${gsBatch} because it is copied to prm and older than 2 days"
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${gsBatch} because the RawData and the AnalysisData are copied to prm and older than 2 days"
 				#
 				# Create an empty dir (source dir) to sync with the destination dir && then remove source dir.
 				#
 				mkdir -p "${HOME}/empty_dir/"
-				rsync -a --delete "${HOME}/empty_dir/" "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}"
+				rsync -a --delete --rsh='ssh -p 443' "${HOME}/empty_dir/" "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}"
 				rmdir "${HOME}/empty_dir/"
 			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "the batch ${gsBatch} is only $(((dateInSecNow - dateInSecBatchFile) / 86400)) days old"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "The RawData of batch ${gsBatch} is only $(((dateInSecNow - dateInSecRawData) / 86400)) day(s) old and \
+						the AnalysisData is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. Both the RawData and the AnalysisData need to be at least 2 days old"
 			fi
 		done
 	fi

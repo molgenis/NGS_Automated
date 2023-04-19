@@ -85,7 +85,7 @@ function processRawdataToDB() {
 	CHRONQC_DATABASE_NAME="${TMP_TRENDANALYSE_DIR}/database/"
 	PRM_RAWDATA_DIR="${PRM_ROOT_DIR}/rawdata/ngs/${_rawdata}/Info/"
 
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "removing files from ${CHRONQC_TMP}"
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing files from ${CHRONQC_TMP} ..."
 
 	rm -rf "${CHRONQC_TMP:-missing}"/*
 
