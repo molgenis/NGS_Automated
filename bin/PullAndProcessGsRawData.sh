@@ -92,7 +92,7 @@ function rsyncData(){
 			--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
 			--omit-dir-times \
 			--omit-link-times \
-			"${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}/${gsBatch}.finished" \
+			"${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${gsBatch}.finished" \
 			"${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished"
 	else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No .finished file for ${gsBatch} present yet: nothing to sync."
@@ -723,19 +723,20 @@ function processSamplesheetsAndMoveConvertedData() {
 		# Copy samplesheets per sequencing run to .../Samplesheets/ dir,
 		# so the next step of NGS_Automated will pick it up for further processing.
 		#
-		cp -v "${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/Samplesheets/" \
+		cp -v "${TMP_ROOT_DIR}/rawdata/ngs/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/" \
 			>> "${_controlFileBaseForFunction}.started" 2>&1 \
 		|| {
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to copy sequencing run samplesheet to ${TMP_ROOT_DIR}/Samplesheets/. See ${_controlFileBaseForFunction}.failed for details."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to copy sequencing run samplesheet to ${TMP_ROOT_DIR}/Samplesheets/DRAGEN/. See ${_controlFileBaseForFunction}.failed for details."
 			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		}
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "creating: mkdir -m 2770 -p ${TMP_ROOT_DIR}/logs/${_runDir} and touch ${RAWDATAPROCESSINGFINISHED} in that folder"
 		# shellcheck disable=SC2174
 		mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${_runDir}" \
-			&& touch "${TMP_ROOT_DIR}/logs/${_runDir}/run01.demultiplexing.finished" \
+			&& touch "${TMP_ROOT_DIR}/logs/${_runDir}/${RAWDATAPROCESSINGFINISHED}" \
 			>> "${_controlFileBaseForFunction}.started" 2>&1 \
 		|| {
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to touch ${TMP_ROOT_DIR}/logs/${_runDir}_Demultiplexing.finished. See ${_controlFileBaseForFunction}.failed for details."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to touch ${TMP_ROOT_DIR}/logs/${_runDir}/${RAWDATAPROCESSINGFINISHED}. See ${_controlFileBaseForFunction}.failed for details."
 			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		}
@@ -996,17 +997,6 @@ then
 		
 				rsyncData "${gsBatch}" "${controlFileBase}" "${rawdataFolder}"
 			fi
-			if [[ -e "${controlFileBase}.${rawdataFolder}_rsyncData.finished" ]]
-			then
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.${rawdataFolder}_rsyncData.finished present -> processing completed for batch ${gsBatch}..."
-				rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing batch ${gsBatch}."
-				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
-			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.${rawdataFolder}_rsyncData.finished absent -> processing failed for batch ${gsBatch}."
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process batch ${gsBatch}."
-				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-			fi
 		done
 	fi
 else
@@ -1018,6 +1008,8 @@ fi
 ### process Raw_data 
 ##
 #
+
+
 readarray -t gsBatches< <(rsync -f"+ */" -f"- *" "${TMP_ROOT_DIR}/" | awk '{if ($5 != "" && $5 != "." && $5 ~/-/){print $5}}')
 if [[ "${#gsBatches[@]}" -eq '0' ]]
 then
@@ -1029,7 +1021,7 @@ else
 		controlFileBase="${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}"
 		export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing process analysis batch ${gsBatch}..."
-		
+
 		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${gsBatch} already processed, no need process the data again."
@@ -1089,17 +1081,20 @@ else
 			#
 			if [[ -e "${controlFileBase}.${rawdataFolder}_processSamplesheetsAndMoveConvertedData.finished" ]]
 			then
+				csvFile=$(ls -1 "${TMP_ROOT_DIR}/${gsBatch}/CSV_UMCG_"*".csv")
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.${rawdataFolder}_processSamplesheetsAndMoveConvertedData.finished present -> processing completed for batch ${gsBatch}..."
 				rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing batch ${gsBatch}."
-				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
-				#####
+				
 				# Combine samplesheets 
 				mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
 				projectName=$(echo "${uniqProjects[0]}" | grep -Eo GS_[0-9]+)
-				mkdir -p "${TMP_ROOT_DIR}/logs/${projectName}/"
-				touch "${TMP_ROOT_DIR}/logs/${projectName}/${RAWDATAPROCESSINGFINISHED}
-				#########
+				# shellcheck disable=SC2174
+				mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${projectName}/"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Creating ${TMP_ROOT_DIR}/logs/${projectName}/${RAWDATAPROCESSINGFINISHED}"
+				touch "${TMP_ROOT_DIR}/logs/${projectName}/${RAWDATAPROCESSINGFINISHED}"
+				rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
+				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing batch ${gsBatch}."
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.${rawdataFolder}_processSamplesheetsAndMoveConvertedData.finished absent -> processing failed for batch ${gsBatch}."
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process batch ${gsBatch}."

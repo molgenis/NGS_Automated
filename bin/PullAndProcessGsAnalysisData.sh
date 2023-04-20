@@ -79,7 +79,7 @@ function rsyncData(){
 	else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No .finished file for ${gsBatch} present yet: nothing to sync."
 	fi
-	
+	rm -f "${_controlFileBaseForFunction}.failed"
 	mv "${_controlFileBaseForFunction}."{started,finished}
 
 }
@@ -216,6 +216,7 @@ function sanityChecking(){
 			cd -
 		done
 	done
+	rm -f "${_controlFileBaseForFunction}.failed"
 	mv -v "${_controlFileBaseForFunction}."{started,finished}
 }
 function mergeSamplesheets(){
@@ -260,6 +261,7 @@ function mergeSamplesheets(){
 	
 	awk -v projectName="${_projectName}" -v gsBatch="${_batch}" '{if (NR==1){print $0}else{print $0","projectName","gsBatch}}' "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv" > "${TMP_ROOT_DIR}/Samplesheets/NGS_DNA/${_projectName}.csv"
 	rm "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
+	rm -f "${_controlFileBaseForFunction}.failed"
 	mv -v "${_controlFileBaseForFunction}."{started,finished}
 }
 

@@ -281,6 +281,11 @@ function splitSamplesheetPerProject() {
 		#  * either only demultiplexing was requested via the samplesheet
 		#  * or when disabled on the commandline by enabling "archiveMode".
 		#
+		if [[ "${mergedSamplesheet}" == 'true' ]]
+		then
+			_project=$(echo "${_project}" | grep -Eo GS_[0-9]+)
+		fi
+		
 		if [[ "${archiveMode}" == 'false' ]]; then
 			#
 			# Skip project if demultiplexing only.
@@ -313,15 +318,18 @@ function splitSamplesheetPerProject() {
 				then
 					for _pipeline in "${_pipelines[@]}"
 					do
+						
+						# Check whether the projectSamplesheet name needs to be without the A,B,C extensions
+						
 						#
 						## create a rawDataCopiedToPrm.finished file to tell the copyProjectDataToPrm that the copying of the rawdata to prm for this project has been finished
 						#
 						# shellcheck disable=SC2029
-						if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${_project}/${_project}.rawDataCopiedToPrm.finished"
+						if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished"
 						then
-							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${SCR_ROOT_DIR}/logs/${_project}/${_project}.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
+							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
 						else
-							log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${SCR_ROOT_DIR}/logs/${_project}/${_project}.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
+							log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
 							mv "${_controlFileBaseForFunction}."{started,failed}
 							return
 						fi
@@ -342,15 +350,16 @@ function splitSamplesheetPerProject() {
 	_allProjects="${_allProjects// /,}"
 	printf '%s\n' "\"${_allProjects}\"" > "${JOB_CONTROLE_FILE_BASE}.trace_putFromFile_overview.csv" 
 	#
-	# Move samplesheet to archive on sourceServerFQDN
+	# remove samplesheet to archive on sourceServerFQDN
 	#
 	# shellcheck disable=SC2029
-	if ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "mv \"${SCR_ROOT_DIR}/Samplesheets/${pipeline}/${_run}.${SAMPLESHEET_EXT}\"* \"${SCR_ROOT_DIR}/Samplesheets/archive/\""
+	if ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "rm \"${SCR_ROOT_DIR}/Samplesheets/${pipeline}/${_run}.${SAMPLESHEET_EXT}\""
 	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}.${SAMPLESHEET_EXT} moved to ${SCR_ROOT_DIR}/Samplesheets/archive/ on ${sourceServerFQDN}."
+		rm -f "${_controlFileBaseForFunction}.failed"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}.${SAMPLESHEET_EXT} removed from ${SCR_ROOT_DIR}/Samplesheets/${pipeline}/ on ${sourceServerFQDN}."
 		mv "${_controlFileBaseForFunction}."{started,finished}
 	else
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}.${SAMPLESHEET_EXT} cannot be moved to ${SCR_ROOT_DIR}/Samplesheets/archive/ on ${sourceServerFQDN}."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}.${SAMPLESHEET_EXT} cannot be removed from ${SCR_ROOT_DIR}/Samplesheets/${pipeline}/ on ${sourceServerFQDN}."
 		mv "${_controlFileBaseForFunction}."{started,failed}
 	fi
 }
@@ -526,10 +535,12 @@ then
 fi
 if [[ -z "${finishedPrevStep:-}" ]]
 then
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'Previous step is: ${RAWDATAPROCESSINGFINISHED}'
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Previous step is: ${RAWDATAPROCESSINGFINISHED}"
+	mergedSamplesheet='false'
 else
 	RAWDATAPROCESSINGFINISHED="${finishedPrevStep}"
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'Previous step is: ${RAWDATAPROCESSINGFINISHED}'
+	mergedSamplesheet='true'
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Previous step is: ${RAWDATAPROCESSINGFINISHED}"
 fi
 
 #
