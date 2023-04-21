@@ -87,10 +87,7 @@ EOH
 }
 
 function rsyncProjectRun() {
-	local _project="${1}"
-	local _run="${2}"
-	local _controlFileBase="${3}"	
-	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
+
 
 	#
 	# Determine whether an rsync is required for this run, which is the case when
@@ -103,7 +100,18 @@ function rsyncProjectRun() {
 	#
 
 	# shellcheck disable=SC2174
+	mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${_project}/"
 
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run} ..." \
+	2>&1 | tee -a "${_controlFileBaseForFunction}.started"
+	echo "started: $(date +%FT%T%z)" > "${_controlFileBaseForFunction}.totalRunTime"
+	
+	#
+	# Count the number of all files produced in this analysis run.
+	#
+	local _countFilesProjectRunDirTmp
+	# shellcheck disable=SC2029
+	_countFilesProjectRunDirTmp=$(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}/results/\"* -type f -o -type l | wc -l")
 	
 	# Perform rsync.
 	#  1. For ${_run} dir: recursively with "default" archive (-a),
