@@ -103,18 +103,7 @@ function rsyncProjectRun() {
 	#
 
 	# shellcheck disable=SC2174
-	mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${_project}/"
 
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run} ..." \
-	2>&1 | tee -a "${_controlFileBaseForFunction}.started"
-	echo "started: $(date +%FT%T%z)" > "${_controlFileBaseForFunction}.totalRunTime"
-	
-	#
-	# Count the number of all files produced in this analysis run.
-	#
-	local _countFilesProjectRunDirTmp
-	# shellcheck disable=SC2029
-	_countFilesProjectRunDirTmp=$(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}/results/\"* -type f -o -type l | wc -l")
 	
 	# Perform rsync.
 	#  1. For ${_run} dir: recursively with "default" archive (-a),
@@ -129,7 +118,17 @@ function rsyncProjectRun() {
 	#       if an analysis run got updated?
 	#
 
-	
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run} dir ..." \
+		2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" 
+	rsync -av --progress --log-file="${_controlFileBaseForFunction}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' "${dryrun:---progress}" \
+		"${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}" \
+		"${PRM_ROOT_DIR}/projects/${_project}/" \
+	|| {
+		mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Failed to rsync ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run} dir. See ${_controlFileBaseForFunction}.failed for details."
+		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_controlFileBaseForFunction}.failed for details." \
+			>> "${JOB_CONTROLE_FILE_BASE}.failed" \
+		}
 	
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run}.md5 checksums ..."
 	rsync -acv --progress --log-file="${_controlFileBaseForFunction}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' "${dryrun:---progress}" \
