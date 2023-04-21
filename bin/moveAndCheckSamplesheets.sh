@@ -153,6 +153,7 @@ if [[ -z "${dat_dir:-}" ]]
 then
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "default (${DAT_ROOT_DIR})"
 else
+	# shellcheck disable=SC2153
 	DAT_ROOT_DIR="/groups/${GROUP}/${dat_dir}/"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "DAT_ROOT_DIR is set to ${DAT_ROOT_DIR}"
 	if test -e "/groups/${GROUP}/${dat_dir}/"

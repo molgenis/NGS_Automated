@@ -131,6 +131,7 @@ function processBatch() {
 	#
 	## 
 	#
+	# shellcheck disable=SC2029
 	ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${_batch}/${_batch}.copyBatchRawDataToPrm.finished"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully rsynced samplesheets for batch ${_batch} to prm."
 	rm -f "${_controlFileBaseForFunction}.failed"

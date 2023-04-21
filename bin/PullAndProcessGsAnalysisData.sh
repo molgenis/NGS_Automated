@@ -248,7 +248,7 @@ function mergeSamplesheets(){
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Creating new combined samplesheet for the processing of the Analysis data"
 			#Renaming samplesheet to solely the GS_XX (e.g. GS_182.. so without the A,B,C etc suffix)
-			_projectName=$(echo "${i}" | grep -Eo GS_[0-9]+)
+			_projectName=$(echo "${i}" | grep -Eo 'GS_[0-9]+')
 			# create a combined samplesheet header, renamed project to originalproject and added new project column
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "new samplesheet name: ${_projectName}.csv"
 			head -1 "${TMP_ROOT_DIR}/Samplesheets/${i}.csv" | perl -p -e 's|project|originalproject|' | awk '{print $0",project,gsBatch"}' > "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"

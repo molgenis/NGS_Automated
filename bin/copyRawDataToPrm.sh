@@ -283,7 +283,7 @@ function splitSamplesheetPerProject() {
 		#
 		if [[ "${mergedSamplesheet}" == 'true' ]]
 		then
-			_project=$(echo "${_project}" | grep -Eo GS_[0-9]+)
+			_project=$(echo "${_project}" | grep -Eo 'GS_[0-9]+')
 		fi
 		
 		if [[ "${archiveMode}" == 'false' ]]; then
