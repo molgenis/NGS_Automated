@@ -90,7 +90,7 @@
         "table_name": "HsMetrics",
         "chart_type": "time_series_with_mean_and_stdev",
         "chart_properties": {
-            "chart_title": "On taget PF aligned bases",
+            "chart_title": "On target PF aligned bases",
             "y_value": "ON_TARGET_BASES"
         }
     },
@@ -122,7 +122,7 @@
         "table_name": "HsMetrics",
         "chart_type": "time_series_with_mean_and_stdev",
         "chart_properties": {
-            "chart_title": "Percentage on taget bases",
+            "chart_title": "Percentage on target bases",
             "y_value": "PCT_USABLE_BASES_ON_TARGET"
         }
     },
