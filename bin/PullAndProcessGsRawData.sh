@@ -1087,7 +1087,7 @@ else
 				
 				# Combine samplesheets 
 				mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
-				projectName=$(echo "${uniqProjects[0]}" | grep -Eo GS_[0-9]+)
+				projectName=$(echo "${uniqProjects[0]}" | grep -Eo 'GS_[0-9]+')
 				# shellcheck disable=SC2174
 				mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${projectName}/"
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Creating ${TMP_ROOT_DIR}/logs/${projectName}/${RAWDATAPROCESSINGFINISHED}"
