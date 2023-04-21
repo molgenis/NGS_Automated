@@ -92,6 +92,24 @@ function rsyncProjectRun() {
 	local _controlFileBase="${3}"	
 	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
 
+	#
+	# Determine whether an rsync is required for this run, which is the case when
+	#  1. either the pipeline has finished and this copy script has not
+	#  2. or when a pipeline has updated the results after a previous execution of this script. 
+	#
+	# Temporarily check for "${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.finished"
+	#        in addition to "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished"
+	# for backwards compatibility with old NGS_Automated 1.x.
+	#
+
+	# shellcheck disable=SC2174
+	mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${_project}/"
+
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run} ..." \
+	2>&1 | tee -a "${_controlFileBaseForFunction}.started"
+	echo "started: $(date +%FT%T%z)" > "${_controlFileBaseForFunction}.totalRunTime"
+	
+	
 }
 	
 function sanityCheck() {
