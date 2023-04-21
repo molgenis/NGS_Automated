@@ -86,7 +86,13 @@ EOH
 	exit 0
 }
 
+function rsyncProjectRun() {
+	local _project="${1}"
+	local _run="${2}"
+	local _controlFileBase="${3}"	
+	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
 
+}
 	
 function sanityCheck() {
 	local _project="${1}"
