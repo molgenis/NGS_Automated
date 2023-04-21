@@ -101,7 +101,19 @@ function rsyncProjectRun() {
 	#        in addition to "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished"
 	# for backwards compatibility with old NGS_Automated 1.x.
 	#
-
+	#
+	# Check if function previously finished successfully for this data.
+	#
+	if [[ -e "${_controlFileBaseForFunction}.finished" ]]
+	then
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished is present -> Skipping."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping already transferred ${_project}."
+		return
+	else
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
+		printf '' > "${_controlFileBaseForFunction}.started"
+	fi
+	
 	# shellcheck disable=SC2174
 	mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${_project}/"
 
@@ -154,6 +166,19 @@ function sanityCheck() {
 	local _sampleType=${3}
 	local _controlFileBase="${4}"	
 	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
+	
+	#
+	# Check if function previously finished successfully for this data.
+	#
+	if [[ -e "${_controlFileBaseForFunction}.finished" ]]
+	then
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished is present -> Skipping."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping already did a ${FUNCNAME[0]} for ${_project}."
+		return
+	else
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
+		printf '' > "${_controlFileBaseForFunction}.started"
+	fi
 	
 	#
 	# Count the number of all files produced in this analysis run.
