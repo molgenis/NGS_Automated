@@ -147,8 +147,8 @@ function rsyncProjectRun() {
 	|| {
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Failed to rsync ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}.md5. See ${_controlFileBaseForFunction}.failed for details."
-		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_controlFileBaseForFunction}.failed for details." 
-			>> "${_controlFileBaseForFunction}.failed" \
+		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_controlFileBaseForFunction}.failed for details." \
+			>> "${_controlFileBaseForFunction}.failed" 
 	}
 	rm -f "${_controlFileBaseForFunction}.failed"
 	mv "${_controlFileBaseForFunction}."{started,finished}
