@@ -149,13 +149,101 @@ function rsyncProjectRun() {
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Failed to rsync ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}.md5. See ${_controlFileBaseForFunction}.failed for details."
 		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_controlFileBaseForFunction}.failed for details." \
-			>> "${_controlFileBaseForFunction}.failed" \
-		}
+			>> "${_controlFileBaseForFunction}.failed" 
+	}
 	rm -f "${_controlFileBaseForFunction}.failed"
 	mv "${_controlFileBaseForFunction}."{started,finished}
 }
 	
-
+function sanityCheck() {
+	local _project="${1}"
+	local _run="${2}"
+	local _sampleType=${3}
+	local _controlFileBase="${4}"	
+	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
+	
+	#
+	# Sanity check.
+	#
+	#  1. Firstly do a quick count of the amount of files to make sure we are complete.
+	#     (No need to waist a lot of time on computing checksums for a partially failed transfer).
+	#  2. Secondly verify checksums on the destination.
+	#
+	
+	local _countFilesProjectRunDirPrm
+	_countFilesProjectRunDirPrm=$(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/"* -type f -o -type l | wc -l)
+	if [[ "${_countFilesProjectRunDirTmp}" -ne "${_countFilesProjectRunDirPrm}" ]]
+	then
+		
+		find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/"* -type f -o -type l | sort -V > "${JOB_CONTROLE_FILE_BASE}.countPrmFiles.txt"
+		# shellcheck disable=SC2029
+		ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}/results/\"* -type f -o -type l | sort -V" > "${_controlFileBaseForFunction}.countTmpFiles.txt"
+		
+		echo "diff -q ${_controlFileBaseForFunction}.countPrmFiles.txt ${_controlFileBaseForFunction}.countTmpFiles.txt" >> "${_controlFileBaseForFunction}.started"
+		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectRunDirTmp}) and prm (${_countFilesProjectRunDirPrm}) is NOT the same!" \
+			>> "${_controlFileBaseForFunction}.started"
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
+			"Amount of files for ${_project}/${_run} on tmp (${_countFilesProjectRunDirTmp}) and prm (${_countFilesProjectRunDirPrm}) is NOT the same!"
+		
+	else
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
+			"Amount of files on tmp and prm is the same for ${_project}/${_run}: ${_countFilesProjectRunDirPrm}."
+		#
+		# Verify checksums on prm storage.
+		#
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
+			"Started verification of checksums by using checksums from ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5."
+		cd "${PRM_ROOT_DIR}/projects/${_project}/"
+		if md5sum -c "${_run}.md5" > "${_run}.md5.log" 2>&1
+		then
+			if [[ "${_sampleType}" == 'GAP' ]]
+			then
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "_sampleType is GAP. Making symlinks for DiagnosticOutput folder."
+				# shellcheck disable=SC1003 # No, we are not escaping a '
+				windowsPathDelimeter='\\'
+				linuxPathDelimeter='/'
+				#
+				# Create symlinks for PennCNV files per sample (new style).
+				#
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if ${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/ folder exists ..."
+				if [[ -d "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/" ]]
+				then
+					mapfile -t pennCNVFiles < <(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/PennCNV_reports/" -name "*.txt")
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Number of PennCNV files: ${#pennCNVFiles[@]}."
+					#shellcheck disable=SC2153
+					mkdir -p "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/${_project}/"
+					for pennCNV in "${pennCNVFiles[@]}"
+					do
+						name=$(basename "${pennCNV}")
+						printf '%s%s\r\n' "${SMB_SHARE_NAMES["${GROUP}"]}" "${pennCNV//${linuxPathDelimeter}/${windowsPathDelimeter}}" \
+							> "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/${_project}/${name}"
+					done
+				fi
+				#
+				# Create symlink for call rate file last as this is the trigger for Darwin to start processing the data.
+				# If any data is (still) missing after creating this symlink, processing will fail.
+				#
+				callrate=$(ls "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/Callrates_${_project}.txt")
+				printf '%s%s\r\n' "${SMB_SHARE_NAMES["${GROUP}"]}" "${callrate//${linuxPathDelimeter}/${windowsPathDelimeter}}" \
+					> "/groups/${GROUP}/${DAT_LFS}/DiagnosticOutput/Callrates_${_project}.txt"
+			fi
+			echo "The results can be found in: ${PRM_ROOT_DIR}." \
+				>> "${_controlFileBaseForFunction}.started"
+			echo "OK! $(date '+%Y-%m-%d-T%H%M'): checksum verification succeeded. See ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details." \
+				>> "${_controlFileBaseForFunction}.started" \
+			&& rm -f "${_controlFileBaseForFunction}.failed" \
+			&& mv "${_controlFileBaseForFunction}."{started,finished}
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Checksum verification succeeded.'
+			rm -f "${PRM_ROOT_DIR}/Samplesheets/${project}.${SAMPLESHEET_EXT}"
+		else
+			mv "${_controlFileBaseForFunction}."{started,failed}
+			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): checksum verification failed. See ${PRM_ROOT_DIR}/logs/${_project}/${_run}.md5.failed.log for details." \
+			>> "${_controlFileBaseForFunction}.failed"
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Checksum verification failed. See ${PRM_ROOT_DIR}/projects/${_project}/${_run}.md5.log for details."
+		fi
+		cd -
+	fi
+}
 
 function getSampleType(){
 	local  _sampleSheet="${1}"
