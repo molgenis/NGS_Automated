@@ -129,30 +129,6 @@ function rsyncProjectRun() {
 	#       if an analysis run got updated?
 	#
 
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run} dir ..." \
-		2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" 
-	rsync -av --progress --log-file="${_controlFileBaseForFunction}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' "${dryrun:---progress}" \
-		"${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}" \
-		"${PRM_ROOT_DIR}/projects/${_project}/" \
-	|| {
-		mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Failed to rsync ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run} dir. See ${_controlFileBaseForFunction}.failed for details."
-		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_controlFileBaseForFunction}.failed for details." \
-			>> "${JOB_CONTROLE_FILE_BASE}.failed" \
-	}
-	
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run}.md5 checksums ..."
-	rsync -acv --progress --log-file="${_controlFileBaseForFunction}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' "${dryrun:---progress}" \
-		"${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}.md5" \
-		"${PRM_ROOT_DIR}/projects/${_project}/" \
-	|| {
-		mv "${_controlFileBaseForFunction}."{started,failed}
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Failed to rsync ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}.md5. See ${_controlFileBaseForFunction}.failed for details."
-		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_controlFileBaseForFunction}.failed for details." \
-			>> "${_controlFileBaseForFunction}.failed" \
-	}
-	rm -f "${_controlFileBaseForFunction}.failed"
-	mv "${_controlFileBaseForFunction}."{started,finished}
 }
 	
 function sanityCheck() {
