@@ -86,6 +86,75 @@ EOH
 	exit 0
 }
 
+function rsyncProjectRun() {
+	local _project="${1}"
+	local _run="${2}"
+	local _controlFileBase="${3}"	
+	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
+
+	#
+	# Determine whether an rsync is required for this run, which is the case when
+	#  1. either the pipeline has finished and this copy script has not
+	#  2. or when a pipeline has updated the results after a previous execution of this script. 
+	#
+	# Temporarily check for "${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.finished"
+	#        in addition to "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished"
+	# for backwards compatibility with old NGS_Automated 1.x.
+	#
+
+	# shellcheck disable=SC2174
+	mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${_project}/"
+
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run} ..." \
+	2>&1 | tee -a "${_controlFileBaseForFunction}.started"
+	echo "started: $(date +%FT%T%z)" > "${_controlFileBaseForFunction}.totalRunTime"
+	
+	#
+	# Count the number of all files produced in this analysis run.
+	#
+	local _countFilesProjectRunDirTmp
+	# shellcheck disable=SC2029
+	_countFilesProjectRunDirTmp=$(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}/results/\"* -type f -o -type l | wc -l")
+	
+	# Perform rsync.
+	#  1. For ${_run} dir: recursively with "default" archive (-a),
+	#     which checks for differences based on file size and modification times.
+	#     No need to use checksums here as we will verify checksums later anyway.
+	#  2. For ${_run}.md5 list of checksums with archive (-a) and -c to determine 
+	#     differences based on checksum instead of file size and modification time.
+	#     It is vitally important (and computationally cheap) to make sure 
+	#     the list of checksums is complete and up-to-date!
+	#
+	# ToDo: Do we need to add --delete to get rid of files that should no longer be there 
+	#       if an analysis run got updated?
+	#
+
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run} dir ..." \
+	2>&1 | tee -a "${JOB_CONTROLE_FILE_BASE}.started" 
+	rsync -av --progress --log-file="${_controlFileBaseForFunction}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' "${dryrun:---progress}" \
+		"${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}" \
+		"${PRM_ROOT_DIR}/projects/${_project}/" \
+	|| {
+		mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Failed to rsync ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run} dir. See ${_controlFileBaseForFunction}.failed for details."
+		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_controlFileBaseForFunction}.failed for details." \
+			>> "${JOB_CONTROLE_FILE_BASE}.failed" \
+		}
+	
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run}.md5 checksums ..."
+	rsync -acv --progress --log-file="${_controlFileBaseForFunction}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' "${dryrun:---progress}" \
+		"${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}.md5" \
+		"${PRM_ROOT_DIR}/projects/${_project}/" \
+	|| {
+		mv "${_controlFileBaseForFunction}."{started,failed}
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Failed to rsync ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}.md5. See ${_controlFileBaseForFunction}.failed for details."
+		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_controlFileBaseForFunction}.failed for details." \
+			>> "${_controlFileBaseForFunction}.failed" \
+		}
+	rm -f "${_controlFileBaseForFunction}.failed"
+	mv "${_controlFileBaseForFunction}."{started,finished}
+}
+	
 
 
 function getSampleType(){
