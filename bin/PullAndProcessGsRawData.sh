@@ -125,12 +125,12 @@ function sanityChecking() {
 	# Check if one sane GS samplesheet is present.
 	#
 	local _numberOfSamplesheets
-	_numberOfSamplesheets=$(find "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/" -maxdepth 1 -mindepth 1 -name 'CSV_UMCG_*.'"${SAMPLESHEET_EXT}" 2>/dev/null | wc -l)
+	_numberOfSamplesheets=$(find "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/" -maxdepth 1 -mindepth 1 -name 'UMCG_CSV_*.'"${SAMPLESHEET_EXT}" 2>/dev/null | wc -l)
 	if [[ "${_numberOfSamplesheets}" -eq 1 ]]
 	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Found: one ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/CSV_UMCG_*.${SAMPLESHEET_EXT} samplesheet."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Found: one ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/UMCG_CSV_*.${SAMPLESHEET_EXT} samplesheet."
 		local _gsSampleSheet
-		_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/CSV_UMCG_"*".${SAMPLESHEET_EXT}")
+		_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/UMCG_CSV_"*".${SAMPLESHEET_EXT}")
 		#
 		# Make sure:
 		#  1. The last line ends with a line end character.
@@ -157,7 +157,7 @@ function sanityChecking() {
 		_gsSampleSheet="${_gsSampleSheet}.converted"
 	elif [[ "${_numberOfSamplesheets}" -gt 1 ]]
 	then
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "More than one CSV_UMCG_*.${SAMPLESHEET_EXT} GS samplesheet present in ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "More than one UMCG_CSV_*.${SAMPLESHEET_EXT} GS samplesheet present in ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/."
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	elif [[ "${_numberOfSamplesheets}" -lt 1 ]]
@@ -210,7 +210,7 @@ function sanityChecking() {
 	# _insaneSamples is a string of sample IDs only present either on disk or on the samplesheet.
 	#
 	readarray -t _samplesOnDisk < <(find "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/" -maxdepth 1 -mindepth 1 -name '*.fastq.gz' | grep -o "${_batch}-[0-9][0-9]*" | sort -u)
-	readarray -t _samplesInSamplesheet < <(grep -o "${_batch}-[0-9][0-9]*" "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/CSV_UMCG_"*".${SAMPLESHEET_EXT}.converted" | sort -u)
+	readarray -t _samplesInSamplesheet < <(grep -o "${_batch}-[0-9][0-9]*" "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/UMCG_CSV_"*".${SAMPLESHEET_EXT}.converted" | sort -u)
 	local _insaneSamples
 	_insaneSamples="$(echo "${_samplesOnDisk[@]:-}" "${_samplesInSamplesheet[@]:-}" | tr ' ' '\n' | sort | uniq -u | tr '\n' ' ')"
 	if [[ -n "${_insane_samples:-}" ]]
@@ -595,7 +595,7 @@ function processSamplesheetsAndMoveConvertedData() {
 	declare -A _sampleSheetColumnOffsets=()
 	local      _projectFieldIndex
 	declare -a _projects=()
-	_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/CSV_UMCG_"*".${SAMPLESHEET_EXT}.converted")
+	_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/UMCG_CSV_"*".${SAMPLESHEET_EXT}.converted")
 	IFS="${SAMPLESHEET_SEP}" read -r -a _sampleSheetColumnNames <<< "$(head -1 "${_gsSampleSheet}")"
 	for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]} ; _offset++ ))
 	do
@@ -989,10 +989,10 @@ then
 				fi
 				
 				# First parse samplesheet to see where the data should go
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing only the CSV_UMCG samplesheet file for ${gsBatch} to ${group}..."
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}/CSV_UMCG_*.csv"
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing only the UMCG_CSV samplesheet file for ${gsBatch} to ${group}..."
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}/UMCG_CSV_*.csv"
 				/usr/bin/rsync -e 'ssh -p 443' -vrltD \
-					"${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}/CSV_UMCG_"*".csv" \
+					"${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}/UMCG_CSV_"*".csv" \
 					"${TMP_ROOT_DIR}/${gsBatch}/"
 		
 				rsyncData "${gsBatch}" "${controlFileBase}" "${rawdataFolder}"
@@ -1081,7 +1081,7 @@ else
 			#
 			if [[ -e "${controlFileBase}.${rawdataFolder}_processSamplesheetsAndMoveConvertedData.finished" ]]
 			then
-				csvFile=$(ls -1 "${TMP_ROOT_DIR}/${gsBatch}/CSV_UMCG_"*".csv")
+				csvFile=$(ls -1 "${TMP_ROOT_DIR}/${gsBatch}/${rawdataFolder}/UMCG_CSV_"*".csv")
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.${rawdataFolder}_processSamplesheetsAndMoveConvertedData.finished present -> processing completed for batch ${gsBatch}..."
 				rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 				
@@ -1108,16 +1108,16 @@ fi
 
 if [[ "${CLEANUP}" == "false" ]]
 then
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "this is a testgroup, data should not be removed"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "this is a testgroup, data should not be removed after 14 days"
 else
 	#
-	# Cleanup old data if data transfer with rsync finished successfully (and hence did not crash this script).
+	# Cleanup old data if data transfer with rsync finished successfully and the rawdata is on prm for at least 2 days.
 	#
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting data that has been processed completely"
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting data older than 2 days from ${HOSTNAME_DATA_STAGING%%.*}:/groups/${GROUP}/${SCR_LFS}/ ..."
 	#
 	# Get the batch name by parsing the ${GENOMESCAN_HOME_DIR} folder, directories only and no empty or '.'
 	#
-	readarray -t gsBatchesSourceServer< <(rsync -f"+ */" -f"- *" "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}" | awk '{if ($5 != "" && $5 != "."){print $5}}')
+	readarray -t gsBatchesSourceServer< <(rsync -f"+ */" -f"- *" "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/" | awk '{if ($5 != "" && $5 != "."){print $5}}')
 	if [[ "${#gsBatchesSourceServer[@]}" -eq '0' ]]
 	then
 		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No batches found at ${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/"
@@ -1125,29 +1125,33 @@ else
 		for gsBatch in "${gsBatchesSourceServer[@]}"
 		do
 			gsBatch="$(basename "${gsBatch}")"
-			controlFileBase="${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}.${SCRIPT_NAME}.cleanup"
-			if [[ -f "${TMP_ROOT_DIR}/logs/${gsBatch}.processGsRawData.finished" ]]
+			#
+			# Convert date to seconds for easier calculation of the date difference.
+			# 86400 = 1 day in seconds.
+			#
+			# The copySamplesheetForBatchToPrm.sh will generate a log file when all flowcells of a genomescan batch ar copied to prm.
+			# If this file is older than 2 days, the genomescan batch will be removed from the data staging machine.
+			#
+			if [[ -f "${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}.copyBatchRawDataToPrm.finished" ]]
 			then
-				touch "${controlFileBase}.started"
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pulling data and Preprocessing of ${gsBatch} has been finished, removing Rawdata data from the datastaging server: ${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}/Raw_data"
-				#
-				# Create an empty dir (source dir) to sync with the destination dir && then remove source dir.
-				#
-				##
-				### Enable and execute this once it is tested properly
-				##
-				#mkdir -p "${HOME}/empty_dir/"
-				#if rsync -a --delete "${HOME}/empty_dir/" "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/${gsBatch}/Raw_data"
-				#then
-				#	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully removed ${gsBatch}/Raw_data from ${HOSTNAME_DATA_STAGING}"
-				#	rmdir "${HOME}/empty_dir/"
-				#else
-				# log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "An error occured while removing ${gsBatch}/Raw_data from ${HOSTNAME_DATA_STAGING}"
-				# mv "${controlFileBase}".{started,failed}
-				#fi
-				mv "${controlFileBase}".{started,finished}
+				dateInSecRawData="$(date -d"$(rsync "${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}.copyBatchRawDataToPrm.finished" | awk '{print $3}')" +%s)"
+				dateInSecNow=$(date +%s)
+				if [[ $(((dateInSecNow - dateInSecRawData) / 86400)) -gt 2 ]]
+				then
+					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${gsBatch} because the RawData is copied to prm and older than 2 days"
+					#
+					# Create an empty dir (source dir) to sync with the destination dir && then remove source dir.
+					#
+					mkdir -p "${HOME}/empty_dir/"
+					rsync -a --delete -e 'ssh -p 443' "${HOME}/empty_dir/" "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}"
+					rmdir "${HOME}/empty_dir/"
+				else
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "The rawdata of batch ${gsBatch} is only $(((dateInSecNow - dateInSecRawData) / 86400)) day(s) old. The rawdata needs to be at least 2 days old before it can be removed"
+					continue
+				fi
 			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "the processing of batch ${gsBatch} is not yet finished"
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}.copyBatchRawDataToPrm.finished does not exist, skipping"
+				continue
 			fi
 		done
 	fi

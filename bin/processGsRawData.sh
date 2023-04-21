@@ -73,12 +73,12 @@ function sanityChecking() {
 	# Check if one sane GS samplesheet is present.
 	#
 	local _numberOfSamplesheets
-	_numberOfSamplesheets=$(find "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/" -maxdepth 1 -mindepth 1 -name 'CSV_UMCG_*.'"${SAMPLESHEET_EXT}" 2>/dev/null | wc -l)
+	_numberOfSamplesheets=$(find "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/" -maxdepth 1 -mindepth 1 -name 'UMCG_CSV_*.'"${SAMPLESHEET_EXT}" 2>/dev/null | wc -l)
 	if [[ "${_numberOfSamplesheets}" -eq 1 ]]
 	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Found: one ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/CSV_UMCG_*.${SAMPLESHEET_EXT} samplesheet."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Found: one ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/UMCG_CSV_*.${SAMPLESHEET_EXT} samplesheet."
 		local _gsSampleSheet
-		_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/CSV_UMCG_"*".${SAMPLESHEET_EXT}")
+		_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/UMCG_CSV_"*".${SAMPLESHEET_EXT}")
 		#
 		# Make sure:
 		#  1. The last line ends with a line end character.
@@ -105,7 +105,7 @@ function sanityChecking() {
 		_gsSampleSheet="${_gsSampleSheet}.converted"
 	elif [[ "${_numberOfSamplesheets}" -gt 1 ]]
 	then
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "More than one CSV_UMCG_*.${SAMPLESHEET_EXT} GS samplesheet present in ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "More than one UMCG_CSV_*.${SAMPLESHEET_EXT} GS samplesheet present in ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/."
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	elif [[ "${_numberOfSamplesheets}" -lt 1 ]]
@@ -158,7 +158,7 @@ function sanityChecking() {
 	# _insaneSamples is a string of sample IDs only present either on disk or on the samplesheet.
 	#
 	readarray -t _samplesOnDisk < <(find "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/" -maxdepth 1 -mindepth 1 -name '*.fastq.gz' | grep -o "${_batch}-[0-9][0-9]*" | sort -u)
-	readarray -t _samplesInSamplesheet < <(grep -o "${_batch}-[0-9][0-9]*" "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/CSV_UMCG_"*".${SAMPLESHEET_EXT}.converted" | sort -u)
+	readarray -t _samplesInSamplesheet < <(grep -o "${_batch}-[0-9][0-9]*" "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/UMCG_CSV_"*".${SAMPLESHEET_EXT}.converted" | sort -u)
 	local _insaneSamples
 	_insaneSamples="$(echo "${_samplesOnDisk[@]:-}" "${_samplesInSamplesheet[@]:-}" | tr ' ' '\n' | sort | uniq -u | tr '\n' ' ')"
 	if [[ -n "${_insane_samples:-}" ]]
@@ -543,7 +543,7 @@ function processSamplesheetsAndMoveConvertedData() {
 	declare -A _sampleSheetColumnOffsets=()
 	local      _projectFieldIndex
 	declare -a _projects=()
-	_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/CSV_UMCG_"*".${SAMPLESHEET_EXT}.converted")
+	_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/UMCG_CSV_"*".${SAMPLESHEET_EXT}.converted")
 	IFS="${SAMPLESHEET_SEP}" read -r -a _sampleSheetColumnNames <<< "$(head -1 "${_gsSampleSheet}")"
 	for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]} ; _offset++ ))
 	do
