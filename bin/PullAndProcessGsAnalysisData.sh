@@ -32,7 +32,57 @@ REAL_USER="$(logname 2>/dev/null || echo 'no login name')"
 ### Functions.
 ##
 #
+function rsyncData(){
+	local _batch="${1}"
+	local _controlFileBase="${2}"
+	local _dataType="${3}"
+	local _controlFileBaseForFunction="${_controlFileBase}.${_dataType}_${FUNCNAME[0]}"
 
+	if [[ -e "${_controlFileBaseForFunction}.finished" ]]
+	then
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished is present -> Skipping."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} ${_batch}. OK"
+		return
+	else
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
+		printf '' > "${_controlFileBaseForFunction}.started"
+	fi
+	#
+	# Rsync everything except the *.finished file and except any "hidden" files starting with a dot
+	# (which may be temporary files created by rsync and which we do not have permissions for):
+	# this may be an incompletely uploaded batch, but we already rsync everything we've got so far.
+	#
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing everything but the .finished file for ${gsBatch} ..."
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/./${gsBatch}/${_dataType} to ${TMP_ROOT_DIR}"
+	/usr/bin/rsync -e 'ssh -p 443' -vrltD \
+		--log-file="${logDir}/rsync-from-${HOSTNAME_DATA_STAGING%%.*}.log" \
+		--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
+		--omit-dir-times \
+		--omit-link-times \
+		--exclude='*.finished' \
+		--exclude='.*' \
+		--relative "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/./${gsBatch}/${_dataType}" \
+		"${TMP_ROOT_DIR}/"
+	#
+	# Rsync the .finished file last if the upload was complete.
+	#
+	if [[ "${gsBatchUploadCompleted}" == 'true' ]]
+	then
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing only the .finished file for ${gsBatch} ..."
+		/usr/bin/rsync -e 'ssh -p 443' -vrltD \
+			--log-file="${logDir}/rsync-from-${HOSTNAME_DATA_STAGING%%.*}.log" \
+			--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
+			--omit-dir-times \
+			--omit-link-times \
+			"${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${gsBatch}.finished" \
+			"${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished"
+	else
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No .finished file for ${gsBatch} present yet: nothing to sync."
+	fi
+	rm -f "${_controlFileBaseForFunction}.failed"
+	mv "${_controlFileBaseForFunction}."{started,finished}
+
+}
 function sanityChecking(){
 	local _batch="${1}"
 	local _controlFileBase="${2}"
