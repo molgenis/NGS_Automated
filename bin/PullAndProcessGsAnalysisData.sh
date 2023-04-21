@@ -32,14 +32,7 @@ REAL_USER="$(logname 2>/dev/null || echo 'no login name')"
 ### Functions.
 ##
 #
-function rsyncData(){
-	local _batch="${1}"
-	local _controlFileBase="${2}"
-	local _dataType="${3}"
-	local _controlFileBaseForFunction="${_controlFileBase}.${_dataType}_${FUNCNAME[0]}"
 
-
-}
 function sanityChecking(){
 	local _batch="${1}"
 	local _controlFileBase="${2}"
