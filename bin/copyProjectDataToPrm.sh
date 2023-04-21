@@ -87,7 +87,10 @@ EOH
 }
 
 function rsyncProjectRun() {
-
+	local _project="${1}"
+	local _run="${2}"
+	local _controlFileBase="${3}"	
+	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
 
 	#
 	# Determine whether an rsync is required for this run, which is the case when
@@ -488,7 +491,7 @@ else
 							sampleType="$(set -e; getSampleType "${PRM_ROOT_DIR}/Samplesheets/archive/${project}.${SAMPLESHEET_EXT}")"
 							log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sampleType =${sampleType}"
 							log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/${run} ..."
-							rsyncProjectRun "${project}" "${run}"  "${controlFileBase}"
+							rsyncProjectRun "${project}" "${run}" "${controlFileBase}"
 							
 							if [[ -e "${controlFileBase}.rsyncProjectRun.finished" ]]
 							then
