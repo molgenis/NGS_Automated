@@ -109,12 +109,6 @@ function rsyncProjectRun() {
 	2>&1 | tee -a "${_controlFileBaseForFunction}.started"
 	echo "started: $(date +%FT%T%z)" > "${_controlFileBaseForFunction}.totalRunTime"
 	
-	#
-	# Count the number of all files produced in this analysis run.
-	#
-	local _countFilesProjectRunDirTmp
-	# shellcheck disable=SC2029
-	_countFilesProjectRunDirTmp=$(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}/results/\"* -type f -o -type l | wc -l")
 	
 	# Perform rsync.
 	#  1. For ${_run} dir: recursively with "default" archive (-a),
@@ -162,6 +156,13 @@ function sanityCheck() {
 	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
 	
 	#
+	# Count the number of all files produced in this analysis run.
+	#
+	local _countFilesProjectRunDirTmp
+	# shellcheck disable=SC2029
+	_countFilesProjectRunDirTmp=$(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}/results/\"* -type f -o -type l | wc -l")
+	
+	#
 	# Sanity check.
 	#
 	#  1. Firstly do a quick count of the amount of files to make sure we are complete.
@@ -171,7 +172,7 @@ function sanityCheck() {
 	
 	local _countFilesProjectRunDirPrm
 	_countFilesProjectRunDirPrm=$(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/"* -type f -o -type l | wc -l)
-	if [[ "${_countFilesProjectRunDirTmp}" -ne "${_countFilesProjectRunDirPrm}" ]]
+	if [[ "${_countFilesProjectRunDirPrm}" -ne "${_countFilesProjectRunDirPrm}" ]]
 	then
 		
 		find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/"* -type f -o -type l | sort -V > "${JOB_CONTROLE_FILE_BASE}.countPrmFiles.txt"
