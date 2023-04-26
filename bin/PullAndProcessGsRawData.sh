@@ -213,7 +213,7 @@ function sanityChecking() {
 	readarray -t _samplesInSamplesheet < <(grep -o "${_batch}-[0-9][0-9]*" "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/UMCG_CSV_"*".${SAMPLESHEET_EXT}.converted" | sort -u)
 	local _insaneSamples
 	_insaneSamples="$(echo "${_samplesOnDisk[@]:-}" "${_samplesInSamplesheet[@]:-}" | tr ' ' '\n' | sort | uniq -u | tr '\n' ' ')"
-	if [[ -n "${_insane_samples:-}" ]]
+	if [[ -n "${_insaneSamples:-}" ]]
 	then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' \
 			"Mismatch: sample(s) ${_insaneSamples} are either present in the samplesheet, but missing on disk or vice versa."
@@ -1032,23 +1032,12 @@ else
 			# shellcheck disable=SC2174
 			mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${gsBatch}/"
 			printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
-			if [[ -e "${controlFileBase}.${rawdataFolder}_rsyncData.finished" ]]
-			then
-				if [[ -e "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished" ]]
-				then
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished present -> Data transfer completed; let's process batch ${gsBatch}..."
-					sanityChecking "${gsBatch}" "${controlFileBase}" "${rawdataFolder}"
-				else
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished absent -> Data transfer not yet completed; skipping batch ${gsBatch}."
-					log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Data transfer not yet completed; skipping batch ${gsBatch}."
-					break
-				fi
-			fi
 			#
 			# Step 1: Sanity Check if transfer of raw data has finished.
 			#
 			if [[ -e "${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}.${rawdataFolder}_rsyncData.finished" ]]
 			then
+				
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}.${rawdataFolder}_rsyncData.finished present -> Data transfer completed; let's process batch ${gsBatch}..."
 				sanityChecking "${gsBatch}" "${controlFileBase}" "${rawdataFolder}"
 			else

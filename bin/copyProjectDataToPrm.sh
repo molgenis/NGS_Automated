@@ -59,7 +59,7 @@ Options:
 
 	-h	Show this help.
 	-g	Group.
-	-d DAT_DIR
+	-d	DAT_DIR
 	-p	[pipeline]
 		Pipeline that produced the project data that needs to be transferred to prm. (NGS_Demultiplexing, GAP)
 	-n	Dry-run: Do not perform actual sync, but only list changes instead.
@@ -197,7 +197,7 @@ function sanityCheck() {
 	
 	local _countFilesProjectRunDirPrm
 	_countFilesProjectRunDirPrm=$(find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/"* -type f -o -type l | wc -l)
-	if [[ "${_countFilesProjectRunDirPrm}" -ne "${_countFilesProjectRunDirPrm}" ]]
+	if [[ "${_countFilesProjectRunDirTmp}" -ne "${_countFilesProjectRunDirPrm}" ]]
 	then
 		
 		find "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/"* -type f -o -type l | sort -V > "${JOB_CONTROLE_FILE_BASE}.countPrmFiles.txt"
@@ -528,7 +528,6 @@ else
 							if [[ -e "${controlFileBase}.sanityCheck.finished" ]]
 							then
 								log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.sanityCheck.finished present -> sanityCheck completed; let's upload data to Track and Trace for project ${project}..."
-								log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "removing ${project}.csv from "
 								# shellcheck disable=SC2029
 								if ssh "${DATA_MANAGER}@${HOSTNAME_TMP}" "rm -f ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/${project}.${SAMPLESHEET_EXT}"
 								then
