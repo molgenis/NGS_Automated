@@ -83,13 +83,13 @@ function processBatch() {
 	# E.g. 210419_A00379_0361_H3C3GDSX2
 	#
 	# shellcheck disable=SC2029
-	readarray -t _flowcellDirsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${_batchDirFromSourceServer}\" -maxdepth 1 -mindepth 1 -type d -name '[^_]*_[^_]*_[^_]*_[^_]*'")
+	readarray -t _flowcellDirsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${_batchDirFromSourceServer}/${rawdataFolder}/\" -maxdepth 1 -mindepth 1 -type d -name '[^_]*_[^_]*_[^_]*_[^_]*'")
 	if [[ "${#_flowcellDirsFromSourceServer[@]}" -eq '0' ]]
 	then
-		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No flowcell directories found at ${DATA_MANAGER}@${sourceServerFQDN}:${_batchDirFromSourceServer}/[^_]*_[^_]*_[^_]*_[^_]*."
+		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No flowcell directories found at ${DATA_MANAGER}@${sourceServerFQDN}:${_batchDirFromSourceServer}/${rawdataFolder}/[^_]*_[^_]*_[^_]*_[^_]*."
 		return
 	else
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found at least one flowcell dir at ${DATA_MANAGER}@${sourceServerFQDN}:${_batchDirFromSourceServer}/[^_]*_[^_]*_[^_]*_[^_]*."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found at least one flowcell dir at ${DATA_MANAGER}@${sourceServerFQDN}:${_batchDirFromSourceServer}/${rawdataFolder}/[^_]*_[^_]*_[^_]*_[^_]*."
 	fi
 	#
 	# Step 2: check if flowcells were already successfully transferred to prm by copyRawDataToPrm.sh
@@ -128,6 +128,11 @@ function processBatch() {
 		mv -v "${_controlFileBaseForFunction}."{started,failed}
 		return
 	}
+	#
+	## 
+	#
+	# shellcheck disable=SC2029
+	ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${_batch}/${_batch}.copyBatchRawDataToPrm.finished"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully rsynced samplesheets for batch ${_batch} to prm."
 	rm -f "${_controlFileBaseForFunction}.failed"
 	mv -v "${_controlFileBaseForFunction}."{started,finished}
@@ -251,7 +256,6 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files ..."
 declare -a configFiles=(
 	"${CFG_DIR}/${group}.cfg"
 	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
-	"${CFG_DIR}/${sourceServer}.cfg"
 	"${CFG_DIR}/sharedConfig.cfg"
 	"${HOME}/molgenis.cfg"
 )
@@ -308,7 +312,6 @@ fi
 hashedSource="$(printf '%s:%s' "${sourceServer}" "${SCR_ROOT_DIR}" | md5sum | awk '{print $1}')"
 lockFile="${PRM_ROOT_DIR}/logs/${SCRIPT_NAME}_${hashedSource}.lock"
 thereShallBeOnlyOne "${lockFile}"
-printf 'Lock file for %s instance that fetches data from %s:%s\n' "${SCRIPT_NAME}" "${sourceServer}" "${SCR_ROOT_DIR}" > "${lockFile}"
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile} ..."
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${PRM_ROOT_DIR}/logs ..."
 
@@ -361,7 +364,6 @@ else
 			continue
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing ${batch} ..."
-			printf '%s\n' "Processing ${batch} ..." >> "${lockFile}"
 		fi
 		#
 		# Let's start.
@@ -386,7 +388,6 @@ else
 fi
 
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished.'
-printf '%s\n' "Finished." >> "${lockFile}"
 
 trap - EXIT
 exit 0

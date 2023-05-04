@@ -55,6 +55,7 @@ Usage:
 	$(basename "${0}") OPTIONS
 Options:
 	-h	Show this help.
+	-d DAT_DIR
 	-g	Group.
 	-l	Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
@@ -82,7 +83,7 @@ EOH
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
-while getopts ":g:l:h" opt
+while getopts ":g:l:d:h" opt
 do
 	case "${opt}" in
 		h)
@@ -90,6 +91,9 @@ do
 			;;
 		g)
 			group="${OPTARG}"
+			;;
+		d)
+			dat_dir="${OPTARG}"
 			;;
 		l)
 			l4b_log_level="${OPTARG^^}"
@@ -144,6 +148,22 @@ do
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Config file ${configFile} missing or not accessible."
 	fi
 done
+
+if [[ -z "${dat_dir:-}" ]]
+then
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "default (${DAT_ROOT_DIR})"
+else
+	# shellcheck disable=SC2153
+	DAT_ROOT_DIR="/groups/${GROUP}/${dat_dir}/"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "DAT_ROOT_DIR is set to ${DAT_ROOT_DIR}"
+	if test -e "/groups/${GROUP}/${dat_dir}/"
+	then
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DAT_ROOT_DIR} is available"
+		
+	else
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "${DAT_ROOT_DIR} does not exist, exit!"
+	fi
+fi
 
 #
 # Make sure to use an account for cron jobs and *without* write access to prm storage.
@@ -266,7 +286,10 @@ do
 		perl -p -e "s|${valueInSamplesheet[0]}|${REPLACEDPIPELINECOLUMN}|" "${samplesheet}" > "${samplesheet}.tmp"
 		mv "${samplesheet}.tmp" "${samplesheet}"
 	else
-		awk -v pipeline="${REPLACEDPIPELINECOLUMN}" -v pipelineColumn="${PIPELINECOLUMN}" 'BEGIN {FS=","}{if (NR==1){print $0","pipelineColumn}else{ print $0","pipeline}}'
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no column [${PIPELINECOLUMN}] in the samplesheet, creating dummy entry:"
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "header: ${PIPELINECOLUMN} and value: ${REPLACEDPIPELINECOLUMN}"
+		awk -v pipeline="${REPLACEDPIPELINECOLUMN}" -v pipelineColumn="${PIPELINECOLUMN}" 'BEGIN {FS=","}{if (NR==1){print $0","pipelineColumn}else{ print $0","pipeline}}' "${samplesheet}" > "${samplesheet}.tmp"
+		mv "${samplesheet}.tmp" "${samplesheet}"
 	fi
 	firstStepOfPipeline="${REPLACEDPIPELINECOLUMN%%+*}"
 
