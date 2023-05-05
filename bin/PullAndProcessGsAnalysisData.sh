@@ -63,6 +63,18 @@ function rsyncData(){
 		--exclude='.*' \
 		--relative "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/./${gsBatch}/${_dataType}" \
 		"${TMP_ROOT_DIR}/"
+	
+	#
+	# Rsync the Gs samplesheet to the gsbatch directory
+	#
+	/usr/bin/rsync -e 'ssh -p 443' -vrltD \
+		--log-file="${logDir}/rsync-from-${HOSTNAME_DATA_STAGING%%.*}.log" \
+		--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
+		--omit-dir-times \
+		--omit-link-times \
+		"${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}/UMCG_CSV_*.${SAMPLESHEET_EXT}" \
+		"${TMP_ROOT_DIR}/${gsBatch}/"
+	
 	#
 	# Rsync the .finished file last if the upload was complete.
 	#
@@ -110,8 +122,8 @@ function sanityChecking(){
 	if [[ "${_numberOfSamplesheets}" -eq 1 ]]
 	then
 		local _gsSampleSheet
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Found: one ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/UMCG_CSV_*.${SAMPLESHEET_EXT} samplesheet."
-		_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/UMCG_CSV_"*".${SAMPLESHEET_EXT}")	
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Found: one ${TMP_ROOT_DIR}/${_batch}/UMCG_CSV_*.${SAMPLESHEET_EXT} samplesheet."
+		_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/UMCG_CSV_"*".${SAMPLESHEET_EXT}")
 		#
 		# Make sure:
 		#  1. The last line ends with a line end character.
@@ -236,7 +248,7 @@ function mergeSamplesheets(){
 		printf '' > "${_controlFileBaseForFunction}.started"
 	fi
 	
-	csvFile=$(ls -1 "${TMP_ROOT_DIR}/${gsBatch}/${rawdataFolder}/UMCG_CSV_"*".csv")
+	csvFile=$(ls -1 "${TMP_ROOT_DIR}/${gsBatch}/UMCG_CSV_"*".csv")
 
 	# Combine samplesheets 
 	mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)

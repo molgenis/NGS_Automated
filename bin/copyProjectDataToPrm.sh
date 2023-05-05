@@ -90,7 +90,7 @@ function rsyncProjectRun() {
 	local _project="${1}"
 	local _run="${2}"
 	local _controlFileBase="${3}"	
-	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
+	local _controlFileBaseForFunction="${_controlFileBase}.${SCRIPT_NAME}_${FUNCNAME[0]}"
 
 	#
 	# Determine whether an rsync is required for this run, which is the case when
@@ -165,7 +165,7 @@ function sanityCheck() {
 	local _run="${2}"
 	local _sampleType=${3}
 	local _controlFileBase="${4}"	
-	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
+	local _controlFileBaseForFunction="${_controlFileBase}.${SCRIPT_NAME}_${FUNCNAME[0]}"
 	
 	#
 	# Check if function previously finished successfully for this data.
@@ -499,7 +499,7 @@ else
 				rawDataCopiedToPrmFinishedFile="ssh ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.rawDataCopiedToPrm.finished"
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${PRM_ROOT_DIR}/logs/${project}/"
 				mkdir -p "${PRM_ROOT_DIR}/logs/${project}/"
-				touch "${JOB_CONTROLE_FILE_BASE}.started"
+				
 				if ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.rawDataCopiedToPrm.finished"
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "found: ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.rawDataCopiedToPrm.finished"
@@ -511,6 +511,7 @@ else
 						then
 							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${project}/${run}."
 						else
+							touch "${JOB_CONTROLE_FILE_BASE}.started"
 							log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "archiving samplesheet in ${PRM_ROOT_DIR}/Samplesheets/archive/"
 							rsync -av "${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${project}/${run}/jobs/${project}.${SAMPLESHEET_EXT}" "${PRM_ROOT_DIR}/Samplesheets/archive/"
 							sampleType="$(set -e; getSampleType "${PRM_ROOT_DIR}/Samplesheets/archive/${project}.${SAMPLESHEET_EXT}")"
