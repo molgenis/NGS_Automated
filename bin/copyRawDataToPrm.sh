@@ -350,7 +350,7 @@ function splitSamplesheetPerProject() {
 	_allProjects="${_allProjects// /,}"
 	printf '%s\n' "\"${_allProjects}\"" > "${JOB_CONTROLE_FILE_BASE}.trace_putFromFile_overview.csv" 
 	#
-	# remove samplesheet to archive on sourceServerFQDN
+	# remove samplesheet on sourceServerFQDN
 	#
 	# shellcheck disable=SC2029
 	if ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "rm \"${SCR_ROOT_DIR}/Samplesheets/${pipeline}/${_run}.${SAMPLESHEET_EXT}\""

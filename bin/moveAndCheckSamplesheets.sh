@@ -55,7 +55,7 @@ Usage:
 	$(basename "${0}") OPTIONS
 Options:
 	-h	Show this help.
-	-d DAT_DIR
+	-d	DAT_DIR
 	-g	Group.
 	-l	Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
