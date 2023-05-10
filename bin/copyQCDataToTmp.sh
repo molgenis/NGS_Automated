@@ -254,35 +254,28 @@ for prm_dir in "${ALL_PRM[@]}"
 do
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "looping through ${prm_dir}"
 	export PRM_ROOT_DIR="/groups/${group}/${prm_dir}/"
-	readarray -t rawdata < <(find "${PRM_ROOT_DIR}/rawdata/ngs/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${PRM_ROOT_DIR}/rawdata/ngs/||")
+	readarray -t rawdataArray < <(find "${PRM_ROOT_DIR}/rawdata/ngs/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${PRM_ROOT_DIR}/rawdata/ngs/||")
 
-	if [[ "${#rawdata[@]}" -eq '0' ]]
+	if [[ "${#rawdataArray[@]}" -eq '0' ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No rawdata found @ ${PRM_ROOT_DIR}/rawdata/ngs/."
 	else
-		for rawdat in "${rawdata[@]}"
+		for rawdata in "${rawdataArray[@]}"
 		do
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing rawdat ${rawdat} ..."
-			if  [[ -d "${PRM_ROOT_DIR}/trendanalysis/logs/${rawdat}/" ]]
-			then
-				controlFileBase="${PRM_ROOT_DIR}/trendanalysis/logs/${rawdat}/"
-				export JOB_CONTROLE_FILE_BASE="${controlFileBase}/${rawdat}.${SCRIPT_NAME}"
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${rawdat} ..."
-			else
-				mkdir "${PRM_ROOT_DIR}/trendanalysis/logs/${rawdat}/"
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${PRM_ROOT_DIR}/trendanalysis/logs/${rawdat}/"
-				controlFileBase="${PRM_ROOT_DIR}/trendanalysis/logs/${rawdat}/"
-				export JOB_CONTROLE_FILE_BASE="${controlFileBase}/${rawdat}.${SCRIPT_NAME}"
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${rawdat} ..."
-			fi
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing rawdata ${rawdata} ..."
+			mkdir -p "${PRM_ROOT_DIR}/trendanalysis/logs/${rawdata}/"
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${PRM_ROOT_DIR}/trendanalysis/logs/${rawdata}/"
+			controlFileBase="${PRM_ROOT_DIR}/trendanalysis/logs/${rawdata}/"
+			export JOB_CONTROLE_FILE_BASE="${controlFileBase}/${rawdata}.${SCRIPT_NAME}"
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${rawdata} ..."
 
 			if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 			then
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${rawdat}."
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${rawdata}."
 				continue
 			else
 				printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
-				copyQCRawdataToTmp "${rawdat}"
+				copyQCRawdataToTmp "${rawdata}"
 			fi
 		done
 	fi
