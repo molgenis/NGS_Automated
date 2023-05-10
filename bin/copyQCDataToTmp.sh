@@ -72,27 +72,27 @@ function copyQCRawdataToTmp() {
 
 function copyQCProjectdataToTmp() {
 
-        local _project="${1}"
-        log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Working on ${_project}"
+	local _project="${1}"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Working on ${_project}"
 
-        if [[ -e "${PRM_ROOT_DIR}/projects/${_project}/run01/results/multiqc_data/${_project}.run_date_info.csv" ]]
-        then
-                log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Project ${_project} is not yet copied to tmp, start rsyncing.."
-                touch "${JOB_CONTROLE_FILE_BASE}.started"
-                log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_project} found on ${PRM_ROOT_DIR}, start rsyncing.."
-                rsync -av --rsync-path="sudo -u ${group}-ateambot rsync" "${PRM_ROOT_DIR}/projects/${_project}/run01/results/multiqc_data/"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/trendanalysis/projects/${_project}/" \
-                || {
-                log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}"
-                log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from /groups/${group}/${PRM_ROOT_DIR}/"
-                log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    to ${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/"
-                mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-                return
-                }
+	if [[ -e "${PRM_ROOT_DIR}/projects/${_project}/run01/results/multiqc_data/${_project}.run_date_info.csv" ]]
+	then
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Project ${_project} is not yet copied to tmp, start rsyncing.."
+		touch "${JOB_CONTROLE_FILE_BASE}.started"
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_project} found on ${PRM_ROOT_DIR}, start rsyncing.."
+		rsync -av --rsync-path="sudo -u ${group}-ateambot rsync" "${PRM_ROOT_DIR}/projects/${_project}/run01/results/multiqc_data/"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/trendanalysis/projects/${_project}/" \
+		|| {
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${line}"
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from /groups/${group}/${PRM_ROOT_DIR}/"
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    to ${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/"
+		mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+		return
+		}
 
-                mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
-        else
-                log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "For project ${_project} there is no QC data, nothing to rsync.."
-        fi
+		mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+	else
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "For project ${_project} there is no QC data, nothing to rsync.."
+	fi
 
 }
 
@@ -296,40 +296,40 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "starting checking the prm'
 
 for prm_dir in "${ALL_PRM[@]}"
 do
-        log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "looping through ${prm_dir}"
-        export PRM_ROOT_DIR="/groups/${group}/${prm_dir}/"
-        readarray -t projectdata < <(find "${PRM_ROOT_DIR}/projects/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${PRM_ROOT_DIR}/projects/||")
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "looping through ${prm_dir}"
+	export PRM_ROOT_DIR="/groups/${group}/${prm_dir}/"
+	readarray -t projectdata < <(find "${PRM_ROOT_DIR}/projects/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${PRM_ROOT_DIR}/projects/||")
 
-        if [[ -z "${projectdata[@]}" ]]
-        then
-                log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No projectdata found @ ${PRM_ROOT_DIR}/projects/."
-        else
-                for project in "${projectdata[@]}"
-                do
-                        log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project} ..."
-                        if  [[ -d "${PRM_ROOT_DIR}/trendanalysis/logs/${project}/" ]]
-                        then
-                                controlFileBase="${PRM_ROOT_DIR}/trendanalysis/logs/${project}/"
-                                export JOB_CONTROLE_FILE_BASE="${controlFileBase}/${project}.${SCRIPT_NAME}"
-                                log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project} ..."
-                        else
-                                mkdir "${PRM_ROOT_DIR}/trendanalysis/logs/${project}/"
-                                log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${PRM_ROOT_DIR}/trendanalysis/logs/${project}/"
-                                controlFileBase="${PRM_ROOT_DIR}/trendanalysis/logs/${project}/"
-                                export JOB_CONTROLE_FILE_BASE="${controlFileBase}/${project}.${SCRIPT_NAME}"
-                                log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project} ..."
-                        fi
+	if [[ -z "${projectdata[@]}" ]]
+	then
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No projectdata found @ ${PRM_ROOT_DIR}/projects/."
+	else
+		for project in "${projectdata[@]}"
+		do
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project} ..."
+			if  [[ -d "${PRM_ROOT_DIR}/trendanalysis/logs/${project}/" ]]
+			then
+				controlFileBase="${PRM_ROOT_DIR}/trendanalysis/logs/${project}/"
+				export JOB_CONTROLE_FILE_BASE="${controlFileBase}/${project}.${SCRIPT_NAME}"
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project} ..."
+			else
+				mkdir "${PRM_ROOT_DIR}/trendanalysis/logs/${project}/"
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${PRM_ROOT_DIR}/trendanalysis/logs/${project}/"
+				controlFileBase="${PRM_ROOT_DIR}/trendanalysis/logs/${project}/"
+				export JOB_CONTROLE_FILE_BASE="${controlFileBase}/${project}.${SCRIPT_NAME}"
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project} ..."
+			fi
 
-                        if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
-                        then
-                                log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${project}."
-                                continue
-                        else
-                                printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
-                                copyQCProjectdataToTmp "${project}"
-                        fi
-                done
-        fi
+			if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
+			then
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${project}."
+				continue
+			else
+				printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
+				copyQCProjectdataToTmp "${project}"
+			fi
+		done
+	fi
 done
 
 
