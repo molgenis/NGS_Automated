@@ -256,7 +256,7 @@ do
 	export PRM_ROOT_DIR="/groups/${group}/${prm_dir}/"
 	readarray -t rawdata < <(find "${PRM_ROOT_DIR}/rawdata/ngs/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${PRM_ROOT_DIR}/rawdata/ngs/||")
 
-	if [[ -z "${rawdata[@]}" ]]
+	if [[ "${#rawdata[@]}" -eq '0' ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No rawdata found @ ${PRM_ROOT_DIR}/rawdata/ngs/."
 	else
@@ -300,7 +300,7 @@ do
 	export PRM_ROOT_DIR="/groups/${group}/${prm_dir}/"
 	readarray -t projectdata < <(find "${PRM_ROOT_DIR}/projects/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${PRM_ROOT_DIR}/projects/||")
 
-	if [[ -z "${projectdata[@]}" ]]
+	if [[ "${#projectdata[@]}" -eq '0' ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No projectdata found @ ${PRM_ROOT_DIR}/projects/."
 	else
@@ -338,8 +338,8 @@ done
 #
 
 
-IMPORT_DIR="/groups/${GROUP}/${DAT_LFS}/trendanalysis/"
-PRM_DARWIN_LOGS_DIR="/groups/${GROUP}/${PRM_LFS}/trendanalysis/logs/darwin/"
+IMPORT_DIR="/groups/${group}/${DAT_LFS}/trendanalysis/"
+PRM_DARWIN_LOGS_DIR="/groups/${group}/${PRM_LFS}/trendanalysis/logs/darwin/"
 
 if [[ -d "${PRM_DARWIN_LOGS_DIR}" ]]
 then
@@ -352,7 +352,7 @@ fi
 
 readarray -t darwindata < <(find "${IMPORT_DIR}/" -maxdepth 1 -mindepth 1 -type f -name "*runinfo*" | sed -e "s|^${IMPORT_DIR}/||")
 
-if [[ -z "${darwindata[@]}" ]]
+if [[ "${#darwindata[@]}" -eq '0' ]]
 then
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "no new darwin files present in ${IMPORT_DIR}"
 else
