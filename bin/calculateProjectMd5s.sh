@@ -73,7 +73,6 @@ EOH
 	exit 0
 }
 
-
 #
 # Compute checksums recursively for a given project folder.
 #
@@ -101,14 +100,14 @@ function calculateMd5() {
 			"Cannot find ${_controlFileBase}.pipeline.finished: skipping ${_project}/${_run}/ ... "
 		return
 	fi
-	
+
 	#
 	# zip all files in jobs folder to ${_project}_jobs.tar.gz"
 	#
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
 		"zip all files in jobs folder to ${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/jobs/${_project}_jobs.tar.gz and removing originals"
 	tar -czvf "${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/jobs/${_project}_jobs.tar.gz" "${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/jobs/"* --remove-files
-	
+
 	#
 	# All checks passed: start computing checksums.
 	#
@@ -123,7 +122,7 @@ function calculateMd5() {
 			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			return
 		}
-		
+
 	md5deep -r -j0 -o f -l "${_run}/" > "${_run}.md5" 2>> "${JOB_CONTROLE_FILE_BASE}.started" \
 		|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" \
