@@ -109,18 +109,18 @@ function copyDarwinQCData() {
 	local _darwin_job_controle_file_base="${5}"
 
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Copying ${_runinfofile} to tmp, start rsyncing.."
-	touch "${darwin_job_controle_file_base}.started"
+	touch "${_darwin_job_controle_file_base}.started"
 
 	rsync -av --rsync-path="sudo -u ${group}-ateambot rsync" "${IMPORT_DIR}/${_filetype}"*"${_filedate}.csv" "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/trendanalysis/darwin/" \
 	|| {
 	log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${_filetype}"*"${_filedate}.csv"
 	log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from ${IMPORT_DIR}/"
 	log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    to ${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/"
-	mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+	mv "${_darwin_job_controle_file_base}."{started,failed}
 	return
 	}
 
-	mv "${darwin_job_controle_file_base}."{started,finished}
+	mv "${_darwin_job_controle_file_base}."{started,finished}
 	mv "${IMPORT_DIR}/${_filetype}"*"${_filedate}.csv" "${IMPORT_DIR}/archive/"
 
 
@@ -268,10 +268,10 @@ do
 		for rawdata in "${rawdataArray[@]}"
 		do
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing rawdata ${rawdata} ..."
-			mkdir -p "${PRM_ROOT_DIR}/trendanalysis/logs/${rawdata}/"
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${PRM_ROOT_DIR}/trendanalysis/logs/${rawdata}/"
+			mkdir -p "${PRM_ROOT_DIR}/logs/${rawdata}/"
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${PRM_ROOT_DIR}/logs/${rawdata}/"
 			controlFileBase="${PRM_ROOT_DIR}/logs/${rawdata}/"
-			RAWDATA_JOB_CONTROLE_FILE_BASE="${controlFileBase}/rawdata_${rawdata}.${SCRIPT_NAME}"
+			RAWDATA_JOB_CONTROLE_FILE_BASE="${controlFileBase}/rawdata.${rawdata}.${SCRIPT_NAME}"
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${rawdata} ..."
 
 			if [[ -e "${RAWDATA_JOB_CONTROLE_FILE_BASE}.finished" ]]
@@ -279,7 +279,6 @@ do
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${rawdata}."
 				continue
 			else
-				printf '' > "${RAWDATA_JOB_CONTROLE_FILE_BASE}.started"
 				copyQCRawdataToTmp "${rawdata}" "${RAWDATA_JOB_CONTROLE_FILE_BASE}"
 			fi
 		done
@@ -305,9 +304,9 @@ do
 		for project in "${projectdata[@]}"
 		do
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project} ..."
-			mkdir -p "${PRM_ROOT_DIR}/trendanalysis/logs/${project}/"
+			mkdir -p "${PRM_ROOT_DIR}/logs/${project}/"
 			controlFileBase="${PRM_ROOT_DIR}/logs/${project}/"
-			PROJECT_JOB_CONTROLE_FILE_BASE="${controlFileBase}/project_${project}.${SCRIPT_NAME}"
+			PROJECT_JOB_CONTROLE_FILE_BASE="${controlFileBase}/project.${project}.${SCRIPT_NAME}"
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project} ..."
 
 			if [[ -e "${PROJECT_JOB_CONTROLE_FILE_BASE}.finished" ]]
@@ -315,7 +314,6 @@ do
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${project}."
 				continue
 			else
-				printf '' > "${PROJECT_JOB_CONTROLE_FILE_BASE}.started"
 				copyQCProjectdataToTmp "${project}" "${PROJECT_JOB_CONTROLE_FILE_BASE}"
 			fi
 		done
@@ -350,7 +348,7 @@ else
 		tableFile="${fileType}_${fileDate}.csv"
 		runinfoCSV="${runinfoFile}.csv"
 		controlFileBase="${PRM_DARWIN_LOGS_DIR}"
-		DARWIN_JOB_CONTROLE_FILE_BASE="${controlFileBase}/darwin_${fileType}_${fileDate}.${SCRIPT_NAME}"
+		DARWIN_JOB_CONTROLE_FILE_BASE="${controlFileBase}/darwin.${fileType}_${fileDate}.${SCRIPT_NAME}"
 
 		if [[ -e "${DARWIN_JOB_CONTROLE_FILE_BASE}.finished" ]]
 		then
@@ -358,7 +356,6 @@ else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${runinfoFile} data is already processed, but there is new data on dat05, check if previous rsync went okay"
 		else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "no ${DARWIN_JOB_CONTROLE_FILE_BASE}.finished present, starting rsyncing ${tableFile} and ${runinfoCSV}"
-			printf '' > "${DARWIN_JOB_CONTROLE_FILE_BASE}.started"
 			copyDarwinQCData "${runinfoCSV}" "${tableFile}" "${fileType}" "${fileDate}" "${DARWIN_JOB_CONTROLE_FILE_BASE}"
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${runinfoCSV} and ${tableFile} copied to tmp and moved to  ${IMPORT_DIR}/archive/"
 		fi
