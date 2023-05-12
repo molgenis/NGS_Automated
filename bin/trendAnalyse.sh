@@ -98,7 +98,7 @@ function processRawdataToDB() {
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_rawdata} ..." \
 			2>&1 | tee -a "${_rawdata_job_controle_file_base}.started"
 	fi
-	if [[ -e "${TMP_RAWDATA_DIR}/SequenceRun_run_date_info.csv"  ]]
+	if [[ -e "${TMP_RAWDATA_DIR}/SequenceRun_run_date_info.csv" ]]
 	then
 		cp "${TMP_RAWDATA_DIR}/SequenceRun_run_date_info.csv" "${CHRONQC_TMP}/${_rawdata}.SequenceRun_run_date_info.csv"
 		cp "${TMP_RAWDATA_DIR}/SequenceRun.csv" "${CHRONQC_TMP}/${_rawdata}.SequenceRun.csv"
@@ -142,12 +142,7 @@ function processRawdataToDB() {
 	else
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} for sequence run ${_rawdata}, no sequencer statistics were stored "
 	fi
-	if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
-	then
-		echo "rawdata ${_rawdata} is ready. The data is available at ${PRM_ROOT_DIR}/projects/." \
-			>> "${JOB_CONTROLE_FILE_BASE}.finished"
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished. Setting track & trace state to finished :)."
-	fi
+
 }
 
 
