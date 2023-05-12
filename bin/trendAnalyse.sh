@@ -84,7 +84,7 @@ function processRawdataToDB() {
 	_sequencer=$(echo "${_rawdata}" | cut -d '_' -f2)
 	CHRONQC_TMP="${TMP_TRENDANALYSE_DIR}/tmp/"
 	CHRONQC_DATABASE_NAME="${TMP_TRENDANALYSE_DIR}/database/"
-	TMP_RAWDATA_DIR="${TMP_ROOT_DIR}/rawdata/${_rawdata}/"
+	TMP_RAWDATA_DIR="${TMP_TRENDANALYSE_DIR}/rawdata/${_rawdata}/"
 
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing files from ${CHRONQC_TMP} ..."
 
