@@ -158,7 +158,7 @@ function processProjectToDB() {
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_project}/run01 was already processed. return"
 		return
 	else
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run} ..." \
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project} ..." \
 			2>&1 | tee -a "${_processprojecttodb_controle_file_base}.started"
 	fi
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "__________processing ${_project}.run_date_info.csv_____________"
