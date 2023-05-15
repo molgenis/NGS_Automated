@@ -79,31 +79,32 @@ EOH
 
 function processRawdataToDB() {
 	local _rawdata="${1}"
+	local _rawdata_job_controle_file_base="${2}"
 	local _sequencer
 	_sequencer=$(echo "${_rawdata}" | cut -d '_' -f2)
 	CHRONQC_TMP="${TMP_TRENDANALYSE_DIR}/tmp/"
 	CHRONQC_DATABASE_NAME="${TMP_TRENDANALYSE_DIR}/database/"
-	PRM_RAWDATA_DIR="${PRM_ROOT_DIR}/rawdata/ngs/${_rawdata}/Info/"
+	TMP_RAWDATA_DIR="${TMP_TRENDANALYSE_DIR}/rawdata/${_rawdata}/"
 
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing files from ${CHRONQC_TMP} ..."
 
 	rm -rf "${CHRONQC_TMP:-missing}"/*
 
-	if [[ -e "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.finished" ]]
+	if [[ -e "${_rawdata_job_controle_file_base}.finished" ]]
 	then
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_rawdata}, which was already processed."
 		return
 	else
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_rawdata} ..." \
-			2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started"
+			2>&1 | tee -a "${_rawdata_job_controle_file_base}.started"
 	fi
-	if [[ -e "${PRM_RAWDATA_DIR}/SequenceRun_run_date_info.csv"  ]]
+	if [[ -e "${TMP_RAWDATA_DIR}/SequenceRun_run_date_info.csv" ]]
 	then
-		cp "${PRM_RAWDATA_DIR}/SequenceRun_run_date_info.csv" "${CHRONQC_TMP}/${_rawdata}.SequenceRun_run_date_info.csv"
-		cp "${PRM_RAWDATA_DIR}/SequenceRun.csv" "${CHRONQC_TMP}/${_rawdata}.SequenceRun.csv"
+		cp "${TMP_RAWDATA_DIR}/SequenceRun_run_date_info.csv" "${CHRONQC_TMP}/${_rawdata}.SequenceRun_run_date_info.csv"
+		cp "${TMP_RAWDATA_DIR}/SequenceRun.csv" "${CHRONQC_TMP}/${_rawdata}.SequenceRun.csv"
 		if [[ -e "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" ]]
 		then
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "found ${PRM_RAWDATA_DIR}/SequenceRun_run_date_info.csv . Updating ChronQC database with ${_rawdata}."
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "found ${TMP_RAWDATA_DIR}/SequenceRun_run_date_info.csv . Updating ChronQC database with ${_rawdata}."
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Importing ${_rawdata}.SequenceRun.csv"
 			chronqc database --update --db "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" \
 				"${CHRONQC_TMP}/${_rawdata}.SequenceRun.csv" \
@@ -111,15 +112,15 @@ function processRawdataToDB() {
 				--run-date-info "${CHRONQC_TMP}/${_rawdata}.SequenceRun_run_date_info.csv" \
 				"${_sequencer}" || {
 					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to import ${_rawdata} with ${_sequencer} stored to Chronqc database." \
-						2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started"
-					mv "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,failed}
+						2>&1 | tee -a "${_rawdata_job_controle_file_base}.started"
+					mv "${_rawdata_job_controle_file_base}."{started,failed}
 					return
 				}
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} ${_rawdata} with ${_sequencer} stored to Chronqc database." \
-				2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started"
-			rm -f "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.failed"
-			mv -v "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,finished}
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.finished."
+				2>&1 | tee -a "${_rawdata_job_controle_file_base}.started"
+			rm -f "${_rawdata_job_controle_file_base}.failed"
+			mv -v "${_rawdata_job_controle_file_base}."{started,finished}
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_rawdata_job_controle_file_base}.finished."
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Create database for project ${_rawdata}."
 			chronqc database --create \
@@ -129,60 +130,56 @@ function processRawdataToDB() {
 				--db-table "SequenceRun" \
 				"${_sequencer}" -f || {
 					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_rawdata} with ${_sequencer} stored to Chronqc database." \
-						2>&1 | tee -a "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.started"
-					mv "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,failed}
+						2>&1 | tee -a "${_rawdata_job_controle_file_base}.started"
+					mv "${_rawdata_job_controle_file_base}."{started,failed}
 					return
 				}
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} ${_rawdata} with ${_sequencer} was stored in Chronqc database."
-			rm -f "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.failed" \
-			mv -v "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}."{started,finished}
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.finished."
+			rm -f "${_rawdata_job_controle_file_base}.failed" \
+			mv -v "${_rawdata_job_controle_file_base}."{started,finished}
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_rawdata_job_controle_file_base}.finished."
 		fi
 	else
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} for sequence run ${_rawdata}, no sequencer statistics were stored "
 	fi
-	if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
-	then
-		echo "rawdata ${_rawdata} is ready. The data is available at ${PRM_ROOT_DIR}/projects/." \
-			>> "${JOB_CONTROLE_FILE_BASE}.finished"
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished. Setting track & trace state to finished :)."
-	fi
+
 }
 
 
 function processProjectToDB() {
 	local _project="${1}"
-	local _run="${2}"
+	local _processprojecttodb_controle_file_base="${2}"
+	
 	CHRONQC_TMP="${TMP_TRENDANALYSE_DIR}/tmp/"
+	CHRONQC_PROJECTS_DIR="${TMP_TRENDANALYSE_DIR}/projects/${_project}/"
 	CHRONQC_DATABASE_NAME="${TMP_TRENDANALYSE_DIR}/database/"
-	PRM_MULTIQCPROJECT_DIR="${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/multiqc_data"
-	if [[ -e "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.finished" ]]
+	if [[ -e "${_processprojecttodb_controle_file_base}.finished" ]]
 	then
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_project}/${_run} was already processed. return"
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_project}/run01 was already processed. return"
 		return
 	else
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run} ..." \
-			2>&1 | tee -a "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.started"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project} ..." \
+			2>&1 | tee -a "${_processprojecttodb_controle_file_base}.started"
 	fi
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "________________${PRM_MULTIQCPROJECT_DIR}/${_project}.run_date_info.csv_____________"
-	if [[ -e "${PRM_MULTIQCPROJECT_DIR}/${_project}.run_date_info.csv" ]]
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "__________processing ${_project}.run_date_info.csv_____________"
+	if [[ -e "${CHRONQC_PROJECTS_DIR}/${_project}.run_date_info.csv" ]]
 	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "found ${PRM_MULTIQCPROJECT_DIR}/${_project}.run_date_info.csv. Updating ChronQC database with ${_project}."
-		cp "${PRM_MULTIQCPROJECT_DIR}/${_project}.run_date_info.csv" "${CHRONQC_TMP}/${_project}.run_date_info.csv"
-		cp "${PRM_MULTIQCPROJECT_DIR}/multiqc_sources.txt" "${CHRONQC_TMP}/${_project}.multiqc_sources.txt"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "found ${CHRONQC_PROJECTS_DIR}/${_project}.run_date_info.csv. Updating ChronQC database with ${_project}."
+		cp "${CHRONQC_PROJECTS_DIR}/${_project}.run_date_info.csv" "${CHRONQC_TMP}/${_project}.run_date_info.csv"
+		cp "${CHRONQC_PROJECTS_DIR}/multiqc_sources.txt" "${CHRONQC_TMP}/${_project}.multiqc_sources.txt"
 		for multiQC in "${MULTIQC_METRICS_TO_PLOT[@]}"
 		do
 			local _metrics="${multiQC%:*}"
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "using _metrics: ${_metrics}"
 			if [[ "${_metrics}" == multiqc_picard_insertSize.txt ]]
 			then
-				cp "${PRM_MULTIQCPROJECT_DIR}/${_metrics}" "${CHRONQC_TMP}/${_project}.${_metrics}"
+				cp "${CHRONQC_PROJECTS_DIR}/${_metrics}" "${CHRONQC_TMP}/${_project}.${_metrics}"
 				awk 'BEGIN{FS=OFS="\t"}{print $2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23}' "${CHRONQC_TMP}/${_project}.${_metrics}" > "${CHRONQC_TMP}/${_project}.1.${_metrics}"
 				perl -pe 's|SAMPLE_NAME\t|Sample\t|' "${CHRONQC_TMP}/${_project}.1.${_metrics}" > "${CHRONQC_TMP}/${_project}.3.${_metrics}"
 				perl -pe 's|SAMPLE\t|SAMPLE_NAME2\t|' "${CHRONQC_TMP}/${_project}.3.${_metrics}" > "${CHRONQC_TMP}/${_project}.2.${_metrics}"
 			elif [[ "${_metrics}" == multiqc_general_stats.txt ]]
 			then
-				cp "${PRM_MULTIQCPROJECT_DIR}/${_metrics}" "${CHRONQC_TMP}/${_project}.${_metrics}"
+				cp "${CHRONQC_PROJECTS_DIR}/${_metrics}" "${CHRONQC_TMP}/${_project}.${_metrics}"
 				head -1 "${CHRONQC_TMP}/${_project}.${_metrics}" > "${CHRONQC_TMP}/${_project}.${_metrics}.tmp"
 				#for sample in $(grep HsMetrics "${CHRONQC_TMP}/${_project}.multiqc_sources.txt" | awk -v p="${_project}" '{print $3}'); do grep $sample "${CHRONQC_TMP}/${_project}.${_metrics}" >> "${CHRONQC_TMP}/${_project}.${_metrics}.tmp" ;done
 				# to remove the per lane sample id from the ${project}.multiqc_general_stats.txt file
@@ -194,7 +191,7 @@ function processProjectToDB() {
 			#	cp "${CHRONQC_TMP}/${_project}.${_metrics}" "${CHRONQC_TMP}/${_project}.2.${_metrics}"
 			elif [[ "${_metrics}" == multiqc_fastqc.txt ]]
 			then
-				cp "${PRM_MULTIQCPROJECT_DIR}/${_metrics}" "${CHRONQC_TMP}/${_project}.${_metrics}"
+				cp "${CHRONQC_PROJECTS_DIR}/${_metrics}" "${CHRONQC_TMP}/${_project}.${_metrics}"
 				# This part will make a run_date_info.csv for only the lane information
 				echo -e 'Sample,Run,Date' >> "${CHRONQC_TMP}/${_project}.lane.run_date_info.csv"
 				IFS=$'\t' read -ra perLaneSample <<< "$(awk '$1 ~ /.recoded/ {print $1}' "${CHRONQC_TMP}/${_project}.${_metrics}" | tr '\n' '\t')"
@@ -208,7 +205,7 @@ function processProjectToDB() {
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "using _metrics: ${_metrics} to create ${_project}.lane.run_date_info.csv"
 
 			else
-				cp "${PRM_MULTIQCPROJECT_DIR}/${_metrics}" "${CHRONQC_TMP}/${_project}.${_metrics}"
+				cp "${CHRONQC_PROJECTS_DIR}/${_metrics}" "${CHRONQC_TMP}/${_project}.${_metrics}"
 				perl -pe 's|SAMPLE\t|SAMPLE_NAME2\t|' "${CHRONQC_TMP}/${_project}.${_metrics}" > "${CHRONQC_TMP}/${_project}.2.${_metrics}"
 			fi
 		done
@@ -239,7 +236,7 @@ function processProjectToDB() {
 		#
 		# Get panel information from $_project} based on column 'capturingKit'.
 		#
-		_panel=$(awk -F "${SAMPLESHEET_SEP}" 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i}}{if(NR > 1) print $(f["capturingKit"]) }' "${PRM_ROOT_DIR}/projects/${_project}/${_run}/results/${_project}.csv" | sort -u | cut -d'/' -f2)
+		_panel=$(awk -F "${SAMPLESHEET_SEP}" 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i}}{if(NR > 1) print $(f["capturingKit"]) }' "${TMP_ROOT_DIR}/projects/${_project}/run01/results/${_project}.csv" | sort -u | cut -d'/' -f2)
 		IFS='_' read -r -a array <<< "${_panel}"
 		if [[ "${array[0]}" == *"Exoom"* ]]
 		then
@@ -280,8 +277,8 @@ function processProjectToDB() {
 							--run-date-info "${CHRONQC_TMP}/${_project}.lane.run_date_info.csv" \
 							"${_panel}" || {
 								log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to import ${_project}: panel: ${_panel} metrics: ${_metrics} stored to Chronqc database." \
-									2>&1 | tee -a "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.started"
-								mv "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}."{started,failed}
+									2>&1 | tee -a "${_processprojecttodb_controle_file_base}.started"
+								mv "${_processprojecttodb_controle_file_base}."{started,failed}
 								return
 							}
 					else
@@ -291,17 +288,17 @@ function processProjectToDB() {
 							--run-date-info "${CHRONQC_TMP}/${_project}.2.run_date_info.csv" \
 							"${_panel}" || {
 								log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to import ${_project}: panel: ${_panel} stored to Chronqc database." \
-									2>&1 | tee -a "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.started"
-								mv "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}."{started,failed}
+									2>&1 | tee -a "${_processprojecttodb_controle_file_base}.started"
+								mv "${_processprojecttodb_controle_file_base}."{started,failed}
 								return
 							}
 					fi
 				done
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} ${_project}: panel: ${_panel} stored to Chronqc database." \
 					2>&1 | tee -a "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.started"
-				rm -f "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.failed"
-				mv -v "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}."{started,finished}
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.finished."
+				rm -f "${_processprojecttodb_controle_file_base}.failed"
+				mv -v "${_processprojecttodb_controle_file_base}."{started,finished}
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_processprojecttodb_controle_file_base}.finished."
 
 			else
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Create database for project ${_project}: panel: ${_panel}."
@@ -320,8 +317,8 @@ function processProjectToDB() {
 							--db-table "${_table}" \
 							"${_panel}" -f || {
 								log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_project}: panel: ${_panel} stored to Chronqc database." \
-									2>&1 | tee -a "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.started"
-								mv "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}."{started,failed}
+									2>&1 | tee -a "${_processprojecttodb_controle_file_base}.started"
+								mv "${_processprojecttodb_controle_file_base}."{started,failed}
 								return
 							}
 					else
@@ -332,40 +329,42 @@ function processProjectToDB() {
 							--db-table "${_table}" \
 							"${_panel}" -f || {
 								log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_project}: panel: ${_panel} stored to Chronqc database." \
-									2>&1 | tee -a "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.started"
-								mv "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}."{started,failed}
+									2>&1 | tee -a "${_processprojecttodb_controle_file_base}.started"
+								mv "${_processprojecttodb_controle_file_base}."{started,failed}
 								return
 							}
 					fi
 				done
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} ${_project}: panel: ${_panel} was stored in Chronqc database."
-					rm -f "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.failed"
-					mv -v "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}."{started,finished}
-					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.finished."
+					rm -f "${_processprojecttodb_controle_file_base}.failed"
+					mv -v "${_processprojecttodb_controle_file_base}."{started,finished}
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_processprojecttodb_controle_file_base}.finished."
 			fi
 		else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_project}: panel: ${_panel} has date ${_checkdate} this is not fit for chronQC." \
-					2>&1 | tee -a "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.started"
-				mv -v "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}."{started,incorrectDate}
+					2>&1 | tee -a "${_processprojecttodb_controle_file_base}.started"
+				mv -v "${_processprojecttodb_controle_file_base}."{started,incorrectDate}
 				return
 		fi
-	elif [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
+	elif [[ -e "${_processprojecttodb_controle_file_base}.finished" ]]
 	then
-		echo "Project/run ${_project}/${_run} is ready. The data is available at ${PRM_ROOT_DIR}/projects/." \
-			>> "${JOB_CONTROLE_FILE_BASE}.finished"
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished. Setting track & trace state to finished :)."
+		echo "Project ${_project} is ready. The data is available at ${TMP_ROOT_DIR}/projects/." \
+			>> "${_processprojecttodb_controle_file_base}.finished"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_processprojecttodb_controle_file_base}.finished. Setting track & trace state to finished :)."
 	fi
 }
 
-function generateChronQCOutput() {
+function processDarwinToDB() {
 	local _runinfo="${1}"
 	local _tablefile="${2}"
 	local _filetype="${3}"
 	local _fileDate="${4}"
+	local _darwin_job_controle_file_base="${5}"
 	CHRONQC_TMP="${TMP_TRENDANALYSE_DIR}/tmp/"
 	
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "local variables generateChronQCOutput:_runinfo=${_runinfo},_tablefile=${_tablefile}, _filetype=${_filetype}, _fileDate=${_fileDate}"
-	
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "starting to fille the trendanalysis database with :${_runinfo} and ${_tablefile}}"
+	touch "${_darwin_job_controle_file_base}".started
 	if [[ "${_filetype}"  == 'ArrayInzetten' ]]
 	then
 
@@ -384,29 +383,51 @@ function generateChronQCOutput() {
 				--run-date-info "${_runinfo}" \
 				-o "${CHRONQC_DATABASE_NAME}" \
 				--db-table "${_filetype}All" \
-				"${_tablefile}" all
-
+				"${_tablefile}" all || {
+					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_runinfo} to Chronqc database." \
+					2>&1 | tee -a "${_darwin_job_controle_file_base}.started"
+					mv "${_darwin_job_controle_file_base}."{started,failed}
+					return
+					}
+				
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "updating database with ${CHRONQC_TMP}/${_filetype}Labpassed_${_fileDate}.csv"
 			chronqc database -f --update \
 				--db "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" \
 				--run-date-info "${CHRONQC_TMP}/ArrayInzettenLabpassed_runinfo_${_fileDate}.csv" \
 				-o "${CHRONQC_DATABASE_NAME}" \
 				--db-table "${_filetype}Labpassed" \
-				"${CHRONQC_TMP}/ArrayInzettenLabpassed_${_fileDate}.csv" labpassed
+				"${CHRONQC_TMP}/ArrayInzettenLabpassed_${_fileDate}.csv" labpassed || {
+					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_runinfo} to Chronqc database." \
+					2>&1 | tee -a "${_darwin_job_controle_file_base}.started"
+					mv "${_darwin_job_controle_file_base}."{started,failed}
+					return
+					}
+				mv "${_darwin_job_controle_file_base}."{started,finished}
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "creating database starting with ${CHRONQC_TMP}/${_filetype}_${_fileDate}.csv"
 			chronqc database -f --create \
 				--run-date-info "${_runinfo}" \
 				--o "${CHRONQC_DATABASE_NAME}" \
 				--db-table "${_filetype}All" \
-				"${_tablefile}" all
+				"${_tablefile}" all || {
+					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_runinfo} to Chronqc database." \
+					2>&1 | tee -a "${_darwin_job_controle_file_base}.started"
+					mv "${_darwin_job_controle_file_base}."{started,failed}
+					return
+					}
 			
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "creating database starting with ${CHRONQC_TMP}/${_filetype}Labpassed_${_fileDate}.csv"
 			chronqc database -f --create \
 				--run-date-info "${CHRONQC_TMP}/ArrayInzettenLabpassed_runinfo_${_fileDate}.csv" \
 				--o "${CHRONQC_DATABASE_NAME}" \
 				--db-table "${_filetype}Labpassed" \
-				"${CHRONQC_TMP}/ArrayInzettenLabpassed_${_fileDate}.csv" labpassed
+				"${CHRONQC_TMP}/ArrayInzettenLabpassed_${_fileDate}.csv" labpassed || {
+					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_runinfo} to Chronqc database." \
+					2>&1 | tee -a "${_darwin_job_controle_file_base}.started"
+					mv "${_darwin_job_controle_file_base}."{started,failed}
+					return
+					}
+				mv "${_darwin_job_controle_file_base}."{started,finished}
 		fi
 		
 	elif [[ "${_filetype}" == 'Concentratie' ]]
@@ -427,14 +448,26 @@ function generateChronQCOutput() {
 				--run-date-info "${CHRONQC_TMP}/ConcentratieNimbus_runinfo_${_fileDate}.csv" \
 				-o "${CHRONQC_DATABASE_NAME}" \
 				--db-table "${_filetype}" \
-				"${CHRONQC_TMP}/ConcentratieNimbus_${_fileDate}.csv" Nimbus
+				"${CHRONQC_TMP}/ConcentratieNimbus_${_fileDate}.csv" Nimbus || {
+					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_runinfo} to Chronqc database." \
+					2>&1 | tee -a "${_darwin_job_controle_file_base}.started"
+					mv "${_darwin_job_controle_file_base}."{started,failed}
+					return
+					}
+				mv "${_darwin_job_controle_file_base}."{started,finished}
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "creating database starting with ${CHRONQC_TMP}/${_filetype}Nimbus_${_fileDate}.csv"
 			chronqc database -f --create \
 				--run-date-info "${CHRONQC_TMP}/ConcentratieNimbus_runinfo_${_fileDate}.csv" \
 				--o "${CHRONQC_DATABASE_NAME}" \
 				--db-table "${_filetype}" \
-				"${CHRONQC_TMP}/ConcentratieNimbus_${_fileDate}.csv" Nimbus
+				"${CHRONQC_TMP}/ConcentratieNimbus_${_fileDate}.csv" Nimbus || {
+					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_runinfo} to Chronqc database." \
+					2>&1 | tee -a "${_darwin_job_controle_file_base}.started"
+					mv "${_darwin_job_controle_file_base}."{started,failed}
+					return
+					}
+				mv "${_darwin_job_controle_file_base}."{started,finished}
 		fi
 
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "database filled with ConcentratieNimbus_${_fileDate}.csv"
@@ -447,18 +480,31 @@ function generateChronQCOutput() {
 				--run-date-info "${_runinfo}" \
 				-o "${CHRONQC_DATABASE_NAME}" \
 				--db-table "${_filetype}" \
-				"${_tablefile}" NGSlab
+				"${_tablefile}" NGSlab || {
+					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_runinfo} to Chronqc database." \
+					2>&1 | tee -a "${_darwin_job_controle_file_base}.started"
+					mv "${_darwin_job_controle_file_base}."{started,failed}
+					return
+					}
+				mv "${_darwin_job_controle_file_base}."{started,finished}
+
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "creating database starting with ${CHRONQC_TMP}/${_filetype}_${_fileDate}.csv"
 			chronqc database -f --create \
 				--run-date-info "${_runinfo}" \
 				--o "${CHRONQC_DATABASE_NAME}" \
 				--db-table "${_filetype}" \
-				"${_tablefile}" NGSlab
+				"${_tablefile}" NGSlab || {
+					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_runinfo} to Chronqc database." \
+					2>&1 | tee -a "${_darwin_job_controle_file_base}.started"
+					mv "${_darwin_job_controle_file_base}."{started,failed}
+					return
+					}
+				mv "${_darwin_job_controle_file_base}."{started,finished}
 		fi
 	fi		
-	mv "${_runinfo}" "${ARCHIVE_DIR}"
-	mv "${_tablefile}" "${ARCHIVE_DIR}"
+
+
 
 }
 
@@ -468,17 +514,29 @@ function generateChronQCOutput() {
 ## The layout of the report is configured by the given json config file.
 #
 function generate_plots() {
+	local _job_controle_file_base="${1}"
+	
 	declare configFile="${CHRONQC_TEMPLATE_DIRS}/reports.${HOSTNAME_SHORT}.cfg"
+	touch "${_job_controle_file_base}".started
 	if [[ -f "${configFile}" && -r "${configFile}" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Sourcing config file ${configFile} ..."
 		#include host specific report commands.
 		#shellcheck disable=SC1090
 		mixed_stdouterr=$(source "${configFile}" 2>&1) || log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" "${?}" "Cannot source ${configFile}."
+		# May seem redundant, but is a mandatory workaround for some Bash versions.
 		#shellcheck disable=SC1090
-		source "${configFile}"  # May seem redundant, but is a mandatory workaround for some Bash versions.
+		source "${configFile}"  || {
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create reports from the Chronqc database." \
+			2>&1 | tee -a "${_darwin_job_controle_file_base}.started"
+			mv "${_job_controle_file_base}."{started,failed}
+			return
+			}
+		mv "${_job_controle_file_base}."{started,finished}
+
 	else
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Config file ${configFile} missing or not accessible."
+		mv "${_job_controle_file_base}."{started,failed}
 	fi
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "ChronQC reports finished."
 }
@@ -588,7 +646,7 @@ fi
 lockFile="${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
 thereShallBeOnlyOne "${lockFile}"
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile} ..."
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${TMP_ROOT_DIR}/trendanalysis/logs ..."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${TMP_ROOT_DIR}/logs ..."
 
 #
 # Use multiplexing to reduce the amount of SSH connections created
@@ -618,28 +676,27 @@ module load "chronqc/${CHRONQC_VERSION}"
 #MULTIPLE_PRMS
 
 TMP_TRENDANALYSE_DIR="${TMP_ROOT_DIR}/trendanalysis/"
+LOGS_DIR="${TMP_ROOT_DIR}/logs/"
 
-readarray -t rawdata < <(find "${TMP_TRENDANALYSE_DIR}/rawdata/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${TMP_TRENDANALYSE_DIR}/rawdata/||")
-if [[ "${#rawdata[@]:-0}" -eq '0' ]]
+readarray -t rawdataArray < <(find "${TMP_TRENDANALYSE_DIR}/rawdata/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${TMP_TRENDANALYSE_DIR}/rawdata/||")
+if [[ "${#rawdataArray[@]:-0}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${TMP_TRENDANALYSE_DIR}/rawdata/."
 else
-	for rawdat in "${rawdata[@]}"
+	for rawdata in "${rawdataArray[@]}"
 	do
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing rawdat ${rawdat} ..."
-		echo "Working on ${rawdat}" > "${lockFile}"
-		export TMP_TRENDANALYSE_LOGS_DIR="${TMP_TRENDANALYSE_DIR}/logs"
-		controlFileBase="${TMP_TRENDANALYSE_DIR}/logs/${rawdat}"
-		export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
-		export PROCESSRAWDATATODB_CONTROLE_FILE_BASE="${TMP_TRENDANALYSE_DIR}/logs/${rawdat}/${rawdat}.processRawdataToDB"
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${TMP_TRENDANALYSE_DIR}/logs/${rawdat}/"
-		mkdir -p "${TMP_TRENDANALYSE_DIR}/logs/${rawdat}"
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${rawdat} ..."
-		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]] && [[ "${PROCESSRAWDATATODB_CONTROLE_FILE_BASE}.finished" -ot "${JOB_CONTROLE_FILE_BASE}.finished" ]]
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing rawdata ${rawdata} ..."
+		echo "Working on ${rawdata}" > "${lockFile}"
+		controlFileBase="${LOGS_DIR}/${rawdata}/"
+		RAWDATA_JOB_CONTROLE_FILE_BASE="${controlFileBase}/rawdata.${rawdata}.${SCRIPT_NAME}_processRawdatatoDB"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${LOGS_DIR}/${rawdata}/"
+		mkdir -p "${LOGS_DIR}/${rawdata}/"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${rawdata} ..."
+		if [[ -e "${RAWDATA_JOB_CONTROLE_FILE_BASE}.finished" ]]
 		then
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${rawdat}."
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${rawdata}."
 		else
-			processRawdataToDB "${rawdat}"
+			processRawdataToDB "${rawdata}" "${RAWDATA_JOB_CONTROLE_FILE_BASE}"
 		fi
 	done
 fi
@@ -659,59 +716,51 @@ else
 	do
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project} ..."
 		echo "Working on ${project}" > "${lockFile}"
-		readarray -t runs < <(find "${TMP_TRENDANALYSE_DIR}/projects/${project}/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${TMP_TRENDANALYSE_DIR}/projects/${project}/||")
-		if [[ "${#runs[@]:-0}" -eq '0' ]]
+		controlFileBase="${LOGS_DIR}/${project}/"
+		PROCESSPROJECTTODB_CONTROLE_FILE_BASE="${LOGS_DIR}/${project}/project.${project}.${SCRIPT_NAME}_processProjectToDB"
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${LOGS_DIR}/${project}/"
+		mkdir -p "${LOGS_DIR}/${project}"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/ ..."
+		if [[ -e "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.finished" ]] 
 		then
-			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found for project ${project}."
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${project}/${run}."
 		else
-			for run in "${runs[@]}"
-			do
-				export TMP_TRENDANALYSE_LOGS_DIR="${TMP_TRENDANALYSE_DIR}/logs"
-				controlFileBase="${TMP_TRENDANALYSE_DIR}/logs/${project}/${run}"
-				export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
-				export PROCESSPROJECTTODB_CONTROLE_FILE_BASE="${TMP_TRENDANALYSE_DIR}/logs/${project}/${run}.processProjectToDB"
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${TMP_TRENDANALYSE_DIR}/logs/${project}/"
-				mkdir -p "${TMP_TRENDANALYSE_DIR}/logs/${project}"
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/${run} ..."
-				if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]] && [[ "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.finished" -ot "${JOB_CONTROLE_FILE_BASE}.finished" ]]
-				then
-					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${project}/${run}."
-				else
-					processProjectToDB "${project}" "${run}"
-				fi
-			done
+			processProjectToDB "${project}" "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}"
 		fi
 	done
 fi
-
-
 
 
 #
 ## Checks directory ${IMPORT_DIR} for new Darwin import files. Than calls function 'generateChronQCOutput "${i}" "${importDir}/${tableFile}" "${fileType}"'
 ## to process files. After precession the files are moved to archive.
 #
-mkdir -p "${TMP_TRENDANALYSE_LOGS_DIR}/darwin/"
-while read -r i
-do
-	if [[ -e "${i}" ]]
-	then
-		runinfoFile=$(basename "${i}" .csv)
+
+
+mkdir -p "${LOGS_DIR}/darwin/"
+
+readarray -t darwindata < <(find "${TMP_TRENDANALYSE_DIR}/darwin/" -maxdepth 1 -mindepth 1 -type d -name "*runinfo*" | sed -e "s|^${TMP_TRENDANALYSE_DIR}/darwin/||")
+if [[ "${#darwindata[@]:-0}" -eq '0' ]]
+then
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${TMP_TRENDANALYSE_DIR}/darwin/."
+else
+	for darwinfile in "${darwindata[@]}"
+	do
+		runinfoFile=$(basename "${darwinfile}" .csv)
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "files to be processed:${runinfoFile}"
-		if [[ -e "${TMP_TRENDANALYSE_LOGS_DIR}/darwin/${runinfoFile}.finished" ]]
+		fileType=$(cut -d '_' -f1 <<< "${runinfoFile}")
+		fileDate=$(cut -d '_' -f3 <<< "${runinfoFile}")
+		tableFile="${fileType}_${fileDate}.csv"
+		controlFileBase="${LOGS_DIR}/darwin/"
+		DARWIN_JOB_CONTROLE_FILE_BASE="${controleFileBase}/darwin.${fileType}_${fileDate}.${SCRIPT_NAME}_processDarwinToDB"
+		if [[ -e "${DARWIN_JOB_CONTROLE_FILE_BASE}.finished" ]]
 		then
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${runinfoFile} data is already processed"
 		else
-			fileType=$(cut -d '_' -f1 <<< "${runinfoFile}")
-			fileDate=$(cut -d '_' -f3 <<< "${runinfoFile}")
-			tableFile="${fileType}_${fileDate}.csv"
-			generateChronQCOutput "${i}" "${IMPORT_DIR}/${tableFile}" "${fileType}" "${fileDate}"
-			touch "${TMP_TRENDANALYSE_LOGS_DIR}/darwin/${runinfoFile}.finished"
+			processDarwinToDB "${darwinfile}" "${TMP_TRENDANALYSE_DIR}/darwin/${tableFile}" "${fileType}" "${fileDate}" "${DARWIN_JOB_CONTROLE_FILE_BASE}"
 		fi
-	else
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "all files are processed"
-	fi
-done < <(find "${IMPORT_DIR}"/ -maxdepth 1 -type f -iname "*runinfo*.csv")
+	done
+fi
 
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "cleanup ${CHRONQC_TMP}* ..."
 
@@ -720,10 +769,15 @@ rm "${CHRONQC_TMP}/"*
 #
 ## Function for generating a list of ChronQC plots.
 #
-generate_plots
+mkdir -p "${LOGS_DIR}/trendanalysis/"
 
+today=$(date | awk '{print $3$2$6}')
+controlFileBase="${LOGS_DIR}/trendanalysis/"
+JOB_CONTROLE_FILE_BASE="${controlFileBase}/generate_plots.${today}.${SCRIPT_NAME}"
+
+generate_plots "${JOB_CONTROLE_FILE_BASE}"
 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished successfully!'
-echo "" > "${lockFile}"
+
 trap - EXIT
 exit 0

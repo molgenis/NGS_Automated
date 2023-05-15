@@ -92,7 +92,14 @@ function copyQCProjectdataToTmp() {
 		mv "${_project_job_controle_file_base}."{started,failed}
 		return
 		}
-
+		rsync -av --rsync-path="sudo -u ${group}-ateambot rsync" "${PRM_ROOT_DIR}/projects/${_project}/run01/results/${_project}.csv" "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/trendanalysis/projects/${_project}/" \
+		|| {
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${_project}"
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from /groups/${group}/${PRM_ROOT_DIR}/"
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    to ${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/"
+		mv "${_project_job_controle_file_base}."{started,failed}
+		return
+		}
 		mv "${_project_job_controle_file_base}."{started,finished}
 	else
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "For project ${_project} there is no QC data, nothing to rsync.."
