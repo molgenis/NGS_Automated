@@ -397,7 +397,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline argume
 declare group=''
 declare email='false'
 declare selectedPhaseState='all'
-while getopts ":g:l:s:d:he" opt; do
+while getopts ":g:l:s:p:d:he" opt; do
 	case "${opt}" in
 		h)
 			showHelp
@@ -410,6 +410,9 @@ while getopts ":g:l:s:d:he" opt; do
 			;;
 		d)
 			dat_dir="${OPTARG}"
+			;;
+		p)
+			prm_dir="${OPTARG}"
 			;;
 		s)
 			selectedPhaseState="${OPTARG}"
@@ -472,6 +475,9 @@ do
 	fi
 done
 
+#
+# Overrule group's DAT_ROOT_DIR if necessary.
+#
 if [[ -z "${dat_dir:-}" ]]
 then
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "default (${DAT_ROOT_DIR})"
@@ -485,6 +491,24 @@ else
 		
 	else
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "${DAT_ROOT_DIR} does not exist, exit!"
+	fi
+fi
+
+#
+# Overrule group's PRM_ROOT_DIR if necessary.
+#
+if [[ -z "${prm_dir:-}" ]]
+then
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "default (${PRM_ROOT_DIR})"
+else
+	PRM_ROOT_DIR="/groups/${GROUP}/${prm_dir}/"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "DAT_ROOT_DIR is set to ${PRM_ROOT_DIR}"
+	if test -e "/groups/${GROUP}/${prm_dir}/"
+	then
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${PRM_ROOT_DIR} is available"
+		
+	else
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "${PRM_ROOT_DIR} does not exist, exit!"
 	fi
 fi
 

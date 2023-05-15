@@ -82,7 +82,7 @@ EOH
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
-while getopts ":g:l:s:h" opt
+while getopts ":g:l:p:s:h" opt
 do
 	case "${opt}" in
 		h)
@@ -90,6 +90,9 @@ do
 			;;
 		g)
 			group="${OPTARG}"
+			;;
+		p)
+			prm_dir="${OPTARG}"
 			;;
 		s)
 			sourceServerFQDN="${OPTARG}"
@@ -163,6 +166,25 @@ then
 fi
 
 #
+# Overrule group's SCR_ROOT_DIR if necessary.
+#
+if [[ -z "${prm_dir:-}" ]]
+then
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "default (${PRM_ROOT_DIR})"
+else
+	PRM_ROOT_DIR="/groups/${GROUP}/${prm_dir}/"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "DAT_ROOT_DIR is set to ${PRM_ROOT_DIR}"
+	if test -e "/groups/${GROUP}/${prm_dir}/"
+	then
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${PRM_ROOT_DIR} is available"
+		
+	else
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "${PRM_ROOT_DIR} does not exist, exit!"
+	fi
+fi
+
+
+#
 # Make sure only one copy of this script runs simultaneously
 # per data collection we want to copy to prm -> one copy per group.
 # Therefore locking must be done after
@@ -175,9 +197,6 @@ lockFile="${PRM_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
 thereShallBeOnlyOne "${lockFile}"
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile} ..."
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${PRM_ROOT_DIR}/logs ..."
-
-
-
 
 declare -a sampleSheetsFromSourceServer
 # shellcheck disable=SC2029
