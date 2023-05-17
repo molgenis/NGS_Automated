@@ -200,12 +200,12 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${PRM_ROOT_DIR}/logs ..."
 
 declare -a sampleSheetsFromSourceServer
-SC2029
+# shellcheck disable=SC2029
 readarray -t sampleSheetsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${SCR_ROOT_DIR}/Samplesheets/\" -mindepth 1 -maxdepth 1 -type f -name '*.${SAMPLESHEET_EXT}'")
 
 if [[ "${#sampleSheetsFromSourceServer[@]}" -eq '0' ]]
 then
-	# shellcheck disable=SC2029
+	
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found at ${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}."
 else
 	for sampleSheet in "${sampleSheetsFromSourceServer[@]}"
