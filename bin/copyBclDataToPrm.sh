@@ -172,6 +172,7 @@ if [[ -z "${prm_dir:-}" ]]
 then
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "default (${PRM_ROOT_DIR})"
 else
+	# shellcheck disable=SC2153
 	PRM_ROOT_DIR="/groups/${GROUP}/${prm_dir}/"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "DAT_ROOT_DIR is set to ${PRM_ROOT_DIR}"
 	if test -e "/groups/${GROUP}/${prm_dir}/"
@@ -199,7 +200,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${PRM_ROOT_DIR}/logs ..."
 
 declare -a sampleSheetsFromSourceServer
-# shellcheck disable=SC2029
+SC2029
 readarray -t sampleSheetsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${SCR_ROOT_DIR}/Samplesheets/\" -mindepth 1 -maxdepth 1 -type f -name '*.${SAMPLESHEET_EXT}'")
 
 if [[ "${#sampleSheetsFromSourceServer[@]}" -eq '0' ]]
