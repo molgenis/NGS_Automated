@@ -205,6 +205,7 @@ readarray -t sampleSheetsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServ
 
 if [[ "${#sampleSheetsFromSourceServer[@]}" -eq '0' ]]
 then
+	# shellcheck disable=SC2029
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found at ${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}."
 else
 	for sampleSheet in "${sampleSheetsFromSourceServer[@]}"
