@@ -236,7 +236,7 @@ function processProjectToDB() {
 		#
 		# Get panel information from $_project} based on column 'capturingKit'.
 		#
-		_panel=$(awk -F "${SAMPLESHEET_SEP}" 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i}}{if(NR > 1) print $(f["capturingKit"]) }' "${TMP_ROOT_DIR}/projects/${_project}/run01/results/${_project}.csv" | sort -u | cut -d'/' -f2)
+		_panel=$(awk -F "${SAMPLESHEET_SEP}" 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i}}{if(NR > 1) print $(f["capturingKit"]) }' "${CHRONQC_PROJECTS_DIR}/${_project}.csv" | sort -u | cut -d'/' -f2)
 		IFS='_' read -r -a array <<< "${_panel}"
 		if [[ "${array[0]}" == *"Exoom"* ]]
 		then
