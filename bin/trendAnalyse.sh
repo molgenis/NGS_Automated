@@ -723,7 +723,7 @@ else
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/ ..."
 		if [[ -e "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}.finished" ]] 
 		then
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${project}/${run}."
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${project}."
 		else
 			processProjectToDB "${project}" "${PROCESSPROJECTTODB_CONTROLE_FILE_BASE}"
 		fi
