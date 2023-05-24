@@ -739,7 +739,7 @@ fi
 
 mkdir -p "${LOGS_DIR}/darwin/"
 
-readarray -t darwindata < <(find "${TMP_TRENDANALYSE_DIR}/darwin/" -maxdepth 1 -mindepth 1 -type d -name "*runinfo*" | sed -e "s|^${TMP_TRENDANALYSE_DIR}/darwin/||")
+readarray -t darwindata < <(find "${TMP_TRENDANALYSE_DIR}/darwin/" -maxdepth 1 -mindepth 1 -type f -name "*runinfo*" | sed -e "s|^${TMP_TRENDANALYSE_DIR}/darwin/||")
 if [[ "${#darwindata[@]:-0}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${TMP_TRENDANALYSE_DIR}/darwin/."
@@ -751,13 +751,13 @@ else
 		fileType=$(cut -d '_' -f1 <<< "${runinfoFile}")
 		fileDate=$(cut -d '_' -f3 <<< "${runinfoFile}")
 		tableFile="${fileType}_${fileDate}.csv"
-		controlFileBase="${LOGS_DIR}/darwin/"
+		controleFileBase="${LOGS_DIR}/darwin/"
 		DARWIN_JOB_CONTROLE_FILE_BASE="${controleFileBase}/darwin.${fileType}_${fileDate}.${SCRIPT_NAME}_processDarwinToDB"
 		if [[ -e "${DARWIN_JOB_CONTROLE_FILE_BASE}.finished" ]]
 		then
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${runinfoFile} data is already processed"
 		else
-			processDarwinToDB "${darwinfile}" "${TMP_TRENDANALYSE_DIR}/darwin/${tableFile}" "${fileType}" "${fileDate}" "${DARWIN_JOB_CONTROLE_FILE_BASE}"
+			processDarwinToDB "${TMP_TRENDANALYSE_DIR}/darwin/${darwinfile}" "${TMP_TRENDANALYSE_DIR}/darwin/${tableFile}" "${fileType}" "${fileDate}" "${DARWIN_JOB_CONTROLE_FILE_BASE}"
 		fi
 	done
 fi
