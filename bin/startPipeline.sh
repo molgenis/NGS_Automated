@@ -579,17 +579,8 @@ else
 
 		if [[ -e "${controlFileBase}.generateScripts.finished" ]]
 		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Check if rawdata is copied already, if not generatedScripts.finished will be removed"
-			sleep 2
-			if [[ ! -f "${TMP_ROOT_DIR}/generatedscripts/${pipeline}/${project}/scripts/CheckRawDataOnTmp_0.sh.finished" ]]
-			then 
-				rm -f "${controlFileBase}.generateScripts.finished"
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Not all data present, need to revisit generateScripts again. ${controlFileBase}.generateScripts.finished removed"
-				continue
-			else	
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.generateScripts.finished present and rawdata present -> generateScripts completed; let's submitScripts for ${project}/${pipelineRun} ..."
-				submitJobScripts "${project}" "${pipelineRun}" "${sampleType}" "${priority}" "${capturingKit}" "${labRunID}" "${controlFileBase}" "${resubmitJobScripts}"
-			fi
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.generateScripts.finished present -> generateScripts completed; let's submitScripts for ${project}/${pipelineRun} ..."
+			submitJobScripts "${project}" "${pipelineRun}" "${sampleType}" "${priority}" "${capturingKit}" "${labRunID}" "${controlFileBase}" "${resubmitJobScripts}"
 		else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.generateScripts.finished absent -> generateScripts failed."
 		fi
