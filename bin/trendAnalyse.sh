@@ -509,38 +509,20 @@ function processDarwinToDB() {
 }
 
 
-#
-## Generates a QC report based in the '-p tablename', and a possible subselection of that table. This is done based on a panel, for example 'Exoom'.
-## The layout of the report is configured by the given json config file.
-#
-function generate_plots() {
+function generateReports() {
+
 	local _job_controle_file_base="${1}"
-	
-	declare configFile="${CHRONQC_TEMPLATE_DIRS}/reports.${HOSTNAME_SHORT}.cfg"
-	touch "${_job_controle_file_base}".started
-	if [[ -f "${configFile}" && -r "${configFile}" ]]
-	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Sourcing config file ${configFile} ..."
-		#include host specific report commands.
-		#shellcheck disable=SC1090
-		mixed_stdouterr=$(source "${configFile}" 2>&1) || log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" "${?}" "Cannot source ${configFile}."
-		# May seem redundant, but is a mandatory workaround for some Bash versions.
-		#shellcheck disable=SC1090
-		source "${configFile}"  || {
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create reports from the Chronqc database." \
-			2>&1 | tee -a "${_darwin_job_controle_file_base}.started"
-			mv "${_job_controle_file_base}."{started,failed}
-			return
-			}
-		mv "${_job_controle_file_base}."{started,finished}
-
-	else
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Config file ${configFile} missing or not accessible."
+	source "${CHRONQC_TEMPLATE_DIRS}/reports.sh" || { 
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create all reports from the Chronqc database." \
+		2>&1 | tee -a "${_job_controle_file_base}.started"
 		mv "${_job_controle_file_base}."{started,failed}
-	fi
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "ChronQC reports finished."
-}
+		return
+	}
 
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "ChronQC reports finished."
+	mv "${_job_controle_file_base}."{started,finished}
+
+}
 
 
 #
@@ -688,7 +670,7 @@ else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing rawdata ${rawdata} ..."
 		echo "Working on ${rawdata}" > "${lockFile}"
 		controlFileBase="${LOGS_DIR}/${rawdata}/"
-		RAWDATA_JOB_CONTROLE_FILE_BASE="${controlFileBase}/rawdata.${rawdata}.${SCRIPT_NAME}_processRawdatatoDB"
+		RAWDATA_JOB_CONTROLE_FILE_BASE="${controlFileBase}/rawdata.${SCRIPT_NAME}_processRawdatatoDB"
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${LOGS_DIR}/${rawdata}/"
 		mkdir -p "${LOGS_DIR}/${rawdata}/"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${rawdata} ..."
@@ -717,7 +699,7 @@ else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project} ..."
 		echo "Working on ${project}" > "${lockFile}"
 		controlFileBase="${LOGS_DIR}/${project}/"
-		PROCESSPROJECTTODB_CONTROLE_FILE_BASE="${LOGS_DIR}/${project}/project.${project}.${SCRIPT_NAME}_processProjectToDB"
+		PROCESSPROJECTTODB_CONTROLE_FILE_BASE="${LOGS_DIR}/${project}/project.${SCRIPT_NAME}_processProjectToDB"
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${LOGS_DIR}/${project}/"
 		mkdir -p "${LOGS_DIR}/${project}"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/ ..."
@@ -752,7 +734,7 @@ else
 		fileDate=$(cut -d '_' -f3 <<< "${runinfoFile}")
 		tableFile="${fileType}_${fileDate}.csv"
 		controleFileBase="${LOGS_DIR}/darwin/"
-		DARWIN_JOB_CONTROLE_FILE_BASE="${controleFileBase}/darwin.${fileType}_${fileDate}.${SCRIPT_NAME}_processDarwinToDB"
+		DARWIN_JOB_CONTROLE_FILE_BASE="${controleFileBase}/${fileType}_${fileDate}.${SCRIPT_NAME}_processDarwinToDB"
 		if [[ -e "${DARWIN_JOB_CONTROLE_FILE_BASE}.finished" ]]
 		then
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${runinfoFile} data is already processed"
@@ -764,20 +746,20 @@ fi
 
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "cleanup ${CHRONQC_TMP}* ..."
 
-rm "${CHRONQC_TMP}/"*
+#rm "${CHRONQC_TMP}/"*
 
 #
 ## Function for generating a list of ChronQC plots.
 #
 mkdir -p "${LOGS_DIR}/trendanalysis/"
 
-today=$(date | awk '{print $3$2$6}')
+today=$(date '+%Y%m%d')
 controlFileBase="${LOGS_DIR}/trendanalysis/"
 JOB_CONTROLE_FILE_BASE="${controlFileBase}/generate_plots.${today}.${SCRIPT_NAME}"
+touch "${JOB_CONTROLE_FILE_BASE}".started
 
-generate_plots "${JOB_CONTROLE_FILE_BASE}"
+generateReports "${JOB_CONTROLE_FILE_BASE}"
 
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished successfully!'
 
 trap - EXIT
 exit 0

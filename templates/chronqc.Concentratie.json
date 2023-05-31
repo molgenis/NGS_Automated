@@ -11,16 +11,6 @@
     },
     {
         "table_name": "Concentratie",
-        "chart_type": "time_series_with_percentage_of_samples_above_threshold",
-        "chart_properties": {
-            "chart_title": "% Sample per run met A260_230 boven de 1.4",
-            "y_value": "A260_230",
-            "threshold": 1.4,
-            "y_lable": "% of samples whit quality score above 1.4"
-        }
-    },
-    {
-        "table_name": "Concentratie",
         "chart_type": "time_series_with_absolute_threshold",
         "chart_properties": {
             "chart_title": "A260_280 (Mean per run)",
@@ -31,32 +21,11 @@
     },
     {
         "table_name": "Concentratie",
-        "chart_type": "time_series_with_percentage_of_samples_above_threshold",
-        "chart_properties": {
-            "chart_title": "% Sample per run met A260_280 boven de 1.4",
-            "y_value": "A260_280",
-            "threshold": 1.4,
-            "y_lable": "% of samples with quality score above 1.4"
-        }
-    },
-    {
-        "table_name": "Concentratie",
         "chart_type": "time_series_with_absolute_threshold",
         "chart_properties": {
             "chart_title": "YIELD ng/ul (Mean per run)",
             "lower_threshold": 80,
             "y_value": "YIELD"
         }
-    },
-    {
-        "table_name": "Concentratie",
-        "chart_type": "time_series_with_percentage_of_samples_above_threshold",
-        "chart_properties": {
-            "chart_title": "% Sample per run met concentratie boven 80 ng/ul",
-            "y_value": "YIELD",
-            "threshold": 80,
-            "y_lable": "% of samples above 80 ng/ul"
-        }
     }
-
 ]

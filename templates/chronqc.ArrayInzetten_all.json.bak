@@ -1,0 +1,30 @@
+[
+    {
+        "table_name": "ArrayInzettenAll",
+        "chart_type": "time_series_with_stacked_bar_plot",
+        "chart_properties": {
+            "chart_title": "bar plot qcStatus",
+            "y_value": "qcstatus_y",
+            "categories": "labpassed, labfailed, datafailed"
+        }
+    },
+    {
+        "table_name": "ArrayInzettenAll",
+        "chart_type": "time_series_with_percentage_of_samples_above_threshold",
+        "chart_properties": {
+            "chart_title": "CallRate per project (% samples above 97)",
+            "y_value": "CallRate",
+            "threshold": 97
+        }
+    },
+    {
+        "table_name": "ArrayInzettenAll",
+        "chart_type": "time_series_with_percentage_of_samples_above_threshold",
+        "chart_properties": {
+            "chart_title": "StdDev per project (% sample above 0.2)",
+            "y_value": "StdDev",
+            "threshold": 0.2,
+            "y_label": "% of samples above 0.2"
+        }
+    }
+]
