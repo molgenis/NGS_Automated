@@ -13,6 +13,7 @@ fi
 
 set -e # Exit if any subcommand or pipeline returns a non-zero exit status.
 set -u # Raise exception if variable is unbound. Combined with set -e will halt execution when an unbound variable is encountered.
+set -o pipefail # Fail when any command in series of piped commands failed as opposed to only when the last command failed.
 
 umask 0027
 
@@ -32,7 +33,6 @@ REAL_USER="$(logname 2>/dev/null || echo 'no login name')"
 ### Functions.
 ##
 #
-
 if [[ -f "${LIB_DIR}/sharedFunctions.bash" && -r "${LIB_DIR}/sharedFunctions.bash" ]]
 then
 	# shellcheck source=lib/sharedFunctions.bash
@@ -49,23 +49,38 @@ function showHelp() {
 	#
 	cat <<EOH
 ===============================================================================================================
-Script to pull data from a Data Staging (DS) server.
+Script to copy (sync) data from a succesfully finished analysis project from tmp to prm storage.
 
 Usage:
+
 	$(basename "${0}") OPTIONS
+
 Options:
+
 	-h	Show this help.
 	-g	Group.
+	-d	DAT_DIR
+	-p	[pipeline]
+		Pipeline that produced the project data that needs to be transferred to prm. (NGS_Demultiplexing, GAP)
+	-n	Dry-run: Do not perform actual sync, but only list changes instead.
+	-r	[root]
+		Root dir on the server specified with -s and from where the project data will be fetched (optional).
+		By default this is the SCR_ROOT_DIR variable, which is compiled from variables specified in the
+		<group>.cfg, <source_host>.cfg and sharedConfig.cfg config files (see below.)
+		You need to override SCR_ROOT_DIR when the data is to be fetched from a non default path,
+		which is for example the case when fetching data from another group.
 	-l	Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
 Config and dependencies:
-	This script needs 4 config files, which must be located in ${CFG_DIR}:
+
+	This script needs 3 config files, which must be located in ${CFG_DIR}:
 	1. <group>.cfg       for the group specified with -g
-	2. <this_host>.cfg   for this server. E.g.: "${HOSTNAME_SHORT}.cfg"
+	2. <host>.cfg        for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
 	3. sharedConfig.cfg  for all groups and all servers.
 	In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
 ===============================================================================================================
+
 EOH
 	trap - EXIT
 	exit 0
@@ -82,7 +97,8 @@ EOH
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
-while getopts ":g:l:p:s:h" opt
+declare dryrun=''
+while getopts ":g:l:hn" opt
 do
 	case "${opt}" in
 		h)
@@ -91,12 +107,9 @@ do
 		g)
 			group="${OPTARG}"
 			;;
-		p)
-			prm_dir="${OPTARG}"
-			;;
-		s)
-			sourceServerFQDN="${OPTARG}"
-			sourceServer="${sourceServerFQDN%%.*}"
+
+		n)
+			dryrun='-n'
 			;;
 		l)
 			l4b_log_level="${OPTARG^^}"
@@ -120,9 +133,9 @@ if [[ -z "${group:-}" ]]
 then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
 fi
-if [[ -z "${sourceServerFQDN:-}" ]]
+if [[ -n "${dryrun:-}" ]]
 then
-log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a Fully Qualified Domain Name (FQDN) for sourceServer with -s.'
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Enabled dryrun option for rsync.'
 fi
 
 #
@@ -132,11 +145,9 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files ..."
 declare -a configFiles=(
 	"${CFG_DIR}/${group}.cfg"
 	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
-	"${CFG_DIR}/${sourceServer}.cfg"
 	"${CFG_DIR}/sharedConfig.cfg"
-	#"${HOME}/molgenis.cfg" Pull data from a DS server is currently not monitored using a Track & Trace Molgenis.
+	"${HOME}/molgenis.cfg"
 )
-
 for configFile in "${configFiles[@]}"
 do
 	if [[ -f "${configFile}" && -r "${configFile}" ]]
@@ -157,8 +168,9 @@ do
 	fi
 done
 
+
 #
-# Make sure to use an account for cron jobs and *without* write access to prm storage.
+# Write access to prm storage requires data manager account.
 #
 if [[ "${ROLE_USER}" != "${DATA_MANAGER}" ]]
 then
@@ -166,117 +178,70 @@ then
 fi
 
 #
-# Overrule group's SCR_ROOT_DIR if necessary.
-#
-if [[ -z "${prm_dir:-}" ]]
-then
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "default (${PRM_ROOT_DIR})"
-else
-	# shellcheck disable=SC2153
-	PRM_ROOT_DIR="/groups/${GROUP}/${prm_dir}/"
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "DAT_ROOT_DIR is set to ${PRM_ROOT_DIR}"
-	if test -e "/groups/${GROUP}/${prm_dir}/"
-	then
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${PRM_ROOT_DIR} is available"
-		
-	else
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "${PRM_ROOT_DIR} does not exist, exit!"
-	fi
-fi
-
-
-#
-# Make sure only one copy of this script runs simultaneously
+# Make sure only one copy of this script runs simultaneously 
 # per data collection we want to copy to prm -> one copy per group.
-# Therefore locking must be done after
+# Therefore locking must be done after 
 # * sourcing the file containing the lock function,
 # * sourcing config files,
 # * and parsing commandline arguments,
-# but before doing the actual data transfers.
+# but before doing the actual data trnasfers.
 #
 lockFile="${PRM_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
 thereShallBeOnlyOne "${lockFile}"
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile} ..."
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${PRM_ROOT_DIR}/logs ..."
 
-declare -a sampleSheetsFromSourceServer
+#
+# Use multiplexing to reduce the amount of SSH connections created
+# when rsyncing using the group's data manager account.
+# 
+#  1. Become the "${DATA_MANAGER} user who will rsync the data to prm and 
+#  2. Add to ~/.ssh/config:
+#		ControlMaster auto
+#		ControlPath ~/.ssh/tmp/%h_%p_%r
+#		ControlPersist 5m
+#  3. Create ~/.ssh/tmp dir:
+#		mkdir -p -m 700 ~/.ssh/tmp
+#  4. Recursively restrict access to the ~/.ssh dir to allow only the owner/user:
+#		chmod -R go-rwx ~/.ssh
+#
+
+#
+# Get a list of all projects for this group, loop over their run analysis ("run") sub dirs and check if there are any we need to rsync.
+#
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Searching for folders as ${DATA_MANAGER} on ${HOSTNAME_TMP} in ${CHRONQC_REPORTS_DIRS}/*"
 # shellcheck disable=SC2029
-readarray -t sampleSheetsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${SCR_ROOT_DIR}/Samplesheets/\" -mindepth 1 -maxdepth 1 -type f -name '*.${SAMPLESHEET_EXT}'")
-
-if [[ "${#sampleSheetsFromSourceServer[@]}" -eq '0' ]]
+mapfile -t chronQCDateFolders < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find "${CHRONQC_REPORTS_DIRS}" -maxdepth 1 -mindepth 1 -type d")
+if [[ "${#chronQCDateFolders[@]}" -eq '0' ]]
 then
-	
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found at ${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/*.${SAMPLESHEET_EXT}."
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No folders found @ ${CHRONQC_REPORTS_DIRS}."
 else
-	for sampleSheet in "${sampleSheetsFromSourceServer[@]}"
+	for chronQCDateFolder in "${chronQCDateFolders[@]}"
 	do
-		#
-		# Process this sample sheet / run and find how out how many raw data items it contains.
-		#
-		filePrefix="$(basename "${sampleSheet%."${SAMPLESHEET_EXT}"}")"
-		controlFileBase="${PRM_ROOT_DIR}/logs/${filePrefix}/"
-
-		export JOB_CONTROLE_FILE_BASE="${controlFileBase}/${filePrefix}.${SCRIPT_NAME}"
-		logDir="${PRM_ROOT_DIR}/logs/${filePrefix}/"
-		# shellcheck disable=SC2174
-		mkdir -m 2770 -p "${logDir}"
+		chronQCDateFolderName=$(basename "${chronQCDateFolder}")
+		controlFileBase="${PRM_ROOT_DIR}/logs/trendanalysis/${chronQCDateFolderName}"
+		export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
 		
 		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${JOB_CONTROLE_FILE_BASE}.finished is present -> Skipping."
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping already transferred ${filePrefix}."
-			continue
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${chronQCDateFolderName}."
 		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${JOB_CONTROLE_FILE_BASE}.finished not present -> Continue..."
-			printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
-		fi	
-		
-		#
-		# Determine whether an rsync is required for this run, which is the case when
-		# raw data production has finished successfully and this copy script has not.
-		#
-		if ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" test -e "${SEQ_DIR}/${filePrefix}/RunCompletionStatus.xml"
-		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SEQ_DIR}/${filePrefix}/RunCompletionStatus.xml present."
-			finished="true"
-		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SEQ_DIR}/${filePrefix}/RunCompletionStatus.xml absent."
-			continue
-		fi
-
-		if [[ "${finished}" == "true" ]]
-		then
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing everything from ${filePrefix}"
-			/usr/bin/rsync -vrltD \
-				--log-file="${JOB_CONTROLE_FILE_BASE}.log" \
-				--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
-				--omit-dir-times \
-				--omit-link-times \
-				"${DATA_MANAGER}@${sourceServerFQDN}:${SEQ_DIR}/${filePrefix}" \
-				"${PRM_ROOT_DIR}/rawdata/bcls/"	
-		else
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer is busy producing data: skipping ${filePrefix}."
-			continue	
-		fi
-		# shellcheck disable=SC2029
-		countFilesRunDirScr="$(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${SEQ_DIR}/${filePrefix}/\"* -type f | wc -l")"
-		countFilesRunDirPrm="$(find "${PRM_ROOT_DIR}/rawdata/bcls/${filePrefix}/"* -type f | wc -l)"
-		if [[ "${countFilesRunDirScr}" -ne "${countFilesRunDirPrm}" ]]; then
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
-				"Amount of files on tmp (${countFilesRunDirScr}) and prm (${countFilesRunDirPrm}) is NOT the same!"
-				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-			return
-		else
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Amount of files on tmp and prm is the same for ${filePrefix}. FINISHED"
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing chronQCDateFolder ${chronQCDateFolderName} ..."
+			mkdir -p "${PRM_ROOT_DIR}/logs/trendanalysis/"
+			touch "${JOB_CONTROLE_FILE_BASE}.started"
+			rsync -av --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' "${dryrun:---progress}" \
+				"${DATA_MANAGER}@${HOSTNAME_TMP}:${chronQCDateFolder}" \
+				"${PRM_ROOT_DIR}/trendanalysis/" \
+			|| {
+				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed} 
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Failed to rsync ${DATA_MANAGER}@${HOSTNAME_TMP}:${chronQCDateFolder} dir. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
+			}
+	
 			mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 		fi
-		
-	done 
-fi	
+	done
+fi
 
-
-# Clean exit.
-#
-log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Finished successfully."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished successfully!'
 trap - EXIT
 exit 0
