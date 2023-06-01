@@ -211,7 +211,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Searching for folders as ${DATA_MANAGER} on ${HOSTNAME_TMP} in ${CHRONQC_REPORTS_DIRS}/*"
 # shellcheck disable=SC2029
-mapfile -t chronQCDateFolders < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find "${CHRONQC_REPORTS_DIRS}" -maxdepth 1 -mindepth 1 -type d")
+mapfile -t chronQCDateFolders < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" \"find "${CHRONQC_REPORTS_DIRS}\" -maxdepth 1 -mindepth 1 -type d")
 if [[ "${#chronQCDateFolders[@]}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No folders found @ ${CHRONQC_REPORTS_DIRS}."
