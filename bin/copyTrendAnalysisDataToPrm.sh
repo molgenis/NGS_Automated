@@ -49,7 +49,7 @@ function showHelp() {
 	#
 	cat <<EOH
 ===============================================================================================================
-Script to copy (sync) data from a succesfully finished analysis project from tmp to prm storage.
+Script to copy (sync) trendanalysis data from tmp to prm storage.
 
 Usage:
 
@@ -60,8 +60,6 @@ Options:
 	-h	Show this help.
 	-g	Group.
 	-d	DAT_DIR
-	-p	[pipeline]
-		Pipeline that produced the project data that needs to be transferred to prm. (NGS_Demultiplexing, GAP)
 	-n	Dry-run: Do not perform actual sync, but only list changes instead.
 	-r	[root]
 		Root dir on the server specified with -s and from where the project data will be fetched (optional).
@@ -235,6 +233,7 @@ else
 			|| {
 				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed} 
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Failed to rsync ${DATA_MANAGER}@${HOSTNAME_TMP}:${chronQCDateFolder} dir. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
+				continue
 			}
 	
 			mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
