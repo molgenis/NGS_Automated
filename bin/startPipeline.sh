@@ -180,6 +180,7 @@ function generateScripts () {
 	#
 	# Signal succes.
 	#
+	
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for ${_project}/${_run}. See ${_controlFileBaseForFunction}.finished for details."
 	rm -f "${_controlFileBaseForFunction}.failed"
 	mv -v "${_controlFileBaseForFunction}."{started,finished}
@@ -575,6 +576,7 @@ else
 		#
 		# Step 2: Submit generated job scripts (per project).
 		#
+
 		if [[ -e "${controlFileBase}.generateScripts.finished" ]]
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.generateScripts.finished present -> generateScripts completed; let's submitScripts for ${project}/${pipelineRun} ..."

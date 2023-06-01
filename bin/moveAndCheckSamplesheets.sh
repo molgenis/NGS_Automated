@@ -241,6 +241,10 @@ do
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a GAP samplesheet. There is no samplesheetCheck at this moment."
 		projectSamplesheet="false"
+	elif [[ "${group}" == "patho" ]]
+	then
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a Patho samplesheet. There is no need for samplesheetCheck."
+		projectSamplesheet="false"
 	else
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a NGS samplesheet. Lets check if the samplesheet is correct."
 		cp "${samplesheet}"{,.converted}
@@ -299,11 +303,18 @@ do
 	#
 	if [[ "${projectSamplesheet}" == "true" ]]
 	then
-		firstStepOfPipeline="NGS_DNA"
-		perl -p -e "s|${REPLACEDPIPELINECOLUMN}|${firstStepOfPipeline}|" "${samplesheet}" > "${samplesheet}.tmp"
-		mv "${samplesheet}.tmp" "${samplesheet}"
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a project samplesheet (no NGS_Demultiplexing); firstStepOfPipeline was set to ${firstStepOfPipeline}."
+		if [[ "${REPLACEDPIPELINECOLUMN}" == *"GENOMESCAN"* ]]
+		then
+			firstStepOfPipeline=''
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a GENOMESCAN project samplesheet, the first step of the pipeline will be set to an empty string (samplesheet will be put in correct bucket in a later stage of the pipeline)."
+		else
+			firstStepOfPipeline="NGS_DNA"
+			perl -p -e "s|${REPLACEDPIPELINECOLUMN}|${firstStepOfPipeline}|" "${samplesheet}" > "${samplesheet}.tmp"
+			mv "${samplesheet}.tmp" "${samplesheet}"
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a project samplesheet (no NGS_Demultiplexing); firstStepOfPipeline was set to ${firstStepOfPipeline}."
+		fi
 	fi
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "first step of the pipeline:[${firstStepOfPipeline}]."
 	# shellcheck disable=SC2153
 	samplesheetDestination="${HOSTNAME_TMP}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/${firstStepOfPipeline}/"
 

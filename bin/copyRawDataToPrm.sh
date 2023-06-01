@@ -429,7 +429,7 @@ declare group=''
 declare dryrun=''
 declare sourceServerFQDN=''
 declare sourceServerRootDir=''
-while getopts ":g:l:s:f:r:p:ahn" opt
+while getopts ":g:l:s:m:f:r:p:ahn" opt
 do
 	case "${opt}" in
 		a)
@@ -446,7 +446,10 @@ do
 			;;
 		p)
 			pipeline="${OPTARG}"
-			;;			
+			;;
+		m)
+			prm_dir="${OPTARG}"
+			;;	
 		s)
 			sourceServerFQDN="${OPTARG}"
 			sourceServer="${sourceServerFQDN%%.*}"
@@ -541,6 +544,25 @@ else
 	RAWDATAPROCESSINGFINISHED="${finishedPrevStep}"
 	mergedSamplesheet='true'
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Previous step is: ${RAWDATAPROCESSINGFINISHED}"
+fi
+
+#
+# Overrule group's PRM_ROOT_DIR if necessary.
+#
+if [[ -z "${prm_dir:-}" ]]
+then
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "default (${PRM_ROOT_DIR})"
+else
+	# shellcheck disable=SC2153
+	PRM_ROOT_DIR="/groups/${GROUP}/${prm_dir}/"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "DAT_ROOT_DIR is set to ${PRM_ROOT_DIR}"
+	if test -e "/groups/${GROUP}/${prm_dir}/"
+	then
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${PRM_ROOT_DIR} is available"
+		
+	else
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "${PRM_ROOT_DIR} does not exist, exit!"
+	fi
 fi
 
 #
