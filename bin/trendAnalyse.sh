@@ -512,6 +512,7 @@ function processDarwinToDB() {
 function generateReports() {
 
 	local _job_controle_file_base="${1}"
+	# shellcheck disable=SC1091
 	source "${CHRONQC_TEMPLATE_DIRS}/reports.sh" || { 
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create all reports from the Chronqc database." \
 		2>&1 | tee -a "${_job_controle_file_base}.started"
