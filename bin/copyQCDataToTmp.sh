@@ -101,7 +101,8 @@ function copyQCProjectdataToTmp() {
 		return
 		}
 		mv "${_project_job_controle_file_base}."{started,finished}
-	elif [[ -e "${PRM_ROOT_DIR}/projects/${_project}/run01/results/qc/statistics/*Dragen_runinfo.csv" ]]
+	elif  [[ -e "${PRM_ROOT_DIR}/projects/${_project}/run01/results/qc/statistics/${_project}.Dragen_runinfo.csv" ]]
+	then
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Dragen project ${_project} is not yet copied to tmp, start rsyncing.."
 		touch "${_project_job_controle_file_base}.started"
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_project} found on ${PRM_ROOT_DIR}, start rsyncing.."
