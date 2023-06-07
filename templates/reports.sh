@@ -22,11 +22,15 @@ chronqc plot -o "${CHRONQC_REPORTS_DIRS}/${TODAY}/" -p ArrayInzetten -f "${CHRON
 #
 ## Sequence run report, when we have enhough data points to generate boxplots, the chronqc.SequenceRun.json can be used, until then chronqc.SequenceRunNoBoxplots.json will be used.  
 #
-#chronqc plot -o "${CHRONQC_REPORTS_DIRS}/${TODAY}/" -p SequenceRun -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" NB501043 "${CHRONQC_TEMPLATE_DIRS}/chronqc.SequenceRunNoBoxplots.json"
+chronqc plot -o "${CHRONQC_REPORTS_DIRS}/${TODAY}/" -p SequenceRun -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" NB501043 "${CHRONQC_TEMPLATE_DIRS}/chronqc.SequenceRunNoBoxplots.json"
 chronqc plot -o "${CHRONQC_REPORTS_DIRS}/${TODAY}/" -p SequenceRun -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" NB501043 "${CHRONQC_TEMPLATE_DIRS}/chronqc.SequenceRun.json"
 chronqc plot -o "${CHRONQC_REPORTS_DIRS}/${TODAY}/" -p SequenceRun -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" NB501093 "${CHRONQC_TEMPLATE_DIRS}/chronqc.SequenceRun.json"
 chronqc plot -o "${CHRONQC_REPORTS_DIRS}/${TODAY}/" -p SequenceRun -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" NB552735 "${CHRONQC_TEMPLATE_DIRS}/chronqc.SequenceRun.json"
 
+#
+## Dragen data reports
+#
+chronqc plot -o "${CHRONQC_REPORTS_DIRS}/${TODAY}/" -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" Dragen "${CHRONQC_TEMPLATE_DIRS}/chronqc.Dragen.json"
 
 
 

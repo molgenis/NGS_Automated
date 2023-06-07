@@ -127,7 +127,7 @@ function processRawdataToDB() {
 				-o "${CHRONQC_DATABASE_NAME}" \
 				"${CHRONQC_TMP}/${_rawdata}.SequenceRun.csv" \
 				--run-date-info "${CHRONQC_TMP}/${_rawdata}.SequenceRun_run_date_info.csv" \
-				--db-table "SequenceRun" \
+				--db-table SequenceRun \
 				"${_sequencer}" -f || {
 					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_rawdata} with ${_sequencer} stored to Chronqc database." \
 						2>&1 | tee -a "${_rawdata_job_controle_file_base}.started"
@@ -504,14 +504,59 @@ function processDarwinToDB() {
 		fi
 	fi		
 
+}
+
+
+function processDragenToDB() {
+
+	local _runinfo="${1}"
+	local _tablefile="${2}"
+	local _dragen_job_controle_file_base="${3}"
+	
+	touch "${_dragen_job_controle_file_base}".started
+	
+	if [[ -e "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" ]]
+	then
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "updating database with ${_runinfo}.csv"
+		chronqc database -f --update \
+			--db "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" \
+			--run-date-info "${_runinfo}" \
+			-o "${CHRONQC_DATABASE_NAME}" \
+			--db-table Dragen \
+			"${_tablefile}" Dragen || {
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_runinfo} to Chronqc database." \
+				2>&1 | tee -a "${_dragen_job_controle_file_base}.started"
+				mv "${_dragen_job_controle_file_base}."{started,failed}
+				return
+				}
+			mv "${_dragen_job_controle_file_base}."{started,finished}
+
+	else
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "creating database starting with ${CHRONQC_TMP}/${_runinfo}.csv"
+		chronqc database -f --create \
+			--run-date-info "${_runinfo}" \
+			--o "${CHRONQC_DATABASE_NAME}" \
+			--db-table Dragen \
+			"${_tablefile}" Dragen || {
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_runinfo} to Chronqc database." \
+				2>&1 | tee -a "${_dragen_job_controle_file_base}.started"
+				mv "${_dragen_job_controle_file_base}."{started,failed}
+				return
+				}
+			mv "${_dragen_job_controle_file_base}."{started,finished}
+	fi
 
 
 }
 
 
+
+
+
 function generateReports() {
 
 	local _job_controle_file_base="${1}"
+	# shellcheck disable=SC1091
 	source "${CHRONQC_TEMPLATE_DIRS}/reports.sh" || { 
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create all reports from the Chronqc database." \
 		2>&1 | tee -a "${_job_controle_file_base}.started"
@@ -714,8 +759,8 @@ fi
 
 
 #
-## Checks directory ${IMPORT_DIR} for new Darwin import files. Than calls function 'generateChronQCOutput "${i}" "${importDir}/${tableFile}" "${fileType}"'
-## to process files. After precession the files are moved to archive.
+## Checks for new Darwin import files. Than calls function 'processDarwinToDB'
+## to add the new files to the database
 #
 
 
@@ -744,9 +789,38 @@ else
 	done
 fi
 
-log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "cleanup ${CHRONQC_TMP}* ..."
 
-#rm "${CHRONQC_TMP}/"*
+
+#
+## Checks dragen data, and adds the new files to the database
+#
+
+readarray -t dragendata < <(find "${TMP_TRENDANALYSE_DIR}/dragen/" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | sed -e "s|^${TMP_TRENDANALYSE_DIR}/dragen/||")
+if [[ "${#dragendata[@]:-0}" -eq '0' ]]
+then
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${TMP_TRENDANALYSE_DIR}/dragen/."
+else
+	for dragenProject in "${dragendata[@]}"
+	do
+		runinfoFile="${dragenProject}".Dragen_runinfo.csv
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "files to be processed:${runinfoFile}"
+		tableFile="${dragenProject}".Dragen.csv
+		mkdir -p "${LOGS_DIR}/${dragenProject}/"
+		controleFileBase="${LOGS_DIR}/${dragenProject}/"
+		DRAGEN_JOB_CONTROLE_FILE_BASE="${controleFileBase}/${dragenProject}.${SCRIPT_NAME}_processDragenToDB"
+		if [[ -e "${DRAGEN_JOB_CONTROLE_FILE_BASE}.finished" ]]
+		then
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${runinfoFile} data is already processed"
+		else
+			processDragenToDB "${TMP_TRENDANALYSE_DIR}/dragen/${dragenProject}/${runinfoFile}" "${TMP_TRENDANALYSE_DIR}/dragen/${dragenProject}/${tableFile}" "${DRAGEN_JOB_CONTROLE_FILE_BASE}"
+		fi
+	done
+fi
+
+
+log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "cleanup ${CHRONQC_TMP}* ..."
+rm "${CHRONQC_TMP}/"*
+log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "cleanup ${CHRONQC_TMP}* ..."
 
 #
 ## Function for generating a list of ChronQC plots.
