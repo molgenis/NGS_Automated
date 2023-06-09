@@ -90,7 +90,7 @@ function rsyncProjectRun() {
 	local _project="${1}"
 	local _run="${2}"
 	local _controlFileBase="${3}"	
-	local _controlFileBaseForFunction="${_controlFileBase}.${SCRIPT_NAME}_${FUNCNAME[0]}"
+	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
 
 	#
 	# Determine whether an rsync is required for this run, which is the case when
@@ -165,7 +165,7 @@ function sanityCheck() {
 	local _run="${2}"
 	local _sampleType=${3}
 	local _controlFileBase="${4}"	
-	local _controlFileBaseForFunction="${_controlFileBase}.${SCRIPT_NAME}_${FUNCNAME[0]}"
+	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
 	
 	#
 	# Check if function previously finished successfully for this data.
