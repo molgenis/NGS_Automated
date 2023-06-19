@@ -198,7 +198,6 @@ function trackAndTracePostFromFile() {
 	#
 	# Get token from login.
 	#
-	
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Trying to login and to get a token for REST API @ https://${MOLGENISSERVER}/api/v1/login ..."
 	_curlResponse=$(curl -f -s -H 'Content-Type: application/json' -X POST -d "{\"username\":\"${USERNAME}\", \"password\":\"${PASSWORD}\"}" "https://${MOLGENISSERVER}/api/v1/login") \
 		|| {
