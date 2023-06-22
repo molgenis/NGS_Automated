@@ -286,6 +286,7 @@ function splitSamplesheetPerProject() {
 		then
 			_project=$(echo "${_project}" | grep -Eo 'GS_[0-9]+')
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "project will now be ${_project}."
+			# shellcheck disable=SC2029
 			if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished"
 			then
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
