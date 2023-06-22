@@ -209,7 +209,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Searching for folders as ${DATA_MANAGER} on ${HOSTNAME_TMP} in ${CHRONQC_REPORTS_DIRS}/*"
 # shellcheck disable=SC2029
-mapfile -t chronQCDateFolders < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" \"find "${CHRONQC_REPORTS_DIRS}\" -maxdepth 1 -mindepth 1 -type d")
+mapfile -t chronQCDateFolders < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${CHRONQC_REPORTS_DIRS}\" -maxdepth 1 -mindepth 1 -type d")
 if [[ "${#chronQCDateFolders[@]}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No folders found @ ${CHRONQC_REPORTS_DIRS}."
@@ -229,7 +229,7 @@ else
 			touch "${JOB_CONTROLE_FILE_BASE}.started"
 			rsync -av --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' "${dryrun:---progress}" \
 				"${DATA_MANAGER}@${HOSTNAME_TMP}:${chronQCDateFolder}" \
-				"${PRM_ROOT_DIR}/trendanalysis/" \
+				"${PRM_ROOT_DIR}/trendanalysis/reports/" \
 			|| {
 				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed} 
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Failed to rsync ${DATA_MANAGER}@${HOSTNAME_TMP}:${chronQCDateFolder} dir. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
