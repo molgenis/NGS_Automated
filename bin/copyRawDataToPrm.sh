@@ -295,59 +295,58 @@ function splitSamplesheetPerProject() {
 				
 			fi
 			break
-		else
-			if [[ "${archiveMode}" == 'false' ]]; then
-				#
-				# Skip project if demultiplexing only.
-				#
-				local _projectSampleSheet
-				_projectSampleSheet="${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}"
-				head -1 "${_sampleSheet}" > "${_projectSampleSheet}.tmp"
-				grep "${_project}" "${_sampleSheet}" >> "${_projectSampleSheet}.tmp"
-				mv "${_projectSampleSheet}"{.tmp,}
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Created ${_projectSampleSheet}."
-				#
-				# Get pipeline/analysis values from samplesheet.
-				#
-				IFS="${SAMPLESHEET_SEP}" read -r -a _sampleSheetColumnNames <<< "$(head -1 "${_projectSampleSheet}")"
-				for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]} ; _offset++ ))
-				do
-					_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
-				done
-				if [[ -n "${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]+isset}" ]]; then
-					_pipelineFieldIndex=$((${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]} + 1))
-					_projectFieldIndex=$((${_sampleSheetColumnOffsets["${PROJECTCOLUMN}"]} + 1))
-					readarray -t _pipelines < <(tail -n +2 "${_projectSampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_pipelineFieldIndex}" | sort | uniq )
-					if [[ "${#_pipelines[@]}" -lt '1' ]]
-					then
-						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} does not contain at least one value in the ${PIPELINECOLUMN} column."
-						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in samplesheet."
-						mv "${_controlFileBaseForFunction}."{started,failed}
-						return
-					elif [[ "${#_pipelines[@]}" -ge '1' ]]
-					then
-						for _pipeline in "${_pipelines[@]}"
-						do
-							#
-							## create a rawDataCopiedToPrm.finished file to tell the copyProjectDataToPrm that the copying of the rawdata to prm for this project has been finished
-							#
-							# shellcheck disable=SC2029
-							if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished"
-							then
-								log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
-							else
-								log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
-								mv "${_controlFileBaseForFunction}."{started,failed}
-								return
-							fi
-						done
-					fi
-				else
-					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}, because ${PIPELINECOLUMN} column is missing in samplesheet."
+		fi
+		if [[ "${archiveMode}" == 'false' ]]; then
+			#
+			# Skip project if demultiplexing only.
+			#
+			local _projectSampleSheet
+			_projectSampleSheet="${PRM_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}"
+			head -1 "${_sampleSheet}" > "${_projectSampleSheet}.tmp"
+			grep "${_project}" "${_sampleSheet}" >> "${_projectSampleSheet}.tmp"
+			mv "${_projectSampleSheet}"{.tmp,}
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Created ${_projectSampleSheet}."
+			#
+			# Get pipeline/analysis values from samplesheet.
+			#
+			IFS="${SAMPLESHEET_SEP}" read -r -a _sampleSheetColumnNames <<< "$(head -1 "${_projectSampleSheet}")"
+			for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]} ; _offset++ ))
+			do
+				_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
+			done
+			if [[ -n "${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]+isset}" ]]; then
+				_pipelineFieldIndex=$((${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]} + 1))
+				_projectFieldIndex=$((${_sampleSheetColumnOffsets["${PROJECTCOLUMN}"]} + 1))
+				readarray -t _pipelines < <(tail -n +2 "${_projectSampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_pipelineFieldIndex}" | sort | uniq )
+				if [[ "${#_pipelines[@]}" -lt '1' ]]
+				then
+					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_sampleSheet} does not contain at least one value in the ${PIPELINECOLUMN} column."
+					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run} due to error in samplesheet."
 					mv "${_controlFileBaseForFunction}."{started,failed}
 					return
+				elif [[ "${#_pipelines[@]}" -ge '1' ]]
+				then
+					for _pipeline in "${_pipelines[@]}"
+					do
+						#
+						## create a rawDataCopiedToPrm.finished file to tell the copyProjectDataToPrm that the copying of the rawdata to prm for this project has been finished
+						#
+						# shellcheck disable=SC2029
+						if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished"
+						then
+							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
+						else
+							log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
+							mv "${_controlFileBaseForFunction}."{started,failed}
+							return
+						fi
+					done
 				fi
-			fi	
+			else
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}, because ${PIPELINECOLUMN} column is missing in samplesheet."
+				mv "${_controlFileBaseForFunction}."{started,failed}
+				return
+			fi
 		fi
 	done
 	#
