@@ -311,18 +311,19 @@ else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing run ${project} ..."
 		fi
 		
-		printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
-		
 		if [[ "${samplesheetsServerLocation}" == "localhost" ]]
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Samplesheet is on this machine"
 			if [[ -f "${WORKING_DIR}/logs/${project}/${RAWDATAPROCESSINGFINISHED}" ]]
 			then
+				printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${WORKING_DIR}/logs/${project}/${RAWDATAPROCESSINGFINISHED} present."
 				##Check if array or NGS run
 				# shellcheck disable=SC2029
-				
-				rsync -rltDvc --relative --rsync-path="sudo -u ${group}-ateambot rsync" "${WORKING_DIR}/./${line}"* "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/"
+				while read -r line
+				do
+					rsync -rltDvc --relative --rsync-path="sudo -u ${group}-ateambot rsync" "${WORKING_DIR}/./${line}"* "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/"
+				done<"${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.requested"
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${WORKING_DIR}/logs/${project}/${RAWDATAPROCESSINGFINISHED} absent."
 				continue
@@ -332,6 +333,7 @@ else
 			# shellcheck disable=SC2029
 			if ssh "${DATA_MANAGER}"@"${DESTINATION_DIAGNOSTICS_CLUSTER}" test -e "${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.requested"
 			then
+				printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 				## copy the requested file to the ${WORKING_DIR}
 				rsync -vt "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.requested" "${WORKING_DIR}/logs/${project}/"
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.requested present, copying will start"
