@@ -453,6 +453,7 @@ function postMessageToChannel() {
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Compiling JSON message ..."
 	local _jsonMessage
 	local _messageBody
+	# shellcheck disable=SC2002
 	_messageBody="$(cat "${_projectStateFile}" | tr \" \' )"
 	_jsonMessage=$(cat <<-EOM
 		{
