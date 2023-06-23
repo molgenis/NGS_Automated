@@ -24,6 +24,7 @@ INSTALLATION_DIR="$(cd -P "$(dirname "${0}")/.." && pwd)"
 LIB_DIR="${INSTALLATION_DIR}/lib"
 CFG_DIR="${INSTALLATION_DIR}/etc"
 HOSTNAME_SHORT="$(hostname -s)"
+ROLE_USER="$(whoami)"
 #
 ##
 ### Functions.
@@ -457,7 +458,7 @@ function postMessageToChannel() {
 	_messageBody="$(cat "${_projectStateFile}" | tr \" \' )"
 	_jsonMessage=$(cat <<-EOM
 		{
-		"title": "Project ${_project}/${_run} on ${HOSTNAME_SHORT} has ${_state} for phase ${_phase} at ${_timestamp}.",
+		"title": "${ROLE_USER}@${HOSTNAME_SHORT}: Project ${_project}/${_run} has state ${_state} for phase ${_phase} at ${_timestamp}.",
 		"text": "${_messageBody}"
 		}
 		EOM
