@@ -393,7 +393,7 @@ Options:
 	-g	[group]
 		Group for which to process data.
 	-p	[pipeline]
-		from which pipeline is the data coming from (NGS_Demultiplexing, GAP)
+		Which pipeline was running in the previous step (e.g. NGS_Demultiplexing, GAP, DRAGEN) 
 	-l	[level]
 		Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
@@ -401,6 +401,11 @@ Options:
 		Source server address from where the rawdate will be fetched
 		Must be a Fully Qualified Domain Name (FQDN).
 		E.g. gattaca01.gcc.rug.nl or gattaca02.gcc.rug.nl
+	-m [prmdir]
+		Alternative prmdir can be specified
+	-f [previousStep]
+		specify the filename of the previous step that was finished.
+		e.g. run01.processGsRawData.finished 
 	-r	[root]
 		Root dir on the server specified with -s and from where the raw data will be fetched (optional).
 		By default this is the SCR_ROOT_DIR variable, which is compiled from variables specified in the
