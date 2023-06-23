@@ -64,7 +64,7 @@ function copyQCRawdataToTmp() {
 		mv "${_rawdata_job_controle_file_base}."{started,failed}
 		return
 		}
-
+		rm -f "${_rawdata_job_controle_file_base}.failed"
 		mv "${_rawdata_job_controle_file_base}."{started,finished}
 	else
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "For sequencerun ${_rawdata} there is no QC data, nothing to rsync.."
@@ -100,6 +100,7 @@ function copyQCProjectdataToTmp() {
 		mv "${_project_job_controle_file_base}."{started,failed}
 		return
 		}
+		rm -f "${_project_job_controle_file_base}.failed"
 		mv "${_project_job_controle_file_base}."{started,finished}
 	elif  [[ -e "${PRM_ROOT_DIR}/projects/${_project}/run01/results/qc/statistics/${_project}.Dragen_runinfo.csv" ]]
 	then
@@ -122,6 +123,7 @@ function copyQCProjectdataToTmp() {
 		mv "${_project_job_controle_file_base}."{started,failed}
 		return
 		}
+		rm -f "${_project_job_controle_file_base}.failed"
 		mv "${_project_job_controle_file_base}."{started,finished}
 
 	else
@@ -149,7 +151,7 @@ function copyDarwinQCData() {
 	mv "${_darwin_job_controle_file_base}."{started,failed}
 	return
 	}
-
+	rm -f "${_darwin_job_controle_file_base}.failed"
 	mv "${_darwin_job_controle_file_base}."{started,finished}
 	mv "${IMPORT_DIR}/${_filetype}"*"${_filedate}.csv" "${IMPORT_DIR}/archive/"
 
