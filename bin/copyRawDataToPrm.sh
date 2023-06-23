@@ -281,11 +281,22 @@ function splitSamplesheetPerProject() {
 		#  * either only demultiplexing was requested via the samplesheet
 		#  * or when disabled on the commandline by enabling "archiveMode".
 		#
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "mergedSamplesheet = ${mergedSamplesheet}."
 		if [[ "${mergedSamplesheet}" == 'true' ]]
 		then
 			_project=$(echo "${_project}" | grep -Eo 'GS_[0-9]+')
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "project will now be ${_project}."
+			# shellcheck disable=SC2029
+			if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished"
+			then
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
+			else
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
+				mv "${_controlFileBaseForFunction}."{started,failed}
+				
+			fi
+			break
 		fi
-		
 		if [[ "${archiveMode}" == 'false' ]]; then
 			#
 			# Skip project if demultiplexing only.
@@ -318,9 +329,6 @@ function splitSamplesheetPerProject() {
 				then
 					for _pipeline in "${_pipelines[@]}"
 					do
-						
-						# Check whether the projectSamplesheet name needs to be without the A,B,C extensions
-						
 						#
 						## create a rawDataCopiedToPrm.finished file to tell the copyProjectDataToPrm that the copying of the rawdata to prm for this project has been finished
 						#
@@ -339,7 +347,7 @@ function splitSamplesheetPerProject() {
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${_run}, because ${PIPELINECOLUMN} column is missing in samplesheet."
 				mv "${_controlFileBaseForFunction}."{started,failed}
 				return
-			fi	
+			fi
 		fi
 	done
 	#
@@ -353,7 +361,7 @@ function splitSamplesheetPerProject() {
 	# remove samplesheet on sourceServerFQDN
 	#
 	# shellcheck disable=SC2029
-	if ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "rm \"${SCR_ROOT_DIR}/Samplesheets/${pipeline}/${_run}.${SAMPLESHEET_EXT}\""
+	if ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "mv \"${SCR_ROOT_DIR}/Samplesheets/${pipeline}/${_run}.${SAMPLESHEET_EXT}\" \"${SCR_ROOT_DIR}/Samplesheets/${pipeline}/archive/\" "
 	then
 		rm -f "${_controlFileBaseForFunction}.failed"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}.${SAMPLESHEET_EXT} removed from ${SCR_ROOT_DIR}/Samplesheets/${pipeline}/ on ${sourceServerFQDN}."
@@ -385,7 +393,7 @@ Options:
 	-g	[group]
 		Group for which to process data.
 	-p	[pipeline]
-		from which pipeline is the data coming from (NGS_Demultiplexing, GAP)
+		Which pipeline was running in the previous step (e.g. NGS_Demultiplexing, GAP, DRAGEN) 
 	-l	[level]
 		Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
@@ -393,6 +401,11 @@ Options:
 		Source server address from where the rawdate will be fetched
 		Must be a Fully Qualified Domain Name (FQDN).
 		E.g. gattaca01.gcc.rug.nl or gattaca02.gcc.rug.nl
+	-m [prmdir]
+		Alternative prmdir can be specified
+	-f [previousStep]
+		specify the filename of the previous step that was finished.
+		e.g. run01.processGsRawData.finished 
 	-r	[root]
 		Root dir on the server specified with -s and from where the raw data will be fetched (optional).
 		By default this is the SCR_ROOT_DIR variable, which is compiled from variables specified in the
