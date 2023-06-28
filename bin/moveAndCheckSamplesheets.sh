@@ -319,6 +319,15 @@ do
 	samplesheetDestination="${HOSTNAME_TMP}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/${firstStepOfPipeline}/"
 
 	#
+	# Distribute samplesheet to other dat folders
+	#
+	for datDir in "${ARRAY_OTHER_DAT_LFS_ISILON[@]}"
+	do
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "copying ${samplesheet} /groups/${GROUP}/${datDir}/Samplesheets/new/"
+		rsync -av "${samplesheet}" "/groups/${GROUP}/${datDir}/Samplesheets/new/"
+	done
+
+	#
 	# Move samplesheets with rsync
 	#
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pushing samplesheets using rsync to ${samplesheetDestination} ..."
