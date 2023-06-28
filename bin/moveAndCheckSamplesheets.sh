@@ -324,7 +324,7 @@ do
 	for datDir in "${ARRAY_OTHER_DAT_LFS_ISILON[@]}"
 	do
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "copying ${samplesheet} /groups/${GROUP}/${datDir}/Samplesheets/new/"
-		rsync -vt "${samplesheet}" "/groups/${GROUP}/${datDir}/Samplesheets/new/"
+		rsync -v "${samplesheet}" "/groups/${GROUP}/${datDir}/Samplesheets/new/"
 	done
 
 	#
