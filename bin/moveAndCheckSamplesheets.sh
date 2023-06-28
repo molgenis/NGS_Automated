@@ -324,7 +324,10 @@ do
 	for datDir in "${ARRAY_OTHER_DAT_LFS_ISILON[@]}"
 	do
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "copying ${samplesheet} /groups/${GROUP}/${datDir}/Samplesheets/new/"
-		rsync -av "${samplesheet}" "/groups/${GROUP}/${datDir}/Samplesheets/new/"
+		rsync -vt \
+		--log-file="${logDir}/rsync.log" \
+		--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
+		--omit-link-times "${samplesheet}" "/groups/${GROUP}/${datDir}/Samplesheets/new/"
 	done
 
 	#
