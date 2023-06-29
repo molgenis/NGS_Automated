@@ -182,16 +182,18 @@ function processProjectToDB() {
 				perl -pe 's|SAMPLE\t|SAMPLE_NAME2\t|' "${CHRONQC_TMP}/${_project}.3.${_metrics}" > "${CHRONQC_TMP}/${_project}.2.${_metrics}"
 			elif [[ "${_metrics}" == multiqc_general_stats.txt ]]
 			then
-				cp "${CHRONQC_PROJECTS_DIR}/${_metrics}" "${CHRONQC_TMP}/${_project}.${_metrics}"
-				head -1 "${CHRONQC_TMP}/${_project}.${_metrics}" > "${CHRONQC_TMP}/${_project}.${_metrics}.tmp"
-				#for sample in $(grep HsMetrics "${CHRONQC_TMP}/${_project}.multiqc_sources.txt" | awk -v p="${_project}" '{print $3}'); do grep $sample "${CHRONQC_TMP}/${_project}.${_metrics}" >> "${CHRONQC_TMP}/${_project}.${_metrics}.tmp" ;done
-				# to remove the per lane sample id from the ${project}.multiqc_general_stats.txt file
-				while read -r sample
-				do
-					grep "${sample}" "${CHRONQC_TMP}/${_project}.${_metrics}" >> "${CHRONQC_TMP}/${_project}.${_metrics}.tmp"
-				done < <(grep HsMetrics "${CHRONQC_TMP}/${_project}.multiqc_sources.txt" | awk -v p="${_project}" '{print $3}')
-				mv "${CHRONQC_TMP}/${_project}.${_metrics}.tmp" "${CHRONQC_TMP}/${_project}.2.${_metrics}"
-			#	cp "${CHRONQC_TMP}/${_project}.${_metrics}" "${CHRONQC_TMP}/${_project}.2.${_metrics}"
+				if [[ -f "${CHRONQC_PROJECTS_DIR}/${_metrics}" ]]
+				then
+					cp "${CHRONQC_PROJECTS_DIR}/${_metrics}" "${CHRONQC_TMP}/${_project}.${_metrics}"
+					head -1 "${CHRONQC_TMP}/${_project}.${_metrics}" > "${CHRONQC_TMP}/${_project}.${_metrics}.tmp"
+					while read -r sample
+					do
+						grep "${sample}" "${CHRONQC_TMP}/${_project}.${_metrics}" >> "${CHRONQC_TMP}/${_project}.${_metrics}.tmp"
+					done < <(grep HsMetrics "${CHRONQC_TMP}/${_project}.multiqc_sources.txt" | awk -v p="${_project}" '{print $3}')
+					mv "${CHRONQC_TMP}/${_project}.${_metrics}.tmp" "${CHRONQC_TMP}/${_project}.2.${_metrics}"
+				else
+					continue
+				fi
 			elif [[ "${_metrics}" == multiqc_fastqc.txt ]]
 			then
 				cp "${CHRONQC_PROJECTS_DIR}/${_metrics}" "${CHRONQC_TMP}/${_project}.${_metrics}"
@@ -284,7 +286,8 @@ function processProjectToDB() {
 								mv "${_processprojecttodb_controle_file_base}."{started,failed}
 								return
 							}
-					else
+					elif [[ -f "${CHRONQC_TMP}/${_project}.2.${_metrics}" ]]
+					then
 						chronqc database --update --db "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" \
 							"${CHRONQC_TMP}/${_project}.2.${_metrics}" \
 							--db-table "${_table}" \
@@ -295,6 +298,9 @@ function processProjectToDB() {
 								mv "${_processprojecttodb_controle_file_base}."{started,failed}
 								return
 							}
+					else
+						log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "The file ${CHRONQC_TMP}/${_project}.2.${_metrics} does not exist, so can't be added to the database"
+						continue
 					fi
 				done
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} ${_project}: panel: ${_panel} stored to Chronqc database." \
@@ -324,7 +330,8 @@ function processProjectToDB() {
 								mv "${_processprojecttodb_controle_file_base}."{started,failed}
 								return
 							}
-					else
+					elif [[ -f "${CHRONQC_TMP}/${_project}.2.${_metrics}" ]]
+					then
 						chronqc database --create \
 							-o "${CHRONQC_DATABASE_NAME}" \
 							"${CHRONQC_TMP}/${_project}.2.${_metrics}" \
@@ -336,6 +343,9 @@ function processProjectToDB() {
 								mv "${_processprojecttodb_controle_file_base}."{started,failed}
 								return
 							}
+					else
+						log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "The file ${CHRONQC_TMP}/${_project}.2.${_metrics} does not exist, so can't be added to the database"
+						continue
 					fi
 				done
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} ${_project}: panel: ${_panel} was stored in Chronqc database."
