@@ -198,6 +198,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 
 
 samplesheetsSource="${DAT_ROOT_DIR}/samplesheets/new/"
+samplesheetsSourceFolderChecked="${DAT_ROOT_DIR}/samplesheets/"
 #
 # Find samplesheets.
 #
@@ -213,94 +214,164 @@ then
 #	printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 	
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No samplesheets found in ${samplesheetsSource}."
+
+else
+	for samplesheet in "${samplesheets[@]}"
+	do
+		sampleSheetName=$(basename "${samplesheet%.*}")
+		logDir="${DAT_ROOT_DIR}/logs/${sampleSheetName}/"
+		# shellcheck disable=SC2174
+		mkdir -m 2770 -p "${logDir}"
+		touch "${logDir}"
+		export JOB_CONTROLE_FILE_BASE="${logDir}/${sampleSheetName}.${SCRIPT_NAME}"
+		printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
+	
+		declare -a _sampleSheetColumnNames=()
+		declare -A _sampleSheetColumnOffsets=()
+
+		IFS="${SAMPLESHEET_SEP}" read -r -a _sampleSheetColumnNames <<< "$(head -1 "${samplesheet}")"
+	
+		for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]} ; _offset++ ))
+		do
+			_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
+		done
+	
+		if [[ -n "${_sampleSheetColumnOffsets["SentrixBarcode_A"]+isset}" ]] 
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a GAP samplesheet. There is no samplesheetCheck at this moment."
+			projectSamplesheet="false"
+		elif [[ "${group}" == "patho" ]]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a Patho samplesheet. There is no need for samplesheetCheck."
+			projectSamplesheet="false"
+		else
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a NGS samplesheet. Lets check if the samplesheet is correct."
+			cp "${samplesheet}"{,.converted}
+	
+			#
+			# Make sure
+			#  1. The last line ends with a line end character.
+			#  2. We have the right line end character: convert any carriage return (\r) to newline (\n).
+			#  3. We remove empty lines.
+			#
+			printf '\n'     >> "${samplesheet}.converted"
+			sed 's/\r/\n/g' "${samplesheet}.converted" > "${samplesheet}.converted.tmp"
+			sed '/^\s*$/d'  "${samplesheet}.converted.tmp" > "${samplesheet}.converted.tmp2"
+			rm "${samplesheet}.converted.tmp"
+			mv "${samplesheet}.converted.tmp2" "${samplesheet}.converted"
+			projectSamplesheet="false"
+		
+			#
+			# We want to check whether the samplesheet is a project samplesheet or a rawdata samplesheet
+			if checkSampleSheet.py --input "${samplesheet}.converted" --log "${samplesheet}.converted.log"
+			then
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Samplesheet ${samplesheet}.converted is correct."
+				check=$(cat "${samplesheet}.converted.log")
+				if [[ "${check}" == *'projectSamplesheet'* ]]
+				then
+					projectSamplesheet="true"
+				fi
+			else
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Samplesheet ${samplesheet}.converted contains errors."
+				check=$(cat "${samplesheet}.converted.log")
+			
+				log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "${check} for samplesheet: ${samplesheet}"
+				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+				continue
+			fi
+		fi
+	
+		if [[ -n "${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]+isset}" ]] 
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "column [${PIPELINECOLUMN}] is found in the samplesheet"
+			_pipelineFieldIndex=$((${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]} + 1))
+			## In future this valueInSamplesheet will be replaced by DARWIN to the real value.
+			readarray -t valueInSamplesheet < <(tail -n +2 "${samplesheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_pipelineFieldIndex}" | sort | uniq )
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "renaming ${valueInSamplesheet[0]} into ${REPLACEDPIPELINECOLUMN}"
+			perl -p -e "s|${valueInSamplesheet[0]}|${REPLACEDPIPELINECOLUMN}|" "${samplesheet}" > "${samplesheet}.tmp"
+			mv "${samplesheet}.tmp" "${samplesheet}"
+		else
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no column [${PIPELINECOLUMN}] in the samplesheet, creating dummy entry:"
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "header: ${PIPELINECOLUMN} and value: ${REPLACEDPIPELINECOLUMN}"
+			awk -v pipeline="${REPLACEDPIPELINECOLUMN}" -v pipelineColumn="${PIPELINECOLUMN}" 'BEGIN {FS=","}{if (NR==1){print $0","pipelineColumn}else{ print $0","pipeline}}' "${samplesheet}" > "${samplesheet}.tmp"
+			mv "${samplesheet}.tmp" "${samplesheet}"
+		fi
+		firstStepOfPipeline="${REPLACEDPIPELINECOLUMN%%+*}"
+
+		#
+		# Check whether the samplesheet is a project samplesheet (no NGS_Demultiplexing) and if it is GENOMESCAN or regular
+		# needs an update when we are going to use VIP into production
+		#
+		if [[ "${projectSamplesheet}" == "true" ]]
+		then
+			if [[ "${REPLACEDPIPELINECOLUMN}" == *"GENOMESCAN"* ]]
+			then
+				firstStepOfPipeline=''
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a GENOMESCAN project samplesheet, the first step of the pipeline will be set to an empty string (samplesheet will be put in correct bucket in a later stage of the pipeline)."
+			else
+				firstStepOfPipeline="NGS_DNA"
+				perl -p -e "s|${REPLACEDPIPELINECOLUMN}|${firstStepOfPipeline}|" "${samplesheet}" > "${samplesheet}.tmp"
+				mv "${samplesheet}.tmp" "${samplesheet}"
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a project samplesheet (no NGS_Demultiplexing); firstStepOfPipeline was set to ${firstStepOfPipeline}."
+			fi
+		fi
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "first step of the pipeline:[${firstStepOfPipeline}]."
+
+		mv -v "${samplesheet}" "${samplesheetsSourceFolderChecked}"
+
+		#
+		# Distribute samplesheet to other dat folders
+		#
+		for datDir in "${ARRAY_OTHER_DAT_LFS_ISILON[@]}"
+		do
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "copying ${samplesheet} /groups/${GROUP}/${datDir}/Samplesheets/"
+			rsync -v "${samplesheet}" "/groups/${GROUP}/${datDir}/Samplesheets/"
+		done
+
+	done
+fi
+
+readarray -t samplesheetsChecked < <(find "${samplesheetsSourceFolderChecked}" -maxdepth 1 -mindepth 1 -type f -name "*.${SAMPLESHEET_EXT}")
+if [[ "${#samplesheetsChecked[@]}" -eq '0' ]]
+then
+#	logTimeStamp="$(date "+%Y-%m-%d")"
+#	logDir="${DAT_ROOT_DIR}/logs/${logTimeStamp}/"
+	# shellcheck disable=SC2174
+#	mkdir -m 2770 -p "${logDir}"
+#	touch "${logDir}"
+#	export JOB_CONTROLE_FILE_BASE="${logDir}/${logTimeStamp}.${SCRIPT_NAME}"
+#	printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
+	
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No samplesheets found in ${samplesheetsSourceFolderChecked}."
 	trap - EXIT
 	exit 0
 fi
 
-for samplesheet in "${samplesheets[@]}"
+for samplesheetChecked in "${samplesheetsChecked[@]}"
 do
-	sampleSheetName=$(basename "${samplesheet%.*}")
-	logDir="${DAT_ROOT_DIR}/logs/${sampleSheetName}/"
-	# shellcheck disable=SC2174
-	mkdir -m 2770 -p "${logDir}"
-	touch "${logDir}"
-	export JOB_CONTROLE_FILE_BASE="${logDir}/${sampleSheetName}.${SCRIPT_NAME}"
-	printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
-	
+
 	declare -a _sampleSheetColumnNames=()
 	declare -A _sampleSheetColumnOffsets=()
 
-	IFS="${SAMPLESHEET_SEP}" read -r -a _sampleSheetColumnNames <<< "$(head -1 "${samplesheet}")"
+	IFS="${SAMPLESHEET_SEP}" read -r -a _sampleSheetColumnNames <<< "$(head -1 "${samplesheetChecked}")"
 	
 	for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]} ; _offset++ ))
 	do
 		_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
 	done
-	
-	if [[ -n "${_sampleSheetColumnOffsets["SentrixBarcode_A"]+isset}" ]] 
+
+	firstStepOfPipeline="${REPLACEDPIPELINECOLUMN%%+*}"
+	# We want to check whether the samplesheet is a project samplesheet or a rawdata samplesheet
+	if checkSampleSheet.py --input "${samplesheetChecked}" --log "${samplesheetChecked}.log"
 	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a GAP samplesheet. There is no samplesheetCheck at this moment."
-		projectSamplesheet="false"
-	elif [[ "${group}" == "patho" ]]
-	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a Patho samplesheet. There is no need for samplesheetCheck."
-		projectSamplesheet="false"
-	else
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a NGS samplesheet. Lets check if the samplesheet is correct."
-		cp "${samplesheet}"{,.converted}
-	
-		#
-		# Make sure
-		#  1. The last line ends with a line end character.
-		#  2. We have the right line end character: convert any carriage return (\r) to newline (\n).
-		#  3. We remove empty lines.
-		#
-		printf '\n'     >> "${samplesheet}.converted"
-		sed 's/\r/\n/g' "${samplesheet}.converted" > "${samplesheet}.converted.tmp"
-		sed '/^\s*$/d'  "${samplesheet}.converted.tmp" > "${samplesheet}.converted.tmp2"
-		rm "${samplesheet}.converted.tmp"
-		mv "${samplesheet}.converted.tmp2" "${samplesheet}.converted"
-		projectSamplesheet="false"
-		
-		if checkSampleSheet.py --input "${samplesheet}.converted" --log "${samplesheet}.converted.log"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if samplesheet is project samplesheet"
+		check=$(cat "${samplesheet}.converted.log")
+		if [[ "${check}" == *'projectSamplesheet'* ]]
 		then
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Samplesheet ${samplesheet}.converted is correct."
-			check=$(cat "${samplesheet}.converted.log")
-			if [[ "${check}" == *'projectSamplesheet'* ]]
-			then
-				projectSamplesheet="true"
-			fi
-		else
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Samplesheet ${samplesheet}.converted contains errors."
-			check=$(cat "${samplesheet}.converted.log")
-			
-			log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "${check} for samplesheet: ${samplesheet}"
-			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-			continue
+			projectSamplesheet="true"
 		fi
 	fi
 	
-	if [[ -n "${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]+isset}" ]] 
-	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "column [${PIPELINECOLUMN}] is found in the samplesheet"
-		_pipelineFieldIndex=$((${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]} + 1))
-		## In future this valueInSamplesheet will be replaced by DARWIN to the real value.
-		readarray -t valueInSamplesheet < <(tail -n +2 "${samplesheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_pipelineFieldIndex}" | sort | uniq )
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "renaming ${valueInSamplesheet[0]} into ${REPLACEDPIPELINECOLUMN}"
-		perl -p -e "s|${valueInSamplesheet[0]}|${REPLACEDPIPELINECOLUMN}|" "${samplesheet}" > "${samplesheet}.tmp"
-		mv "${samplesheet}.tmp" "${samplesheet}"
-	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no column [${PIPELINECOLUMN}] in the samplesheet, creating dummy entry:"
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "header: ${PIPELINECOLUMN} and value: ${REPLACEDPIPELINECOLUMN}"
-		awk -v pipeline="${REPLACEDPIPELINECOLUMN}" -v pipelineColumn="${PIPELINECOLUMN}" 'BEGIN {FS=","}{if (NR==1){print $0","pipelineColumn}else{ print $0","pipeline}}' "${samplesheet}" > "${samplesheet}.tmp"
-		mv "${samplesheet}.tmp" "${samplesheet}"
-	fi
-	firstStepOfPipeline="${REPLACEDPIPELINECOLUMN%%+*}"
-
-	#
-	# Check whether the samplesheet is a project samplesheet (no NGS_Demultiplexing)
-	# needs an update when we are going to use VIP into production
-	#
 	if [[ "${projectSamplesheet}" == "true" ]]
 	then
 		if [[ "${REPLACEDPIPELINECOLUMN}" == *"GENOMESCAN"* ]]
@@ -309,40 +380,27 @@ do
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a GENOMESCAN project samplesheet, the first step of the pipeline will be set to an empty string (samplesheet will be put in correct bucket in a later stage of the pipeline)."
 		else
 			firstStepOfPipeline="NGS_DNA"
-			perl -p -e "s|${REPLACEDPIPELINECOLUMN}|${firstStepOfPipeline}|" "${samplesheet}" > "${samplesheet}.tmp"
-			mv "${samplesheet}.tmp" "${samplesheet}"
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a project samplesheet (no NGS_Demultiplexing); firstStepOfPipeline was set to ${firstStepOfPipeline}."
 		fi
 	fi
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "first step of the pipeline:[${firstStepOfPipeline}]."
 	# shellcheck disable=SC2153
 	samplesheetDestination="${HOSTNAME_TMP}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/${firstStepOfPipeline}/"
-
-	#
-	# Distribute samplesheet to other dat folders
-	#
-	for datDir in "${ARRAY_OTHER_DAT_LFS_ISILON[@]}"
-	do
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "copying ${samplesheet} /groups/${GROUP}/${datDir}/Samplesheets/new/"
-		rsync -v "${samplesheet}" "/groups/${GROUP}/${datDir}/Samplesheets/new/"
-	done
-
 	#
 	# Move samplesheets with rsync
 	#
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pushing samplesheets using rsync to ${samplesheetDestination} ..."
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "See ${logDir}/rsync.log for details ..."
 	transactionStatus='Ok'
-	
-	/usr/bin/rsync -vt \
+
+		/usr/bin/rsync -vt \
 		--log-file="${logDir}/rsync.log" \
 		--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
 		--omit-link-times \
-		"${samplesheet}" \
+		"${samplesheetChecked}" \
 		"${samplesheetDestination}" \
-	&& rm -v "${samplesheet}" >> "${JOB_CONTROLE_FILE_BASE}.started" \
+	&& rm -v "${samplesheetChecked}" >> "${JOB_CONTROLE_FILE_BASE}.started" \
 	|| {
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to move ${samplesheet}."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to move ${samplesheetChecked}."
 		transactionStatus='Failed'
 	}
 
@@ -356,9 +414,7 @@ do
 		rm -f "${JOB_CONTROLE_FILE_BASE}.finished"
 		mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 	fi
-
 done
-
 
 #
 # Clean exit.
