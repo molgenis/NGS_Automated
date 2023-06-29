@@ -355,6 +355,7 @@ do
 	# if samplesheets[@] is empty this means that the samplesheet is coming from a different machine, so we need logDir and a ${JOB_CONTROLE_FILE_BASE}.started file
 	if [[ "${#samplesheets[@]}" -eq '0' ]]
 	then
+		sampleSheetName=$(basename "${samplesheet%.*}")
 		logDir="${DAT_ROOT_DIR}/logs/${sampleSheetName}/"
 		# shellcheck disable=SC2174
 		mkdir -m 2770 -p "${logDir}"
@@ -422,7 +423,7 @@ do
 
 	if [[ "${transactionStatus}" == 'Ok' ]]
 	then
-		rm -f "${samplesheetChecked}."{,.log}
+		rm -f "${samplesheetChecked}"{,.log}
 		rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 		mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 	
