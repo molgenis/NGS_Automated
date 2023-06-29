@@ -386,16 +386,16 @@ do
 		projectSamplesheet="false"
 	else
 	# We want to check whether the samplesheet is a project samplesheet or a rawdata samplesheet
-	if checkSampleSheet.py --input "${samplesheetChecked}" --log "${samplesheetChecked}.log"
-	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if samplesheet is project samplesheet"
-		check=$(cat "${samplesheetChecked}.log")
-		if [[ "${check}" == *'projectSamplesheet'* ]]
+		if checkSampleSheet.py --input "${samplesheetChecked}" --log "${samplesheetChecked}.log"
 		then
-			projectSamplesheet="true"
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if samplesheet is project samplesheet"
+			check=$(cat "${samplesheetChecked}.log")
+			if [[ "${check}" == *'projectSamplesheet'* ]]
+			then
+				projectSamplesheet="true"
+			fi
 		fi
 	fi
-	
 	#
 	# When samplesheet is GENOMESCAN the samplesheet has to go to the Samplesheets root folder (no bucket)
 	#
