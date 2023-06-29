@@ -320,6 +320,7 @@ else
 		#
 		# Distribute samplesheet to other dat folders
 		#
+		# shellcheck disable=SC2068
 		for datDir in ${ARRAY_OTHER_DAT_LFS_ISILON[@]}
 		do
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "copying ${samplesheet} /groups/${GROUP}/${datDir}/Samplesheets/"
