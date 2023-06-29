@@ -316,18 +316,18 @@ else
 			fi
 		fi
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "first step of the pipeline:[${firstStepOfPipeline}]."
-
-		mv -v "${samplesheet}" "${samplesheetsSourceFolderChecked}"
-
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Moving samplesheet one folder upstream: ${samplesheetsSourceFolderChecked}"
 		#
 		# Distribute samplesheet to other dat folders
 		#
-		for datDir in "${ARRAY_OTHER_DAT_LFS_ISILON[@]}"
+		for datDir in ${ARRAY_OTHER_DAT_LFS_ISILON[@]}
 		do
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "copying ${samplesheet} /groups/${GROUP}/${datDir}/Samplesheets/"
 			rsync -v "${samplesheet}" "/groups/${GROUP}/${datDir}/Samplesheets/"
 		done
-
+		
+		mv -v "${samplesheet}" "${samplesheetsSourceFolderChecked}"
+		
 	done
 fi
 
@@ -365,7 +365,7 @@ do
 	if checkSampleSheet.py --input "${samplesheetChecked}" --log "${samplesheetChecked}.log"
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if samplesheet is project samplesheet"
-		check=$(cat "${samplesheet}.converted.log")
+		check=$(cat "${samplesheetChecked}.log")
 		if [[ "${check}" == *'projectSamplesheet'* ]]
 		then
 			projectSamplesheet="true"
