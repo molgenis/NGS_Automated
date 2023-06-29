@@ -87,7 +87,6 @@ function processRawdataToDB() {
 	TMP_RAWDATA_DIR="${TMP_TRENDANALYSE_DIR}/rawdata/${_rawdata}/"
 
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing files from ${CHRONQC_TMP} ..."
-
 	rm -rf "${CHRONQC_TMP:-missing}"/*
 
 	if [[ -e "${_rawdata_job_controle_file_base}.finished" ]]
@@ -153,6 +152,10 @@ function processProjectToDB() {
 	CHRONQC_TMP="${TMP_TRENDANALYSE_DIR}/tmp/"
 	CHRONQC_PROJECTS_DIR="${TMP_TRENDANALYSE_DIR}/projects/${_project}/"
 	CHRONQC_DATABASE_NAME="${TMP_TRENDANALYSE_DIR}/database/"
+
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing files from ${CHRONQC_TMP} ..."
+	rm -rf "${CHRONQC_TMP:-missing}"/*
+
 	if [[ -e "${_processprojecttodb_controle_file_base}.finished" ]]
 	then
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${_project}/run01 was already processed. return"
@@ -361,6 +364,9 @@ function processDarwinToDB() {
 	local _fileDate="${4}"
 	local _darwin_job_controle_file_base="${5}"
 	CHRONQC_TMP="${TMP_TRENDANALYSE_DIR}/tmp/"
+
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing files from ${CHRONQC_TMP} ..."
+	rm -rf "${CHRONQC_TMP:-missing}"/*
 	
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "local variables generateChronQCOutput:_runinfo=${_runinfo},_tablefile=${_tablefile}, _filetype=${_filetype}, _fileDate=${_fileDate}"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "starting to fille the trendanalysis database with :${_runinfo} and ${_tablefile}}"
@@ -512,7 +518,11 @@ function processDragenToDB() {
 	local _runinfo="${1}"
 	local _tablefile="${2}"
 	local _dragen_job_controle_file_base="${3}"
+	CHRONQC_TMP="${TMP_TRENDANALYSE_DIR}/tmp/"
 	
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing files from ${CHRONQC_TMP} ..."
+	rm -rf "${CHRONQC_TMP:-missing}"/*
+
 	touch "${_dragen_job_controle_file_base}".started
 	
 	if [[ -e "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" ]]
