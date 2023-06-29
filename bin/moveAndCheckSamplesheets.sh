@@ -375,6 +375,16 @@ do
 	done
 
 	firstStepOfPipeline="${REPLACEDPIPELINECOLUMN%%+*}"
+	projectSamplesheet='false'
+	if [[ -n "${_sampleSheetColumnOffsets["SentrixBarcode_A"]+isset}" ]] 
+	then
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a GAP samplesheet. There is no samplesheetCheck at this moment."
+		projectSamplesheet="false"
+	elif [[ "${group}" == "patho" ]]
+	then
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a Patho samplesheet. There is no need for samplesheetCheck."
+		projectSamplesheet="false"
+	else
 	# We want to check whether the samplesheet is a project samplesheet or a rawdata samplesheet
 	if checkSampleSheet.py --input "${samplesheetChecked}" --log "${samplesheetChecked}.log"
 	then
