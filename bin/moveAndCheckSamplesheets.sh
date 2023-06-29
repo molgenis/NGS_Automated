@@ -316,7 +316,7 @@ else
 			fi
 		fi
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "first step of the pipeline:[${firstStepOfPipeline}]."
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Moving samplesheet one folder upstream: ${samplesheetsSourceFolderChecked}"
+		
 		#
 		# Distribute samplesheet to other dat folders
 		#
@@ -325,9 +325,12 @@ else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "copying ${samplesheet} /groups/${GROUP}/${datDir}/Samplesheets/"
 			rsync -v "${samplesheet}" "/groups/${GROUP}/${datDir}/Samplesheets/"
 		done
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Moving samplesheet one folder upstream: ${samplesheetsSourceFolderChecked}"
 		
 		mv -v "${samplesheet}" "${samplesheetsSourceFolderChecked}"
 		
+		rm -f "${samplesheet}.converted"{,.log}
+
 	done
 fi
 
@@ -349,7 +352,17 @@ fi
 
 for samplesheetChecked in "${samplesheetsChecked[@]}"
 do
-
+	# if samplesheets[@] is empty this means that the samplesheet is coming from a different machine, so we need logDir and a ${JOB_CONTROLE_FILE_BASE}.started file
+	if [[ "${#samplesheets[@]}" -eq '0' ]]
+	then
+		logDir="${DAT_ROOT_DIR}/logs/${sampleSheetName}/"
+		# shellcheck disable=SC2174
+		mkdir -m 2770 -p "${logDir}"
+		touch "${logDir}"
+		export JOB_CONTROLE_FILE_BASE="${logDir}/${sampleSheetName}.${SCRIPT_NAME}"
+		printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
+	fi
+	
 	declare -a _sampleSheetColumnNames=()
 	declare -A _sampleSheetColumnOffsets=()
 
@@ -372,6 +385,9 @@ do
 		fi
 	fi
 	
+	#
+	# When samplesheet is GENOMESCAN the samplesheet has to go to the Samplesheets root folder (no bucket)
+	#
 	if [[ "${projectSamplesheet}" == "true" ]]
 	then
 		if [[ "${REPLACEDPIPELINECOLUMN}" == *"GENOMESCAN"* ]]
@@ -406,7 +422,7 @@ do
 
 	if [[ "${transactionStatus}" == 'Ok' ]]
 	then
-		rm -f "${samplesheet}.converted"{,.log}
+		rm -f "${samplesheetChecked}.converted"{,.log}
 		rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 		mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 	
