@@ -422,7 +422,7 @@ do
 
 	if [[ "${transactionStatus}" == 'Ok' ]]
 	then
-		rm -f "${samplesheetChecked}.converted"{,.log}
+		rm -f "${samplesheetChecked}."{,.log}
 		rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 		mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 	
