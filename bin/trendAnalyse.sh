@@ -837,10 +837,9 @@ else
 	done
 fi
 
-
+CHRONQC_TMP="${TMP_TRENDANALYSE_DIR}/tmp/"
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "cleanup ${CHRONQC_TMP}* ..."
-rm "${CHRONQC_TMP}/"*
-log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "cleanup ${CHRONQC_TMP}* ..."
+rm -rf "${CHRONQC_TMP:-missing}"/*
 
 #
 ## Function for generating a list of ChronQC plots.
