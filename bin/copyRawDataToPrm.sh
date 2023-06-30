@@ -361,10 +361,10 @@ function splitSamplesheetPerProject() {
 	# remove samplesheet on sourceServerFQDN
 	#
 	# shellcheck disable=SC2029
-	if ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "mv \"${SCR_ROOT_DIR}/Samplesheets/${pipeline}/${_run}.${SAMPLESHEET_EXT}\" \"${SCR_ROOT_DIR}/Samplesheets/${pipeline}/archive/\" "
+	if ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "mv \"${SCR_ROOT_DIR}/Samplesheets/${pipeline}/${_run}.${SAMPLESHEET_EXT}\" \"${SCR_ROOT_DIR}/Samplesheets/archive/\" "
 	then
 		rm -f "${_controlFileBaseForFunction}.failed"
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}.${SAMPLESHEET_EXT} removed from ${SCR_ROOT_DIR}/Samplesheets/${pipeline}/ on ${sourceServerFQDN}."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}.${SAMPLESHEET_EXT} moved to ${SCR_ROOT_DIR}/Samplesheets/archive/ on ${sourceServerFQDN}."
 		mv "${_controlFileBaseForFunction}."{started,finished}
 	else
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}.${SAMPLESHEET_EXT} cannot be removed from ${SCR_ROOT_DIR}/Samplesheets/${pipeline}/ on ${sourceServerFQDN}."
