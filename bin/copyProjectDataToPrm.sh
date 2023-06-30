@@ -497,72 +497,76 @@ else
 				export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
 				calculateProjectMd5sFinishedFile="ssh ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${run}.calculateProjectMd5s.finished"
 				rawDataCopiedToPrmFinishedFile="ssh ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.rawDataCopiedToPrm.finished"
-				
-				if ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.rawDataCopiedToPrm.finished"
+				if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]] 
 				then
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "found: ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.rawDataCopiedToPrm.finished"
-					# shellcheck disable=SC2244	
-					if ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${run}.calculateProjectMd5s.finished"
+					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${project}/${run}."
+				else
+					if ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.rawDataCopiedToPrm.finished"
 					then
-						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${PRM_ROOT_DIR}/logs/${project}/"
-						mkdir -p "${PRM_ROOT_DIR}/logs/${project}/"
-						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "found: ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${run}.calculateProjectMd5s.finished"
-						if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]] && [[ "${calculateProjectMd5sFinishedFile}" &&  "${rawDataCopiedToPrmFinishedFile}" -ot "${JOB_CONTROLE_FILE_BASE}.finished" ]]
+						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "found: ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.rawDataCopiedToPrm.finished"
+						# shellcheck disable=SC2244	
+						if ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${run}.calculateProjectMd5s.finished"
 						then
-							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${project}/${run}."
-						else
-							touch "${JOB_CONTROLE_FILE_BASE}.started"
-							log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "archiving samplesheet in ${PRM_ROOT_DIR}/Samplesheets/archive/"
-							rsync -av "${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${project}/${run}/results/${project}.${SAMPLESHEET_EXT}" "${PRM_ROOT_DIR}/Samplesheets/archive/"
-							sampleType="$(set -e; getSampleType "${PRM_ROOT_DIR}/Samplesheets/archive/${project}.${SAMPLESHEET_EXT}")"
-							log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sampleType =${sampleType}"
-							log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/${run} ..."
-							rsyncProjectRun "${project}" "${run}" "${controlFileBase}"
+							log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${PRM_ROOT_DIR}/logs/${project}/"
+							mkdir -p "${PRM_ROOT_DIR}/logs/${project}/"
+							log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "found: ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${run}.calculateProjectMd5s.finished"
+							if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]] && [[ "${calculateProjectMd5sFinishedFile}" &&  "${rawDataCopiedToPrmFinishedFile}" -ot "${JOB_CONTROLE_FILE_BASE}.finished" ]]
+							then
+								log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${project}/${run}."
+							else
+								touch "${JOB_CONTROLE_FILE_BASE}.started"
+								log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "archiving samplesheet in ${PRM_ROOT_DIR}/Samplesheets/archive/"
+								rsync -av "${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${project}/${run}/results/${project}.${SAMPLESHEET_EXT}" "${PRM_ROOT_DIR}/Samplesheets/archive/"
+								sampleType="$(set -e; getSampleType "${PRM_ROOT_DIR}/Samplesheets/archive/${project}.${SAMPLESHEET_EXT}")"
+								log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sampleType =${sampleType}"
+								log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/${run} ..."
+								rsyncProjectRun "${project}" "${run}" "${controlFileBase}"
 							
-							if [[ -e "${controlFileBase}.rsyncProjectRun.finished" ]]
-							then
-								log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.rsyncProjectRun.finished present -> rsyncProjectRun completed; let's sanityCheck for project ${project}..."
-								sanityCheck "${project}" "${run}" "${sampleType}" "${controlFileBase}"
-							else
-								log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.rsyncProjectRun.finished absent -> rsyncProjectRun failed."
-							fi
-							if [[ -e "${controlFileBase}.sanityCheck.finished" ]]
-							then
-								log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.sanityCheck.finished present -> sanityCheck completed; let's upload data to Track and Trace for project ${project}..."
-								# shellcheck disable=SC2029
-								if ssh "${DATA_MANAGER}@${HOSTNAME_TMP}" "rm -f ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/${project}.${SAMPLESHEET_EXT}"
+								if [[ -e "${controlFileBase}.rsyncProjectRun.finished" ]]
 								then
-									log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/${project}.${SAMPLESHEET_EXT} removed on ${HOSTNAME_TMP}"
+									log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.rsyncProjectRun.finished present -> rsyncProjectRun completed; let's sanityCheck for project ${project}..."
+									sanityCheck "${project}" "${run}" "${sampleType}" "${controlFileBase}"
 								else
-									log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not remove ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/${project}.${SAMPLESHEET_EXT} from ${HOSTNAME_TMP}"
-									mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-									return
+									log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.rsyncProjectRun.finished absent -> rsyncProjectRun failed."
 								fi
+								if [[ -e "${controlFileBase}.sanityCheck.finished" ]]
+								then
+									log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.sanityCheck.finished present -> sanityCheck completed; let's upload data to Track and Trace for project ${project}..."
+									# shellcheck disable=SC2029
+									if ssh "${DATA_MANAGER}@${HOSTNAME_TMP}" "rm -f ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/${project}.${SAMPLESHEET_EXT}"
+									then
+										log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/${project}.${SAMPLESHEET_EXT} removed on ${HOSTNAME_TMP}"
+									else
+										log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not remove ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/${project}.${SAMPLESHEET_EXT} from ${HOSTNAME_TMP}"
+										mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+										return
+									fi
 								
-								rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
-								mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
-								log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing project ${project}."
+									rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
+									mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+									log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing project ${project}."
 								
-								echo "Project/run ${project}/${run} is ready. The data is available at ${PRM_ROOT_DIR}/projects/." \
-									>> "${JOB_CONTROLE_FILE_BASE}.finished"
-								log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished. Setting track & trace state to finished :)."
+									echo "Project/run ${project}/${run} is ready. The data is available at ${PRM_ROOT_DIR}/projects/." \
+										>> "${JOB_CONTROLE_FILE_BASE}.finished"
+									log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished. Setting track & trace state to finished :)."
 
-								dateFinished=$(date +%FT%T%z -r "${JOB_CONTROLE_FILE_BASE}.finished")
-								printf '"%s"\n' "${dateFinished}" > "${JOB_CONTROLE_FILE_BASE}.trace_putFromFile_projects.csv"
+									dateFinished=$(date +%FT%T%z -r "${JOB_CONTROLE_FILE_BASE}.finished")
+									printf '"%s"\n' "${dateFinished}" > "${JOB_CONTROLE_FILE_BASE}.trace_putFromFile_projects.csv"
 								
-								echo "finished: $(date +%FT%T%z)" >> "${JOB_CONTROLE_FILE_BASE}.totalRunTime"
-							else
-								log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.sanityCheck.finished absent -> rsyncProjectRun failed."
-								log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process project ${project}."
-								mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-								log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.failed. Setting track & trace state to failed :(."
+									echo "finished: $(date +%FT%T%z)" >> "${JOB_CONTROLE_FILE_BASE}.totalRunTime"
+								else
+									log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.sanityCheck.finished absent -> rsyncProjectRun failed."
+									log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process project ${project}."
+									mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+									log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.failed. Setting track & trace state to failed :(."
+								fi
 							fi
+						else
+							log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${project}/${run} calculateProjectMd5s not yet finished."
 						fi
 					else
-						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${project}/${run} calculateProjectMd5s not yet finished."
+						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Copying the rawdata of project ${project} is not yet finished."
 					fi
-				else
-					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Copying the rawdata of project ${project} is not yet finished."
 				fi
 			done
 		fi
