@@ -224,19 +224,24 @@ else
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${chronQCDateFolderName}."
 		else
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing chronQCDateFolder ${chronQCDateFolderName} ..."
-			mkdir -p "${PRM_ROOT_DIR}/logs/trendanalysis/"
-			touch "${JOB_CONTROLE_FILE_BASE}.started"
-			rsync -av --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' "${dryrun:---progress}" \
-				"${DATA_MANAGER}@${HOSTNAME_TMP}:${chronQCDateFolder}" \
-				"${PRM_ROOT_DIR}/trendanalysis/reports/" \
-			|| {
-				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed} 
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Failed to rsync ${DATA_MANAGER}@${HOSTNAME_TMP}:${chronQCDateFolder} dir. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
-				continue
-			}
-	
-			mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+			if ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "test -e ${TMP_ROOT_DIR}/logs/trendanalysis/generate_plots.${chronQCDateFolderName}_trendAnalyse.finished"
+			then
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing chronQCDateFolder ${chronQCDateFolderName} ..."
+				mkdir -p "${PRM_ROOT_DIR}/logs/trendanalysis/"
+				touch "${JOB_CONTROLE_FILE_BASE}.started"
+				rsync -av --progress --log-file="${JOB_CONTROLE_FILE_BASE}.started" --chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' "${dryrun:---progress}" \
+					"${DATA_MANAGER}@${HOSTNAME_TMP}:${chronQCDateFolder}" \
+					"${PRM_ROOT_DIR}/trendanalysis/reports/" \
+				|| {
+					mv "${JOB_CONTROLE_FILE_BASE}."{started,failed} 
+					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Failed to rsync ${DATA_MANAGER}@${HOSTNAME_TMP}:${chronQCDateFolder} dir. See ${JOB_CONTROLE_FILE_BASE}.failed for details."
+					continue
+				}
+				mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+			else
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "not finished jet ${chronQCDateFolderName}."
+			fi
+			
 		fi
 	done
 fi
