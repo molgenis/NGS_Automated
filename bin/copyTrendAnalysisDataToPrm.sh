@@ -224,6 +224,7 @@ else
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${chronQCDateFolderName}."
 		else
+			# shellcheck disable=SC2029
 			if ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "test -e ${TMP_ROOT_DIR}/logs/trendanalysis/generate_plots.${chronQCDateFolderName}_trendAnalyse.finished"
 			then
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing chronQCDateFolder ${chronQCDateFolderName} ..."
