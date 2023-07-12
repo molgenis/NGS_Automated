@@ -570,19 +570,17 @@ function processDragenToDB() {
 
 function generateReports() {
 
-	local _job_controle_line_base="${1}"
+	local _job_controle_file_base="${1}"
 	# shellcheck disable=SC1091
 	source "${CHRONQC_TEMPLATE_DIRS}/reports.sh" || { 
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create all reports from the Chronqc database." 
-		sed -i "/${_job_controle_line_base}/d" "${LOGS_DIR}/process.generate_plots_trendanalysis.started"
-		echo "${_job_controle_line_base}" >> "${LOGS_DIR}/process.generate_plots_trendanalysis.failed"
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create all reports from the Chronqc database." \
+			2>&1 | tee -a "${_job_controle_file_base}.started"
+		mv "${_job_controle_file_base}."{started,failed}
 		return
 	}
 
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "ChronQC reports finished."
-	sed -i "/${_job_controle_line_base}/d" "${LOGS_DIR}/process.generate_plots_trendanalysis.failed"
-	sed -i "/${_job_controle_line_base}/d" "${LOGS_DIR}/process.generate_plots_trendanalysis.started"
-	echo "${_job_controle_line_base}" >> "${LOGS_DIR}/process.generate_plots_trendanalysis.finished"
+	mv "${_job_controle_file_base}."{started,finished}
 }
 
 
@@ -856,19 +854,15 @@ rm -rf "${CHRONQC_TMP:-missing}"/*
 
 
 today=$(date '+%Y%m%d')
-JOB_CONTROLE_LINE_BASE="generate_plots.${today}.${SCRIPT_NAME}"
+JOB_CONTROLE_FILE_BASE="${LOGS_DIR}/generate_plots.${today}_${SCRIPT_NAME}"
 
-touch "${LOGS_DIR}/process.generate_plots_trendanalysis.finished"
-touch "${LOGS_DIR}/process.generate_plots_trendanalysis.failed"
-touch "${LOGS_DIR}/process.generate_plots_trendanalysis.started"
-
-if grep -Fxq "${JOB_CONTROLE_LINE_BASE}" "${LOGS_DIR}/process.generate_plots_trendanalysis.finished"
+if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 then
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already generated plots on ${today}."
 else
-	echo "${JOB_CONTROLE_LINE_BASE}" >> "${LOGS_DIR}/process.generate_plots_trendanalysis.started"
+	touch "${JOB_CONTROLE_FILE_BASE}.started"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "New trendanalysis plots will be generated on ${today}."
-	generateReports "${JOB_CONTROLE_LINE_BASE}"
+	generateReports "${JOB_CONTROLE_FILE_BASE}"
 fi
 
 
