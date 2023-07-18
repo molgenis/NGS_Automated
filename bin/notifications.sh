@@ -454,18 +454,17 @@ function postMessageToChannel() {
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Compiling JSON message ..."
 	local _jsonMessage
 	local _messageBody
-	numberOfLines=$(wc -l "${_projectStateFile}" | awk '{print $1}')
-	if [[ ${numberOfLines} -gt 10 ]]
+	local _numberOfLines
+	_numberOfLines=$(wc -l "${_projectStateFile}" | awk '{print $1}')
+	if [[ "${_numberOfLines}" -gt 10 ]]
 	then
-		# shellcheck disable=SC2002
 		head="$(head -n 6 "${_projectStateFile}" | tr \" \' )"
-		# shellcheck disable=SC2002
 		tail="$(tail -n 4 "${_projectStateFile}" | tr \" \' )"
 		_messageBody="$(echo -e "${head}\n\n(.....)\n\n${tail}")"
 	else
-		# shellcheck disable=SC2002
-		_messageBody="$(cat "${_projectStateFile}" | tr \" \' )"
+		_messageBody="$(tr \" \' < "${_projectStateFile}")"
 	fi
+	
 	_jsonMessage=$(cat <<-EOM
 		{
 		"title": "${ROLE_USER}@${HOSTNAME_SHORT}: Project ${_project}/${_run} has state ${_state} for phase ${_phase} at ${_timestamp}.",
