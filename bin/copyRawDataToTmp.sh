@@ -62,7 +62,7 @@ function rsyncRuns() {
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Checking for ${line} on ${prm} and if it still needs to be processed"
 			if [[ -f "/groups/${group}/${prm}/${line}" && "${copied}" == "no" ]]
 			then
-				rsync -av "${WORKING_DIR}/logs/${project}/${project}.copyDataFromPrm.requested" "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.started"
+				rsync -v "${WORKING_DIR}/logs/${project}/${project}.copyDataFromPrm.requested" "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.started"
 				touch "${JOB_CONTROLE_FILE_BASE}.started"
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${line} found on ${prm}, start rsyncing.."
 				rsync -rltDvc --relative --rsync-path="sudo -u ${group}-ateambot rsync" "/groups/${group}/${prm}/./${line}"* "${DESTINATION_DIAGNOSTICS_CLUSTER}:${TMP_ROOT_DIR}/" \
@@ -91,7 +91,7 @@ function rsyncRuns() {
 			# shellcheck disable=SC2029
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "created ${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.failed"
 			
-			rsync -av "${JOB_CONTROLE_FILE_BASE}.failed" "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.failed"
+			rsync -v "${JOB_CONTROLE_FILE_BASE}.failed" "${samplesheetsServerLocation}:${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.failed"
 			ssh -n "${samplesheetsServerLocation}" "rm ${TMP_ROOT_DIR}/logs/${project}/${project}.copyDataFromPrm.started"
 			return
 		fi
