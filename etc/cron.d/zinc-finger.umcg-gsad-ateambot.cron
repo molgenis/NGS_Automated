@@ -1,3 +1,0 @@
-*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/beta-GAP-beta; startPipeline.sh -g umcg-gsad"
-*/5 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/beta; notifications.sh -g umcg-gsad -e"
-*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/beta-GAP-beta; calculateProjectMd5s.sh  -g umcg-gsad"
