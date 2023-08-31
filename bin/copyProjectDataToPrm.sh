@@ -540,21 +540,20 @@ else
 										mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 										return
 									fi
-									rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
-									mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
-									log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing project ${project}."
 									#
 									# Add info for colleagues that will process the results.
 									# This will appear in the messeages send by notifications.sh
 									#
-									printf 'The data is available at %s.\n' "${PRM_ROOT_DIR}/projects/${project}/${run}/" \
-										>> "${JOB_CONTROLE_FILE_BASE}.finished"
+									log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The data is available at ${PRM_ROOT_DIR}/projects/${project}/${run}/."
 									mountedCifsDevice="$(awk -v mountpoint="${PRM_ROOT_DIR}" '$2==mountpoint && $3=="cifs" {print $1}' /proc/mounts)"
 									if [[ -n "${mountedCifsDevice:-}" ]]; then
 										printf 'file:%s/projects/%s/%s/\n' \
 											"${mountedCifsDevice}" "${project}" "${run}" \
-											>> "${JOB_CONTROLE_FILE_BASE}.finished"
+											>> "${JOB_CONTROLE_FILE_BASE}.started"
 									fi
+									rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
+									mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+									log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing project ${project}."
 									log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished. Setting track & trace state to finished :)."
 									dateFinished=$(date +%FT%T%z -r "${JOB_CONTROLE_FILE_BASE}.finished")
 									printf '"%s"\n' "${dateFinished}" > "${JOB_CONTROLE_FILE_BASE}.trace_putFromFile_projects.csv"

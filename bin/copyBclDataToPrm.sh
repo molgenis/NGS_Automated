@@ -253,7 +253,7 @@ else
 				--omit-dir-times \
 				--omit-link-times \
 				"${DATA_MANAGER}@${sourceServerFQDN}:${SEQ_DIR}/${filePrefix}" \
-				"${PRM_ROOT_DIR}/rawdata/bcls/"	
+				"${PRM_ROOT_DIR}/rawdata/bcls/"
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer is busy producing data: skipping ${filePrefix}."
 			continue	
@@ -267,7 +267,14 @@ else
 				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			return
 		else
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Amount of files on tmp and prm is the same for ${filePrefix}. FINISHED"
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Amount of files on tmp and prm is the same for ${filePrefix}."
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The data is available at ${PRM_ROOT_DIR}/rawdata/bcls/${filePrefix}/"
+			mountedCifsDevice="$(awk -v mountpoint="${PRM_ROOT_DIR}" '$2==mountpoint && $3=="cifs" {print $1}' /proc/mounts)"
+			if [[ -n "${mountedCifsDevice:-}" ]]; then
+				printf 'file:%s/rawdata/bcls/%s/\n' \
+					"${mountedCifsDevice}" "${filePrefix}" \
+					>> "${JOB_CONTROLE_FILE_BASE}.started"
+			fi
 			mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 		fi
 		
