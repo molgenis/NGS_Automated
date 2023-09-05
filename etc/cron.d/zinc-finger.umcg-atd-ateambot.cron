@@ -1,4 +1,0 @@
-*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/beta; startPipeline.sh -g umcg-atd"
-*/15 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/beta; notifications.sh -g umcg-atd -e"
-#*/30 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; bash /groups/umcg-atd/tmp05/GavinStandAlone/tools/runGavin.sh"
-#*/30 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; bash /groups/umcg-atd/tmp05/GavinStandAlone/cleanup.sh umcg-atd"

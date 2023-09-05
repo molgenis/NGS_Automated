@@ -1,2 +1,0 @@
-10,30,50 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/beta; copyRawDataToPrm.sh -g umcg-gsad -s gattaca02.gcc.rug.nl"
-*/10 * * * * /bin/bash -c "export SOURCE_HPC_ENV="True"; . ~/.bashrc; module load NGS_Automated/beta; copyProjectDataToPrm.sh -g umcg-gsad -l FATAL"
