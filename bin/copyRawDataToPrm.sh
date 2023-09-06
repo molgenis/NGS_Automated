@@ -568,7 +568,7 @@ then
 else
 	# shellcheck disable=SC2153
 	PRM_ROOT_DIR="/groups/${GROUP}/${prm_dir}/"
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "DAT_ROOT_DIR is set to ${PRM_ROOT_DIR}"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "PRM_ROOT_DIR is set to ${PRM_ROOT_DIR}"
 	if test -e "/groups/${GROUP}/${prm_dir}/"
 	then
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${PRM_ROOT_DIR} is available"
