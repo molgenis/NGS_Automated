@@ -239,11 +239,29 @@ else
 		if [[ -n "${_sampleSheetColumnOffsets["SentrixBarcode_A"]+isset}" ]] 
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a GAP samplesheet. There is no samplesheetCheck at this moment."
+			#
+			# Make sure
+			#  1. The last line ends with a line end character.
+			#  2. We have the right line end character: convert any carriage return (\r) to newline (\n).
+			#  3. We remove empty lines.
+			#
+			printf '\n'     >> "${samplesheet}.converted"
+			sed 's/\r/\n/g' "${samplesheet}.converted" > "${samplesheet}.converted.tmp"
+			sed '/^\s*$/d'  "${samplesheet}.converted.tmp" > "${samplesheet}.converted.tmp2"
+			rm "${samplesheet}.converted.tmp"
+			mv "${samplesheet}.converted.tmp2" "${samplesheet}.converted"
+			mv "${samplesheet}.converted" "${samplesheet}"
 			projectSamplesheet="false"
 		elif [[ "${group}" == "patho" ]]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a Patho samplesheet. There is no need for samplesheetCheck."
 			projectSamplesheet="false"
+			printf '\n'     >> "${samplesheet}.converted"
+			sed 's/\r/\n/g' "${samplesheet}.converted" > "${samplesheet}.converted.tmp"
+			sed '/^\s*$/d'  "${samplesheet}.converted.tmp" > "${samplesheet}.converted.tmp2"
+			rm "${samplesheet}.converted.tmp"
+			mv "${samplesheet}.converted.tmp2" "${samplesheet}.converted"
+			mv "${samplesheet}.converted" "${samplesheet}"
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a NGS samplesheet. Lets check if the samplesheet is correct."
 			cp "${samplesheet}"{,.converted}
