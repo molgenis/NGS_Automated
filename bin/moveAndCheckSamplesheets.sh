@@ -225,19 +225,17 @@ else
 		touch "${logDir}"
 		export JOB_CONTROLE_FILE_BASE="${logDir}/${sampleSheetName}.${SCRIPT_NAME}"
 		printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
-	
+
 		#
 		# Make sure
 		#  1. The last line ends with a line end character.
 		#  2. We have the right line end character: convert any carriage return (\r) to newline (\n).
 		#  3. We remove empty lines.
 		#
-
 		cp "${samplesheet}"{,.converted}
 		printf '\n'     >> "${samplesheet}.converted"
 		sed -i 's/\r/\n/g' "${samplesheet}.converted"
 		sed -i "/^[\s${SAMPLESHEET_SEP}]*$/d" "${samplesheet}.converted"
-		mv "${samplesheet}.converted.tmp2" "${samplesheet}.converted"
 		mv "${samplesheet}.converted" "${samplesheet}"
 
 		declare -a _sampleSheetColumnNames=()
