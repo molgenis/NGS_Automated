@@ -568,7 +568,7 @@ then
 else
 	# shellcheck disable=SC2153
 	PRM_ROOT_DIR="/groups/${GROUP}/${prm_dir}/"
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "DAT_ROOT_DIR is set to ${PRM_ROOT_DIR}"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "PRM_ROOT_DIR is set to ${PRM_ROOT_DIR}"
 	if test -e "/groups/${GROUP}/${prm_dir}/"
 	then
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${PRM_ROOT_DIR} is available"
@@ -734,6 +734,17 @@ else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}/${runPrefix}.splitSamplesheetPerProject.finished present."
 			rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing ${filePrefix}."
+			#
+			# Add info for colleagues that will process the results.
+			# This will appear in the messeages send by notifications.sh
+			#
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The data is available at ${PRM_ROOT_DIR}/rawdata/."
+			mountedCifsDevice="$(awk -v mountpoint="${PRM_ROOT_DIR}" '$2==mountpoint && $3=="cifs" {print $1}' /proc/mounts)"
+			if [[ -n "${mountedCifsDevice:-}" ]]; then
+				printf 'file:%s/rawdata/\n' \
+					"${mountedCifsDevice}" \
+					>> "${JOB_CONTROLE_FILE_BASE}.started"
+			fi
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 		else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}/${runPrefix}.splitSamplesheetPerProject.finished absent -> splitSamplesheetPerProject failed."

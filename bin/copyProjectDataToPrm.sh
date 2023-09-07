@@ -521,7 +521,6 @@ else
 								log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sampleType =${sampleType}"
 								log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/${run} ..."
 								rsyncProjectRun "${project}" "${run}" "${controlFileBase}"
-							
 								if [[ -e "${controlFileBase}.rsyncProjectRun.finished" ]]
 								then
 									log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.rsyncProjectRun.finished present -> rsyncProjectRun completed; let's sanityCheck for project ${project}..."
@@ -541,18 +540,23 @@ else
 										mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 										return
 									fi
-								
+									#
+									# Add info for colleagues that will process the results.
+									# This will appear in the messeages send by notifications.sh
+									#
+									log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The data is available at ${PRM_ROOT_DIR}/projects/${project}/${run}/."
+									mountedCifsDevice="$(awk -v mountpoint="${PRM_ROOT_DIR}" '$2==mountpoint && $3=="cifs" {print $1}' /proc/mounts)"
+									if [[ -n "${mountedCifsDevice:-}" ]]; then
+										printf 'file:%s/projects/%s/%s/\n' \
+											"${mountedCifsDevice}" "${project}" "${run}" \
+											>> "${JOB_CONTROLE_FILE_BASE}.started"
+									fi
 									rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 									mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 									log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing project ${project}."
-								
-									echo "Project/run ${project}/${run} is ready. The data is available at ${PRM_ROOT_DIR}/projects/." \
-										>> "${JOB_CONTROLE_FILE_BASE}.finished"
 									log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished. Setting track & trace state to finished :)."
-
 									dateFinished=$(date +%FT%T%z -r "${JOB_CONTROLE_FILE_BASE}.finished")
 									printf '"%s"\n' "${dateFinished}" > "${JOB_CONTROLE_FILE_BASE}.trace_putFromFile_projects.csv"
-								
 									echo "finished: $(date +%FT%T%z)" >> "${JOB_CONTROLE_FILE_BASE}.totalRunTime"
 								else
 									log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.sanityCheck.finished absent -> rsyncProjectRun failed."
