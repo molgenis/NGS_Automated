@@ -225,7 +225,19 @@ else
 		touch "${logDir}"
 		export JOB_CONTROLE_FILE_BASE="${logDir}/${sampleSheetName}.${SCRIPT_NAME}"
 		printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
-	
+
+		#
+		# Make sure
+		#  1. The last line ends with a line end character.
+		#  2. We have the right line end character: convert any carriage return (\r) to newline (\n).
+		#  3. We remove empty lines.
+		#
+		cp "${samplesheet}"{,.converted}
+		printf '\n'     >> "${samplesheet}.converted"
+		sed -i 's/\r/\n/g' "${samplesheet}.converted"
+		sed -i "/^[\s${SAMPLESHEET_SEP}]*$/d" "${samplesheet}.converted"
+		mv "${samplesheet}.converted" "${samplesheet}"
+
 		declare -a _sampleSheetColumnNames=()
 		declare -A _sampleSheetColumnOffsets=()
 
@@ -235,45 +247,30 @@ else
 		do
 			_sampleSheetColumnOffsets["${_sampleSheetColumnNames[${_offset}]}"]="${_offset}"
 		done
-	
+
+		projectSamplesheet="false"
 		if [[ -n "${_sampleSheetColumnOffsets["SentrixBarcode_A"]+isset}" ]] 
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a GAP samplesheet. There is no samplesheetCheck at this moment."
-			projectSamplesheet="false"
+			
 		elif [[ "${group}" == "patho" ]]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a Patho samplesheet. There is no need for samplesheetCheck."
-			projectSamplesheet="false"
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a NGS samplesheet. Lets check if the samplesheet is correct."
-			cp "${samplesheet}"{,.converted}
-	
-			#
-			# Make sure
-			#  1. The last line ends with a line end character.
-			#  2. We have the right line end character: convert any carriage return (\r) to newline (\n).
-			#  3. We remove empty lines.
-			#
-			printf '\n'     >> "${samplesheet}.converted"
-			sed 's/\r/\n/g' "${samplesheet}.converted" > "${samplesheet}.converted.tmp"
-			sed '/^\s*$/d'  "${samplesheet}.converted.tmp" > "${samplesheet}.converted.tmp2"
-			rm "${samplesheet}.converted.tmp"
-			mv "${samplesheet}.converted.tmp2" "${samplesheet}.converted"
-			projectSamplesheet="false"
-		
 			#
 			# We want to check whether the samplesheet is a project samplesheet or a rawdata samplesheet
-			if checkSampleSheet.py --input "${samplesheet}.converted" --log "${samplesheet}.converted.log"
+			if checkSampleSheet.py --input "${samplesheet}" --log "${samplesheet}.log"
 			then
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Samplesheet ${samplesheet}.converted is correct."
-				check=$(cat "${samplesheet}.converted.log")
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Samplesheet ${samplesheet} is correct."
+				check=$(cat "${samplesheet}.log")
 				if [[ "${check}" == *'projectSamplesheet'* ]]
 				then
 					projectSamplesheet="true"
 				fi
 			else
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Samplesheet ${samplesheet}.converted contains errors."
-				check=$(cat "${samplesheet}.converted.log")
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Samplesheet ${samplesheet} contains errors."
+				check=$(cat "${samplesheet}.log")
 			
 				log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "${check} for samplesheet: ${samplesheet}"
 				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
