@@ -132,7 +132,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files ..."
 declare -a configFiles=(
 	"${CFG_DIR}/${group}.cfg"
 	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
-	"${CFG_DIR}/${sourceServer}.cfg"
+	"${CFG_DIR}/${sourceServer##*+}.cfg"
 	"${CFG_DIR}/sharedConfig.cfg"
 	#"${HOME}/molgenis.cfg" Pull data from a DS server is currently not monitored using a Track & Trace Molgenis.
 )
@@ -166,7 +166,7 @@ then
 fi
 
 #
-# Overrule group's SCR_ROOT_DIR if necessary.
+# Overrule group's PRM_ROOT_DIR if necessary.
 #
 if [[ -z "${prm_dir:-}" ]]
 then
@@ -174,7 +174,7 @@ then
 else
 	# shellcheck disable=SC2153
 	PRM_ROOT_DIR="/groups/${GROUP}/${prm_dir}/"
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "DAT_ROOT_DIR is set to ${PRM_ROOT_DIR}"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "PRM_ROOT_DIR is set to ${PRM_ROOT_DIR}"
 	if test -e "/groups/${GROUP}/${prm_dir}/"
 	then
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${PRM_ROOT_DIR} is available"
