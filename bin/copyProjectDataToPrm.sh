@@ -185,32 +185,32 @@ function checkRawdata(){
 	2>&1 | tee -a "${_controlFileBaseForFunction}.started"
 	echo "started: $(date +%FT%T%z)" > "${_controlFileBaseForFunction}.totalRunTime"
 	
-# shellcheck disable=SC2029
-mapfile -t fqfiles < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "ls \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}/rawdata/ngs/\"")
-if [[ "${#fqfiles[@]}" -eq '0' ]]
-then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No fastQ files found @ /groups/umcg-atd/projects/."
-else
-	for fqfile in "${fqfiles[@]}"
-	do
-		fqfile=$(basename "${fqfile}")
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${fqfile} on ${TMP_ROOT_DIAGNOSTICS_DIR}, check if it is present on ${PRM_ROOT_DIR}"
-		sequenceRun=$(echo "${fqfile}" | cut -d "_" -f 1-4 --output-delimiter="_")
-		if [[ -e "${PRM_ROOT_DIR}/rawdata/ngs/${sequenceRun}/${fqfile}" ]]
-		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Great, the fastQ file ${fqfile} is stored on ${PRM_ROOT_DIR}"
-		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "the fastQ file ${fqfile} is not stored on ${PRM_ROOT_DIR}, please make sure all the data of project ${_project} is stored proper"
-			mv "${_controlFileBaseForFunction}."{started,failed}
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" "The rawdata for project ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}.md5. is not complete on ${PRM_ROOT_DIR} please make sure the rawdata is complete on PRM so the project data can be copied. See ${_controlFileBaseForFunction}.failed for details."
-			echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_controlFileBaseForFunction}.failed for details." \
-			>> "${_controlFileBaseForFunction}.failed"
-			continue
-		fi
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Perfect! all the files for project ${project} are on PRM, time to make a run01.rawDataCopiedToPrm.finished"
-		ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" touch "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.rawDataCopiedToPrm.finished"
-	done
-fi
+	# shellcheck disable=SC2029
+	mapfile -t fqfiles < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "ls \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}/rawdata/ngs/\"")
+	if [[ "${#fqfiles[@]}" -eq '0' ]]
+	then
+		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No fastQ files found @ /groups/umcg-atd/projects/."
+	else
+		for fqfile in "${fqfiles[@]}"
+		do
+			fqfile=$(basename "${fqfile}")
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${fqfile} on ${TMP_ROOT_DIAGNOSTICS_DIR}, check if it is present on ${PRM_ROOT_DIR}"
+			sequenceRun=$(echo "${fqfile}" | cut -d "_" -f 1-4 --output-delimiter="_")
+			if [[ -e "${PRM_ROOT_DIR}/rawdata/ngs/${sequenceRun}/${fqfile}" ]]
+			then
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Great, the fastQ file ${fqfile} is stored on ${PRM_ROOT_DIR}"
+			else
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "the fastQ file ${fqfile} is not stored on ${PRM_ROOT_DIR}, please make sure all the data of project ${_project} is stored proper"
+				mv "${_controlFileBaseForFunction}."{started,failed}
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" "The rawdata for project ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}.md5. is not complete on ${PRM_ROOT_DIR} please make sure the rawdata is complete on PRM so the project data can be copied. See ${_controlFileBaseForFunction}.failed for details."
+				echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_controlFileBaseForFunction}.failed for details." \
+				>> "${_controlFileBaseForFunction}.failed"
+				continue
+			fi
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Perfect! all the files for project ${project} are on PRM, time to make a run01.rawDataCopiedToPrm.finished"
+			ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" touch "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.rawDataCopiedToPrm.finished"
+		done
+	fi
 
 
 }
