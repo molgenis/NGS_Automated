@@ -206,7 +206,7 @@ function checkRawdata(){
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Great, the fastQ file ${fqfile} is stored on ${PRM_ROOT_DIR}"
 				else
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "the fastQ file ${fqfile} is not stored on ${PRM_ROOT_DIR}, please make sure all the data of project ${_project} is stored proper"
-					touch "${_controlFileBaseForFunction}."checking
+					touch "${_controlFileBaseForFunction}.checking"
 					#log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" "The rawdata for project ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}.md5. is not complete on ${PRM_ROOT_DIR} please make sure the rawdata is complete on PRM so the project data can be copied. See ${_controlFileBaseForFunction}.failed for details."
 					echo "$(date '+%Y-%m-%d-T%H%M'): fastQ file ${fqfile} is not stored in ${PRM_ROOT_DIR}." \
 					>> "${_controlFileBaseForFunction}.checking"
