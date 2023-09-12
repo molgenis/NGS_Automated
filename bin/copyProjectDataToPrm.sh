@@ -196,7 +196,7 @@ else
 		fqfile=$(basename "${fqfile}")
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${fqfile} on ${TMP_ROOT_DIAGNOSTICS_DIR}, check if it is present on ${PRM_ROOT_DIR}"
 		sequenceRun=$(echo "${fqfile}" | cut -d "_" -f 1-4 --output-delimiter="_")
-		if [[ -e "${PRM_ROOT_DIR}/rawdata/ngs/${sequenceRun}/${fqfile}"]]
+		if [[ -e "${PRM_ROOT_DIR}/rawdata/ngs/${sequenceRun}/${fqfile}" ]]
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Great, the fastQ file ${fqfile} is stored on ${PRM_ROOT_DIR}"
 		else
