@@ -213,18 +213,19 @@ function checkRawdata(){
 					continue
 				fi
 			done
-			if [[ -e "${_controlFileBaseForFunction}."checking ]]
-			then
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "All or some file of project ${_project} are missing on PRM, please make sure all files are present"
-				mv "${_controlFileBaseForFunction}."{started,failed}
-				echo "$(date '+%Y-%m-%d-T%H%M'): All or some file of project ${_project} are missing on PRM, please make sure all files are present." \
-				>> "${_controlFileBaseForFunction}.failed"
-				continue
-			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Perfect! all the files for project ${project} are on PRM, time to make a run01.rawDataCopiedToPrm.finished"
-				ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" touch "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.rawDataCopiedToPrm.finished"
-			fi
 		done
+	fi
+	
+	if [[ -e "${_controlFileBaseForFunction}."checking ]]
+	then
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "All or some file of project ${_project} are missing on PRM, please make sure all files are present"
+		mv "${_controlFileBaseForFunction}."{started,failed}
+		echo "$(date '+%Y-%m-%d-T%H%M'): All or some file of project ${_project} are missing on PRM, please make sure all files are present." \
+		>> "${_controlFileBaseForFunction}.failed"
+		continue
+	else
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Perfect! all the files for project ${project} are on PRM, time to make a run01.rawDataCopiedToPrm.finished"
+		ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" touch "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.rawDataCopiedToPrm.finished"
 	fi
 }
 	
