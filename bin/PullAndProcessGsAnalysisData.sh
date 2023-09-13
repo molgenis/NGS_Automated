@@ -263,12 +263,13 @@ function mergeSamplesheets(){
 			_projectName=$(echo "${i}" | grep -Eo 'GS_[0-9]+')
 			# create a combined samplesheet header, renamed project to originalproject and added new project column
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "new samplesheet name: ${_projectName}.csv"
-			head -1 "${TMP_ROOT_DIR}/Samplesheets/${i}.csv" | perl -p -e 's|project|originalproject|' | awk '{print $0",project,gsBatch"}' > "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
-			tail -n+2 "${TMP_ROOT_DIR}/Samplesheets/${i}.csv" >> "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
+			head -1 "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${i}.csv" | perl -p -e 's|project|originalproject|' | awk '{print $0",project,gsBatch"}' > "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
+			tail -n+2 "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${i}.csv" >> "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
 			teller=$((${teller}+1))
 		else
-			tail -n+2 "${TMP_ROOT_DIR}/Samplesheets/${i}.csv" >> "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
+			tail -n+2 "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${i}.csv" >> "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
 		fi
+		mv "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${i}.csv" "${TMP_ROOT_DIR}/Samplesheets/archive/${i}.csv"
 	done
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Adding projectName ${_projectName} and gsBatch:${gsBatch} to the samplesheet and put the samplesheet ${TMP_ROOT_DIR}/Samplesheets/NGS_DNA/${_projectName}.csv"
 	
@@ -594,51 +595,56 @@ then
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "this is a testgroup, data should not be removed after 14 days"
 else
 	#
-	# Cleanup old data if data transfer with rsync finished successfully and the rawdata is on prm for at least 2 days.
+	# Cleanup old data if data transfer with rsync finished successfully and the pipeline is on finished for at least 2 days.
 	#
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting data older than 2 days from ${HOSTNAME_DATA_STAGING%%.*}:/groups/${GROUP}/${SCR_LFS}/ ..."
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking for data which the pipeline is finished at least 2 days ago and will delete the data from ${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${analysisFolder} ..."
 	#
 	# Get the batch name by parsing the ${GENOMESCAN_HOME_DIR} folder, directories only and no empty or '.'
 	#
-	readarray -t gsBatchesSourceServer< <(rsync -f"+ */" -f"- *" "${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/" | awk '{if ($5 != "" && $5 != "."){print $5}}')
+	readarray -t gsBatchesSourceServer< <(rsync -f"+ */" -f"- *" -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/" | awk '{if ($5 != "" && $5 != "."){print $5}}')
 	if [[ "${#gsBatchesSourceServer[@]}" -eq '0' ]]
 	then
-		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No batches found at ${HOSTNAME_DATA_STAGING}:${GENOMESCAN_HOME_DIR}/"
+		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No batches found at ${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/"
 	else
 		for gsBatch in "${gsBatchesSourceServer[@]}"
 		do
-			gsBatch="$(basename "${gsBatch}")"
-			csvFile=$(ls -1 "${TMP_ROOT_DIR}/${gsBatch}/${rawdataFolder}/UMCG_CSV_"*".csv")
-			mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
-			projectName=$(echo "${uniqProjects[0]}" | grep -Eo 'GS_[0-9]+')
-			#
-			# Convert date to seconds for easier calculation of the date difference.
-			# 86400 = 1 day in seconds.
-			#
-			# When the pipeline is finished, a run01.pipeline.finished is created
-			# If this file is older than 2 days, the genomescan batch will be removed from the data staging machine.
-			#
-			if [[ -f "${TMP_ROOT_DIR}/logs/${projectName}/run01.pipeline.finished" ]]
+			if [[ -d "${TMP_ROOT_DIR}/${gsBatch}/" ]]
 			then
-				dateInSecAnalysisData="$(date -d"$(rsync "${TMP_ROOT_DIR}/logs/${projectName}/run01.pipeline.finished" | awk '{print $3}')" +%s)"
-			
-				dateInSecNow=$(date +%s)
-				if [[ $(((dateInSecNow - dateInSecAnalysisData) / 86400)) -gt 2 ]]
+				gsBatch="$(basename "${gsBatch}")"
+				csvFile=$(ls -1 "${TMP_ROOT_DIR}/${gsBatch}/${rawdataFolder}/UMCG_CSV_"*".csv")
+				mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
+				projectName=$(echo "${uniqProjects[0]}" | grep -Eo 'GS_[0-9]+')
+				#
+				# Convert date to seconds for easier calculation of the date difference.
+				# 86400 = 1 day in seconds.
+				#
+				# When the pipeline is finished, a run01.pipeline.finished is created
+				# If this file is older than 2 days, the genomescan batch will be removed from the data staging machine.
+				#
+				if [[ -f "${TMP_ROOT_DIR}/logs/${projectName}/run01.pipeline.finished" ]]
 				then
-					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${gsBatch} because the pipeline is finished and the file is older than 2 days"
-					#
-					# Create an empty dir (source dir) to sync with the destination dir && then remove source dir.
-					#
-					mkdir -p "${HOME}/empty_dir/"
-					rsync -a --delete -e 'ssh -p 443' "${HOME}/empty_dir/" "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${analysisFolder}"
-					rmdir "${HOME}/empty_dir/"
+					dateInSecAnalysisData="$(date -d"$(rsync "${TMP_ROOT_DIR}/logs/${projectName}/run01.pipeline.finished" | awk '{print $3}')" +%s)"
+			
+					dateInSecNow=$(date +%s)
+					if [[ $(((dateInSecNow - dateInSecAnalysisData) / 86400)) -gt 2 ]]
+					then
+						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${gsBatch} because the pipeline is finished and the file is older than 2 days"
+						#
+						# Create an empty dir (source dir) to sync with the destination dir && then remove source dir.
+						#
+						mkdir -p "${HOME}/empty_dir/"
+						rsync -a --delete -e 'ssh -p 443' "${HOME}/empty_dir/" "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${analysisFolder}"
+						rmdir "${HOME}/empty_dir/"
+					else
+						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " the pipeline.finished is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove the Analysis folder the ${TMP_ROOT_DIR}/logs/${projectName}/run01.pipeline.finished needs to be at least 2 days old"
+						continue
+					fi
 				else
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " the pipeline.finished is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove the Analysis folder the ${TMP_ROOT_DIR}/logs/${projectName}/run01.pipeline.finished needs to be at least 2 days old"
+					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${projectName}/run01.pipeline.finished does not exist, skipping"
 					continue
 				fi
 			else
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${projectName}/run01.pipeline.finished does not exist, skipping"
-				continue
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This batch ${gsBatch} is never processed on our cluster, not deleting!"
 			fi
 		done
 	fi

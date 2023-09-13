@@ -252,7 +252,9 @@ else
 		if [[ -n "${_sampleSheetColumnOffsets["SentrixBarcode_A"]+isset}" ]] 
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a GAP samplesheet. There is no samplesheetCheck at this moment."
-			
+		elif [[ "${samplesheet}" == *"GS_"* ]] 
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a GS samplesheet. No samplesheetCheck (yet).. A lot of required columns for in house are not required for GS"	
 		elif [[ "${group}" == "patho" ]]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a Patho samplesheet. There is no need for samplesheetCheck."
