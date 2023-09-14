@@ -165,7 +165,7 @@ function checkRawdata(){
 	local _run="${2}"
 	local _controlFileBase="${3}"	
 	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
-#RAWDATATYPES nog dir in bakken
+
 	# Check if function previously finished successfully for this data.
 	#
 	if [[ -e "${_controlFileBaseForFunction}.finished" ]]
@@ -186,10 +186,11 @@ function checkRawdata(){
 	echo "started: $(date +%FT%T%z)" > "${_controlFileBaseForFunction}.totalRunTime"
 	
 	# shellcheck disable=SC2029
-	mapfile -t fqfiles < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find -type l -maxdepth 1 - mindepth 1 -name *.fq.gz \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}/rawdata/${PRMRAWDATA}/\"")
+	mapfile -t fqfiles < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}/rawdata/${PRMRAWDATA}/\" -maxdepth 1 -mindepth 1 -type l -name *.fq.gz")
 	if [[ "${#fqfiles[@]}" -eq '0' ]]
 	then
-		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No fastQ files found @ /groups/umcg-atd/projects/."
+		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No fastQ files found @ ${TMP_ROOT_DIAGNOSTICS_DIR}/projects/."
+		exit
 	else
 		for fqfile in "${fqfiles[@]}"
 		do
