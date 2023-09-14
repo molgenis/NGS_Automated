@@ -165,7 +165,7 @@ function checkRawdata(){
 	local _run="${2}"
 	local _controlFileBase="${3}"	
 	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
-
+#RAWDATATYPES nog dir in bakken
 	# Check if function previously finished successfully for this data.
 	#
 	if [[ -e "${_controlFileBaseForFunction}.finished" ]]
@@ -186,7 +186,7 @@ function checkRawdata(){
 	echo "started: $(date +%FT%T%z)" > "${_controlFileBaseForFunction}.totalRunTime"
 	
 	# shellcheck disable=SC2029
-	mapfile -t fqfiles < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "ls \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}/rawdata/ngs/\"")
+	mapfile -t fqfiles < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find -type l -maxdepth 1 - mindepth 1 -name *.fq.gz \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}/rawdata/${PRMRAWDATA}/\"")
 	if [[ "${#fqfiles[@]}" -eq '0' ]]
 	then
 		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No fastQ files found @ /groups/umcg-atd/projects/."
@@ -197,36 +197,34 @@ function checkRawdata(){
 			fqfile=$(basename "${fqfile}")
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${fqfile} on ${TMP_ROOT_DIAGNOSTICS_DIR}, check if it is present on ${PRM_ROOT_DIR}"
 			sequenceRun=$(echo "${fqfile}" | cut -d "_" -f 1-4 --output-delimiter="_")
+			fqavail='false'
 			for prm_dir in "${ALL_PRM[@]}"
 			do
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "looping through ${prm_dir}"
+				
 				export PRM_ROOT_DIR="/groups/${group}/${prm_dir}/"
-				if [[ -e "${PRM_ROOT_DIR}/rawdata/ngs/${sequenceRun}/${fqfile}" ]]
+				if [[ -e "${PRM_ROOT_DIR}/rawdata/${PRMRAWDATA}/${sequenceRun}/${fqfile}" ]]
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Great, the fastQ file ${fqfile} is stored on ${PRM_ROOT_DIR}"
-				else
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "the fastQ file ${fqfile} is not stored on ${PRM_ROOT_DIR}, please make sure all the data of project ${_project} is stored proper"
-					touch "${_controlFileBaseForFunction}.checking"
-					#log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" "The rawdata for project ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}.md5. is not complete on ${PRM_ROOT_DIR} please make sure the rawdata is complete on PRM so the project data can be copied. See ${_controlFileBaseForFunction}.failed for details."
-					echo "$(date '+%Y-%m-%d-T%H%M'): fastQ file ${fqfile} is not stored in ${PRM_ROOT_DIR}." \
-					>> "${_controlFileBaseForFunction}.checking"
+					fqavail='true'
 					continue
+				else
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "the fastQ file ${fqfile} is not stored on ${PRM_ROOT_DIR}"
 				fi
 			done
+			if [[ "${fqavail}" == 'false' ]]
+			then
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "the fastQ file ${fqfile} is not stored on ${ALL_PRM[*]}, please make sure all the data of project ${_project} is stored proper"
+				mv "${_controlFileBaseForFunction}."{started,failed}
+				exit
+			fi
 		done
 	fi
 	
-	if [[ -e "${_controlFileBaseForFunction}."checking ]]
-	then
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "All or some file of project ${_project} are missing on PRM, please make sure all files are present"
-		mv "${_controlFileBaseForFunction}."{started,failed}
-		echo "$(date '+%Y-%m-%d-T%H%M'): All or some file of project ${_project} are missing on PRM, please make sure all files are present." \
-		>> "${_controlFileBaseForFunction}.failed"
-		continue
-	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Perfect! all the files for project ${project} are on PRM, time to make a run01.rawDataCopiedToPrm.finished"
-		ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" touch "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.rawDataCopiedToPrm.finished"
-	fi
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Perfect! all the files for project ${project} are on PRM, time to make a run01.rawDataCopiedToPrm.finished"
+	ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" touch "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.rawDataCopiedToPrm.finished"
+	mv "${_controlFileBaseForFunction}."{started,finished}
+
 }
 	
 	
