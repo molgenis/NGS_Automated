@@ -223,6 +223,7 @@ function checkRawdata(){
 	fi
 	
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Perfect! all the files for project ${project} are on PRM, time to make a run01.rawDataCopiedToPrm.finished"
+	# shellcheck disable=SC2029
 	ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" touch "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.rawDataCopiedToPrm.finished"
 	mv "${_controlFileBaseForFunction}."{started,finished}
 
