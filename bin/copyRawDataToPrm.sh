@@ -281,10 +281,13 @@ function splitSamplesheetPerProject() {
 		#  * either only demultiplexing was requested via the samplesheet
 		#  * or when disabled on the commandline by enabling "archiveMode".
 		#
+		local _captkit
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "mergedSamplesheet = ${mergedSamplesheet}."
 		if [[ "${mergedSamplesheet}" == 'true' ]]
 		then
 			_project=$(echo "${_project}" | grep -Eo 'GS_[0-9]+')
+			_captkit=$(echo "${_project}" | awk 'BEGIN {FS="-"}{print $NF}')
+			_project="${_project}-${_captkit}"
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "project will now be ${_project}."
 			# shellcheck disable=SC2029
 			if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished"
