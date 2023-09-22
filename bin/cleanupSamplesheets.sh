@@ -187,6 +187,8 @@ else
 				fi
 			else
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${rawdatasamplesheet} is not stored on ${prm_dir}, check the other prms and leave the samplesheet for now"
+			fi
 		done
+	done
 fi
 
