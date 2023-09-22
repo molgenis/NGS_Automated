@@ -57,7 +57,6 @@ Options:
 	-h	Show this help.
 	-g	Group.
 	-n	Dry-run: Do not perform actual removal, but only print the remove commands instead.
-	-e	Enable email notification. (Disabled by default.)
 	-l	Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
@@ -131,6 +130,8 @@ else
 	dryrun="no"
 fi
 
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "dryrun=${dryrun}"
+
 #
 # Source config files.
 #
@@ -180,9 +181,9 @@ else
 			if [[ -e "${PRM_ROOT_DIR}/rawdata/${PRMRAWDATA}/${rawdatasamplesheet}/" ]]
 			then
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Great, the rawdata of ${rawdatasamplesheet} is already processed and stored on ${PRM_ROOT_DIR}"
-				if [[ "${dryrun}"=='no' ]]
+				if [[ "${dryrun}"=="no" ]]
 				then
-					
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "time to remove the extra samplesheets from ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/NGS_Demultiplexing/"
 					ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "rm \"${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/NGS_Demultiplexing/${rawdatasamplesheet}\".csv"
 				else
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "ssh ${DATA_MANAGER}@${HOSTNAME_TMP} rm ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/NGS_Demultiplexing/${rawdatasamplesheet}.csv"
