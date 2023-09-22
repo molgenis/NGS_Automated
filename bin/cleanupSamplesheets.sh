@@ -184,8 +184,6 @@ else
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "time to remove the extra samplesheets from ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/NGS_Demultiplexing/"
 					ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "rm \"${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/NGS_Demultiplexing/${rawdatasamplesheet}\".csv"
-				else
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "ssh ${DATA_MANAGER}@${HOSTNAME_TMP} rm ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/NGS_Demultiplexing/${rawdatasamplesheet}.csv"
 				fi
 			else
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${rawdatasamplesheet} is not stored on ${prm_dir}, check the other prms and leave the samplesheet for now"
