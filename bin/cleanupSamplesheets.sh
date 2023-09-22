@@ -46,7 +46,7 @@ function showHelp() {
 	#
 	cat <<EOH
 ===============================================================================================================
-Script to check the status of the pipeline and emails notification
+Script to check the tmp0*/Samplesheets/NGS_Demultiplexing/ for duplicate samplesheets of projects which are already finished. 
 
 Usage:
 
