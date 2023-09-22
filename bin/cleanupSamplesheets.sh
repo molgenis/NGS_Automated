@@ -181,7 +181,7 @@ else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Great, the rawdata of ${rawdatasamplesheet} is already processed and stored on ${PRM_ROOT_DIR}"
 				if [[ "${dryrun}"=='no' ]]
 				then
-					ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "rm \"${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/NGS_Demultiplexing/${rawdatasamplesheet}".csv
+					ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "rm \"${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/NGS_Demultiplexing/${rawdatasamplesheet}\".csv"
 				else
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "ssh ${DATA_MANAGER}@${HOSTNAME_TMP} rm ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/NGS_Demultiplexing/${rawdatasamplesheet}.csv"
 				fi
