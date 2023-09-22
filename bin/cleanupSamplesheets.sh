@@ -175,7 +175,6 @@ else
 		for prm_dir in "${ALL_PRM[@]}"
 		do
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "looping through ${prm_dir}"
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "PRM_ROOT_DIR=${PRM_ROOT_DIR}"
 			export PRM_ROOT_DIR="/groups/${group}/${prm_dir}/"
 			if [[ -e "${PRM_ROOT_DIR}/rawdata/${PRMRAWDATA}/${rawdatasamplesheet}/" ]]
 			then
