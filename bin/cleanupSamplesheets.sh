@@ -180,7 +180,7 @@ else
 			if [[ -e "${PRM_ROOT_DIR}/rawdata/${PRMRAWDATA}/${rawdatasamplesheet}/" ]]
 			then
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Great, the rawdata of ${rawdatasamplesheet} is already processed and stored on ${PRM_ROOT_DIR}"
-				if [[ "${dryrun}"=="no" ]]
+				if [[ "${dryrun}" == "no" ]]
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "time to remove the extra samplesheets from ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/NGS_Demultiplexing/"
 					ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "rm \"${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/NGS_Demultiplexing/${rawdatasamplesheet}\".csv"
