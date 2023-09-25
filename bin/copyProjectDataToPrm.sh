@@ -551,6 +551,15 @@ else
 											"${mountedCifsDevice}" "${project}" "${run}" \
 											>> "${JOB_CONTROLE_FILE_BASE}.started"
 									fi
+									if ssh "${DATA_MANAGER}@${HOSTNAME_TMP}" "touch ${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${_project}/run01.copyProjectDataToPrm.finished"
+									then
+										log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${_project}/run01.copyProjectDataToPrm.finished on ${HOSTNAME_TMP}"
+									else
+										log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${_project}/run01.copyProjectDataToPrm.finished on ${HOSTNAME_TMP}"
+										mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+										continue
+									fi
+
 									rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 									mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 									log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing project ${project}."

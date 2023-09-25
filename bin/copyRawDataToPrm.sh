@@ -285,9 +285,9 @@ function splitSamplesheetPerProject() {
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "mergedSamplesheet = ${mergedSamplesheet}."
 		if [[ "${mergedSamplesheet}" == 'true' ]]
 		then
-			_project=$(echo "${_project}" | grep -Eo 'GS_[0-9]+')
+			_projectGS=$(echo "${_project}" | grep -Eo 'GS_[0-9]+')
 			_captkit=$(echo "${_project}" | awk 'BEGIN {FS="-"}{print $NF}')
-			_project="${_project}-${_captkit}"
+			_project="${_projectGS}-${_captkit}"
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "project will now be ${_project}."
 			# shellcheck disable=SC2029
 			if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished"
@@ -749,6 +749,13 @@ else
 					>> "${JOB_CONTROLE_FILE_BASE}.started"
 			fi
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+			if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${runPrefix}/run01.rawDataCopiedToPrm.finished"
+			then
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${SCR_ROOT_DIR}/logs/${runPrefix}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
+			else
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${SCR_ROOT_DIR}/logs/${runPrefix}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
+				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+			fi
 		else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}/${runPrefix}.splitSamplesheetPerProject.finished absent -> splitSamplesheetPerProject failed."
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process ${filePrefix}."
