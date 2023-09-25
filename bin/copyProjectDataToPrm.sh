@@ -160,10 +160,81 @@ function rsyncProjectRun() {
 	mv "${_controlFileBaseForFunction}."{started,finished}
 }
 	
+function checkRawdata(){
+	local _project="${1}"
+	local _run="${2}"
+	local _controlFileBase="${3}"	
+	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
+
+	# Check if function previously finished successfully for this data.
+	#
+	if [[ -e "${_controlFileBaseForFunction}.finished" ]]
+	then
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished is present -> Skipping."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping already checked ${_project}."
+		return
+	else
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
+		printf '' > "${_controlFileBaseForFunction}.started"
+	fi
+	
+	# shellcheck disable=SC2174
+	mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${_project}/"
+
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run} ..." \
+	2>&1 | tee -a "${_controlFileBaseForFunction}.started"
+	echo "started: $(date +%FT%T%z)" > "${_controlFileBaseForFunction}.totalRunTime"
+	
+	# shellcheck disable=SC2029
+	mapfile -t fqfiles < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}/rawdata/${PRMRAWDATA}/\" -maxdepth 1 -mindepth 1 -type l -name *.fq.gz")
+	if [[ "${#fqfiles[@]}" -eq '0' ]]
+	then
+		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No fastQ files found @ ${TMP_ROOT_DIAGNOSTICS_DIR}/projects/."
+		exit
+	else
+		for fqfile in "${fqfiles[@]}"
+		do
+
+			fqfile=$(basename "${fqfile}")
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${fqfile} on ${TMP_ROOT_DIAGNOSTICS_DIR}, check if it is present on ${PRM_ROOT_DIR}"
+			sequenceRun=$(echo "${fqfile}" | cut -d "_" -f 1-4 --output-delimiter="_")
+			fqavail='false'
+			for prm_dir in "${ALL_PRM[@]}"
+			do
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "looping through ${prm_dir}"
+				
+				export PRM_ROOT_DIR="/groups/${group}/${prm_dir}/"
+				if [[ -e "${PRM_ROOT_DIR}/rawdata/${PRMRAWDATA}/${sequenceRun}/${fqfile}" ]]
+				then
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Great, the fastQ file ${fqfile} is stored on ${PRM_ROOT_DIR}"
+					fqavail='true'
+					continue
+				else
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "the fastQ file ${fqfile} is not stored on ${PRM_ROOT_DIR}"
+				fi
+			done
+			if [[ "${fqavail}" == 'false' ]]
+			then
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "the fastQ file ${fqfile} is not stored on ${ALL_PRM[*]}, please make sure all the data of project ${_project} is stored proper"
+				mv "${_controlFileBaseForFunction}."{started,failed}
+				exit
+			fi
+		done
+	fi
+	
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Perfect! all the files for project ${project} are on PRM, time to make a run01.rawDataCopiedToPrm.finished"
+	# shellcheck disable=SC2029
+	ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" touch "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.rawDataCopiedToPrm.finished"
+	mv "${_controlFileBaseForFunction}."{started,finished}
+
+}
+	
+	
+	
 function sanityCheck() {
 	local _project="${1}"
 	local _run="${2}"
-	local _sampleType=${3}
+	local _sampleType="${3}"
 	local _controlFileBase="${4}"	
 	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
 	
@@ -579,6 +650,20 @@ else
 						fi
 					else
 						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Copying the rawdata of project ${project} is not yet finished."
+						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Cheking if the calculateProjectMd5s is finished, if so the pipeline started with only project data, copy the project data and the rawdata to prm"
+						# shellcheck disable=SC2244	
+						if ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${run}.calculateProjectMd5s.finished"
+						then
+							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "CalculateProjectMd5s is finished, the pipeline started with only project data, check if the rawdata is on PRM"
+							log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${PRM_ROOT_DIR}/logs/${project}/"
+							mkdir -p "${PRM_ROOT_DIR}/logs/${project}/"
+							log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "found: ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${run}.calculateProjectMd5s.finished"
+							touch "${JOB_CONTROLE_FILE_BASE}.started"
+							log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "check if the rawdata is stored on PRM"
+							checkRawdata "${project}" "${run}" "${controlFileBase}"
+						else
+							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "CalculateProjectMd5s is not finished yet, the pipeline is still running"
+						fi
 					fi
 				fi
 			done
