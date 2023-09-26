@@ -209,6 +209,7 @@ then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found @ ${TMP_ROOT_DIAGNOSTICS_DIR}/rawdata/ngs/."
 else
 	for run in "${runs[@]}"
+	do
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Check for rawdata that is copied to prm at least 7 days ago and will delete the data from ${TMP_ROOT_DIR} ..."
 		runName="$(basename "${run}")" 
 		
