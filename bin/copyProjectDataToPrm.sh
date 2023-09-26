@@ -188,38 +188,43 @@ function checkRawdata(){
 	echo "started: $(date +%FT%T%z)" > "${_controlFileBaseForFunction}.totalRunTime"
 	
 	# shellcheck disable=SC2029
-	mapfile -t fqfiles < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}/rawdata/${PRMRAWDATA}/\" -maxdepth 1 -mindepth 1 -type l -name *.fq.gz")
-	if [[ "${#fqfiles[@]}" -eq '0' ]]
+	mapfile -t rawdatafiles < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}/rawdata/${PRMRAWDATA}/\" -maxdepth 1 -mindepth 1 -type l \(-name *.fq.gz -o -name *.gtc"\) )
+	if [[ "${#rawdataFiles[@]}" -eq '0' ]]
 	then
-		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No fastQ files found @ ${TMP_ROOT_DIAGNOSTICS_DIR}/projects/."
-		exit
+		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No rawdata files found @ ${TMP_ROOT_DIAGNOSTICS_DIR}/projects/."
+		return
 	else
-		for fqfile in "${fqfiles[@]}"
+		for rawdataFile in "${rawdataFiles[@]}"
 		do
-
-			fqfile=$(basename "${fqfile}")
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${fqfile} on ${TMP_ROOT_DIAGNOSTICS_DIR}, check if it is present on ${PRM_ROOT_DIR}"
-			sequenceRun=$(echo "${fqfile}" | cut -d "_" -f 1-4 --output-delimiter="_")
-			fqavail='false'
+			sequenceRun='PLACEHOLDER'
+			rawdataFile=$(basename "${rawdataFile}")
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${rawdataFile} on ${TMP_ROOT_DIAGNOSTICS_DIR}, check if it is present on ${PRM_ROOT_DIR}"
+			if [[ "${pipeline}" == 'GAP' ]]
+			then
+				sequenceRun=$(echo "${rawdataFile}" | awk 'BEGIN {FS="_"}{print $1}')
+			elif [[ "${pipeline}" == 'NGS_DNA' ]]
+			then
+				sequenceRun=$(echo "${rawdataFile}" | cut -d "_" -f 1-4 --output-delimiter="_")
+			fi
+			rawdataAvail='false'
 			for prm_dir in "${ALL_PRM[@]}"
 			do
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "looping through ${prm_dir}"
-				
 				export PRM_ROOT_DIR="/groups/${group}/${prm_dir}/"
-				if [[ -e "${PRM_ROOT_DIR}/rawdata/${PRMRAWDATA}/${sequenceRun}/${fqfile}" ]]
+				if [[ -e "${PRM_ROOT_DIR}/rawdata/${PRMRAWDATA}/${sequenceRun}/${rawdataFile}" ]]
 				then
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Great, the fastQ file ${fqfile} is stored on ${PRM_ROOT_DIR}"
-					fqavail='true'
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Great, the rawdata file ${rawdataFile} is stored on ${PRM_ROOT_DIR}"
+					rawdataAvail='true'
 					continue
 				else
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "the fastQ file ${fqfile} is not stored on ${PRM_ROOT_DIR}"
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "the rawdata file ${rawdataFile} is not stored on ${PRM_ROOT_DIR}"
 				fi
 			done
-			if [[ "${fqavail}" == 'false' ]]
+			if [[ "${rawdataAvail}" == 'false' ]]
 			then
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "the fastQ file ${fqfile} is not stored on ${ALL_PRM[*]}, please make sure all the data of project ${_project} is stored proper"
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "the rawdata file ${rawdataFile} is not stored on ${ALL_PRM[*]}, please make sure all the data of project ${_project} is stored proper"
 				mv "${_controlFileBaseForFunction}."{started,failed}
-				exit
+				return
 			fi
 		done
 	fi

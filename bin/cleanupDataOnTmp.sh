@@ -199,9 +199,7 @@ else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished does not exist, skipping"
 			continue
 		fi
-	
 	done
-	
 fi
 ##CLEANING UP RAWDATA 
 mapfile -t runs < <(find "${TMP_ROOT_DIAGNOSTICS_DIR}/rawdata/ngs/" -maxdepth 1 -mindepth 1 -type d)
