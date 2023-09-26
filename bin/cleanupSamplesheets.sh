@@ -160,32 +160,34 @@ for configFile in "${configFiles[@]}"; do
 done
 
 
-
-mapfile -t rawdatasamplesheets < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/NGS_Demultiplexing/\" -maxdepth 1 -mindepth 1 -type f")
-if [[ "${#rawdatasamplesheets[@]}" -eq '0' ]]
+pipeline=$(echo "${REPLACEDPIPELINECOLUMN}" | cut -d'+' -f1)
+# shellcheck disable=SC2029
+mapfile -t rawdataSamplesheets < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/\" -maxdepth 1 -mindepth 1 -type f")
+if [[ "${#rawdataSamplesheets[@]}" -eq '0' ]]
 then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No rawdatasamplesheets files found @ ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/NGS_Demultiplexing."
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No rawdataSamplesheets files found @ ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}."
 	exit
 else
-	for rawdatasamplesheet in "${rawdatasamplesheets[@]}"
+	for rawdataSamplesheet in "${rawdataSamplesheets[@]}"
 	do
-		rawdatasamplesheet=$(basename "${rawdatasamplesheet}" .csv)
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${rawdatasamplesheet} on ${TMP_ROOT_DIAGNOSTICS_DIR}, check if it is present on ${PRM_ROOT_DIR}"
+		rawdata=$(basename "${rawdataSamplesheet}" .csv)
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${rawdata} on ${TMP_ROOT_DIAGNOSTICS_DIR}, check if it is present on ${PRM_ROOT_DIR}"
 
 		for prm_dir in "${ALL_PRM[@]}"
 		do
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "looping through ${prm_dir}"
 			export PRM_ROOT_DIR="/groups/${group}/${prm_dir}/"
-			if [[ -e "${PRM_ROOT_DIR}/rawdata/${PRMRAWDATA}/${rawdatasamplesheet}/" ]]
+			if [[ -e "${PRM_ROOT_DIR}/rawdata/${PRMRAWDATA}/${rawdata}/" ]]
 			then
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Great, the rawdata of ${rawdatasamplesheet} is already processed and stored on ${PRM_ROOT_DIR}"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Great, the rawdata of ${rawdata} is already processed and stored on ${PRM_ROOT_DIR}"
 				if [[ "${dryrun}" == "no" ]]
 				then
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "time to remove the extra samplesheets from ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/NGS_Demultiplexing/"
-					ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "rm \"${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/NGS_Demultiplexing/${rawdatasamplesheet}\".csv"
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "time to remove the extra samplesheets from ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/"
+					# shellcheck disable=SC2029
+					ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "rm \"${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/${rawdata}\".csv"
 				fi
 			else
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${rawdatasamplesheet} is not stored on ${prm_dir}, check the other prms and leave the samplesheet for now"
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${rawdata} is not stored on ${prm_dir}, check the other prms and leave the samplesheet for now"
 			fi
 		done
 	done
