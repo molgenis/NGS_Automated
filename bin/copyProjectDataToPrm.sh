@@ -188,7 +188,7 @@ function checkRawdata(){
 	echo "started: $(date +%FT%T%z)" > "${_controlFileBaseForFunction}.totalRunTime"
 	
 	# shellcheck disable=SC2029
-	mapfile -t rawdatafiles < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}/rawdata/${PRMRAWDATA}/\" -maxdepth 1 -mindepth 1 -type l \(-name *.fq.gz -o -name *.gtc"\) )
+	mapfile -t rawdataFiles < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}/rawdata/${PRMRAWDATA}/\" -maxdepth 1 -mindepth 1 -type l -name \"*.fq.gz\" -o -name \"*.gtc\"")
 	if [[ "${#rawdataFiles[@]}" -eq '0' ]]
 	then
 		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No rawdata files found @ ${TMP_ROOT_DIAGNOSTICS_DIR}/projects/."
@@ -629,11 +629,12 @@ else
 											"${mountedCifsDevice}" "${project}" "${run}" \
 											>> "${JOB_CONTROLE_FILE_BASE}.started"
 									fi
-									if ssh "${DATA_MANAGER}@${HOSTNAME_TMP}" "touch ${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${_project}/run01.copyProjectDataToPrm.finished"
+									# shellcheck disable=SC2029
+									if ssh "${DATA_MANAGER}@${HOSTNAME_TMP}" "touch ${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.copyProjectDataToPrm.finished"
 									then
-										log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${_project}/run01.copyProjectDataToPrm.finished on ${HOSTNAME_TMP}"
+										log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.copyProjectDataToPrm.finished on ${HOSTNAME_TMP}"
 									else
-										log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${_project}/run01.copyProjectDataToPrm.finished on ${HOSTNAME_TMP}"
+										log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.copyProjectDataToPrm.finished on ${HOSTNAME_TMP}"
 										mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 										continue
 									fi

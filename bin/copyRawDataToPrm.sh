@@ -749,6 +749,7 @@ else
 					>> "${JOB_CONTROLE_FILE_BASE}.started"
 			fi
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+			# shellcheck disable=SC2029
 			if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${runPrefix}/run01.rawDataCopiedToPrm.finished"
 			then
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${SCR_ROOT_DIR}/logs/${runPrefix}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"

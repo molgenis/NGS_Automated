@@ -173,6 +173,7 @@ then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/."
 else
 	for project in "${projects[@]}"
+	do
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Check for data for which the pipeline was finished at least 10 days ago and will delete the data from ${TMP_ROOT_DIR} ..."
 		projectName="$(basename "${project}")" 
 		
