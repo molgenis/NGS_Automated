@@ -177,17 +177,33 @@ else
 		do
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "looping through ${prm_dir}"
 			export PRM_ROOT_DIR="/groups/${group}/${prm_dir}/"
-			if [[ -e "${PRM_ROOT_DIR}/rawdata/${PRMRAWDATA}/${rawdata}/" ]]
+			if [[ "${pipeline}" == 'NGS_Demultiplexing' ]]
 			then
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Great, the rawdata of ${rawdata} is already processed and stored on ${PRM_ROOT_DIR}"
-				if [[ "${dryrun}" == "no" ]]
+				if [[ -e "${PRM_ROOT_DIR}/rawdata/${PRMRAWDATA}/${rawdata}/" ]]
 				then
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "time to remove the extra samplesheets from ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/"
-					# shellcheck disable=SC2029
-					ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "rm \"${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/${rawdata}\".csv"
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Great, the rawdata of ${rawdata} is already processed and stored on ${PRM_ROOT_DIR}"
+					if [[ "${dryrun}" == "no" ]]
+					then
+						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "time to remove the extra samplesheets from ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/"
+						# shellcheck disable=SC2029
+						ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "rm \"${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/${rawdata}\".csv"
+					fi
+				else
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${rawdata} is not stored on ${prm_dir}, check the other prms and leave the samplesheet for now"
 				fi
-			else
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${rawdata} is not stored on ${prm_dir}, check the other prms and leave the samplesheet for now"
+			elif [[ "${pipeline}" == 'AGCT' ]]
+				if [[ -e "${PRM_ROOT_DIR}/projects/${rawdata}/" ]]
+				then
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Great, the rawdata of ${rawdata} is already processed and stored on ${PRM_ROOT_DIR}"
+					if [[ "${dryrun}" == "no" ]]
+					then
+						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "time to remove the extra samplesheets from ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/"
+						# shellcheck disable=SC2029
+						ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "rm \"${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/${rawdata}\".csv"
+					fi
+				else
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${rawdata} is not stored on ${prm_dir}, check the other prms and leave the samplesheet for now"
+				fi
 			fi
 		done
 	done
