@@ -192,6 +192,7 @@ else
 					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${rawdata} is not stored on ${prm_dir}, check the other prms and leave the samplesheet for now"
 				fi
 			elif [[ "${pipeline}" == 'AGCT' ]]
+			then
 				if [[ -e "${PRM_ROOT_DIR}/projects/${rawdata}/" ]]
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Great, the rawdata of ${rawdata} is already processed and stored on ${PRM_ROOT_DIR}"
@@ -204,6 +205,8 @@ else
 				else
 					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${rawdata} is not stored on ${prm_dir}, check the other prms and leave the samplesheet for now"
 				fi
+			else
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "The variable pipeline ${pipeline} is not devined properly, just go to the end of the script."
 			fi
 		done
 	done
