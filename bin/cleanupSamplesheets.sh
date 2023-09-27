@@ -177,7 +177,7 @@ else
 		do
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "looping through ${prm_dir}"
 			export PRM_ROOT_DIR="/groups/${group}/${prm_dir}/"
-			if [[ "${pipeline}" == 'NGS_Demultiplexing' ]]
+			if [[ "${pipeline}" == "NGS_Demultiplexing" ]]
 			then
 				if [[ -e "${PRM_ROOT_DIR}/rawdata/${PRMRAWDATA}/${rawdata}/" ]]
 				then
@@ -187,12 +187,11 @@ else
 						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "time to remove the extra samplesheets from ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/"
 						# shellcheck disable=SC2029
 						ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "rm \"${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/${rawdata}\".csv"
-						continue
 					fi
 				else
 					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${rawdata} is not stored on ${prm_dir}, check the other prms and leave the samplesheet for now"
 				fi
-			elif [[ "${pipeline}" == 'AGCT' ]]
+			elif [[ "${pipeline}" == "AGCT" ]]
 			then
 				if [[ -e "${PRM_ROOT_DIR}/projects/${rawdata}/" ]]
 				then
@@ -202,15 +201,13 @@ else
 						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "time to remove the extra samplesheets from ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/"
 						# shellcheck disable=SC2029
 						ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "rm \"${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/${rawdata}\".csv"
-						continue
 					fi
 				else
 					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${rawdata} is not stored on ${prm_dir}, check the other prms and leave the samplesheet for now"
 				fi
-			else
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "The variable pipeline ${pipeline} is not devined properly, just go to the end of the script."
 			fi
 		done
 	done
 fi
 
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "you've reached the end of the script, good for you'"
