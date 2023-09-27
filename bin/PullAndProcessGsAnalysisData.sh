@@ -254,6 +254,7 @@ function mergeSamplesheets(){
 	mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
 	teller=0
 	local _projectName
+	local _captkit
 	for i in "${uniqProjects[@]}"
 	do
 		if [[ "${teller}" -eq '0' ]]
@@ -261,6 +262,8 @@ function mergeSamplesheets(){
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Creating new combined samplesheet for the processing of the Analysis data"
 			#Renaming samplesheet to solely the GS_XX (e.g. GS_182.. so without the A,B,C etc suffix)
 			_projectName=$(echo "${i}" | grep -Eo 'GS_[0-9]+')
+			_captkit=$(echo "${i}" | awk 'BEGIN {FS="-"}{print $NF}')
+			_projectName="${_projectName}-${_captkit}"
 			# create a combined samplesheet header, renamed project to originalproject and added new project column
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "new samplesheet name: ${_projectName}.csv"
 			head -1 "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${i}.csv" | perl -p -e 's|project|originalproject|' | awk '{print $0",project,gsBatch"}' > "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
@@ -614,6 +617,8 @@ else
 				csvFile=$(ls -1 "${TMP_ROOT_DIR}/${gsBatch}/${rawdataFolder}/UMCG_CSV_"*".csv")
 				mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
 				projectName=$(echo "${uniqProjects[0]}" | grep -Eo 'GS_[0-9]+')
+				captkit=$(echo "${uniqProjects[0]}" | awk 'BEGIN {FS="-"}{print $NF}')
+				projectName="${projectName}-${captkit}"
 				#
 				# Convert date to seconds for easier calculation of the date difference.
 				# 86400 = 1 day in seconds.
