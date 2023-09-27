@@ -210,4 +210,6 @@ else
 	done
 fi
 
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "you've reached the end of the script, good for you'"
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "finished succefully!"
+trap - EXIT
+exit 0
