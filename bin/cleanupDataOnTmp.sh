@@ -87,10 +87,13 @@ EOH
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
 declare dryrun=''
-while getopts ":g:l:nh" opt; do
+while getopts ":g:l:p:nh" opt; do
 	case "${opt}" in
 		h)
 			showHelp
+			;;
+		p)
+			pipeline="${OPTARG}"
 			;;
 		g)
 			group="${OPTARG}"
@@ -120,6 +123,10 @@ done
 #
 if [[ -z "${group:-}" ]]; then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
+fi
+if [[ -z "${pipeline:-}" ]]
+then
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a pipeline with -p.'
 fi
 if [[ -n "${dryrun:-}"  ]]; then
 	echo -e "\n\t\t #### Enabled dryrun option for cleanup ##### \n"
@@ -158,7 +165,82 @@ for configFile in "${configFiles[@]}"; do
 	fi
 done
 
+##CLEANING UP PROJECT DATA
 
+mapfile -t projects < <(find "${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/" -maxdepth 1 -mindepth 1 -type d)
+if [[ "${#projects[@]}" -eq '0' ]]
+then
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/."
+else
+	for project in "${projects[@]}"
+	do
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Check for data for which the pipeline was finished at least 10 days ago and will delete the data from ${TMP_ROOT_DIR} ..."
+		projectName="$(basename "${project}")" 
+		
+		# Convert date to seconds for easier calculation of the date difference.
+		# 86400 = 1 day in seconds.
+		#
+		# When the project data is copied to prm, a run01.projectDataCopiedToPrm.finished is created also on tmp
+		# If this file is older than 10 days, the project, generatedscripts and tmp data will be deleted
+		#
+		if [[ -f "${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished" ]]
+		then
+			dateInSecAnalysisData="$(date -d"$(rsync "${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished" | awk '{print $3}')" +%s)"
+	
+			dateInSecNow=$(date +%s)
+			if [[ $(((dateInSecNow - dateInSecAnalysisData) / 86400)) -gt 10 ]]
+			then
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${projectName} on tmp because the project data is on prm for at least 10 days"
+				rm -v "${TMP_ROOT_DIR}/"{projects,tmp,generatedscripts}"/${pipeline}/${projectName}/"
+			else
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " the projectDataCopiedToPrm.finished is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove the project,tmp and generatedscripts folders the ${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished needs to be at least 10 days old"
+				continue
+			fi
+		else
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished does not exist, skipping"
+			continue
+		fi
+	done
+fi
+##CLEANING UP RAWDATA 
+mapfile -t runs < <(find "${TMP_ROOT_DIAGNOSTICS_DIR}/rawdata/ngs/" -maxdepth 1 -mindepth 1 -type d)
+if [[ "${#runs[@]}" -eq '0' ]]
+then
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found @ ${TMP_ROOT_DIAGNOSTICS_DIR}/rawdata/ngs/."
+else
+	for run in "${runs[@]}"
+	do
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Check for rawdata that is copied to prm at least 7 days ago and will delete the data from ${TMP_ROOT_DIR} ..."
+		runName="$(basename "${run}")" 
+		
+		# Convert date to seconds for easier calculation of the date difference.
+		# 86400 = 1 day in seconds.
+		#
+		# When the project data is copied to prm, a run01.RawDataCopiedToPrm.finished is created also on tmp
+		# If this file is older than 10 days, the project, generatedscripts and tmp data will be deleted
+		#
+		if [[ -f "${TMP_ROOT_DIR}/logs/${run}/run01.rawDataCopiedToPrm.finished" ]]
+		then
+			dateInSecAnalysisData="$(date -d"$(rsync "${TMP_ROOT_DIR}/logs/${runName}/run01.rawDataCopiedToPrm.finished" | awk '{print $3}')" +%s)"
+	
+			dateInSecNow=$(date +%s)
+			if [[ $(((dateInSecNow - dateInSecAnalysisData) / 86400)) -gt 10 ]]
+			then
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${runName} on tmp because the rawdata is on prm for at least 7 days"
+				rm -v "${TMP_ROOT_DIR}/rawdata/ngs/${runName}"
+			else
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " the rawDataCopiedToPrm is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove rawdata/ngs folder the ${TMP_ROOT_DIR}/logs/${run}/run01.rawDataCopiedToPrm.finished needs to be at least 7 days old"
+				continue
+			fi
+		else
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${runName}/run01.rawDataCopiedToPrm.finished does not exist, skipping"
+			continue
+		fi
+	done
+fi
+
+
+##CLEANING UP GAVIN RUNS
 HOMEDIRGAVIN="${TMP_ROOT_DIR}/GavinStandAlone/"
 
 if [[ -d "${HOMEDIRGAVIN}" ]]
@@ -171,14 +253,14 @@ then
 		do
 			fileName=$(basename "${i}")
 			name=${fileName%%.*}
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${TMP_ROOT_DIR}/tmp/Gavin_${name}/"
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "     and ${TMP_ROOT_DIR}/generatedscripts/Gavin_${name}"
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "     and ${TMP_ROOT_DIR}/projects/Gavin_${name}/"
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${TMP_ROOT_DIR}/tmp/NGS_DNA/Gavin_${name}/"
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "     and ${TMP_ROOT_DIR}/generatedscripts/NGS_DNA/Gavin_${name}"
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "     and ${TMP_ROOT_DIR}/projects/NGS_DNA/Gavin_${name}/"
 			if [[ "${dryrun}" == "no" ]]
 			then
-				rm -rf "${TMP_ROOT_DIR}/tmp/Gavin_${name}/"
-				rm -rf "${TMP_ROOT_DIR}/generatedscripts/Gavin_${name}/"
-				rm -rf "${TMP_ROOT_DIR}/projects/Gavin_${name}/"
+				rm -rf "${TMP_ROOT_DIR}/tmp/NGS_DNA/Gavin_${name}/"
+				rm -rf "${TMP_ROOT_DIR}/generatedscripts//NGS_DNA/Gavin_${name}/"
+				rm -rf "${TMP_ROOT_DIR}/projects/NGS_DNA/Gavin_${name}/"
 				touch "${i}.cleaned"
 			fi
 		done
@@ -188,48 +270,6 @@ else
 	"no GavinStandAlone found, skipped"
 fi
 
-##cleaning up files older than 30 days in PROJECTS and TMP when files are copied
-
-projects="$(find "${TMP_ROOT_DIR}/projects/" -maxdepth 1 -type d -mtime +30 -exec ls -d {} \;)"
-
-for i in "${projects[@]}"
-do
-	project=$(basename "${i}")
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "check ${project}"
-	if [[ -f "${TMP_ROOT_DIR}/logs/${project}/${project}.projectDataCopiedToPrm" ]]
-	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${GROUP_HOME}/projects/${project}/"
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "     and ${GROUP_HOME}/tmp/${project}/ ..."
-		if [[ "${dryrun}" == "no" ]]
-		then
-			rm -rf "${GROUP_HOME}/projects/${project}"
-			rm -rf "${GROUP_HOME}/tmp/${project}"
-		fi
-
-	fi
-done
-##cleaning up files older than 30 days in RAWDATA when files are copied
-
-ngsRuns="$(find "${TMP_ROOT_DIR}/rawdata/ngs/" -maxdepth 1 -type d -mtime +30 -exec ls -d {} \;)"
-
-for i in "${ngsRuns[@]}"
-do
-	run=$(basename "${i}")
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "check ${run}"
-	if [[ -f "${TMP_ROOT_DIR}/logs/${run}/${run}.dataCopiedToPrm" ]]
-	then
-		countPrm=$(ssh calculon.hpc.rug.nl 'ls ${PRM_ROOT_DIR}/rawdata/ngs/${run}/${run}*.fq.gz* | wc -l')
-		countTmp="$(find "${TMP_ROOT_DIR}/rawdata/ngs/${run}/${run}" -name '*.fq.gz*' -type f | wc -l)"
-		if [[ "${countPrm}" == "${countTmp}" ]]
-		then
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${TMP_ROOT_DIR}/rawdata/ngs/${run} ..."
-			if [[ "${dryrun}" == "no" ]]
-			then
-				rm -rf "${TMP_ROOT_DIR}/rawdata/ngs/${run}"
-			fi
-		fi
-	fi
-done
 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished successfully!'
 
