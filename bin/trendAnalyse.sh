@@ -163,23 +163,9 @@ function processProjectToDB() {
 			if [[ "${_metrics}" == multiqc_picard_insertSize.txt ]]
 			then
 				cp "${CHRONQC_PROJECTS_DIR}/${_metrics}" "${CHRONQC_TMP}/${_project}.${_metrics}"
-				awk 'BEGIN{FS=OFS="\t"}{print $2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30}' "${CHRONQC_TMP}/${_project}.${_metrics}" > "${CHRONQC_TMP}/${_project}.1.${_metrics}"
+				awk 'BEGIN{FS=OFS="\t"}{print $2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25}' "${CHRONQC_TMP}/${_project}.${_metrics}" > "${CHRONQC_TMP}/${_project}.1.${_metrics}"
 				perl -pe 's|SAMPLE_NAME\t|Sample\t|' "${CHRONQC_TMP}/${_project}.1.${_metrics}" > "${CHRONQC_TMP}/${_project}.3.${_metrics}"
 				perl -pe 's|SAMPLE\t|SAMPLE_NAME2\t|' "${CHRONQC_TMP}/${_project}.3.${_metrics}" > "${CHRONQC_TMP}/${_project}.2.${_metrics}"
-			elif [[ "${_metrics}" == multiqc_general_stats.txt ]]
-			then
-				if [[ -f "${CHRONQC_PROJECTS_DIR}/${_metrics}" ]]
-				then
-					cp "${CHRONQC_PROJECTS_DIR}/${_metrics}" "${CHRONQC_TMP}/${_project}.${_metrics}"
-					head -1 "${CHRONQC_TMP}/${_project}.${_metrics}" > "${CHRONQC_TMP}/${_project}.${_metrics}.tmp"
-					while read -r sample
-					do
-						grep "${sample}" "${CHRONQC_TMP}/${_project}.${_metrics}" >> "${CHRONQC_TMP}/${_project}.${_metrics}.tmp"
-					done < <(grep HsMetrics "${CHRONQC_TMP}/${_project}.multiqc_sources.txt" | awk -v p="${_project}" '{print $3}')
-					mv "${CHRONQC_TMP}/${_project}.${_metrics}.tmp" "${CHRONQC_TMP}/${_project}.2.${_metrics}"
-				else
-					continue
-				fi
 			elif [[ "${_metrics}" == multiqc_fastqc.txt ]]
 			then
 				cp "${CHRONQC_PROJECTS_DIR}/${_metrics}" "${CHRONQC_TMP}/${_project}.${_metrics}"
