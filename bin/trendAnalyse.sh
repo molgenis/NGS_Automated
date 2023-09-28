@@ -88,7 +88,7 @@ function processRawdataToDB() {
 	LOGS_DIR="${TMP_ROOT_DIR}/logs/trendanalysis/"
 	
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing files from ${CHRONQC_TMP} ..."
-#	rm -rf "${CHRONQC_TMP:-missing}"/*
+	rm -rf "${CHRONQC_TMP:-missing}"/*
 
 	if [[ -e "${TMP_RAWDATA_DIR}/SequenceRun_run_date_info.csv" ]]
 	then
@@ -148,7 +148,7 @@ function processProjectToDB() {
 	CHRONQC_DATABASE_NAME="${TMP_TRENDANALYSE_DIR}/database/"
 
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing files from ${CHRONQC_TMP} ..."
-#	rm -rf "${CHRONQC_TMP:-missing}"/*
+	rm -rf "${CHRONQC_TMP:-missing}"/*
 
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "__________processing ${_project}.run_date_info.csv_____________"
 	if [[ -e "${CHRONQC_PROJECTS_DIR}/${_project}.run_date_info.csv" ]]
@@ -346,7 +346,7 @@ function processDarwinToDB() {
 	CHRONQC_TMP="${TMP_TRENDANALYSE_DIR}/tmp/"
 
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing files from ${CHRONQC_TMP} ..."
-#	rm -rf "${CHRONQC_TMP:-missing}"/*
+	rm -rf "${CHRONQC_TMP:-missing}"/*
 	
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "local variables generateChronQCOutput:_runinfo=${_runinfo},_tablefile=${_tablefile}, _filetype=${_filetype}, _fileDate=${_fileDate}"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "starting to fille the trendanalysis database with :${_runinfo} and ${_tablefile}}"
@@ -513,7 +513,7 @@ function processDragenToDB() {
 	CHRONQC_TMP="${TMP_TRENDANALYSE_DIR}/tmp/"
 	
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing files from ${CHRONQC_TMP} ..."
-#	rm -rf "${CHRONQC_TMP:-missing}"/*
+	rm -rf "${CHRONQC_TMP:-missing}"/*
 
 	
 	if [[ -e "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" ]]
@@ -832,7 +832,7 @@ fi
 
 CHRONQC_TMP="${TMP_TRENDANALYSE_DIR}/tmp/"
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "cleanup ${CHRONQC_TMP}* ..."
-#rm -rf "${CHRONQC_TMP:-missing}"/*
+rm -rf "${CHRONQC_TMP:-missing}"/*
 
 #
 ## Function for generating a list of ChronQC plots.
