@@ -148,7 +148,7 @@ function processProjectToDB() {
 	CHRONQC_DATABASE_NAME="${TMP_TRENDANALYSE_DIR}/database/"
 
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing files from ${CHRONQC_TMP} ..."
-	rm -rf "${CHRONQC_TMP:-missing}"/*
+#	rm -rf "${CHRONQC_TMP:-missing}"/*
 
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "__________processing ${_project}.run_date_info.csv_____________"
 	if [[ -e "${CHRONQC_PROJECTS_DIR}/${_project}.run_date_info.csv" ]]
@@ -832,7 +832,7 @@ fi
 
 CHRONQC_TMP="${TMP_TRENDANALYSE_DIR}/tmp/"
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "cleanup ${CHRONQC_TMP}* ..."
-rm -rf "${CHRONQC_TMP:-missing}"/*
+#rm -rf "${CHRONQC_TMP:-missing}"/*
 
 #
 ## Function for generating a list of ChronQC plots.
