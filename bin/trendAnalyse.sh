@@ -180,7 +180,7 @@ function processProjectToDB() {
 				done
 				#cp "${CHRONQC_TMP}/${_project}.${_metrics}" "${CHRONQC_TMP}/${_project}.2.${_metrics}"
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "using _metrics: ${_metrics} to create ${_project}.lane.run_date_info.csv"
-				echo -e Sample"\t"%GC"\t"total_deduplicated_percentage >> "${CHRONQC_TMP}/${_project}.2.${_metrics}"
+				echo -e 'Sample\t%GC\ttotal_deduplicated_percentage' >> "${CHRONQC_TMP}/${_project}.2.${_metrics}"
 				awk -v FS="\t" -v OFS='\t' -v header="Sample,%GC,total_deduplicated_percentage" 'FNR==1{split(header,h,/,/);for(i=1; i in h; i++){for(j=1; j<=NF; j++){if(tolower(h[i])==tolower($j)){ d[i]=j; break }}}next}{for(i=1; i in h; i++)printf("%s%s",i>1 ? OFS:"",  i in d ?$(d[i]):"");print "";}' "${CHRONQC_TMP}/${_project}.${_metrics}" >> "${CHRONQC_TMP}/${_project}.2.${_metrics}"
 			else
 				cp "${CHRONQC_PROJECTS_DIR}/${_metrics}" "${CHRONQC_TMP}/${_project}.${_metrics}"
