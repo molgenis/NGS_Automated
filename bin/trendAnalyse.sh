@@ -163,8 +163,6 @@ function processProjectToDB() {
 			if [[ "${_metrics}" == multiqc_picard_insertSize.txt ]]
 			then
 				cp "${CHRONQC_PROJECTS_DIR}/${_metrics}" "${CHRONQC_TMP}/${_project}.${_metrics}"
-#				awk 'BEGIN{FS=OFS="\t"}{print $2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25}' "${CHRONQC_TMP}/${_project}.${_metrics}" > "${CHRONQC_TMP}/${_project}.1.${_metrics}"
-#				perl -pe 's|SAMPLE_NAME\t|Sample\t|' "${CHRONQC_TMP}/${_project}.1.${_metrics}" > "${CHRONQC_TMP}/${_project}.3.${_metrics}"
 				awk '{$1=""}1' "${CHRONQC_TMP}/${_project}.${_metrics}" | awk '{$1=$1}{OFS="\t"}1' > "${CHRONQC_TMP}/${_project}.1.${_metrics}"
 				perl -pe 's|SAMPLE_NAME\t|Sample\t|' "${CHRONQC_TMP}/${_project}.1.${_metrics}" > "${CHRONQC_TMP}/${_project}.3.${_metrics}"
 				perl -pe 's|SAMPLE\t|SAMPLE_NAME2\t|' "${CHRONQC_TMP}/${_project}.3.${_metrics}" > "${CHRONQC_TMP}/${_project}.2.${_metrics}"
@@ -180,9 +178,10 @@ function processProjectToDB() {
 					runDate=$(echo "${laneSample}" | cut -d "_" -f 1)
 					echo -e "${laneSample},${_project},${runDate}" >> "${CHRONQC_TMP}/${_project}.lane.run_date_info.csv"
 				done
-				cp "${CHRONQC_TMP}/${_project}.${_metrics}" "${CHRONQC_TMP}/${_project}.2.${_metrics}"
+				#cp "${CHRONQC_TMP}/${_project}.${_metrics}" "${CHRONQC_TMP}/${_project}.2.${_metrics}"
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "using _metrics: ${_metrics} to create ${_project}.lane.run_date_info.csv"
-
+				echo -e Sample"\t"%GC"\t"total_deduplicated_percentage >> "${CHRONQC_TMP}/${_project}.2.${_metrics}"
+				awk -v FS="\t" -v OFS='\t' -v header="Sample,%GC,total_deduplicated_percentage" 'FNR==1{split(header,h,/,/);for(i=1; i in h; i++){for(j=1; j<=NF; j++){if(tolower(h[i])==tolower($j)){ d[i]=j; break }}}next}{for(i=1; i in h; i++)printf("%s%s",i>1 ? OFS:"",  i in d ?$(d[i]):"");print "";}' "${CHRONQC_TMP}/${_project}.${_metrics}" >> "${CHRONQC_TMP}/${_project}.2.${_metrics}"
 			else
 				cp "${CHRONQC_PROJECTS_DIR}/${_metrics}" "${CHRONQC_TMP}/${_project}.${_metrics}"
 				perl -pe 's|SAMPLE\t|SAMPLE_NAME2\t|' "${CHRONQC_TMP}/${_project}.${_metrics}" > "${CHRONQC_TMP}/${_project}.2.${_metrics}"
