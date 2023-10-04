@@ -314,7 +314,7 @@ function sanityChecking() {
 		# ToDo: change location of sample sheet per project back to ${TMP_ROOT_DIR} once we have a 
 		#       proper prm mount on the GD clusters and this script can run a GD cluster.
 		#
-		_sampleSheet="${TMP_ROOT_DIR}/Samplesheets/${_project}.${SAMPLESHEET_EXT}"
+		_sampleSheet="${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${_project}.${SAMPLESHEET_EXT}"
 		_archivedSampleSheet="${TMP_ROOT_DIR}/Samplesheets/archive/${_project}.${SAMPLESHEET_EXT}"
 		if [[ -f "${_sampleSheet}" && -r "${_sampleSheet}" ]]
 		then
@@ -326,7 +326,7 @@ function sanityChecking() {
 			# or there were other QC issues and the samples were re-sequenced;
 			# Check if we have a samplesheet from the previous sequence run in the archive.
 			#
-			log4Bash 'WARN' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Samplesheet for project ${_project} is missing from .../Samplesheets/, but we have one in .../Samplesheets/archive/ and will re-use that one."
+			log4Bash 'WARN' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Samplesheet for project ${_project} is missing from .../Samplesheets/DRAGEN, but we have one in .../Samplesheets/archive/ and will re-use that one."
 			log4Bash 'WARN' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Moving ${_archivedSampleSheet} to ${_sampleSheet} ..."
 			mv "${_archivedSampleSheet}" "${_sampleSheet}" \
 				2>> "${_controlFileBaseForFunction}.started" \
@@ -577,9 +577,10 @@ function processSamplesheetsAndMoveConvertedData() {
 	#
 	# Combine GenomeScan samplesheet per batch with inhouse samplesheet(s) per project.
 	#
+
 	createInhouseSamplesheetFromGS.py \
 		--genomeScanInputDir "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/" \
-		--inhouseSamplesheetsInputDir "${TMP_ROOT_DIR}/Samplesheets/" \
+		--inhouseSamplesheetsInputDir "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/" \
 		--samplesheetsOutputDir "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/" \
 		--logLevel "${_pythonLogLevel}" \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
@@ -1077,6 +1078,8 @@ else
 				# Combine samplesheets 
 				mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
 				projectName=$(echo "${uniqProjects[0]}" | grep -Eo 'GS_[0-9]+')
+				captkit=$(echo "${uniqProjects[0]}" | awk 'BEGIN {FS="-"}{print $NF}')
+				projectName="${projectName}-${captkit}"
 				# shellcheck disable=SC2174
 				mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${projectName}/"
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Creating ${TMP_ROOT_DIR}/logs/${projectName}/${RAWDATAPROCESSINGFINISHED}"

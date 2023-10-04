@@ -46,7 +46,7 @@ function showHelp() {
 	#
 	cat <<EOH
 ===============================================================================================================
-Script to check the status of the pipeline and emails notification
+Script to check the tmp0*/Samplesheets/NGS_Demultiplexing/ for duplicate samplesheets of projects which are already finished. 
 
 Usage:
 
@@ -57,7 +57,6 @@ Options:
 	-h	Show this help.
 	-g	Group.
 	-n	Dry-run: Do not perform actual removal, but only print the remove commands instead.
-	-e	Enable email notification. (Disabled by default.)
 	-l	Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
@@ -131,6 +130,8 @@ else
 	dryrun="no"
 fi
 
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "dryrun=${dryrun}"
+
 #
 # Source config files.
 #
@@ -159,79 +160,56 @@ for configFile in "${configFiles[@]}"; do
 done
 
 
-HOMEDIRGAVIN="${TMP_ROOT_DIR}/GavinStandAlone/"
-
-if [[ -d "${HOMEDIRGAVIN}" ]]
+pipeline=$(echo "${REPLACEDPIPELINECOLUMN}" | cut -d'+' -f1)
+# shellcheck disable=SC2029
+mapfile -t rawdataSamplesheets < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/\" -maxdepth 1 -mindepth 1 -type f -name *.csv" )
+if [[ "${#rawdataSamplesheets[@]}" -eq '0' ]]
 then
-	find "${HOMEDIRGAVIN}/input/" -name '*.cleaned' -type f -mtime +7 -exec rm -- {} \;
-	if ls "${HOMEDIRGAVIN}/input/"*.vcf.finished 1> /dev/null 2>&1
-	then
-		finishedFiles="$(find "${HOMEDIRGAVIN}/input/"*.vcf.finished -type f)"
-		for i in "${finishedFiles[@]}"
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No rawdataSamplesheets files found @ ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}."
+	exit
+else
+	for rawdataSamplesheet in "${rawdataSamplesheets[@]}"
+	do
+		rawdata=$(basename "${rawdataSamplesheet}" .csv)
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${rawdata} on ${TMP_ROOT_DIAGNOSTICS_DIR}, check if it is present on ${PRM_ROOT_DIR}"
+
+		for prm_dir in "${ALL_PRM[@]}"
 		do
-			fileName=$(basename "${i}")
-			name=${fileName%%.*}
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${TMP_ROOT_DIR}/tmp/Gavin_${name}/"
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "     and ${TMP_ROOT_DIR}/generatedscripts/Gavin_${name}"
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "     and ${TMP_ROOT_DIR}/projects/Gavin_${name}/"
-			if [[ "${dryrun}" == "no" ]]
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "looping through ${prm_dir}"
+			export PRM_ROOT_DIR="/groups/${group}/${prm_dir}/"
+			if [[ "${pipeline}" == "NGS_Demultiplexing" ]]
 			then
-				rm -rf "${TMP_ROOT_DIR}/tmp/Gavin_${name}/"
-				rm -rf "${TMP_ROOT_DIR}/generatedscripts/Gavin_${name}/"
-				rm -rf "${TMP_ROOT_DIR}/projects/Gavin_${name}/"
-				touch "${i}.cleaned"
+				if [[ -e "${PRM_ROOT_DIR}/rawdata/${PRMRAWDATA}/${rawdata}/" ]]
+				then
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Great, the rawdata of ${rawdata} is already processed and stored on ${PRM_ROOT_DIR}"
+					if [[ "${dryrun}" == "no" ]]
+					then
+						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "time to remove the extra samplesheets from ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/"
+						# shellcheck disable=SC2029
+						ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "rm -f \"${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/${rawdata}\".csv"
+					fi
+				else
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${rawdata} is not stored on ${prm_dir}, check the other prms and leave the samplesheet for now"
+				fi
+			elif [[ "${pipeline}" == "AGCT" ]]
+			then
+				if [[ -e "${PRM_ROOT_DIR}/projects/${rawdata}/" ]]
+				then
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Great, the rawdata of ${rawdata} is already processed and stored on ${PRM_ROOT_DIR}"
+					if [[ "${dryrun}" == "no" ]]
+					then
+						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "time to remove the extra samplesheets from ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/"
+						# shellcheck disable=SC2029
+						ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "rm -f \"${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}/${rawdata}\".csv"
+					fi
+				else
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${rawdata} is not stored on ${prm_dir}, check the other prms and leave the samplesheet for now"
+				fi
 			fi
 		done
-	fi
-else
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' \
-	"no GavinStandAlone found, skipped"
+	done
 fi
 
-##cleaning up files older than 30 days in PROJECTS and TMP when files are copied
-
-projects="$(find "${TMP_ROOT_DIR}/projects/" -maxdepth 1 -type d -mtime +30 -exec ls -d {} \;)"
-
-for i in "${projects[@]}"
-do
-	project=$(basename "${i}")
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "check ${project}"
-	if [[ -f "${TMP_ROOT_DIR}/logs/${project}/${project}.projectDataCopiedToPrm" ]]
-	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${GROUP_HOME}/projects/${project}/"
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "     and ${GROUP_HOME}/tmp/${project}/ ..."
-		if [[ "${dryrun}" == "no" ]]
-		then
-			rm -rf "${GROUP_HOME}/projects/${project}"
-			rm -rf "${GROUP_HOME}/tmp/${project}"
-		fi
-
-	fi
-done
-##cleaning up files older than 30 days in RAWDATA when files are copied
-
-ngsRuns="$(find "${TMP_ROOT_DIR}/rawdata/ngs/" -maxdepth 1 -type d -mtime +30 -exec ls -d {} \;)"
-
-for i in "${ngsRuns[@]}"
-do
-	run=$(basename "${i}")
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "check ${run}"
-	if [[ -f "${TMP_ROOT_DIR}/logs/${run}/${run}.dataCopiedToPrm" ]]
-	then
-		countPrm=$(ssh calculon.hpc.rug.nl 'ls ${PRM_ROOT_DIR}/rawdata/ngs/${run}/${run}*.fq.gz* | wc -l')
-		countTmp="$(find "${TMP_ROOT_DIR}/rawdata/ngs/${run}/${run}" -name '*.fq.gz*' -type f | wc -l)"
-		if [[ "${countPrm}" == "${countTmp}" ]]
-		then
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${TMP_ROOT_DIR}/rawdata/ngs/${run} ..."
-			if [[ "${dryrun}" == "no" ]]
-			then
-				rm -rf "${TMP_ROOT_DIR}/rawdata/ngs/${run}"
-			fi
-		fi
-	fi
-done
-
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished successfully!'
-
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "finished succefully!"
 trap - EXIT
 exit 0

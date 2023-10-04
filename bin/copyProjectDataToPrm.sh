@@ -144,6 +144,7 @@ function rsyncProjectRun() {
 		mv "${JOB_CONTROLE_FILE_BASE}."{started,failed} 
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Failed to rsync ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run} dir. See ${_controlFileBaseForFunction}.failed for details."
 		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_controlFileBaseForFunction}.failed for details." >> "${JOB_CONTROLE_FILE_BASE}.failed" 
+		return
 	}
 	
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${_project}/${_run}.md5 checksums ..."
@@ -155,15 +156,92 @@ function rsyncProjectRun() {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Failed to rsync ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${_project}/${_run}.md5. See ${_controlFileBaseForFunction}.failed for details."
 		echo "Ooops! $(date '+%Y-%m-%d-T%H%M'): rsync failed. See ${_controlFileBaseForFunction}.failed for details." \
 			>> "${_controlFileBaseForFunction}.failed" 
+		return
 	}
 	rm -f "${_controlFileBaseForFunction}.failed"
 	mv "${_controlFileBaseForFunction}."{started,finished}
 }
 	
+function checkRawdata(){
+	local _project="${1}"
+	local _run="${2}"
+	local _controlFileBase="${3}"	
+	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
+
+	# Check if function previously finished successfully for this data.
+	#
+	if [[ -e "${_controlFileBaseForFunction}.finished" ]]
+	then
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished is present -> Skipping."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping already checked ${_project}."
+		return
+	else
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
+		printf '' > "${_controlFileBaseForFunction}.started"
+	fi
+	
+	# shellcheck disable=SC2174
+	mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${_project}/"
+
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run} ..." \
+	2>&1 | tee -a "${_controlFileBaseForFunction}.started"
+	echo "started: $(date +%FT%T%z)" > "${_controlFileBaseForFunction}.totalRunTime"
+	
+	# shellcheck disable=SC2029
+	mapfile -t rawdataFiles < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find \"${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${_project}/${_run}/rawdata/${PRMRAWDATA}/\" -maxdepth 1 -mindepth 1 -type l -name \"*.fq.gz\" -o -name \"*.gtc\"")
+	if [[ "${#rawdataFiles[@]}" -eq '0' ]]
+	then
+		log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No rawdata files found @ ${TMP_ROOT_DIAGNOSTICS_DIR}/projects/."
+		return
+	else
+		for rawdataFile in "${rawdataFiles[@]}"
+		do
+			sequenceRun='PLACEHOLDER'
+			rawdataFile=$(basename "${rawdataFile}")
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${rawdataFile} on ${TMP_ROOT_DIAGNOSTICS_DIR}, check if it is present on ${PRM_ROOT_DIR}"
+			if [[ "${pipeline}" == 'GAP' ]]
+			then
+				sequenceRun=$(echo "${rawdataFile}" | awk 'BEGIN {FS="_"}{print $1}')
+			elif [[ "${pipeline}" == 'NGS_DNA' ]]
+			then
+				sequenceRun=$(echo "${rawdataFile}" | cut -d "_" -f 1-4 --output-delimiter="_")
+			fi
+			rawdataAvail='false'
+			for prm_dir in "${ALL_PRM[@]}"
+			do
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "looping through ${prm_dir}"
+				export PRM_ROOT_DIR="/groups/${group}/${prm_dir}/"
+				if [[ -e "${PRM_ROOT_DIR}/rawdata/${PRMRAWDATA}/${sequenceRun}/${rawdataFile}" ]]
+				then
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Great, the rawdata file ${rawdataFile} is stored on ${PRM_ROOT_DIR}"
+					rawdataAvail='true'
+					continue
+				else
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "the rawdata file ${rawdataFile} is not stored on ${PRM_ROOT_DIR}"
+				fi
+			done
+			if [[ "${rawdataAvail}" == 'false' ]]
+			then
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "the rawdata file ${rawdataFile} is not stored on ${ALL_PRM[*]}, please make sure all the data of project ${_project} is stored proper"
+				mv "${_controlFileBaseForFunction}."{started,failed}
+				return
+			fi
+		done
+	fi
+	
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Perfect! all the files for project ${project} are on PRM, time to make a run01.rawDataCopiedToPrm.finished"
+	# shellcheck disable=SC2029
+	ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" touch "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.rawDataCopiedToPrm.finished"
+	mv "${_controlFileBaseForFunction}."{started,finished}
+
+}
+	
+	
+	
 function sanityCheck() {
 	local _project="${1}"
 	local _run="${2}"
-	local _sampleType=${3}
+	local _sampleType="${3}"
 	local _controlFileBase="${4}"	
 	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
 	
@@ -551,6 +629,16 @@ else
 											"${mountedCifsDevice}" "${project}" "${run}" \
 											>> "${JOB_CONTROLE_FILE_BASE}.started"
 									fi
+									# shellcheck disable=SC2029
+									if ssh "${DATA_MANAGER}@${HOSTNAME_TMP}" "touch ${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.copyProjectDataToPrm.finished"
+									then
+										log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.copyProjectDataToPrm.finished on ${HOSTNAME_TMP}"
+									else
+										log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.copyProjectDataToPrm.finished on ${HOSTNAME_TMP}"
+										mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+										continue
+									fi
+
 									rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 									mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 									log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing project ${project}."
@@ -570,6 +658,20 @@ else
 						fi
 					else
 						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Copying the rawdata of project ${project} is not yet finished."
+						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Cheking if the calculateProjectMd5s is finished, if so the pipeline started with only project data, copy the project data and the rawdata to prm"
+						# shellcheck disable=SC2244	
+						if ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${run}.calculateProjectMd5s.finished"
+						then
+							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "CalculateProjectMd5s is finished, the pipeline started with only project data, check if the rawdata is on PRM"
+							log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${PRM_ROOT_DIR}/logs/${project}/"
+							mkdir -p "${PRM_ROOT_DIR}/logs/${project}/"
+							log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "found: ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${run}.calculateProjectMd5s.finished"
+							touch "${JOB_CONTROLE_FILE_BASE}.started"
+							log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "check if the rawdata is stored on PRM"
+							checkRawdata "${project}" "${run}" "${controlFileBase}"
+						else
+							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "CalculateProjectMd5s is not finished yet, the pipeline is still running"
+						fi
 					fi
 				fi
 			done
