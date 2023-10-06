@@ -167,10 +167,10 @@ done
 
 ##CLEANING UP PROJECT DATA
 
-mapfile -t projects < <(find "${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/" -maxdepth 1 -mindepth 1 -type d)
+mapfile -t projects < <(find "${TMP_ROOT_DIR}/projects/${pipeline}/" -maxdepth 1 -mindepth 1 -type d)
 if [[ "${#projects[@]}" -eq '0' ]]
 then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/."
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No projects found @ ${TMP_ROOT_DIR}/projects/${pipeline}/."
 else
 	for project in "${projects[@]}"
 	do
@@ -191,7 +191,8 @@ else
 			if [[ $(((dateInSecNow - dateInSecAnalysisData) / 86400)) -gt 10 ]]
 			then
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${projectName} on tmp because the project data is on prm for at least 10 days"
-				rm -v "${TMP_ROOT_DIR}/"{projects,tmp,generatedscripts}"/${pipeline}/${projectName}/"
+				rm -fv "${TMP_ROOT_DIR}/"{projects,tmp,generatedscripts}"/${pipeline}/${projectName}/"
+				rm -f "${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished"
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " the projectDataCopiedToPrm.finished is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove the project,tmp and generatedscripts folders the ${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished needs to be at least 10 days old"
 				continue
@@ -203,10 +204,10 @@ else
 	done
 fi
 ##CLEANING UP RAWDATA 
-mapfile -t runs < <(find "${TMP_ROOT_DIAGNOSTICS_DIR}/rawdata/ngs/" -maxdepth 1 -mindepth 1 -type d)
+mapfile -t runs < <(find "${TMP_ROOT_DIR}/rawdata/ngs/" -maxdepth 1 -mindepth 1 -type d)
 if [[ "${#runs[@]}" -eq '0' ]]
 then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found @ ${TMP_ROOT_DIAGNOSTICS_DIR}/rawdata/ngs/."
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found @ ${TMP_ROOT_DIR}/rawdata/ngs/."
 else
 	for run in "${runs[@]}"
 	do
@@ -227,7 +228,8 @@ else
 			if [[ $(((dateInSecNow - dateInSecAnalysisData) / 86400)) -gt 10 ]]
 			then
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${runName} on tmp because the rawdata is on prm for at least 7 days"
-				rm -v "${TMP_ROOT_DIR}/rawdata/ngs/${runName}"
+				rm -fv "${TMP_ROOT_DIR}/rawdata/ngs/${runName}"
+				rm -f "${TMP_ROOT_DIR}/logs/${runName}/run01.rawDataCopiedToPrm.finished"
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " the rawDataCopiedToPrm is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove rawdata/ngs folder the ${TMP_ROOT_DIR}/logs/${run}/run01.rawDataCopiedToPrm.finished needs to be at least 7 days old"
 				continue
