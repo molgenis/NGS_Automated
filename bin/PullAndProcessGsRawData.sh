@@ -1135,7 +1135,7 @@ else
 					# Create an empty dir (source dir) to sync with the destination dir && then remove source dir.
 					#
 					mkdir -p "${HOME}/empty_dir/"
-					rsync -a --delete -e 'ssh -p 443' "${HOME}/empty_dir/" "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}"
+					rsync -rv --delete -e 'ssh -p 443' "${HOME}/empty_dir/" "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}"
 					rmdir "${HOME}/empty_dir/"
 				else
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "The rawdata of batch ${gsBatch} is only $(((dateInSecNow - dateInSecRawData) / 86400)) day(s) old. The rawdata needs to be at least 2 days old before it can be removed"

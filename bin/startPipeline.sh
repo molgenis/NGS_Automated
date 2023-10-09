@@ -81,6 +81,7 @@ function generateScripts () {
 	local _project="${1}"
 	local _run="${2}"
 	local _sampleType="${3}" ## DNA or RNA
+	# shellcheck disable=SC2154
 	local _generateShScript="${TMP_ROOT_DIR}/generatedscripts/${pipeline}/${_project}/generate.sh"
 	local _controlFileBase="${4}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
@@ -96,19 +97,24 @@ function generateScripts () {
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
 		printf '' > "${_controlFileBaseForFunction}.started"
 		printf 'Generating scripts (including copyPrmToTmpData) for project %s.\n' "${_project}" >> "${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
-		printf 'started: %s\n.' "$(date +%FT%T%z)" > "${_controlFileBase}.pipeline.totalRuntime"
+		local _dateTime
+		_dateTime="$(date +%FT%T%z)"
+		printf 'started: %s\n.' "${_dateTime}" > "${_controlFileBase}.pipeline.totalRuntime"
 	fi
 	#
 	# Determine sample type and hence for which pipeline we need to fetch a copy of the generate_template.sh
 	#
 	if [[ "${_sampleType}" == "DNA" ]]
 	then
+		# shellcheck disable=SC2154
 		_pathToPipeline="${EBROOTNGS_DNA}"
 	elif [[ "${_sampleType}" == "RNA" ]]
 	then
+		# shellcheck disable=SC2154
 		_pathToPipeline="${EBROOTNGS_RNA}"
 	elif [[ "${_sampleType}" == "GAP" ]]
 	then
+		# shellcheck disable=SC2154
 		_pathToPipeline="${EBROOTGAP}"
 	else
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Unknown _sampleType: ${_sampleType}."
@@ -136,6 +142,7 @@ function generateScripts () {
 	#
 	# Check if we need to remove a previously used potentially wrong samplesheet.
 	#
+	# shellcheck disable=SC2154
 	if [[ -e "${TMP_ROOT_DIR}/generatedscripts/${pipeline}/${_project}/${_project}.${SAMPLESHEET_EXT}" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/generatedscripts/${pipeline}/${_project}/${_project}.${SAMPLESHEET_EXT} already exists and will be removed ..."
@@ -155,9 +162,10 @@ function generateScripts () {
 	#
 	# Generate scripts for stage 1.
 	#
-	cd "${TMP_ROOT_DIR}/generatedscripts/${pipeline}/${_project}/"
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Navigated to $(pwd)."
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Executing: sh ${TMP_ROOT_DIR}/generatedscripts/${pipeline}/${_project}/generate.sh -p ${_project} -g ${group} -r ${_run}"
+	cd "${TMP_ROOT_DIR}/generatedscripts/${pipeline}/${_project}/" || return
+	thisFolder=$(pwd) || return
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Navigated to ${thisFolder}."
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Executing: bash ${TMP_ROOT_DIR}/generatedscripts/${pipeline}/${_project}/generate.sh -p ${_project} -g ${group} -r ${_run}"
 	bash "${TMP_ROOT_DIR}/generatedscripts/${pipeline}/${_project}/generate.sh" -p "${_project}" -g "${group}" -r "${_run}" \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
@@ -168,8 +176,9 @@ function generateScripts () {
 	#
 	# Execute generated scripts from stage 1 to generate the stage 2 scripts.
 	#
-	cd 'scripts'
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Navigated to $(pwd)."
+	cd 'scripts' || return
+	thisFolder=$(pwd) || return
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Navigated to ${thisFolder}."
 	bash submit.sh \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
@@ -215,11 +224,13 @@ function submitJobScripts () {
 	#
 	# Go to scripts dir.
 	#
-	cd "${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/jobs/"
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Navigated to: $(pwd)."
+	cd "${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/jobs/" || return
+	thisFolder=$(pwd) || return
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Navigated to ${thisFolder}."
 	#
 	# Track and Trace: project status.
 	#
+	# shellcheck disable=SC2154
 	local _url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_jobs&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
 	printf '%s,%s,%s,%s,%s,%s,%s,%s\n' 'project' 'run_id' 'pipeline' 'url' 'capturingKit' 'message' 'copy_results_prm' 'finishedDate' \
 		>  "${JOB_CONTROLE_FILE_BASE}.trace_post_projects.csv"
@@ -228,7 +239,7 @@ function submitJobScripts () {
 	#
 	# Track and Trace: jobs for this project.
 	#
-	local _jobName
+	local _jobNames
 	readarray -t _jobNames < <(grep '^processJob' submit.sh  | cut -d ' ' -f 2 | tr -d '"')
 	_url="https://${MOLGENISSERVER}/menu/track&trace/dataexplorer?entity=status_samples&hideselect=true&mod=data&query%5Bq%5D%5B0%5D%5Boperator%5D=SEARCH&query%5Bq%5D%5B0%5D%5Bvalue%5D=${_project}"
 	printf '%s,%s,%s,%s,%s,%s,%s,%s\n' 'project_job' 'job' 'project' 'started_date' 'finished_date' 'status' 'url' 'step' \
@@ -270,14 +281,16 @@ function submitJobScripts () {
 			mv -v "${_controlFileBaseForFunction}."{started,failed}
 			return
 		}
+	dateTime="$(date '+%Y-%m-%d-T%H%M')"
 	if [[ "${_resubmitJobScripts}" == 'false' ]]
 	then
+		
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' \
-			"Jobs were submitted to the scheduler on ${HOSTNAME_SHORT} by ${ROLE_USER} for ${_project}/${_run} on $(date '+%Y-%m-%d-T%H%M')."
+			"Jobs were submitted to the scheduler on ${HOSTNAME_SHORT} by ${ROLE_USER} for ${_project}/${_run} on ${dateTime}."
 	elif [[ "${_resubmitJobScripts}" == 'true' ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' \
-		"Jobs were resubmitted to the scheduler on ${HOSTNAME_SHORT} by ${ROLE_USER} for previously failed ${_project}/${_run} on $(date '+%Y-%m-%d-T%H%M')."
+		"Jobs were resubmitted to the scheduler on ${HOSTNAME_SHORT} by ${ROLE_USER} for previously failed ${_project}/${_run} on ${dateTime}."
 	else
 		mv -v "${_controlFileBaseForFunction}."{started,failed}
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Unsupported value for _resubmitJobScripts: ${_resubmitJobScripts}."
@@ -311,7 +324,9 @@ while getopts ":g:l:r:p:h" opt; do
 			pipeline="${OPTARG}"
 			;;
 		l)
+			# shellcheck disable=SC2034
 			l4b_log_level="${OPTARG^^}"
+			# shellcheck disable=SC2034
 			l4b_log_level_prio="${l4b_log_levels["${l4b_log_level}"]}"
 			;;
 		\?)
@@ -394,8 +409,8 @@ lockFile="${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
 thereShallBeOnlyOne "${lockFile}"
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully got exclusive access to lock file ${lockFile} ..."
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Log files will be written to ${TMP_ROOT_DIR}/logs ..."
-
-printf 'Started at %s.\n' "$(date '+%Y-%m-%dT%H:%M:%S')" > "${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
+dateTime=$(date '+%Y-%m-%dT%H:%M:%S')
+printf 'Started at %s.\n' "${dateTime}" > "${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
 
 #
 # Fetch (new) sample sheets from prm.
@@ -605,7 +620,7 @@ else
 		fi
 	done
 fi
-
-printf 'Done at %s.\n' "$(date '+%Y-%m-%dT%H:%M:%S')" >> "${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
+dateTime=$(date '+%Y-%m-%dT%H:%M:%S')
+printf 'Done at %s.\n' "${dateTime}" >> "${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.processing"
 trap - EXIT
 exit 0
