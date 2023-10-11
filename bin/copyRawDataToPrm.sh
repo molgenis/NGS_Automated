@@ -726,8 +726,34 @@ else
 		#
 		if [[ "${processedRawDataItems}" == "${totalRawDataItems}" ]]
 		then
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "All raw data items (${processedRawDataItems}/${totalRawDataItems}) were copied to prm."
-			splitSamplesheetPerProject "${PRM_ROOT_DIR}/Samplesheets/archive/${filePrefix}.${SAMPLESHEET_EXT}" "${filePrefix}" "${controlFileBase}/${runPrefix}"
+
+			declare -a sampleSheetColumnNames=()
+			declare -A sampleSheetColumnOffsets=()
+			
+			IFS="${SAMPLESHEET_SEP}" read -r -a sampleSheetColumnNames <<< "$(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" head -1 "${sampleSheet}")"
+			for (( _offset = 0 ; _offset < ${#sampleSheetColumnNames[@]} ; _offset++ ))
+			do
+				sampleSheetColumnOffsets["${sampleSheetColumnNames[${_offset}]}"]="${_offset}"
+			done
+
+			#
+			# Get analysis values from samplesheet.
+			#
+			if [[ -n "${sampleSheetColumnOffsets["analysis"]+isset}" ]]
+			then
+				analysisFieldIndex=$((${sampleSheetColumnOffsets["analysis"]} + 1))
+				readarray -t analysisArray< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "tail -n +2 \"${sampleSheet}\" | cut -d \"${SAMPLESHEET_SEP}\" -f \"${analysisFieldIndex}\" | sort | uniq" )
+				if [[ "${analysisArray[0]}" == "NGS_Demultiplexing" ]]
+				then
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "NGS_Demultiplexing only, skipping splitSamplesheetPerProject, solely touching the ${runPrefix}.splitSamplesheetPerProject.finished file"
+					touch "${controlFileBase}/${runPrefix}.splitSamplesheetPerProject.finished"
+					continue
+				else
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "All raw data items (${processedRawDataItems}/${totalRawDataItems}) were copied to prm."
+					splitSamplesheetPerProject "${PRM_ROOT_DIR}/Samplesheets/archive/${filePrefix}.${SAMPLESHEET_EXT}" "${filePrefix}" "${controlFileBase}/${runPrefix}"
+				fi
+			fi
+
 		fi
 		#
 		# Signal success or failure for complete process.
@@ -762,12 +788,7 @@ else
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process ${filePrefix}."
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 		fi
-		
-		#
-		# Parsing the samplesheet and push samplesheets to the diagnostic cluster if the analysis column is saying so
-		#
-		
-		
+
 	done
 fi
 

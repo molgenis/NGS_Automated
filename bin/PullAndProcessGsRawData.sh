@@ -973,15 +973,15 @@ then
 				gsBatchUploadCompleted='false'
 				if rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${gsBatch}.finished" 2>/dev/null
 				then
-					readarray -t testForEmptyDir < <(rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/")
-					if [[ "${#testForEmptyDir[@]}" -gt 2 ]]
+					checkIfRawDataFolderExists=$(rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/")
+					if [[ "${checkIfRawDataFolderExists}" == *"${rawdataFolder}"* ]]
 					then
 						gsBatchUploadCompleted='true'
 						logTimeStamp=$(date '+%Y-%m-%d-T%H%M')
 						rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}/" \
 						> "${logDir}/${gsBatch}.uploadCompletedListing_${logTimeStamp}.log"
 					else
-						log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "${gsBatch}/ is empty, nothing to do."
+						log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no Raw_data folder, skipping"
 						continue
 					fi
 				else

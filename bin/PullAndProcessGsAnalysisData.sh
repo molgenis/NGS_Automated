@@ -499,15 +499,15 @@ then
 				gsBatchUploadCompleted='false'
 				if rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${gsBatch}.finished" 2>/dev/null
 				then
-					readarray -t testForEmptyDir < <(rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/")
-					if [[ "${#testForEmptyDir[@]}" -gt 2 ]]
-					then
-						gsBatchUploadCompleted='true'
-						logTimeStamp=$(date '+%Y-%m-%d-T%H%M')
-						rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${analysisFolder}/" \
-						> "${logDir}/${gsBatch}.uploadCompletedListing_${logTimeStamp}.log"
-					else
-						log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "${gsBatch}/ is empty, nothing to do."
+						checkIfRawDataFolderExists=$(rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/")
+						if [[ "${checkIfRawDataFolderExists}" == *"${analysisFolder}"* ]]
+						then
+							gsBatchUploadCompleted='true'
+							logTimeStamp=$(date '+%Y-%m-%d-T%H%M')
+							rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${analysisFolder}/" \
+								> "${logDir}/${gsBatch}.uploadCompletedListing_${logTimeStamp}.log"
+						else
+							log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no Analysis folder, skipping"
 						continue
 					fi
 				else
