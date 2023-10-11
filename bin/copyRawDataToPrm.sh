@@ -729,7 +729,7 @@ else
 
 			declare -a sampleSheetColumnNames=()
 			declare -A sampleSheetColumnOffsets=()
-			
+			# shellcheck disable=SC2029
 			IFS="${SAMPLESHEET_SEP}" read -r -a sampleSheetColumnNames <<< "$(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" head -1 "${sampleSheet}")"
 			for (( _offset = 0 ; _offset < ${#sampleSheetColumnNames[@]} ; _offset++ ))
 			do
@@ -742,6 +742,7 @@ else
 			if [[ -n "${sampleSheetColumnOffsets["analysis"]+isset}" ]]
 			then
 				analysisFieldIndex=$((${sampleSheetColumnOffsets["analysis"]} + 1))
+				# shellcheck disable=SC2029
 				readarray -t analysisArray< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "tail -n +2 \"${sampleSheet}\" | cut -d \"${SAMPLESHEET_SEP}\" -f \"${analysisFieldIndex}\" | sort | uniq" )
 				if [[ "${analysisArray[0]}" == "NGS_Demultiplexing" ]]
 				then
