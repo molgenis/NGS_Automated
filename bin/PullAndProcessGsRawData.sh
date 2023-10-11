@@ -973,15 +973,15 @@ then
 				gsBatchUploadCompleted='false'
 				if rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${gsBatch}.finished" 2>/dev/null
 				then
-					readarray -t testForEmptyDir < <(rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/")
-					if [[ "${#testForEmptyDir[@]}" -gt 2 ]]
+					checkIfRawDataFolderExists=$(rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/")
+					if [[ "${checkIfRawDataFolderExists}" == *"${rawdataFolder}"* ]]
 					then
 						gsBatchUploadCompleted='true'
 						logTimeStamp=$(date '+%Y-%m-%d-T%H%M')
 						rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}/" \
 						> "${logDir}/${gsBatch}.uploadCompletedListing_${logTimeStamp}.log"
 					else
-						log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "${gsBatch}/ is empty, nothing to do."
+						log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no Raw_data folder, skipping"
 						continue
 					fi
 				else
@@ -1135,7 +1135,7 @@ else
 					# Create an empty dir (source dir) to sync with the destination dir && then remove source dir.
 					#
 					mkdir -p "${HOME}/empty_dir/"
-					rsync -a --delete -e 'ssh -p 443' "${HOME}/empty_dir/" "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}"
+					rsync -rv --delete -e 'ssh -p 443' "${HOME}/empty_dir/" "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}"
 					rmdir "${HOME}/empty_dir/"
 				else
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "The rawdata of batch ${gsBatch} is only $(((dateInSecNow - dateInSecRawData) / 86400)) day(s) old. The rawdata needs to be at least 2 days old before it can be removed"
