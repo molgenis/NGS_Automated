@@ -508,8 +508,8 @@ then
 								> "${logDir}/${gsBatch}.uploadCompletedListing_${logTimeStamp}.log"
 						else
 							log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no Analysis folder, skipping"
-						continue
-					fi
+							continue
+						fi
 				else
 					log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "${GENOMESCAN_HOME_DIR}/${gsBatch}/${gsBatch}.finished does not exist"
 					continue
