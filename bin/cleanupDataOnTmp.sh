@@ -166,7 +166,6 @@ for configFile in "${configFiles[@]}"; do
 done
 
 ##CLEANING UP PROJECT DATA
-
 mapfile -t projects < <(find "${TMP_ROOT_DIR}/projects/${pipeline}/" -maxdepth 1 -mindepth 1 -type d)
 if [[ "${#projects[@]}" -eq '0' ]]
 then
@@ -203,7 +202,7 @@ else
 		fi
 	done
 fi
-##CLEANING UP RAWDATA 
+##CLEANING UP RAWDATA AND DEMULTIPLEXING DATA
 mapfile -t runs < <(find "${TMP_ROOT_DIR}/rawdata/ngs/" -maxdepth 1 -mindepth 1 -type d)
 if [[ "${#runs[@]}" -eq '0' ]]
 then
@@ -212,7 +211,9 @@ else
 	for run in "${runs[@]}"
 	do
 		daysTillRemoval=7
+		daysTillRemovalDemultiplexingData=2
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Check for rawdata that is copied to prm at least ${daysTillRemoval} days ago and will delete the data from ${TMP_ROOT_DIR} ..."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Check for demultiplexing data (rawdata) that is copied to prm at least ${daysTillRemovalDemultiplexingData} days ago and will delete the data from ${TMP_ROOT_DIR} ..."
 		runName="$(basename "${run}")" 
 		
 		# Convert date to seconds for easier calculation of the date difference.
@@ -232,6 +233,16 @@ else
 				rm -vf "${TMP_ROOT_DIR}/logs/${runName}/run01.rawDataCopiedToPrm.finished"
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " the rawDataCopiedToPrm is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove rawdata/ngs folder the ${TMP_ROOT_DIR}/logs/${run}/run01.rawDataCopiedToPrm.finished needs to be at least ${daysTillRemoval} days old"
+				continue
+			fi
+			
+			## Cleaning up of demultiplexing data
+			if [[ $(((dateInSecNow - dateInSecAnalysisData) / 86400)) -gt "${daysTillRemovalDemultiplexingData}" ]]
+			then
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${runName} on tmp because the demultiplexing (rawdata) data is on prm for at least ${daysTillRemovalDemultiplexingData} days"
+				rm -Rfv "${TMP_ROOT_DIR}/"{runs,tmp,generatedscripts}"/NGS_Demultiplexing/${runName}/"
+			else
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " the rawDataCopiedToPrm is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove the NGS_Demultiplexing runs, tmp and generatedscripts folders the ${TMP_ROOT_DIR}/logs/${run}/run01.rawDataCopiedToPrm.finished needs to be at least ${daysTillRemovalDemultiplexingData} days old"
 				continue
 			fi
 		else
