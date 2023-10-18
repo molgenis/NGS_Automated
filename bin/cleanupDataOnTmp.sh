@@ -222,7 +222,7 @@ else
 		# When the project data is copied to prm, a run01.RawDataCopiedToPrm.finished is created also on tmp
 		# If this file is older than 10 days, the project, generatedscripts and tmp data will be deleted
 		#
-		if [[ -f "${TMP_ROOT_DIR}/logs/${run}/run01.rawDataCopiedToPrm.finished" ]]
+		if [[ -f "${TMP_ROOT_DIR}/logs/${runName}/run01.rawDataCopiedToPrm.finished" ]]
 		then
 			dateInSecAnalysisData="$(date -d"$(rsync "${TMP_ROOT_DIR}/logs/${runName}/run01.rawDataCopiedToPrm.finished" | awk '{print $3}')" +%s)"
 			dateInSecNow=$(date +%s)
