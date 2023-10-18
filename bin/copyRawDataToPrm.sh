@@ -775,13 +775,13 @@ else
 					"${mountedCifsDevice}" \
 					>> "${JOB_CONTROLE_FILE_BASE}.started"
 			fi
-			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+
 			# shellcheck disable=SC2029
-			if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${runPrefix}/run01.rawDataCopiedToPrm.finished"
+			if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${filePrefix}/run01.rawDataCopiedToPrm.finished"
 			then
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${SCR_ROOT_DIR}/logs/${runPrefix}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${SCR_ROOT_DIR}/logs/${filePrefix}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
 			else
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${SCR_ROOT_DIR}/logs/${runPrefix}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${SCR_ROOT_DIR}/logs/${filePrefix}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
 				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			fi
 		else
@@ -789,7 +789,8 @@ else
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process ${filePrefix}."
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 		fi
-
+		
+		mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 	done
 fi
 
