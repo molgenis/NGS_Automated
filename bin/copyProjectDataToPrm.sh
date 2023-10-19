@@ -114,7 +114,7 @@ function rsyncProjectRun() {
 		printf '' > "${_controlFileBaseForFunction}.started"
 	fi
 	
-	# shellcheck disable=SC2174
+	# shellcheck disable=SC2174,SC2153
 	mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${_project}/"
 
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run} ..." \
