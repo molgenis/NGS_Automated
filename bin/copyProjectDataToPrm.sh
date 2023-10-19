@@ -114,7 +114,7 @@ function rsyncProjectRun() {
 		printf '' > "${_controlFileBaseForFunction}.started"
 	fi
 	
-	# shellcheck disable=SC2174
+	# shellcheck disable=SC2174,SC2153
 	mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${_project}/"
 
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run} ..." \
@@ -167,7 +167,8 @@ function checkRawdata(){
 	local _run="${2}"
 	local _controlFileBase="${3}"	
 	local _controlFileBaseForFunction="${_controlFileBase}.${FUNCNAME[0]}"
-
+	local _PRM_ROOT_DIR
+	
 	# Check if function previously finished successfully for this data.
 	#
 	if [[ -e "${_controlFileBaseForFunction}.finished" ]]
@@ -210,14 +211,14 @@ function checkRawdata(){
 			for prm_dir in "${ALL_PRM[@]}"
 			do
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "looping through ${prm_dir}"
-				export PRM_ROOT_DIR="/groups/${group}/${prm_dir}/"
-				if [[ -e "${PRM_ROOT_DIR}/rawdata/${PRMRAWDATA}/${sequenceRun}/${rawdataFile}" ]]
+				_PRM_ROOT_DIR="/groups/${group}/${prm_dir}/"
+				if [[ -e "${_PRM_ROOT_DIR}/rawdata/${PRMRAWDATA}/${sequenceRun}/${rawdataFile}" ]]
 				then
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Great, the rawdata file ${rawdataFile} is stored on ${PRM_ROOT_DIR}"
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Great, the rawdata file ${rawdataFile} is stored on ${_PRM_ROOT_DIR}"
 					rawdataAvail='true'
 					continue
 				else
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "the rawdata file ${rawdataFile} is not stored on ${PRM_ROOT_DIR}"
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "the rawdata file ${rawdataFile} is not stored on ${_PRM_ROOT_DIR}"
 				fi
 			done
 			if [[ "${rawdataAvail}" == 'false' ]]
