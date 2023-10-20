@@ -174,14 +174,15 @@ else
 	for project in "${projects[@]}"
 	do
 		daysTillRemoval=10
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Check for data for which the pipeline was finished at least ${daysTillRemoval} days ago and will delete the data from ${TMP_ROOT_DIR} ..."
+		daysTillRemovalTmpFolder=3
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Check for data for which the pipeline was finished at least ${daysTillRemovalTmpFolder}(tmp) or ${daysTillRemoval}(projects, generatedscripts) days ago and will delete the data from ${TMP_ROOT_DIR} ..."
 		projectName="$(basename "${project}")" 
 		
 		# Convert date to seconds for easier calculation of the date difference.
 		# 86400 = 1 day in seconds.
 		#
 		# When the project data is copied to prm, a run01.projectDataCopiedToPrm.finished is created also on tmp
-		# If this file is older than 10 days, the project, generatedscripts and tmp data will be deleted
+		# If this file is older than 10 days, the project and generatedscripts data will be deleted
 		#
 		if [[ -f "${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished" ]]
 		then
@@ -190,16 +191,31 @@ else
 			if [[ $(((dateInSecNow - dateInSecAnalysisData) / 86400)) -gt "${daysTillRemoval}" ]]
 			then
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${projectName} on tmp because the project data is on prm for at least ${daysTillRemoval} days"
-				rm -Rfv "${TMP_ROOT_DIR}/"{projects,tmp,generatedscripts}"/${pipeline}/${projectName}/"
+				rm -Rfv "${TMP_ROOT_DIR}/"{projects,generatedscripts}"/${pipeline}/${projectName}/"
 				rm -vf "${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished"
 			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " the projectDataCopiedToPrm.finished is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove the project, tmp and generatedscripts folders the ${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished file needs to be at least ${daysTillRemoval} days old"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " the projectDataCopiedToPrm.finished is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove the project and generatedscripts folders the ${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished file needs to be at least ${daysTillRemoval} days old"
 				continue
 			fi
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished does not exist, skipping"
 			continue
 		fi
+		#
+		# Removing tmp folder after 3 days 
+		#
+		if [[ $(((dateInSecNow - dateInSecAnalysisData) / 86400)) -gt "${daysTillRemovalTmpFolder}" ]]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting tmp/${pipeline}/${projectName} on tmp because the project data is on prm for at least ${daysTillRemovalTmpFolder} days"
+			rm -Rfv "${TMP_ROOT_DIR}/tmp/${pipeline}/${projectName}/"
+		else
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " the projectDataCopiedToPrm.finished is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove tmp/${pipeline}/${projectName}/ the ${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished file needs to be at least ${daysTillRemovalTmpFolder} days old"
+			continue
+		fi
+	else
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished does not exist, skipping"
+		continue
+	fi
 	done
 fi
 ##CLEANING UP RAWDATA AND DEMULTIPLEXING DATA
