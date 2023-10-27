@@ -212,10 +212,6 @@ else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " the projectDataCopiedToPrm.finished is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove tmp/${pipeline}/${projectName}/ the ${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished file needs to be at least ${daysTillRemovalTmpFolder} days old"
 			continue
 		fi
-	else
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished does not exist, skipping"
-		continue
-	fi
 	done
 fi
 ##CLEANING UP RAWDATA AND DEMULTIPLEXING DATA
