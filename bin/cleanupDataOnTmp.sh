@@ -190,11 +190,11 @@ else
 			dateInSecNow=$(date +%s)
 			if [[ $(((dateInSecNow - dateInSecAnalysisData) / 86400)) -gt "${daysTillRemoval}" ]]
 			then
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${projectName} on tmp because the project data is on prm for at least ${daysTillRemoval} days"
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${projectName} on tmp, because the project data is on prm for at least ${daysTillRemoval} days"
 				rm -Rfv "${TMP_ROOT_DIR}/"{projects,generatedscripts}"/${pipeline}/${projectName}/"
 				rm -vf "${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished"
 			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " the projectDataCopiedToPrm.finished is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove the project and generatedscripts folders the ${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished file needs to be at least ${daysTillRemoval} days old"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "The projectDataCopiedToPrm.finished is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove the project and generatedscripts folders the ${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished file needs to be at least ${daysTillRemoval} days old."
 				continue
 			fi
 		else
@@ -206,10 +206,10 @@ else
 		#
 		if [[ $(((dateInSecNow - dateInSecAnalysisData) / 86400)) -gt "${daysTillRemovalTmpFolder}" ]]
 		then
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting tmp/${pipeline}/${projectName} on tmp because the project data is on prm for at least ${daysTillRemovalTmpFolder} days"
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting tmp/${pipeline}/${projectName} on tmp, because the project data is on prm for at least ${daysTillRemovalTmpFolder} days."
 			rm -Rfv "${TMP_ROOT_DIR}/tmp/${pipeline}/${projectName}/"
 		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " the projectDataCopiedToPrm.finished is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove tmp/${pipeline}/${projectName}/ the ${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished file needs to be at least ${daysTillRemovalTmpFolder} days old"
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " The projectDataCopiedToPrm.finished is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove tmp/${pipeline}/${projectName}/ the ${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished file needs to be at least ${daysTillRemovalTmpFolder} days old."
 			continue
 		fi
 	else
