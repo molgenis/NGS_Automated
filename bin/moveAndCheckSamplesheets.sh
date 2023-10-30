@@ -297,7 +297,11 @@ else
 			mv "${samplesheet}.tmp" "${samplesheet}"
 		fi
 		firstStepOfPipeline="${REPLACEDPIPELINECOLUMN%%+*}"
+<<<<<<< HEAD
 
+=======
+		
+>>>>>>> f2e5418d656294457cb5cfaa87b1493329ff8825
 		#
 		# Distribute samplesheet to other dat folders
 		#
