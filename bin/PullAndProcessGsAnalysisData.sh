@@ -266,13 +266,13 @@ function mergeSamplesheets(){
 			_projectName="${_projectName}-${_captkit}"
 			# create a combined samplesheet header, renamed project to originalproject and added new project column
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "new samplesheet name: ${_projectName}.csv"
-			head -1 "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${i}.csv" | perl -p -e 's|project|originalproject|' | awk '{print $0",project,gsBatch"}' > "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
-			tail -n+2 "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${i}.csv" >> "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
+			head -1 "${TMP_ROOT_DIR}/Samplesheets/${i}.csv" | perl -p -e 's|project|originalproject|' | awk '{print $0",project,gsBatch"}' > "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
+			tail -n+2 "${TMP_ROOT_DIR}/Samplesheets/${i}.csv" >> "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
 			teller=$((${teller}+1))
 		else
-			tail -n+2 "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${i}.csv" >> "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
+			tail -n+2 "${TMP_ROOT_DIR}/Samplesheets/${i}.csv" >> "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
 		fi
-		mv "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${i}.csv" "${TMP_ROOT_DIR}/Samplesheets/archive/${i}.csv"
+		mv "${TMP_ROOT_DIR}/Samplesheets/${i}.csv" "${TMP_ROOT_DIR}/Samplesheets/archive/${i}.csv"
 	done
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Adding projectName ${_projectName} and gsBatch:${gsBatch} to the samplesheet and put the samplesheet ${TMP_ROOT_DIR}/Samplesheets/NGS_DNA/${_projectName}.csv"
 	

@@ -255,6 +255,7 @@ else
 		elif [[ "${samplesheet}" == *"GS_"* ]] 
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a GS samplesheet. No samplesheetCheck (yet).. A lot of required columns for in house are not required for GS"	
+			projectSamplesheet="true"
 		elif [[ "${group}" == "patho" ]]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a Patho samplesheet. There is no need for samplesheetCheck."
@@ -296,26 +297,6 @@ else
 			mv "${samplesheet}.tmp" "${samplesheet}"
 		fi
 		firstStepOfPipeline="${REPLACEDPIPELINECOLUMN%%+*}"
-
-		#
-		# Check whether the samplesheet is a project samplesheet (no NGS_Demultiplexing) and if it is GENOMESCAN or regular
-		# needs an update when we are going to use VIP into production
-		#
-		if [[ "${projectSamplesheet}" == "true" ]]
-		then
-			if [[ "${REPLACEDPIPELINECOLUMN}" == *"GENOMESCAN"* ]]
-			then
-				firstStepOfPipeline=''
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a GENOMESCAN project samplesheet, the first step of the pipeline will be set to an empty string (samplesheet will be put in correct bucket in a later stage of the pipeline)."
-			else
-				firstStepOfPipeline="NGS_DNA"
-				perl -p -e "s|${REPLACEDPIPELINECOLUMN}|${firstStepOfPipeline}|" "${samplesheet}" > "${samplesheet}.tmp"
-				mv "${samplesheet}.tmp" "${samplesheet}"
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a project samplesheet (no NGS_Demultiplexing); firstStepOfPipeline was set to ${firstStepOfPipeline}."
-			fi
-		fi
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "first step of the pipeline:[${firstStepOfPipeline}]."
-		
 		#
 		# Distribute samplesheet to other dat folders
 		#
@@ -380,6 +361,10 @@ do
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a GAP samplesheet. There is no samplesheetCheck at this moment."
 		projectSamplesheet="false"
+	elif [[ "${samplesheetChecked}" == *"GS_"* ]]
+	then
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a GS samplesheet. No samplesheetCheck (yet).. A lot of required columns for in house are not required for GS"
+		projectSamplesheet="true"
 	elif [[ "${group}" == "patho" ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a Patho samplesheet. There is no need for samplesheetCheck."
@@ -401,7 +386,7 @@ do
 	#
 	if [[ "${projectSamplesheet}" == "true" ]]
 	then
-		if [[ "${REPLACEDPIPELINECOLUMN}" == *"GENOMESCAN"* ]]
+		if [[ "${REPLACEDPIPELINECOLUMN}" == *"DRAGEN"* ]]
 		then
 			firstStepOfPipeline=''
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a GENOMESCAN project samplesheet, the first step of the pipeline will be set to an empty string (samplesheet will be put in correct bucket in a later stage of the pipeline)."
