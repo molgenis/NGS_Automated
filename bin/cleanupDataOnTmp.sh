@@ -181,8 +181,8 @@ else
 		# Convert date to seconds for easier calculation of the date difference.
 		# 86400 = 1 day in seconds.
 		#
-		# When the project data is copied to prm, a run01.projectDataCopiedToPrm.finished is created also on tmp
-		# If this file is older than 10 days, the project and generatedscripts data will be deleted
+		# When the project data is copied to prm, a run01.projectDataCopiedToPrm.finished is created also on tmp.
+		# If this file is older than 10 days, the project and generatedscripts data will be deleted.
 		#
 		if [[ -f "${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished" ]]
 		then
