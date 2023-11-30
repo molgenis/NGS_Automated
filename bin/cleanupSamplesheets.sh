@@ -166,7 +166,6 @@ mapfile -t rawdataSamplesheets < <(ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" "find
 if [[ "${#rawdataSamplesheets[@]}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No rawdataSamplesheets files found @ ${TMP_ROOT_DIAGNOSTICS_DIR}/Samplesheets/${pipeline}."
-	exit
 else
 	for rawdataSamplesheet in "${rawdataSamplesheets[@]}"
 	do

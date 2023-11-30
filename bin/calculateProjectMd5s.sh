@@ -106,8 +106,8 @@ function calculateMd5() {
 	#
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
 		"zip all files in jobs folder to ${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/jobs/${_project}_jobs.tar.gz and removing originals"
-	tar -czvf "${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/jobs/${_project}_jobs.tar.gz" "${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/jobs/"* --remove-files
-
+	tar -czvf "${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/jobs/${_project}_jobs.tar.gz" -C "${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/jobs/" .
+	rm -f "${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/jobs/"*
 	#
 	# All checks passed: start computing checksums.
 	#
