@@ -44,7 +44,7 @@
         "chart_type": "time_series_with_absolute_threshold",
         "chart_properties": {
             "chart_title": "YIELD ng/ul (Mean per run)",
-            "lower_threshold": 80,
+            "lower_threshold": 50,
             "y_value": "YIELD"
         }
     },
@@ -52,10 +52,10 @@
         "table_name": "Concentratie",
         "chart_type": "time_series_with_percentage_of_samples_above_threshold",
         "chart_properties": {
-            "chart_title": "% Sample per run met concentratie boven 80 ng/ul",
+            "chart_title": "% Sample per run met concentratie boven 50 ng/ul",
             "y_value": "YIELD",
-            "threshold": 80,
-            "y_label": "% of samples above 80 ng/ul"
+            "threshold": 50,
+            "y_label": "% of samples above 50 ng/ul"
         }
     }
 
