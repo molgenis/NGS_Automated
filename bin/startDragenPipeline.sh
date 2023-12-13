@@ -454,7 +454,7 @@ else
 		#
 
 		sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['capturingKit']} + 1))
-		capturingKit=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}' | head -1)
+		capturingKit=$(tail -n 1 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
 			
 		#
 		# Step 1: Generate scripts (per sample sheet).
