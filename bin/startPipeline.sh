@@ -530,7 +530,7 @@ else
 		if [[ -n "${sampleSheetColumnOffsets['analysis']+isset}" ]]
 		then
 			sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['analysis']} + 1))
-			analysisPipeline=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}' | head -1)
+			analysisPipeline=$(tail -n 1 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
 			if [[ "${analysisPipeline}" == "${pipeline}" ]]
 			then
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "There was no preprocessing step, creating a rawDataCopiedToPrm.finished file to prevent a stuck automated pipeline (copyProjectDataToPrm can only copy data if ${TMP_ROOT_DIR}/logs/${project}/${project}.rawDataCopiedToPrm.finished is there)"
@@ -552,7 +552,7 @@ else
 			if [[ "${sampleType}" == 'DNA' ]]
 			then
 				sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['capturingKit']} + 1))
-				capturingKit=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}' | head -1)
+				capturingKit=$(tail -n 1 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
 			fi
 			#
 			# Determine which lab run ID this is: ${sequencingStartDate}_${sequencer}_${incrementalRunNumber}_${flowcell}
@@ -560,22 +560,22 @@ else
 			if [[ -n "${sampleSheetColumnOffsets['sequencingStartDate']+isset}" ]]
 			then
 				sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['sequencingStartDate']} + 1))
-				sequencingStartDate=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}' | head -1)
+				sequencingStartDate=$(tail -n 1 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
 			fi
 			if [[ -n "${sampleSheetColumnOffsets['sequencer']+isset}" ]]
 			then
 				sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['sequencer']} + 1))
-				sequencer=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}' | head -1)
+				sequencer=$(tail -n 1 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
 			fi
 			if [[ -n "${sampleSheetColumnOffsets['run']+isset}" ]]
 			then
 				sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['run']} + 1))
-				incrementalRunNumber=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}' | head -1)
+				incrementalRunNumber=$(tail -n 1 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
 			fi
 			if [[ -n "${sampleSheetColumnOffsets['flowcell']+isset}" ]]
 			then
 				sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['flowcell']} + 1))
-				flowcell=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}' | head -1)
+				flowcell=$(tail -n 1 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
 			fi
 			labRunID="${sequencingStartDate}_${sequencer}_${incrementalRunNumber}_${flowcell}"
 		elif [[ "${sampleType}" == 'GAP' ]]

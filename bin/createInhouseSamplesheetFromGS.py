@@ -122,8 +122,8 @@ def makeOriginalFilenameHashmap(_checksumsFilePath):
     _flowcellDict = defaultdict(dict)
     for _root, _dirs, _files in os.walk(args.genomeScanInputDir):
         for _dir in _dirs:
-            if re.match("([0-9]{6})_([a-zA-Z0-9]{6})_([0-9]{4})_([a-zA-Z0-9]{9})$", _dir):
-                _m = re.match("^([0-9]{6})_([a-zA-Z0-9]{6})_([0-9]{4})_([a-zA-Z0-9]{9})$", _dir)
+            if re.match("([0-9]{6})_([a-zA-Z0-9]{6,8})_([0-9]{4})_([a-zA-Z0-9]{9})$", _dir):
+                _m = re.match("^([0-9]{6})_([a-zA-Z0-9]{6,8})_([0-9]{4})_([a-zA-Z0-9]{9})$", _dir)
                 _sequencingStartDate = _m.group(1)
                 _sequencer = _m.group(2)
                 _run = _m.group(3)
