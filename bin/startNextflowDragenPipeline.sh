@@ -205,7 +205,6 @@ else
 		#
 		# Check if we should (re)start the pipeline.
 		#
-		resubmitJobScripts='false'
 		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 		then
 			if [[ -e "${JOB_CONTROLE_FILE_BASE}.resubmitted" ]]
@@ -219,7 +218,6 @@ else
 				# If it fails again we check for presence of ${JOB_CONTROLE_FILE_BASE}.resubmitted
 				# and won't restart automatically again: manual intervention required.
 				#
-				resubmitJobScripts='true'
 			else
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping already started ${project}/${pipelineRun}."
 				continue
@@ -275,24 +273,9 @@ else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "sampleType column missing in sample sheet; will use default value: ${sampleType}."
 		fi
 		#
-		# Get priority from sample sheet (optional column + value).
-		#
-		priority='false' # default
-		if [[ -n "${sampleSheetColumnOffsets['FirstPriority']+isset}" ]]
-		then
-			sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['FirstPriority']} + 1))
-			firstPriority=$(tail -n +2 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
-			if [[ "${firstPriority^^}" == *"TRUE"* ]]
-			then
-				priority='true'
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "High priority requested for at least one sample in samplesheet for project ${project}."
-			fi
-		fi
-		#
 		# Get additional meta-data from samplesheet.
 		# (Not required for generating and submitting job scripts; only used for track and trace.)
 		#
-
 		sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['capturingKit']} + 1))
 		capturingKit=$(tail -n 1 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
 		
