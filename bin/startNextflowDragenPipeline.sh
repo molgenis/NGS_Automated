@@ -207,21 +207,8 @@ else
 		#
 		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 		then
-			if [[ -e "${JOB_CONTROLE_FILE_BASE}.resubmitted" ]]
-			then
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping already restarted ${project}/${pipelineRun}."
-				continue
-			elif [[ -e "${controlFileBase}.pipeline.failed" ]]
-			then
-				#
-				# Restart pipeline once.
-				# If it fails again we check for presence of ${JOB_CONTROLE_FILE_BASE}.resubmitted
-				# and won't restart automatically again: manual intervention required.
-				#
-			else
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping already started ${project}/${pipelineRun}."
-				continue
-			fi
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping already started ${project}/${pipelineRun}."
+			continue
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing ${project}/${pipelineRun} ..."
 		fi
