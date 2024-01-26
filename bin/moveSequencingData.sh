@@ -50,7 +50,7 @@ function showHelp() {
 	#
 	cat <<EOH
 ======================================================================================================================
-Script to copy the sequencing data from dedicated sequencing storage (/groups/umcg-lab/${TMP_DIR}/sequencers_incoming/) to /groups/umcg-lab/${TMP_DIR}/sequencers when the sequencing is finished.
+Script to copy the sequencing data from dedicated sequencing storage (/groups/umcg-lab/${tmpDir}/sequencers_incoming/) to /groups/umcg-lab/${TMP_DIR}/sequencers when the sequencing is finished.
 
 Usage:
 	$(basename "${0}") OPTIONS
@@ -82,7 +82,7 @@ EOH
 # Get commandline arguments.
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
-declare group=''
+
 while getopts ":t:l:h" opt
 do
 	case "${opt}" in
@@ -154,7 +154,6 @@ do
 	
 	# shellcheck disable=SC2174
 	mkdir -m 770 -p "/groups/umcg-lab/${tmpDir}/logs/${run}/"
-	transferCompleted='no'
 	#
 	# Check if the run has already completed.
 	#
