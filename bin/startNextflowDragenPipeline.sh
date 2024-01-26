@@ -278,7 +278,7 @@ else
 			thisDir=$(pwd)
 
 			cd "${TMP_ROOT_DIR}/nextflow/${project}"
-			nextflow run --samplesheet "${sampleSheet}" --tmpdir "${TMP_LFS}" --group "${group}" -w "${TMP_ROOT_DIR}/nextflow/${project}" "${EBROOTNGS_DNA}/nextflow/main.nf"
+			nextflow run --samplesheet "${sampleSheet}" --tmpdir "${TMP_LFS}" --group "${group}" -w "${TMP_ROOT_DIR}/nextflow/${project}" "${EBROOTNF_NGS_DNA}/nextflow/main.nf"
 			# || log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Failed to execute 'nextflow run' command."
 			cd "${thisDir}"
 		fi
