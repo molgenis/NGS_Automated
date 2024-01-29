@@ -50,7 +50,7 @@ function showHelp() {
 	#
 	cat <<EOH
 ======================================================================================================================
-Script to copy the sequencing data from dedicated sequencing storage (/groups/umcg-lab/${tmpDir}/sequencers_incoming/) to /groups/umcg-lab/${TMP_DIR}/sequencers when the sequencing is finished.
+Script to copy the sequencing data from dedicated sequencing storage (/groups/umcg-lab/${tmpDir}/sequencers_incoming/) to /groups/umcg-lab/${tmpDir}/sequencers when the sequencing is finished.
 
 Usage:
 	$(basename "${0}") OPTIONS
@@ -190,7 +190,8 @@ do
 		if [[ $(((dateInSecNow - dateInSecRawData) / 86400)) -gt 2 ]]
 		then
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Transfer completed more than 2 days ago, ${run} will be removed from ${SEQ_INCOMING_DIR}"
-			rm -rf "${SEQ_INCOMING_DIR}/${run}"
+			runDir="${SEQ_INCOMING_DIR}/${run}"
+			rm -rf "${runDir:?}"
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 		else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Data removal on hold for ${run}: Transfer completed is less than 2 days ago"	
