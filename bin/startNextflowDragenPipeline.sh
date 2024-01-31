@@ -166,7 +166,7 @@ fi
 # * sourcing the file containing the lock function,
 # * sourcing config files,
 # * and parsing commandline arguments,
-# but before doing the actual data trnasfers.
+# but before doing the actual data transfers.
 #
 lockFile="${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
 thereShallBeOnlyOne "${lockFile}"

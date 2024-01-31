@@ -72,7 +72,7 @@ function rsyncData(){
 		--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
 		--omit-dir-times \
 		--omit-link-times \
-		"${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}/UMCG_CSV_*.${SAMPLESHEET_EXT}" \
+		"${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/UMCG_CSV_*.${SAMPLESHEET_EXT}" \
 		"${TMP_ROOT_DIR}/${gsBatch}/"
 	
 	#
@@ -515,13 +515,6 @@ then
 					log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "${GENOMESCAN_HOME_DIR}/${gsBatch}/${gsBatch}.finished does not exist"
 					continue
 				fi
-				# First parse samplesheet to see where the data should go
-			#	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing only the UMCG_CSV samplesheet file for ${gsBatch} to ${group}..."
-		#		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}/UMCG_CSV_*.csv"
-			#	/usr/bin/rsync -e 'ssh -p 443' -vrltD \
-		#			"${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}/UMCG_CSV_"*".csv" \
-		#			"${TMP_ROOT_DIR}/${gsBatch}/"
-				
 				rsyncData "${gsBatch}" "${controlFileBase}" "${analysisFolder}"
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "rsyncing done"
 			fi
@@ -615,7 +608,7 @@ else
 			if [[ -d "${TMP_ROOT_DIR}/${gsBatch}/" ]]
 			then
 				gsBatch="$(basename "${gsBatch}")"
-				csvFile=$(ls -1 "${TMP_ROOT_DIR}/${gsBatch}/${rawdataFolder}/UMCG_CSV_"*".csv")
+				csvFile=$(ls -1 "${TMP_ROOT_DIR}/${gsBatch}/UMCG_CSV_"*".csv")
 				mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
 				projectName=$(echo "${uniqProjects[0]}" | grep -Eo 'GS_[0-9]+')
 				captkit=$(echo "${uniqProjects[0]}" | awk 'BEGIN {FS="-"}{print $NF}')
