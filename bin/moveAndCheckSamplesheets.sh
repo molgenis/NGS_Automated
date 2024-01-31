@@ -381,6 +381,15 @@ do
 			fi
 		fi
 	fi
+	
+	if [[ -n "${_sampleSheetColumnOffsets["build"]+isset}" ]] 
+	then
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Build column present"
+	else
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Build column is missing in the header, will add a build column with 'GRCh37' values."
+		awk '{if (NR ==1){print $0",build"}else{print $0",GRCh37"}}' "${samplesheetChecked}" > "${samplesheetChecked}.build"
+		mv "${samplesheetChecked}.build" "${samplesheetChecked}"
+	fi
 	#
 	# When samplesheet is GENOMESCAN the samplesheet has to go to the Samplesheets root folder (no bucket)
 	#
@@ -389,7 +398,7 @@ do
 		if [[ "${REPLACEDPIPELINECOLUMN}" == *"DRAGEN"* ]]
 		then
 			firstStepOfPipeline=''
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a GENOMESCAN project samplesheet, the first step of the pipeline will be set to an empty string (samplesheet will be put in correct bucket in a later stage of the pipeline)."
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a DRAGEN project samplesheet, the first step of the pipeline will be set to an empty string (samplesheet will be put in correct bucket in a later stage of the pipeline)."
 		else
 			firstStepOfPipeline="NGS_DNA"
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a project samplesheet (no NGS_Demultiplexing); firstStepOfPipeline was set to ${firstStepOfPipeline}."
@@ -400,14 +409,12 @@ do
 	#
 	# Move samplesheets with rsync
 	#
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pushing samplesheets using rsync to ${samplesheetDestination} ..."
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pushing samplesheet ${samplesheetChecked} using rsync to ${samplesheetDestination} ..."
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "See ${logDir}/rsync.log for details ..."
 	transactionStatus='Ok'
 
 		/usr/bin/rsync -vt \
 		--log-file="${logDir}/rsync.log" \
-		--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
-		--omit-link-times \
 		"${samplesheetChecked}" \
 		"${samplesheetDestination}" \
 	&& rm -v "${samplesheetChecked}" >> "${JOB_CONTROLE_FILE_BASE}.started" \

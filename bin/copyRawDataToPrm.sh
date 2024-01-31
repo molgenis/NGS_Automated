@@ -748,7 +748,6 @@ else
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "NGS_Demultiplexing only, skipping splitSamplesheetPerProject, solely touching the ${runPrefix}.splitSamplesheetPerProject.finished file"
 					touch "${controlFileBase}/${runPrefix}.splitSamplesheetPerProject.finished"
-					continue
 				else
 					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "All raw data items (${processedRawDataItems}/${totalRawDataItems}) were copied to prm."
 					splitSamplesheetPerProject "${PRM_ROOT_DIR}/Samplesheets/archive/${filePrefix}.${SAMPLESHEET_EXT}" "${filePrefix}" "${controlFileBase}/${runPrefix}"

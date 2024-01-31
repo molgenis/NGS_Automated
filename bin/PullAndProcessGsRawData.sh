@@ -128,9 +128,9 @@ function sanityChecking() {
 	_numberOfSamplesheets=$(find "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/" -maxdepth 1 -mindepth 1 -name 'UMCG_CSV_*.'"${SAMPLESHEET_EXT}" 2>/dev/null | wc -l)
 	if [[ "${_numberOfSamplesheets}" -eq 1 ]]
 	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Found: one ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/UMCG_CSV_*.${SAMPLESHEET_EXT} samplesheet."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Found: one ${TMP_ROOT_DIR}/${_batch}/UMCG_CSV_*.${SAMPLESHEET_EXT} samplesheet."
 		local _gsSampleSheet
-		_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/UMCG_CSV_"*".${SAMPLESHEET_EXT}")
+		_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/UMCG_CSV_"*".${SAMPLESHEET_EXT}")
 		#
 		# Make sure:
 		#  1. The last line ends with a line end character.
@@ -157,7 +157,7 @@ function sanityChecking() {
 		_gsSampleSheet="${_gsSampleSheet}.converted"
 	elif [[ "${_numberOfSamplesheets}" -gt 1 ]]
 	then
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "More than one UMCG_CSV_*.${SAMPLESHEET_EXT} GS samplesheet present in ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "More than one UMCG_CSV_*.${SAMPLESHEET_EXT} GS samplesheet present in ${TMP_ROOT_DIR}/${_batch}/."
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	elif [[ "${_numberOfSamplesheets}" -lt 1 ]]
@@ -596,7 +596,7 @@ function processSamplesheetsAndMoveConvertedData() {
 	declare -A _sampleSheetColumnOffsets=()
 	local      _projectFieldIndex
 	declare -a _projects=()
-	_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/UMCG_CSV_"*".${SAMPLESHEET_EXT}.converted")
+	_gsSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/UMCG_CSV_"*".${SAMPLESHEET_EXT}.converted")
 	IFS="${SAMPLESHEET_SEP}" read -r -a _sampleSheetColumnNames <<< "$(head -1 "${_gsSampleSheet}")"
 	for (( _offset = 0 ; _offset < ${#_sampleSheetColumnNames[@]} ; _offset++ ))
 	do
@@ -992,9 +992,9 @@ then
 				
 				# First parse samplesheet to see where the data should go
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing only the UMCG_CSV samplesheet file for ${gsBatch} to ${group}..."
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}/UMCG_CSV_*.csv"
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/UMCG_CSV_*.csv"
 				/usr/bin/rsync -e 'ssh -p 443' -vrltD \
-					"${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}/UMCG_CSV_"*".csv" \
+					"${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/UMCG_CSV_"*".csv" \
 					"${TMP_ROOT_DIR}/${gsBatch}/"
 		
 				rsyncData "${gsBatch}" "${controlFileBase}" "${rawdataFolder}"
@@ -1072,7 +1072,7 @@ else
 			#
 			if [[ -e "${controlFileBase}.${rawdataFolder}_processSamplesheetsAndMoveConvertedData.finished" ]]
 			then
-				csvFile=$(ls -1 "${TMP_ROOT_DIR}/${gsBatch}/${rawdataFolder}/UMCG_CSV_"*".csv")
+				csvFile=$(ls -1 "${TMP_ROOT_DIR}/${gsBatch}/UMCG_CSV_"*".csv")
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.${rawdataFolder}_processSamplesheetsAndMoveConvertedData.finished present -> processing completed for batch ${gsBatch}..."
 				rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 				
