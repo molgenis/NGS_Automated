@@ -275,10 +275,20 @@ else
 		
 			module load nextflow
 			thisDir=$(pwd)
-
+			
 			cd "${TMP_ROOT_DIR}/nextflow/${project}"
-			nextflow run --samplesheet "${sampleSheet}" --tmpdir "${TMP_LFS}" --group "${group}" -w "${TMP_ROOT_DIR}/nextflow/${project}" "${EBROOTNF_NGS_DNA}/main.nf"
-
+			type=$(echo "${project#*-}" | awk 'BEGIN {FS="_"}{print $1}')
+			if [[ "${type}" == "sWGS" ]]
+			then
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "type=[${type}] --> sWGS project detected."
+				nextflow run --samplesheet "${sampleSheet}" --tmpdir "${TMP_LFS}" --group "${group}" -w "${TMP_ROOT_DIR}/nextflow/${project}" "${EBROOTNF_NGS_DNA}/swgs.nf"
+			elif [[ "${type}" == "WGS" ]]
+			then
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "type=[${type}] --> WGS project detected."
+				nextflow run --samplesheet "${sampleSheet}" --tmpdir "${TMP_LFS}" --group "${group}" -w "${TMP_ROOT_DIR}/nextflow/${project}" "${EBROOTNF_NGS_DNA}/wgs.nf"
+			else
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "type=[${type}] is not a valid type"
+			fi
 			cd "${thisDir}"
 		fi
 		#
