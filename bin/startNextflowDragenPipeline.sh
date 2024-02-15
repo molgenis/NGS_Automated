@@ -278,17 +278,10 @@ else
 			
 			cd "${TMP_ROOT_DIR}/nextflow/${project}"
 			type=$(echo "${project#*-}" | awk 'BEGIN {FS="_"}{print $1}')
-			if [[ "${type}" == "sWGS" ]]
-			then
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "type=[${type}] --> sWGS project detected."
-				nextflow run --samplesheet "${sampleSheet}" --tmpdir "${TMP_LFS}" --group "${group}" -w "${TMP_ROOT_DIR}/nextflow/${project}" "${EBROOTNF_NGS_DNA}/swgs.nf"
-			elif [[ "${type}" == "WGS" ]]
-			then
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "type=[${type}] --> WGS project detected."
-				nextflow run --samplesheet "${sampleSheet}" --tmpdir "${TMP_LFS}" --group "${group}" -w "${TMP_ROOT_DIR}/nextflow/${project}" "${EBROOTNF_NGS_DNA}/wgs.nf"
-			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "type=[${type}] is not a valid type"
-			fi
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "type=[${type}], ${type} project detected."
+			nextflow run --samplesheet "${sampleSheet}" --tmpdir "${TMP_LFS}" --group "${group}" -w "${TMP_ROOT_DIR}/nextflow/${project}" "${EBROOTNF_NGS_DNA}/${type,,}.nf" || \
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" "0" "pipeline crashed, it might be due to one of the following variables: samplesheet:[${sampleSheet}] tmpdir:[${TMP_LFS}] group:[${group}] workdir:[${TMP_ROOT_DIR}/nextflow/${project}] type/workflow:[${type,,}.nf]" || continue
+			touch "${TMP_ROOT_DIR}/logs/${project}/run01.nextflow_pipeline.finished"
 			cd "${thisDir}"
 		fi
 		#
