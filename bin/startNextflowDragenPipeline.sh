@@ -266,9 +266,9 @@ else
 		sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['capturingKit']} + 1))
 		capturingKit=$(tail -n 1 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
 		
-		if [[ -e "${TMP_ROOT_DIR}/logs/${project}/run01.nextflow_pipeline.finished" ]]
+		if [[ -e "${TMP_ROOT_DIR}/logs/${project}/run01.pipeline.finished" ]]
 		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping already processed project ${project} (${TMP_ROOT_DIR}/logs/${project}//run01.nextflow_pipeline.finished present..."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping already processed project ${project} (${TMP_ROOT_DIR}/logs/${project}//run01.pipeline.finished present..."
 		else
 			####### NEXTFLOW ######
 			mkdir -p "${TMP_ROOT_DIR}/nextflow/${project}"
@@ -279,22 +279,26 @@ else
 			cd "${TMP_ROOT_DIR}/nextflow/${project}"
 			type=$(echo "${project#*-}" | awk 'BEGIN {FS="_"}{print $1}')
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "type=[${type}], ${type} project detected."
-			nextflow run --samplesheet "${sampleSheet}" --tmpdir "${TMP_LFS}" --group "${group}" -w "${TMP_ROOT_DIR}/nextflow/${project}" "${EBROOTNF_NGS_DNA}/${type,,}.nf" || \
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" "0" "pipeline crashed, it might be due to one of the following variables: samplesheet:[${sampleSheet}] tmpdir:[${TMP_LFS}] group:[${group}] workdir:[${TMP_ROOT_DIR}/nextflow/${project}] type/workflow:[${type,,}.nf]" || continue
-			touch "${TMP_ROOT_DIR}/logs/${project}/run01.nextflow_pipeline.finished"
+			nextflow run --samplesheet "${sampleSheet}" --tmpdir "${TMP_LFS}" --group "${group}" -w "${TMP_ROOT_DIR}/nextflow/${project}" "${EBROOTNF_NGS_DNA}/${type,,}.nf" \
+			|| {
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" "0" "pipeline crashed, it might be due to one of the following variables: samplesheet:[${sampleSheet}] tmpdir:[${TMP_LFS}] group:[${group}] workdir:[${TMP_ROOT_DIR}/nextflow/${project}] type/workflow:[${type,,}.nf]"
+			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+			continue
+			}
+			touch "${TMP_ROOT_DIR}/logs/${project}/run01.pipeline.finished"
 			cd "${thisDir}"
 		fi
 		#
 		# Signal success or failure for complete process.
 		#
-		if [[ -e "${TMP_ROOT_DIR}/logs/${project}/run01.nextflow_pipeline.finished" ]]
+		if [[ -e "${TMP_ROOT_DIR}/logs/${project}/run01.pipeline.finished" ]]
 		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/logs/${project}/run01.nextflow_pipeline.finished present -> processing completed for ${project}/${pipelineRun} ..."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/logs/${project}/run01.pipeline.finished present -> processing completed for ${project}/${pipelineRun} ..."
 			rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing ${project}/${pipelineRun}."
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/logs/${project}/run01.nextflow_pipeline.finished absent -> processing failed for ${project}/${pipelineRun}."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/logs/${project}/run01.pipeline.finished absent -> processing failed for ${project}/${pipelineRun}."
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process ${project}/${pipelineRun}."
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 		fi
