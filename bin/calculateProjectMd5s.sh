@@ -136,6 +136,7 @@ function calculateMd5() {
 			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			return
 		}
+	rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 	mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 }
 
