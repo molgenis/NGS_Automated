@@ -669,7 +669,14 @@ else
 							log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "found: ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${run}.calculateProjectMd5s.finished"
 							touch "${JOB_CONTROLE_FILE_BASE}.started"
 							log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "check if the rawdata is stored on PRM"
-							checkRawdata "${project}" "${run}" "${controlFileBase}"
+							if [[ "${project}" != *"WGS"* ]]
+							then
+								checkRawdata "${project}" "${run}" "${controlFileBase}"
+							else
+								log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "This is WGS data! There is no raw data available"
+								# shellcheck disable=SC2029
+								ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" touch "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.rawDataCopiedToPrm.finished"
+							fi
 						else
 							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "CalculateProjectMd5s is not finished yet, the pipeline is still running"
 						fi

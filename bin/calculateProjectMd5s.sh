@@ -100,15 +100,19 @@ function calculateMd5() {
 			"Cannot find ${_controlFileBase}.pipeline.finished: skipping ${_project}/${_run}/ ... "
 		return
 	fi
-
-	#
-	# zip all files in jobs folder to ${_project}_jobs.tar.gz"
-	#
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
-		"zip all files in jobs folder to ${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/jobs/${_project}_jobs.tar.gz and removing originals"
-	tar -czvf "${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/results/${_project}_jobs.tar.gz" -C "${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/jobs/" .
-	rm -f "${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/jobs/"*
-	mv "${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/results/${_project}_jobs.tar.gz" "${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/jobs/"
+	
+	
+	if [[ -e "${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/jobs/" ]]
+	then
+		#
+		# zip all files in jobs folder to ${_project}_jobs.tar.gz"
+		#
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' \
+			"zip all files in jobs folder to ${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/jobs/${_project}_jobs.tar.gz and removing originals"
+		tar -czvf "${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/results/${_project}_jobs.tar.gz" -C "${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/jobs/" .
+		rm -f "${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/jobs/"*
+		mv "${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/results/${_project}_jobs.tar.gz" "${TMP_ROOT_DIR}/projects/${pipeline}/${_project}/${_run}/jobs/"
+	fi
 	#
 	# All checks passed: start computing checksums.
 	#
@@ -132,6 +136,7 @@ function calculateMd5() {
 			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			return
 		}
+	rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 	mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 }
 
