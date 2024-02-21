@@ -194,6 +194,12 @@ then
 else
 	for sampleSheet in "${sampleSheets[@]}"
 	do
+		if [[ "${sampleSheet}" != *"WGS"* ]]
+		then
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "This samplesheet is NOT a (s)WGS samplesheet, there is another script that executes this type of data..."
+			continue
+		fi
+		
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing sample sheet: ${sampleSheet} ..."
 		project="$(basename "${sampleSheet}" ".${SAMPLESHEET_EXT}")"
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing: ${project} ..."
