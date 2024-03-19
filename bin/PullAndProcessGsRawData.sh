@@ -146,7 +146,8 @@ function sanityChecking() {
 			2>> "${_controlFileBaseForFunction}.started" \
 			&& sed -i "/^[\s${SAMPLESHEET_SEP}]*$/d" "${_gsSampleSheet}.converted" \
 			2>> "${_controlFileBaseForFunction}.started" \
-			&& cp "${_gsSampleSheet}.converted" "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/"
+			&& cp "${_gsSampleSheet}.converted" "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/" \
+			2>> "${_controlFileBaseForFunction}.started" \
 		|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to convert line end characters and/or remove empty lines for ${_gsSampleSheet}."
 			mv "${_controlFileBaseForFunction}."{started,failed}
