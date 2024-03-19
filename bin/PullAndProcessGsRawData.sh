@@ -150,6 +150,9 @@ function sanityChecking() {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to convert line end characters and/or remove empty lines for ${_gsSampleSheet}."
 			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
+		
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Also put the ${_gsSampleSheet}.converted in the ${TMP_ROOT_DIR}/${_batch}/Raw_data/ folder."
+		cp "${TMP_ROOT_DIR}/${_batch}/${_gsSampleSheet}.converted" "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/"
 		}
 		#
 		# Continue with converted samplesheet.
