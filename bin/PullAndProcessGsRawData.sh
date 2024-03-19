@@ -688,7 +688,7 @@ function processSamplesheetsAndMoveConvertedData() {
 					_inhouseprojectFieldIndex=$((${_inhousesampleSheetColumnOffsets['analysis']} + 1))
 					if [[ "${_inhouseprojectFieldIndex}" == 'DRAGEN+NGS_RNA' ]]
 					then
-						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "This is an DRAGEN+NGS_RNA project, also put the samplesheet in ${TMP_ROOT_DIR}/Samplesheets/NGS_RNA/."
+						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "This is a DRAGEN+NGS_RNA project, also put the samplesheet in ${TMP_ROOT_DIR}/Samplesheets/NGS_RNA/."
 						cp "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_inhouseproject}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/Samplesheets/NGS_RNA/"
 					else
 						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "This is not an NGS_RNA project, nothing to do here"
@@ -700,6 +700,7 @@ function processSamplesheetsAndMoveConvertedData() {
 				fi
 			done
 		done
+	done
 	#
 	# Sanity check: count if the amount of sample lines in the GenomeScan samplesheet 
 	#               is the same or higher as the flowcell+lane+barcode lines in the combined sequencing run samplesheet(s).
@@ -764,9 +765,8 @@ function processSamplesheetsAndMoveConvertedData() {
 			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		}
-		
-		#### hier de samplessheet in de /Samplesheets map checken op RNA en verplaatsen naar de NGS_RNA map
-		
+
+
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "creating: mkdir -m 2770 -p ${TMP_ROOT_DIR}/logs/${_runDir} and touch ${RAWDATAPROCESSINGFINISHED} in that folder"
 		# shellcheck disable=SC2174
 		mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${_runDir}" \
