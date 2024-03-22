@@ -133,76 +133,79 @@ SEQ_DIR="/groups/umcg-lab/${tmpDir}/sequencers/"
 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "find ${SEQ_INCOMING_DIR}/ -mindepth 1 -maxdepth 1 -type d -o -type l"
 mapfile -t runs < <(find "${SEQ_INCOMING_DIR}/" -mindepth 1 -maxdepth 1 -type d -o -type l)
-
-for i in "${runs[@]}"
-do
+if [[ "${#runs[@]}" -eq '0' ]]
+then
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found at ${SEQ_INCOMING_DIR}/"
+else
+	for i in "${runs[@]}"
+	do
 	
-	run=$(basename "${i}")
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking ${run} ..."
-	moveSequencingDataJobControleFileBase="/groups/umcg-lab/${tmpDir}/logs/${run}/run01.moveSequencingData"
+		run=$(basename "${i}")
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking ${run} ..."
+		moveSequencingDataJobControleFileBase="/groups/umcg-lab/${tmpDir}/logs/${run}/run01.moveSequencingData"
 	
-	export JOB_CONTROLE_FILE_BASE="${moveSequencingDataJobControleFileBase}"
+		export JOB_CONTROLE_FILE_BASE="${moveSequencingDataJobControleFileBase}"
 	
-	if [[ -f "${JOB_CONTROLE_FILE_BASE}.started" ]]
-	then
-		if [[ ! -f "${JOB_CONTROLE_FILE_BASE}.transferCompleted" ]]
-		then			
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.started: Skipping ${run}, which is already getting processed."
-			continue
-		fi
-	fi
-	
-	# shellcheck disable=SC2174
-	mkdir -m 770 -p "/groups/umcg-lab/${tmpDir}/logs/${run}/"
-	#
-	# Check if the run has already completed.
-	#
-	if [[ -f "${SEQ_INCOMING_DIR}/${run}/CopyComplete.txt" ]]
-	then
-		if [[ ! -f "${JOB_CONTROLE_FILE_BASE}.transferCompleted" ]]
+		if [[ -f "${JOB_CONTROLE_FILE_BASE}.started" ]]
 		then
-			touch "${JOB_CONTROLE_FILE_BASE}.started"
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencing run completed: ${run}. Copy data from ${SEQ_INCOMING_DIR} to ${SEQ_DIR}."
-
-			if rsync -av --checksum --exclude="${SEQ_INCOMING_DIR}/${run}/RunCompletionStatus.xml" "${SEQ_INCOMING_DIR}/${run}"	"${SEQ_DIR}"
-			then	
-				rsync -av \
-				"${SEQ_INCOMING_DIR}/${run}/RunCompletionStatus.xml" \
-				"${SEQ_DIR}/${run}/"
-		
-				touch "${JOB_CONTROLE_FILE_BASE}.transferCompleted"
-			else
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to rsync ${SEQ_INCOMING_DIR}/${run}/."
-				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-				exit 1
+			if [[ ! -f "${JOB_CONTROLE_FILE_BASE}.transferCompleted" ]]
+			then			
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.started: Skipping ${run}, which is already getting processed."
+				continue
 			fi
 		fi
-	else
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencing run is not (yet) finished."
-		continue
-	fi
-
-	if [[ -f "${JOB_CONTROLE_FILE_BASE}.transferCompleted" ]]
-	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Transfer completed for run ${run}."
-		dateInSecRawData="$(date -d"$(rsync "${JOB_CONTROLE_FILE_BASE}.transferCompleted" | awk '{print $3}')" +%s)"
-		dateInSecNow=$(date +%s)
-		if [[ $(((dateInSecNow - dateInSecRawData) / 86400)) -gt 2 ]]
+	
+		# shellcheck disable=SC2174
+		mkdir -m 770 -p "/groups/umcg-lab/${tmpDir}/logs/${run}/"
+		#
+		# Check if the run has already completed.
+		#
+		if [[ -f "${SEQ_INCOMING_DIR}/${run}/CopyComplete.txt" ]]
 		then
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Transfer completed more than 2 days ago, ${run} will be removed from ${SEQ_INCOMING_DIR}"
-			runDir="${SEQ_INCOMING_DIR}/${run}"
-			rm -rf "${runDir:?}"
-			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+			touch "${JOB_CONTROLE_FILE_BASE}.started"
+			if [[ ! -f "${JOB_CONTROLE_FILE_BASE}.transferCompleted" ]]
+			then
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencing run completed: ${run}. Copy data from ${SEQ_INCOMING_DIR} to ${SEQ_DIR}."
+				if rsync -av --checksum --exclude="${SEQ_INCOMING_DIR}/${run}/RunCompletionStatus.xml" "${SEQ_INCOMING_DIR}/${run}"	"${SEQ_DIR}"
+				then	
+					rsync -av \
+					"${SEQ_INCOMING_DIR}/${run}/RunCompletionStatus.xml" \
+					"${SEQ_DIR}/${run}/"
+		
+					touch "${JOB_CONTROLE_FILE_BASE}.transferCompleted"
+				else
+					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to rsync ${SEQ_INCOMING_DIR}/${run}/."
+					mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+					exit 1
+				fi
+			fi
 		else
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Data removal on hold for ${run}: Transfer completed is less than 2 days ago"	
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencing run is not (yet) finished."
+			continue
 		fi
-	else
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to rsync ${SEQ_INCOMING_DIR}/${run}/."
-		mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-	fi
+
+		if [[ -f "${JOB_CONTROLE_FILE_BASE}.transferCompleted" ]]
+		then
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Transfer completed for run ${run}."
+			dateInSecRawData="$(date -d"$(rsync "${JOB_CONTROLE_FILE_BASE}.transferCompleted" | awk '{print $3}')" +%s)"
+			dateInSecNow=$(date +%s)
+			if [[ $(((dateInSecNow - dateInSecRawData) / 86400)) -gt 2 ]]
+			then
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Transfer completed more than 2 days ago, ${run} will be removed from ${SEQ_INCOMING_DIR}"
+				runDir="${SEQ_INCOMING_DIR}/${run}"
+				rm -rf "${runDir:?}"
+				rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
+				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+			else
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Data removal on hold for ${run}: Transfer completed is less than 2 days ago"	
+			fi
+		else
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to rsync ${SEQ_INCOMING_DIR}/${run}/."
+			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+		fi
 
 
-done
-
+	done
+fi
 trap - EXIT
 exit 0
