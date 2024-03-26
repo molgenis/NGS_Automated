@@ -146,6 +146,8 @@ function sanityChecking() {
 			2>> "${_controlFileBaseForFunction}.started" \
 			&& sed -i "/^[\s${SAMPLESHEET_SEP}]*$/d" "${_gsSampleSheet}.converted" \
 			2>> "${_controlFileBaseForFunction}.started" \
+			&& cp "${_gsSampleSheet}.converted" "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/" \
+			2>> "${_controlFileBaseForFunction}.started" \
 		|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to convert line end characters and/or remove empty lines for ${_gsSampleSheet}."
 			mv "${_controlFileBaseForFunction}."{started,failed}
@@ -507,7 +509,7 @@ function renameFastQs() {
 	#
 	# Load ngs-utils.
 	#
-	module load ngs-utils \
+	module load ngs-utils/"${NGS_UTILS_VERSION}" \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 		&& module list \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
@@ -577,7 +579,6 @@ function processSamplesheetsAndMoveConvertedData() {
 	#
 	# Combine GenomeScan samplesheet per batch with inhouse samplesheet(s) per project.
 	#
-
 	createInhouseSamplesheetFromGS.py \
 		--genomeScanInputDir "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/" \
 		--inhouseSamplesheetsInputDir "${TMP_ROOT_DIR}/Samplesheets/" \
@@ -666,6 +667,40 @@ function processSamplesheetsAndMoveConvertedData() {
 			fi
 		done
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished creating ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}."
+		#
+		## Determine if this is an NGS_RNA or an NGS_DNA project. For RNA projects the samplesheet will also be put in Samplesheets/NGS_RNA/
+		#
+		declare -a _inhouseSampleSheetColumnNames=()
+		declare -A _inhousesampleSheetColumnOffsets=()
+		local      _inhouseprojectFieldIndex
+
+		for _inhouseproject in "${_projects[@]}"
+		do
+			_inhouseSampleSheet=$(ls -1 "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_inhouseproject}.${SAMPLESHEET_EXT}")
+			IFS="${SAMPLESHEET_SEP}" read -r -a _inhousesampleSheetColumnNames <<< "$(head -1 "${_inhouseSampleSheet}")"
+			for (( _offset = 0 ; _offset < ${#_inhousesampleSheetColumnNames[@]} ; _offset++ ))
+			do
+				_inhousesampleSheetColumnOffsets["${_inhousesampleSheetColumnNames[${_offset}]}"]="${_offset}"
+			done
+			if [[ -n "${_inhousesampleSheetColumnOffsets['analysis']+isset}" ]]
+			then
+				_inhouseprojectFieldIndex=$((${_inhousesampleSheetColumnOffsets['analysis']} + 1))
+				_analysisType=$(tail -n-1 "${_inhouseSampleSheet}" | cut -d, -f"${_inhouseprojectFieldIndex}")
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "_inhouseprojectFieldIndex = ${_inhouseprojectFieldIndex}"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "_analysisType = ${_analysisType}"
+				if [[ "${_analysisType}" == 'DRAGEN+NGS_RNA' ]]
+				then
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "This is a DRAGEN+NGS_RNA project, also put the samplesheet in ${TMP_ROOT_DIR}/Samplesheets/NGS_RNA/."
+					cp "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_inhouseproject}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/Samplesheets/NGS_RNA/"
+				else
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "This is not an NGS_RNA project, nothing to do here"
+				fi
+			else
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Column containing analysis name is missing in ${_inhouseSampleSheet}."
+				mv "${_controlFileBaseForFunction}."{started,failed}
+				return
+			fi
+		done
 	done
 	#
 	# Sanity check: count if the amount of sample lines in the GenomeScan samplesheet 
@@ -912,8 +947,8 @@ declare -A requiredSamplesheetColumns=(
 	['flowcell']='empty'
 	['lane']='empty'
 	['sampleProcessStepID']='present'
+	['analysis']='present'
 )
-
 logTimeStamp="$(date "+%Y-%m-%d")"
 logDir="${TMP_ROOT_DIR}/logs/${logTimeStamp}/"
 # shellcheck disable=SC2174
