@@ -310,7 +310,6 @@ function sanityChecking() {
 	local _project
 	local _sampleSheet
 	local _archivedSampleSheet
-	
 	for _project in "${_projects[@]}"
 	do
 		#
@@ -510,8 +509,7 @@ function renameFastQs() {
 	#
 	# Load ngs-utils.
 	#
-	#module load ngs-utils \
-	module load ngs-utils/beta \
+	module load ngs-utils/"${NGS_UTILS_VERSION}" \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 		&& module list \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
@@ -592,7 +590,6 @@ function processSamplesheetsAndMoveConvertedData() {
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	}
-	
 	#
 	# Get a list of projects listed in the GenomeScan samplesheet.
 	#
@@ -618,7 +615,6 @@ function processSamplesheetsAndMoveConvertedData() {
 		return
 	fi
 	readarray -t _projects < <(tail -n +2 "${_gsSampleSheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_projectFieldIndex}" | sed 's/-[0-9][0-9]*$//' | sort | uniq )
-
 	#
 	# Get a list of sequencing run dirs (created by renameFastQs.bash)
 	# and in format ${sequencingStartdate}_${sequencer}_${run}_${flowcell}
@@ -671,7 +667,6 @@ function processSamplesheetsAndMoveConvertedData() {
 			fi
 		done
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished creating ${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_runDir}/${_runDir}.${SAMPLESHEET_EXT}."
-		
 		#
 		## Determine if this is an NGS_RNA or an NGS_DNA project. For RNA projects the samplesheet will also be put in Samplesheets/NGS_RNA/
 		#
@@ -771,8 +766,6 @@ function processSamplesheetsAndMoveConvertedData() {
 			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
 		}
-
-
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "creating: mkdir -m 2770 -p ${TMP_ROOT_DIR}/logs/${_runDir} and touch ${RAWDATAPROCESSINGFINISHED} in that folder"
 		# shellcheck disable=SC2174
 		mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${_runDir}" \
@@ -956,7 +949,6 @@ declare -A requiredSamplesheetColumns=(
 	['sampleProcessStepID']='present'
 	['analysis']='present'
 )
-
 logTimeStamp="$(date "+%Y-%m-%d")"
 logDir="${TMP_ROOT_DIR}/logs/${logTimeStamp}/"
 # shellcheck disable=SC2174
