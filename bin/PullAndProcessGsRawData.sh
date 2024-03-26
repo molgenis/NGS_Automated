@@ -686,22 +686,23 @@ function processSamplesheetsAndMoveConvertedData() {
 			for (( _offset = 0 ; _offset < ${#_inhousesampleSheetColumnNames[@]} ; _offset++ ))
 			do
 				_inhousesampleSheetColumnOffsets["${_inhousesampleSheetColumnNames[${_offset}]}"]="${_offset}"
-				if [[ -n "${_inhousesampleSheetColumnOffsets['analysis']+isset}" ]]
-				then
-					_inhouseprojectFieldIndex=$((${_inhousesampleSheetColumnOffsets['analysis']} + 1))
-					if [[ "${_inhouseprojectFieldIndex}" == 'DRAGEN+NGS_RNA' ]]
-					then
-						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "This is a DRAGEN+NGS_RNA project, also put the samplesheet in ${TMP_ROOT_DIR}/Samplesheets/NGS_RNA/."
-						cp "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_inhouseproject}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/Samplesheets/NGS_RNA/"
-					else
-						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "This is not an NGS_RNA project, nothing to do here"
-					fi
-				else
-					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Column containing analysis name is missing in ${_inhouseSampleSheet}."
-					mv "${_controlFileBaseForFunction}."{started,failed}
-					return
-				fi
 			done
+			if [[ -n "${_inhousesampleSheetColumnOffsets['analysis']+isset}" ]]
+			then
+				_inhouseprojectFieldIndex=$((${_inhousesampleSheetColumnOffsets['analysis']} + 1))
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "_inhouseprojectFieldIndex = ${_inhouseprojectFieldIndex}"
+				if [[ "${_inhouseprojectFieldIndex}" == 'DRAGEN+NGS_RNA' ]]
+				then
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "This is a DRAGEN+NGS_RNA project, also put the samplesheet in ${TMP_ROOT_DIR}/Samplesheets/NGS_RNA/."
+					cp "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_inhouseproject}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/Samplesheets/NGS_RNA/"
+				else
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "This is not an NGS_RNA project, nothing to do here"
+				fi
+			else
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Column containing analysis name is missing in ${_inhouseSampleSheet}."
+				mv "${_controlFileBaseForFunction}."{started,failed}
+				return
+			fi
 		done
 	done
 	#
