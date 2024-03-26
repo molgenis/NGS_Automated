@@ -510,7 +510,8 @@ function renameFastQs() {
 	#
 	# Load ngs-utils.
 	#
-	module load ngs-utils \
+	#module load ngs-utils \
+	module load ngs-utils/beta \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 		&& module list \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
