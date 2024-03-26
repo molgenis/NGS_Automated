@@ -690,8 +690,10 @@ function processSamplesheetsAndMoveConvertedData() {
 			if [[ -n "${_inhousesampleSheetColumnOffsets['analysis']+isset}" ]]
 			then
 				_inhouseprojectFieldIndex=$((${_inhousesampleSheetColumnOffsets['analysis']} + 1))
+				_analysisType=$(cat "${_inhouseSampleSheet}" | cut -d, -f"${_inhouseprojectFieldIndex}" | tail -n-1)
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "_inhouseprojectFieldIndex = ${_inhouseprojectFieldIndex}"
-				if [[ "${_inhouseprojectFieldIndex}" == 'DRAGEN+NGS_RNA' ]]
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "_analysisType = ${_analysisType}"
+				if [[ "${_analysisType}" == 'DRAGEN+NGS_RNA' ]]
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "This is a DRAGEN+NGS_RNA project, also put the samplesheet in ${TMP_ROOT_DIR}/Samplesheets/NGS_RNA/."
 					cp "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/${_inhouseproject}.${SAMPLESHEET_EXT}" "${TMP_ROOT_DIR}/Samplesheets/NGS_RNA/"
