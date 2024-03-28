@@ -226,7 +226,7 @@ for gsSamplesheetFile in glob.iglob(os.path.join(args.genomeScanInputDir, "UMCG_
 #
 # Check availability and readability of md5sum file.
 #
-checksumsFilePath = args.genomeScanInputDir + 'checksums.md5'
+checksumsFilePath = args.samplesheetsOutputDir + 'checksums.md5'
 if os.path.isfile(checksumsFilePath) and os.access(checksumsFilePath, os.R_OK):
     logging.info('Found checksums file: ' + checksumsFilePath + '.')
 else:
