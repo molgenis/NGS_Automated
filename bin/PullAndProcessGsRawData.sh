@@ -578,7 +578,7 @@ function processSamplesheetsAndMoveConvertedData() {
 	# Combine GenomeScan samplesheet per batch with inhouse samplesheet(s) per project.
 	#
 	createInhouseSamplesheetFromGS.py \
-		--genomeScanInputDir "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/" \
+		--genomeScanInputDir "${TMP_ROOT_DIR}/${_batch}/" \
 		--inhouseSamplesheetsInputDir "${TMP_ROOT_DIR}/Samplesheets/" \
 		--samplesheetsOutputDir "${TMP_ROOT_DIR}/${_batch}/${rawdataFolder}/" \
 		--logLevel "${_pythonLogLevel}" \
