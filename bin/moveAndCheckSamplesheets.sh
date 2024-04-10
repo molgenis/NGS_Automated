@@ -318,14 +318,6 @@ fi
 readarray -t samplesheetsChecked < <(find "${samplesheetsSourceFolderChecked}" -maxdepth 1 -mindepth 1 -type f -name "*.${SAMPLESHEET_EXT}")
 if [[ "${#samplesheetsChecked[@]}" -eq '0' ]]
 then
-#	logTimeStamp="$(date "+%Y-%m-%d")"
-#	logDir="${DAT_ROOT_DIR}/logs/${logTimeStamp}/"
-	# shellcheck disable=SC2174
-#	mkdir -m 2770 -p "${logDir}"
-#	touch "${logDir}"
-#	export JOB_CONTROLE_FILE_BASE="${logDir}/${logTimeStamp}.${SCRIPT_NAME}"
-#	printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
-	
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No samplesheets found in ${samplesheetsSourceFolderChecked}."
 	trap - EXIT
 	exit 0
@@ -333,17 +325,12 @@ fi
 
 for samplesheetChecked in "${samplesheetsChecked[@]}"
 do
-	# if samplesheets[@] is empty this means that the samplesheet is coming from a different machine, so we need logDir and a ${JOB_CONTROLE_FILE_BASE}.started file
-	if [[ "${#samplesheets[@]}" -eq '0' ]]
-	then
-		sampleSheetName=$(basename "${samplesheetChecked%.*}")
-		logDir="${DAT_ROOT_DIR}/logs/${sampleSheetName}/"
-		# shellcheck disable=SC2174
-		mkdir -m 2770 -p "${logDir}"
-		touch "${logDir}"
-		export JOB_CONTROLE_FILE_BASE="${logDir}/${sampleSheetName}.${SCRIPT_NAME}"
-		printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
-	fi
+	# if samplesheets[@] is empty this means that the samplesheet is coming from a different machine, so we need logDir and${JOB_CONTROLE_FILE_BASE}.started file
+	sampleSheetName=$(basename "${samplesheetChecked%.*}")
+	logDir="${DAT_ROOT_DIR}/logs/${sampleSheetName}/"
+	# shellcheck disable=SC2174
+	mkdir -m 2770 -p "${logDir}"
+	export JOB_CONTROLE_FILE_BASE="${logDir}/${sampleSheetName}.${SCRIPT_NAME}"
 	
 	declare -a _sampleSheetColumnNames=()
 	declare -A _sampleSheetColumnOffsets=()
