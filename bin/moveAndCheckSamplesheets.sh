@@ -328,6 +328,7 @@ do
 	# if samplesheets[@] is empty this means that the samplesheet is coming from a different machine, so we need logDir and${JOB_CONTROLE_FILE_BASE}.started file
 	sampleSheetName=$(basename "${samplesheetChecked%.*}")
 	logDir="${DAT_ROOT_DIR}/logs/${sampleSheetName}/"
+	# shellcheck disable=SC2174
 	mkdir -m 2770 -p "${logDir}"
 	export JOB_CONTROLE_FILE_BASE="${logDir}/${sampleSheetName}.${SCRIPT_NAME}"
 	
