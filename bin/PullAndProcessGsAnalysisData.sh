@@ -287,19 +287,19 @@ function mergeSamplesheets(){
 
 	# Combine samplesheets 
 	mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
-	teller=0
+	count=0
 	local _projectName
 	local _captkit
 	for i in "${uniqProjects[@]}"
 	do
-		sampie="${TMP_ROOT_DIR}/${_batch}/${i}.csv"
-		cp "${sampie}"{,.converted}
-		printf '\n'     >> "${sampie}.converted"
-		sed -i 's/\r/\n/g' "${sampie}.converted"
-		sed -i "/^[\s${SAMPLESHEET_SEP}]*$/d" "${sampie}.converted"
-		mv "${sampie}.converted" "${sampie}"
+		samplesheet="${TMP_ROOT_DIR}/${_batch}/${i}.csv"
+		cp "${samplesheet}"{,.converted}
+		printf '\n'     >> "${samplesheet}.converted"
+		sed -i 's/\r/\n/g' "${samplesheet}.converted"
+		sed -i "/^[\s${SAMPLESHEET_SEP}]*$/d" "${samplesheet}.converted"
+		mv "${samplesheet}.converted" "${samplesheet}"
 		
-		if [[ "${teller}" -eq '0' ]]
+		if [[ "${count}" -eq '0' ]]
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Creating new combined samplesheet for the processing of the Analysis data"
 			#Renaming samplesheet to solely the GS_XX (e.g. GS_182.. so without the A,B,C etc suffix)
@@ -307,12 +307,12 @@ function mergeSamplesheets(){
 			_captkit=$(echo "${i}" | awk 'BEGIN {FS="-"}{print $NF}')
 			_projectName="${_projectName}-${_captkit}"
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "new samplesheet name: ${_projectName}.csv"
-			cat "${TMP_ROOT_DIR}/${_batch}/${i}.csv" > "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
-			teller=$((${teller}+1))
+			cat "${samplesheet}" > "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
+			count=$((${count}+1))
 		else
-			tail -n+2 "${TMP_ROOT_DIR}/${_batch}/${i}.csv" >> "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
+			tail -n+2 "${samplesheet}" >> "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
 		fi
-		mv "${TMP_ROOT_DIR}/${_batch}/${i}.csv" "${TMP_ROOT_DIR}/Samplesheets/archive/${i}.csv"
+		mv "${samplesheet}" "${TMP_ROOT_DIR}/Samplesheets/archive/${i}.csv"
 	done
 	
 	mv -v "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv" "${TMP_ROOT_DIR}/Samplesheets/NGS_DNA/${_projectName}.csv"
