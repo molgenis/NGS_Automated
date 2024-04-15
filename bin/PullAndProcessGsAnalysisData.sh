@@ -307,7 +307,7 @@ function mergeSamplesheets(){
 			_captkit=$(echo "${i}" | awk 'BEGIN {FS="-"}{print $NF}')
 			_projectName="${_projectName}-${_captkit}"
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "new samplesheet name: ${_projectName}.csv"
-			cat "${samplesheet}" > "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
+			cp "${samplesheet}" > "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
 			count=$((${count}+1))
 		else
 			tail -n+2 "${samplesheet}" >> "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
