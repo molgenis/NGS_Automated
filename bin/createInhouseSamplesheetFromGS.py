@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 
 import os
 import glob
@@ -162,7 +162,7 @@ def makeOriginalFilenameHashmap(_checksumsFilePath):
             #                                                                  {'lane': '8', 'sequencingStartDate': '181128', 'run': '0364', 'sequencer': 'K00296', 'flowcell': 'HYKGJBBXX', 'barcodes': 'CAGAGAGG-TCTACTCT'}])
             #
             _barcodesPlusGenomeScanID = _barcodes + '-' + _genomeScanID
-            if _originalFileNameDict.has_key(_barcodesPlusGenomeScanID):
+            if _barcodesPlusGenomeScanID in _originalFileNameDict:
                 _originalFileNameDict[_barcodesPlusGenomeScanID].append(
                     {'lane': _lane, 'barcodes': _barcodes, 'flowcell': _flowcell, 
                      'sequencingStartDate': _flowcellDict[_flowcell]['sequencingStartDate'], 'sequencer': _flowcellDict[_flowcell]['sequencer'], 'run': _flowcellDict[_flowcell]['run']})
