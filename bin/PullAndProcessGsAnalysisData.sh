@@ -289,7 +289,7 @@ function mergeSamplesheets(){
 	mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
 	count=0
 	local _projectName
-	local _captkit
+	local _capturingKit
 	for i in "${uniqProjects[@]}"
 	do
 		samplesheet="${TMP_ROOT_DIR}/${_batch}/${i}.csv"
@@ -304,8 +304,8 @@ function mergeSamplesheets(){
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Creating new combined samplesheet for the processing of the Analysis data"
 			#Renaming samplesheet to solely the GS_XX (e.g. GS_182.. so without the A,B,C etc suffix)
 			_projectName=$(echo "${i}" | grep -Eo 'GS_[0-9]+')
-			_captkit=$(echo "${i}" | awk 'BEGIN {FS="-"}{print $NF}')
-			_projectName="${_projectName}-${_captkit}"
+			_capturingKit=$(echo "${i}" | awk 'BEGIN {FS="-"}{print $NF}')
+			_projectName="${_projectName}-${_capturingKit}"
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "new samplesheet name: ${_projectName}.csv"
 			cp "${samplesheet}" "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
 			count=$((${count}+1))
