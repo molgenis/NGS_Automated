@@ -118,7 +118,7 @@ def readableDir(prospectiveDir):
 #
 parser = argparse.ArgumentParser(description='Commandline parameters:')
 parser.add_argument("--genomeScanInputDir", type=readableDir, required=True, help='Input directory containing one GenomeScan batch (*.csv, checksums.m5 and *.fastq.gz files).')
-parser.add_argument("--inhouseSamplesheetsInputDir", type=readableDir , required=True, help='Input directory containing incomplete new inhouse samplesheets.')
+parser.add_argument("--inhouseSamplesheetsInputDir", type=readableDir, required=True, help='Input directory containing incomplete new inhouse samplesheets.')
 parser.add_argument("--samplesheetsOutputDir", type=readableDir, required=True, help='Directory where complete, merged inhouse samplesheets are stored.')
 parser.add_argument("--logLevel", required=False, default='INFO', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'])
 args = parser.parse_args()
