@@ -31,7 +31,7 @@ def printNewSamplesheet(_projectSamplesheetPath, _gsSamplesheetDataHashmap, _sam
         #  * version of Darwin code that produced the samplesheet
         #  * whether were prepped at GenomeScan or in our own lab.
         #
-        _potentiallyMissingColumns = ['barcode', 'barcode1', 'barcode2', 'GS_ID', 'gsBatch','originalproject']
+        _potentiallyMissingColumns = ['barcode', 'barcode1', 'barcode2', 'GS_ID', 'gsBatch', 'originalproject']
         for _potentiallyMissingColumn in _potentiallyMissingColumns:
             if not _potentiallyMissingColumn in _headers:
                 _headers.append(_potentiallyMissingColumn)
