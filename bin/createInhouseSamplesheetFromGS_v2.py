@@ -200,7 +200,7 @@ for row in gsReader:
         logging.critical('Cannot parse project name and sampleProcessStepID from "' + row[gsSampleIdColumnName] + '" in column ' + gsSampleIdColumnName + ' from ' + gsSamplesheetFile + '.')
         sys.exit('FATAL ERROR!')
     gsGenomeScanID=row['GS_ID']
-    b = re.match("(^[0-9]+-[0-9]+)-([0-9]+)$", row['GS_ID'])
+    b = re.match("(^[0-9]+-[0-9]+)-([0-9]+)$", row[gsGenomeScanID])
     gsBatch= b.group(1)
     gsProjects.append(gsProject)
     c = re.match("(^[a-zA-Z0-9_]+)-([a-zA-Z0-9_]+)$", gsProject)
