@@ -195,7 +195,6 @@ else
 				rm -vf "${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished"
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "The projectDataCopiedToPrm.finished is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove the project and generatedscripts folders the ${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished file needs to be at least ${daysTillRemoval} days old."
-				continue
 			fi
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished does not exist, skipping"

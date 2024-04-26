@@ -228,6 +228,7 @@ function sanityChecking(){
 			cd -
 		done
 	done
+	
 	rm -f "${_controlFileBaseForFunction}.failed"
 	mv -v "${_controlFileBaseForFunction}."{started,finished}
 }
@@ -248,36 +249,73 @@ function mergeSamplesheets(){
 		printf '' > "${_controlFileBaseForFunction}.started"
 	fi
 	
+	#
+	# Convert log4bash log levels to Python logging levels where necessary
+	#
+	local _pythonLogLevel
+	_pythonLogLevel='TRACE' # default fallback.
+	if [[ "${l4b_log_level}" == 'TRACE' ]]
+	then
+		_pythonLogLevel='DEBUG'
+	elif [[ "${l4b_log_level}" == 'WARN' ]]
+	then
+		_pythonLogLevel='WARNING'
+	elif [[ "${l4b_log_level}" == 'FATAL' ]]
+	then
+		_pythonLogLevel='CRITICAL'
+	else
+		_pythonLogLevel="${l4b_log_level}"
+	fi
+	#
+	# Combine GenomeScan samplesheet per batch with inhouse samplesheet(s) per project.
+	#
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "combining GS samplesheet with inhouse samplesheet"
+	createInhouseSamplesheetFromGS_v2.py \
+		--genomeScanInputDir "${TMP_ROOT_DIR}/${_batch}/" \
+		--inhouseSamplesheetsInputDir "${TMP_ROOT_DIR}/Samplesheets/" \
+		--samplesheetsOutputDir "${TMP_ROOT_DIR}/${_batch}/" \
+		--logLevel "${_pythonLogLevel}" \
+		>> "${_controlFileBaseForFunction}.started" 2>&1 \
+	|| {
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "createInhouseSamplesheetFromGS_v2.py failed."
+		mv "${_controlFileBaseForFunction}."{started,failed}
+		return
+	}
+
+
 	csvFile=$(ls -1 "${TMP_ROOT_DIR}/${gsBatch}/UMCG_CSV_"*".csv")
 
 	# Combine samplesheets 
 	mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
-	teller=0
+	count=0
 	local _projectName
-	local _captkit
+	local _capturingKit
 	for i in "${uniqProjects[@]}"
 	do
-		if [[ "${teller}" -eq '0' ]]
+		samplesheet="${TMP_ROOT_DIR}/${_batch}/${i}.csv"
+		cp "${samplesheet}"{,.converted}
+		printf '\n'     >> "${samplesheet}.converted"
+		sed -i 's/\r/\n/g' "${samplesheet}.converted"
+		sed -i "/^[\s${SAMPLESHEET_SEP}]*$/d" "${samplesheet}.converted"
+		mv "${samplesheet}.converted" "${samplesheet}"
+		
+		if [[ "${count}" -eq '0' ]]
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Creating new combined samplesheet for the processing of the Analysis data"
 			#Renaming samplesheet to solely the GS_XX (e.g. GS_182.. so without the A,B,C etc suffix)
 			_projectName=$(echo "${i}" | grep -Eo 'GS_[0-9]+')
-			_captkit=$(echo "${i}" | awk 'BEGIN {FS="-"}{print $NF}')
-			_projectName="${_projectName}-${_captkit}"
-			# create a combined samplesheet header, renamed project to originalproject and added new project column
+			_capturingKit=$(echo "${i}" | awk 'BEGIN {FS="-"}{print $NF}')
+			_projectName="${_projectName}-${_capturingKit}"
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "new samplesheet name: ${_projectName}.csv"
-			head -1 "${TMP_ROOT_DIR}/Samplesheets/${i}.csv" | perl -p -e 's|,project|,originalproject|' | awk '{print $0",project,gsBatch"}' > "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
-			tail -n+2 "${TMP_ROOT_DIR}/Samplesheets/${i}.csv" >> "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
-			teller=$((${teller}+1))
+			cp "${samplesheet}" "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
+			count=$((${count}+1))
 		else
-			tail -n+2 "${TMP_ROOT_DIR}/Samplesheets/${i}.csv" >> "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
+			tail -n+2 "${samplesheet}" >> "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
 		fi
-		mv "${TMP_ROOT_DIR}/Samplesheets/${i}.csv" "${TMP_ROOT_DIR}/Samplesheets/archive/${i}.csv"
+		mv "${samplesheet}" "${TMP_ROOT_DIR}/Samplesheets/archive/${i}.csv"
 	done
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Adding projectName ${_projectName} and gsBatch:${gsBatch} to the samplesheet and put the samplesheet ${TMP_ROOT_DIR}/Samplesheets/NGS_DNA/${_projectName}.csv"
 	
-	awk -v projectName="${_projectName}" -v gsBatch="${_batch}" '{if (NR==1){print $0}else{print $0","projectName","gsBatch}}' "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv" > "${TMP_ROOT_DIR}/Samplesheets/NGS_DNA/${_projectName}.csv"
-	rm "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
+	mv -v "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv" "${TMP_ROOT_DIR}/Samplesheets/NGS_DNA/${_projectName}.csv"
 	rm -f "${_controlFileBaseForFunction}.failed"
 	mv -v "${_controlFileBaseForFunction}."{started,finished}
 }
@@ -616,14 +654,15 @@ else
 				#
 				# Convert date to seconds for easier calculation of the date difference.
 				# 86400 = 1 day in seconds.
-				#
-				# When the pipeline is finished, a run01.pipeline.finished is created
-				# If this file is older than 2 days, the genomescan batch will be removed from the data staging machine.
-				#
+				
 				if [[ -f "${TMP_ROOT_DIR}/logs/${projectName}/run01.pipeline.finished" ]]
 				then
 					dateInSecAnalysisData="$(date -d"$(rsync "${TMP_ROOT_DIR}/logs/${projectName}/run01.pipeline.finished" | awk '{print $3}')" +%s)"
 			
+					#
+					# When the pipeline is finished, a run01.pipeline.finished is created
+					# If this file is older than 2 days, the genomescan batch will be removed from the data staging machine.
+					#
 					dateInSecNow=$(date +%s)
 					if [[ $(((dateInSecNow - dateInSecAnalysisData) / 86400)) -gt 2 ]]
 					then
@@ -636,6 +675,18 @@ else
 						rmdir "${HOME}/empty_dir/"
 					else
 						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " the pipeline.finished is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove the Analysis folder the ${TMP_ROOT_DIR}/logs/${projectName}/run01.pipeline.finished needs to be at least 2 days old"
+						continue
+					fi
+					#
+					# When the pipeline is finished, a run01.pipeline.finished is created
+					# If this file is older than 6 days, the genomescan batch will be removed from tmp.
+					#
+					if [[ $(((dateInSecNow - dateInSecAnalysisData) / 86400)) -gt 6 ]]
+					then
+						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${gsBatch} from tmp because the pipeline is finished and the file is older than 6 days"
+						rmdir "${TMP_ROOT_DIR}/${gsBatch}"
+					else
+						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " the pipeline.finished is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove the ${gsBatch} folder from tmp the ${TMP_ROOT_DIR}/logs/${projectName}/run01.pipeline.finished needs to be at least 6 days old"
 						continue
 					fi
 				else

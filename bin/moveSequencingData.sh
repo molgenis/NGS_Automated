@@ -166,7 +166,7 @@ else
 			if [[ ! -f "${JOB_CONTROLE_FILE_BASE}.transferCompleted" ]]
 			then
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencing run completed: ${run}. Copy data from ${SEQ_INCOMING_DIR} to ${SEQ_DIR}."
-				if rsync -av --checksum --exclude="${SEQ_INCOMING_DIR}/${run}/RunCompletionStatus.xml" "${SEQ_INCOMING_DIR}/${run}"	"${SEQ_DIR}"
+				if rsync -av --checksum --exclude="RunCompletionStatus.xml" "${SEQ_INCOMING_DIR}/${run}"	"${SEQ_DIR}"
 				then	
 					rsync -av \
 					"${SEQ_INCOMING_DIR}/${run}/RunCompletionStatus.xml" \
