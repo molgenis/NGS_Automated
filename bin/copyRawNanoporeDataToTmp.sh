@@ -213,55 +213,55 @@ declare -a runs
 # Parse nanopore folder.
 #
 mapfile -t runs < <(find "${PRM_ROOT_DIR}/rawdata/nanopore/" -maxdepth 1 -mindepth 1 -type d)
-	for run in "${runs[@]}"
-	do
-		#
-		# Process this run 
-		#
-		runName="$(basename "${run}")"
-		controlFileBase="${PRM_ROOT_DIR}/logs/${runName}/${runName}"
-		export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
-		# shellcheck disable=SC2174
-		mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${runName}/"
-		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]] 
-		then
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed run ${runName}."
-			continue
-		else
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${runName}."
-			touch "${JOB_CONTROLE_FILE_BASE}.started"
+for run in "${runs[@]}"
+do
+	#
+	# Process this run 
+	#
+	runName="$(basename "${run}")"
+	controlFileBase="${PRM_ROOT_DIR}/logs/${runName}/${runName}"
+	export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
+	# shellcheck disable=SC2174
+	mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${runName}/"
+	if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]] 
+	then
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed run ${runName}."
+		continue
+	else
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${runName}."
+		touch "${JOB_CONTROLE_FILE_BASE}.started"
 
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${run} to ${diagnostic_server_location}:${TMP_ROOT_DIR}/rawdata/nanopore/"
-			rsync -rltDvc --rsync-path="sudo -u ${group}-ateambot rsync" "${run}" "${diagnostic_server_location}:${TMP_ROOT_DIR}/rawdata/nanopore/" \
-			|| {
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${runName}"
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from ${PRM_ROOT_DIR}/rawdata/nanopore/"
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    to ${diagnostic_server_location}:${TMP_ROOT_DIR}/rawdata/nanopore/"
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${run} to ${diagnostic_server_location}:${TMP_ROOT_DIR}/rawdata/nanopore/"
+		rsync -rltDvc --rsync-path="sudo -u ${group}-ateambot rsync" "${run}" "${diagnostic_server_location}:${TMP_ROOT_DIR}/rawdata/nanopore/" \
+		|| {
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${runName}"
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from ${PRM_ROOT_DIR}/rawdata/nanopore/"
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    to ${diagnostic_server_location}:${TMP_ROOT_DIR}/rawdata/nanopore/"
+		mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+		continue
+		}
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred the data from ${run} to ${diagnostic_server_location}:${TMP_ROOT_DIR}/rawdata/nanopore/${runName}"
+		#
+		## Copy samplesheet to tmp that is the signal for the next step to start
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing samplesheet ${PRM_ROOT_DIR}/Samplesheets/${runName}.csv to ${diagnostic_server_location}:${TMP_ROOT_DIR}/Samplesheets/nanopore/"
+		
+		rsync -rltDvc --rsync-path="sudo -u ${group}-ateambot rsync" "${PRM_ROOT_DIR}/Samplesheets/${runName}.csv" "${diagnostic_server_location}:${TMP_ROOT_DIR}/Samplesheets/nanopore/" \
+		|| {
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync samplesheet ${runName}.csv"
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from ${PRM_ROOT_DIR}/Samplesheets/"
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    to ${diagnostic_server_location}:${TMP_ROOT_DIR}/Samplesheets/nanopore/"
 			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			continue
-			}
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred the data from ${run} to ${diagnostic_server_location}:${TMP_ROOT_DIR}/rawdata/nanopore/${runName}"
-			#
-			## Copy samplesheet to tmp that is the signal for the next step to start
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing samplesheet ${PRM_ROOT_DIR}/Samplesheets/${runName}.csv to ${diagnostic_server_location}:${TMP_ROOT_DIR}/Samplesheets/nanopore/"
-			
-			rsync -rltDvc --rsync-path="sudo -u ${group}-ateambot rsync" "${PRM_ROOT_DIR}/Samplesheets/${runName}.csv" "${diagnostic_server_location}:${TMP_ROOT_DIR}/Samplesheets/nanopore/" \
-			|| {
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync samplesheet ${runName}.csv"
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from ${PRM_ROOT_DIR}/Samplesheets/"
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    to ${diagnostic_server_location}:${TMP_ROOT_DIR}/Samplesheets/nanopore/"
-				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-				continue
-			}
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred the samplesheet from ${PRM_ROOT_DIR}/Samplesheets/${runName}.csv to ${diagnostic_server_location}:${TMP_ROOT_DIR}/Samplesheets/nanopore/"
-		fi
+		}
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred the samplesheet from ${PRM_ROOT_DIR}/Samplesheets/${runName}.csv to ${diagnostic_server_location}:${TMP_ROOT_DIR}/Samplesheets/nanopore/"
+	fi
 
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred all the data from ${run} to ${diagnostic_server_location}:${TMP_ROOT_DIR}/Samplesheets/nanopore/"
-		
-		rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
-		mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
-	done
-fi
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred all the data from ${run} to ${diagnostic_server_location}:${TMP_ROOT_DIR}/Samplesheets/nanopore/"
+	
+	rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
+	mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+done
+	
 
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' 'Finished.'
 
