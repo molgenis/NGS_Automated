@@ -598,7 +598,7 @@ else
 				else
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished absent -> Data transfer not yet completed; skipping batch ${gsBatch}."
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Data transfer not yet completed; skipping batch ${gsBatch}."
-					break
+					continue
 				fi
 				if [[ -e "${controlFileBase}.${analysisFolder}_sanityChecking.finished" ]]
 				then
@@ -608,7 +608,7 @@ else
 				fi
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.${analysisFolder}_rsyncData.finished absent, waiting for ${gsBatch} to finish rsyncing before starting to sanity check"
-				break
+				continue
 			fi
 		fi
 		if [[ -e "${controlFileBase}.${analysisFolder}_mergeSamplesheets.finished" ]]
