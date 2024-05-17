@@ -109,7 +109,7 @@ function executePreVip () {
 	# step 2: extract read IDs of interest based on decision in csv file
 	#
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "extract read IDs of interest based on decision in csv file"
-	local -r _adaptive_sampling_files=( ${_project_rawdata_dir}/*/other_reports/adaptive_sampling_*.csv )
+	local -r _adaptive_sampling_files=( "${_project_rawdata_dir}/"*"/other_reports/adaptive_sampling_"*".csv" )
 	local -r _adaptive_sampling_file="${_adaptive_sampling_files[0]}"
 	local -r _read_ids_file="${_project_tmp_dir}/stop_receiving_read_ids.txt"
 	grep stop_receiving "${_adaptive_sampling_file}" | cut -d , -f 5 > "${_read_ids_file}"
