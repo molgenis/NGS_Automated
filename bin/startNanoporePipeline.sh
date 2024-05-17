@@ -389,14 +389,14 @@ else
 		fi
 		if [[ -e "${JOB_CONTROLE_FILE_BASE}_executeVip.finished" ]]
 		then
-		  executePostVip "${project}" "${pipelineRun}" "${controlFileBase}"
+			executePostVip "${project}" "${pipelineRun}" "${controlFileBase}"
 		else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${JOB_CONTROLE_FILE_BASE}_executeVip.finished absent -> sanityChecking failed."
 		fi
 
 		if [[ -e "${JOB_CONTROLE_FILE_BASE}_executePostVip.finished" ]]
 		then
-		  log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${JOB_CONTROLE_FILE_BASE}_executePostVip.finished present -> processing completed for project ${project}."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${JOB_CONTROLE_FILE_BASE}_executePostVip.finished present -> processing completed for project ${project}."
 			rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing project ${project}."
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
