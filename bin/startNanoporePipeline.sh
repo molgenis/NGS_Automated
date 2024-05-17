@@ -198,8 +198,8 @@ function executePreVip () {
 }
 
 function executePostVip () {
-  local -r _project="${1}"
-  local -r _run="${2}"
+	local -r _project="${1}"
+	local -r _run="${2}"
 	local _controlFileBase="${3}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${SCRIPT_NAME}_${FUNCNAME[0]}"
 
@@ -387,7 +387,6 @@ else
 		else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${JOB_CONTROLE_FILE_BASE}_executePreVip.finished absent -> sanityChecking failed."
 		fi
-		
 		if [[ -e "${JOB_CONTROLE_FILE_BASE}_executeVip.finished" ]]
 		then
 		  executePostVip "${project}" "${pipelineRun}" "${controlFileBase}"
