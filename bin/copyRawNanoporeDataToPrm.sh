@@ -209,15 +209,13 @@ SOURCE_DIR="/data/Diagnostiek/"
 DESTINATION_DIR="${PRM_ROOT_DIR}/rawdata/nanopore/"
 
 #
-# Get a list of all samplesheets for this group on the specified samplesheetsServerLocation, where the raw data was generated, and
-#	1. Loop over their analysis ("run") sub dirs and check if there are any we need to rsync.
-#	2. Optionally, split the samplesheets per project after the data was rsynced.
+# Loop over their analysis ("run") sub dirs and check if there are any we need to rsync.
 #
 declare -a runs
 
 # Parse nanopore folder.
 #
-#mapfile -t runs < <(find "${PRM_ROOT_DIR}/rawdata/nanopore/" -maxdepth 1 -mindepth 1 -type d)
+# shellcheck disable=SC2029
 readarray -t runs < <(ssh "${REMOTE_USER}"@"${REMOTE_MACHINE}" "find \"${SOURCE_DIR}\" -maxdepth 1 -mindepth 1 -type d")
 
 for run in "${runs[@]}"
@@ -240,7 +238,7 @@ do
 		# Determine whether an rsync is required for this run, which is the case when
 		# raw data production has finished successfully and this copy script has not.
 		#
-		if ssh "${REMOTE_USER}"@"${REMOTE_MACHINE}" test -e "${SOURCE_DIR}/${runName}/${runName}/"*"/sample_sheet_"*".csv"
+		if rsync "${REMOTE_USER}"@"${REMOTE_MACHINE}:${SOURCE_DIR}/${runName}/${runName}/*/sample_sheet_*.csv" 2>/dev/null
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${REMOTE_USER}"@"${REMOTE_MACHINE}:${SOURCE_DIR}/${runName}/${runName}/"*"/sample_sheet_"*".csv present."
 			finished="true"
@@ -281,13 +279,13 @@ do
 				}
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred the data from ${REMOTE_USER}"@"${REMOTE_MACHINE}":"${SOURCE_DIR}/${runName} to ${diagnostic_server_location}:${DESTINATION_DIR}"
 		else
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer is busy producing data, or Samplesheet is missing: skipping ${filePrefix}."
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer is busy producing data, or Samplesheet is missing: skipping ${filePrefix}."
 			continue
 		fi
 
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred all the data from ${runName} to ${DESTINATION_DIR}"
 	rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
-	mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+	mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 
 	fi
 done
