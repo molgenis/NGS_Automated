@@ -238,7 +238,7 @@ do
 		# Determine whether an rsync is required for this run, which is the case when
 		# raw data production has finished successfully and this copy script has not.
 		#
-		if rsync "${REMOTE_USER}"@"${REMOTE_MACHINE}:${SOURCE_DIR}/${runName}/${runName}/*/sample_sheet_*.csv" 2>/dev/null
+		if rsync "${REMOTE_USER}@${REMOTE_MACHINE}:${SOURCE_DIR}/${runName}/${runName}/*/sample_sheet_*.csv" 2>/dev/null
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${REMOTE_USER}@${REMOTE_MACHINE}:${SOURCE_DIR}/${runName}/${runName}/*/sample_sheet_"*".csv present."
 			finished="true"
@@ -266,7 +266,7 @@ do
 				--omit-link-times \
 				--exclude '*_fail' \
 				--exclude 'bam_*' \
-				"${REMOTE_USER}"@"${REMOTE_MACHINE}:${SOURCE_DIR}/${runName}" \
+				"${REMOTE_USER}@${REMOTE_MACHINE}:${SOURCE_DIR}/${runName}" \
 				"${DESTINATION_DIR}" \
 				|| {
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${runName}"
