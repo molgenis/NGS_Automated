@@ -244,7 +244,6 @@ do
 			finished="true"
 		else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${REMOTE_USER}"@"${REMOTE_MACHINE}:${SOURCE_DIR}/${runName}/${runName}/"*"/sample_sheet_"*".csv absent."
-			continue
 		fi
 
 		if [[ -e "${PRM_SAMPLESHEET_DIR}/${runName}.csv" ]]
@@ -253,7 +252,6 @@ do
 			samplesheetPresent="true"
 		else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${PRM_SAMPLESHEET_DIR}/${runName}.csv absent."
-			continue
 		fi
 
 		if [[ "${finished}" == "true" && "${samplesheetPresent}" == "true" ]]
