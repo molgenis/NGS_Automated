@@ -240,10 +240,10 @@ do
 		#
 		if rsync "${REMOTE_USER}"@"${REMOTE_MACHINE}:${SOURCE_DIR}/${runName}/${runName}/*/sample_sheet_*.csv" 2>/dev/null
 		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${REMOTE_USER}"@"${REMOTE_MACHINE}:${SOURCE_DIR}/${runName}/${runName}/"*"/sample_sheet_"*".csv present."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${REMOTE_USER}@${REMOTE_MACHINE}:${SOURCE_DIR}/${runName}/${runName}/*/sample_sheet_"*".csv present."
 			finished="true"
 		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${REMOTE_USER}"@"${REMOTE_MACHINE}:${SOURCE_DIR}/${runName}/${runName}/"*"/sample_sheet_"*".csv absent."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${REMOTE_USER}@${REMOTE_MACHINE}:${SOURCE_DIR}/${runName}/${runName}/*/sample_sheet_*.csv absent."
 		fi
 
 		if [[ -e "${PRM_SAMPLESHEET_DIR}/${runName}.csv" ]]
@@ -270,12 +270,12 @@ do
 				"${DESTINATION_DIR}" \
 				|| {
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${runName}"
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "from ${REMOTE_USER}"@"${REMOTE_MACHINE}":"${SOURCE_DIR}/${runName}"
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "from ${REMOTE_USER}@${REMOTE_MACHINE}:${SOURCE_DIR}/${runName}"
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "to ${DESTINATION_DIR}"
 				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 				continue
 				}
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred the data from ${REMOTE_USER}"@"${REMOTE_MACHINE}":"${SOURCE_DIR}/${runName} to ${diagnostic_server_location}:${DESTINATION_DIR}"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred the data from ${REMOTE_USER}@${REMOTE_MACHINE}:${SOURCE_DIR}/${runName} to ${diagnostic_server_location}:${DESTINATION_DIR}"
 		else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer is busy producing data, or Samplesheet is missing: skipping ${filePrefix}."
 			continue
