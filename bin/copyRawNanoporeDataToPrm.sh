@@ -244,6 +244,7 @@ do
 			finished="true"
 		else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${REMOTE_USER}@${REMOTE_MACHINE}:${SOURCE_DIR}/${runName}/${runName}/*/sample_sheet_*.csv absent."
+			finished="false"
 		fi
 
 		if [[ -e "${PRM_SAMPLESHEET_DIR}/${runName}.csv" ]]
@@ -252,6 +253,7 @@ do
 			samplesheetPresent="true"
 		else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${PRM_SAMPLESHEET_DIR}/${runName}.csv absent."
+			samplesheetPresent="false"
 		fi
 
 		if [[ "${finished}" == "true" && "${samplesheetPresent}" == "true" ]]
@@ -277,7 +279,7 @@ do
 				}
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred the data from ${REMOTE_USER}@${REMOTE_MACHINE}:${SOURCE_DIR}/${runName} to ${diagnostic_server_location}:${DESTINATION_DIR}"
 		else
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer is busy producing data, or Samplesheet is missing: skipping ${filePrefix}."
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer is busy producing data, or Samplesheet is missing: skipping ${runName}."
 			continue
 		fi
 
