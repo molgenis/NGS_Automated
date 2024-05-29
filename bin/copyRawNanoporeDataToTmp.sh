@@ -223,6 +223,13 @@ do
 	export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
 	# shellcheck disable=SC2174
 	mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${runName}/"
+	
+	if [[ ! -e "${PRM_ROOT_DIR}/logs/${runName}/run01.copyRawNanoporeDataToPrm.sh" ]]
+	then
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${runName}, because the the data is not copied to prm completely."
+		continue
+	fi
+	
 	if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]] 
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed run ${runName}."

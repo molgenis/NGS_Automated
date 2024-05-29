@@ -102,7 +102,7 @@ function executePreVip () {
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "merge and decompress the passed fastq files"
 	local -r _merged_fastq_file="${_project_tmp_dir}/${_project}.fastq"
 	local -r _merged_fastq_gz_file="${_merged_fastq_file}.gz"
-	cat "${_project_rawdata_dir}"/*/fastq_pass/*.fastq.gz > "${_merged_fastq_gz_file}"
+	cat "${_project_rawdata_dir}/"*"/fastq_pass/"*".fastq.gz" > "${_merged_fastq_gz_file}"
 	gzip -f "${_merged_fastq_gz_file}"
 
 	#
@@ -112,6 +112,7 @@ function executePreVip () {
 	local -r _adaptive_sampling_files=( "${_project_rawdata_dir}/"*"/other_reports/adaptive_sampling_"*".csv" )
 	local -r _adaptive_sampling_file="${_adaptive_sampling_files[0]}"
 	local -r _read_ids_file="${_project_tmp_dir}/stop_receiving_read_ids.txt"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "adaptive_sampling_file: ${_adaptive_sampling_files[0]}"
 	grep stop_receiving "${_adaptive_sampling_file}" | cut -d , -f 5 > "${_read_ids_file}"
 
 	#
@@ -224,7 +225,9 @@ function executePostVip () {
 	local -r _coverage_file="${_vip_output_dir}/${_project}_coverage.tsv"
 	samtools coverage --reference "${_reference_fasta}" "${_cram}" > "${_coverage_file}"
 	gzip -f "${_coverage_file}"
-
+	
+	rsync -v "${TMP_ROOT_DIR}/Samplesheets/nanopore/${_project}.csv" "${TMP_ROOT_DIR}/projects/nanopore/${_project}/${_run}/results/"
+	
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "creating depth file"
 	local -r _depth_file="${_vip_output_dir}/${_project}_depth.tsv"
 	samtools depth --reference "${_reference_fasta}" "${_cram}" > "${_depth_file}"
@@ -400,12 +403,13 @@ else
 			rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing project ${project}."
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+			
+			touch "${TMP_ROOT_DIR}/logs/${project}/run01.pipeline.finished"
+			touch "${TMP_ROOT_DIR}/logs/${project}/run01.rawDataCopiedToPrm.finished"
 		else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${JOB_CONTROLE_FILE_BASE}_executePostVip.finished absent -> processing failed for project ${project}."
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process project ${project}}."
 		fi
-		
-		touch "${JOB_CONTROLE_FILE_BASE}.finished"
 	done
 fi
 dateTime=$(date '+%Y-%m-%dT%H:%M:%S')
