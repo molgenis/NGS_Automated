@@ -270,6 +270,7 @@ function mergeSamplesheets(){
 	# Combine GenomeScan samplesheet per batch with inhouse samplesheet(s) per project.
 	#
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "combining GS samplesheet with inhouse samplesheet"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "createInhouseSamplesheetFromGS_v2.py --genomeScanInputDir \"${TMP_ROOT_DIR}/${_batch}/\" --inhouseSamplesheetsInputDir \"${TMP_ROOT_DIR}/Samplesheets/\" --samplesheetsOutputDir \"${TMP_ROOT_DIR}/${_batch}/\" --logLevel \"${_pythonLogLevel}\" >> ${_controlFileBaseForFunction}.started"
 	createInhouseSamplesheetFromGS_v2.py \
 		--genomeScanInputDir "${TMP_ROOT_DIR}/${_batch}/" \
 		--inhouseSamplesheetsInputDir "${TMP_ROOT_DIR}/Samplesheets/" \
@@ -646,6 +647,11 @@ else
 			if [[ -d "${TMP_ROOT_DIR}/${gsBatch}/" ]]
 			then
 				gsBatch="$(basename "${gsBatch}")"
+				if [[ ! -e "${TMP_ROOT_DIR}/${gsBatch}/UMCG_CSV_${gsBatch}.csv" ]]
+				then
+					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no UMCG_CSV_${gsBatch}.csv, cannot proceed with the clean up"
+					continue
+				fi
 				csvFile=$(ls -1 "${TMP_ROOT_DIR}/${gsBatch}/UMCG_CSV_"*".csv")
 				mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
 				projectName=$(echo "${uniqProjects[0]}" | grep -Eo 'GS_[0-9]+')
