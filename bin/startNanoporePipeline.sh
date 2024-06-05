@@ -103,7 +103,7 @@ function executePreVip () {
 	local -r _merged_fastq_file="${_project_tmp_dir}/${_project}.fastq"
 	local -r _merged_fastq_gz_file="${_merged_fastq_file}.gz"
 	cat "${_project_rawdata_dir}/"*"/fastq_pass/"*".fastq.gz" > "${_merged_fastq_gz_file}"
-	gzip -f "${_merged_fastq_gz_file}"
+	gunzip -f "${_merged_fastq_gz_file}"
 
 	#
 	# step 2: extract read IDs of interest based on decision in csv file
@@ -113,6 +113,7 @@ function executePreVip () {
 	local -r _adaptive_sampling_file="${_adaptive_sampling_files[0]}"
 	local -r _read_ids_file="${_project_tmp_dir}/stop_receiving_read_ids.txt"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "adaptive_sampling_file: ${_adaptive_sampling_files[0]}"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "_read_ids_file: ${_read_ids_file}"
 	grep stop_receiving "${_adaptive_sampling_file}" | cut -d , -f 5 > "${_read_ids_file}"
 
 	#
@@ -121,6 +122,7 @@ function executePreVip () {
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "extract reads and save to new file"
 	local -r _seqtk_image_file="${_pipeline_software_dir}/images/seqtk-1.4.sif"
 	local -r _stop_receiving_fastq_file="${_project_tmp_dir}/${_project}_stop_receiving.fastq"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "COMMAND to EXECUTE: apptainer exec --no-mount home --bind \"${TMP_ROOT_DIR}\" \"${_seqtk_image_file}\" seqtk subseq \"${_merged_fastq_file}\" \"${_read_ids_file}\" > \"${_stop_receiving_fastq_file}\""
 	apptainer exec --no-mount home --bind "${TMP_ROOT_DIR}" "${_seqtk_image_file}" seqtk subseq "${_merged_fastq_file}" "${_read_ids_file}" > "${_stop_receiving_fastq_file}"
 	gzip -f "${_stop_receiving_fastq_file}"
 
