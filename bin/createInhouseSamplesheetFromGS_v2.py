@@ -200,8 +200,8 @@ for row in gsReader:
         logging.critical('Cannot parse project name and sampleProcessStepID from "' + row[gsSampleIdColumnName] + '" in column ' + gsSampleIdColumnName + ' from ' + gsSamplesheetFile + '.')
         sys.exit('FATAL ERROR!')
     gsGenomeScanID=row['GS_ID']
-    if re.match("(^[0-9]+-[0-9]+)-([0-9]+)$", row[gsGenomeScanID]):
-        b = re.match("(^[0-9]+-[0-9]+)-([0-9]+)$", row[gsGenomeScanID])
+    if re.match("(^[0-9]+-[0-9]+)-([0-9]+)$", row['GS_ID']):
+        b = re.match("(^[0-9]+-[0-9]+)-([0-9]+)$", row['GS_ID'])
         gsBatch= b.group(1)
         gsProjects.append(gsProject)
         c = re.match("(^[a-zA-Z0-9_]+)-([a-zA-Z0-9_]+)$", gsProject)
@@ -210,7 +210,7 @@ for row in gsReader:
         mergedproject = mergedproject[:-1]
         mergedproject = mergedproject +"-"+ mergedprojectType
         gsBarcodesAndGenomeScanID = row['Index1'] + '-' + row['Index2'] + '-' + gsGenomeScanID
-    else
+    else:
         logging.critical('Cannot parse gsBatch name and project from "' + row[gsGenomeScanID] + '" in column ' + gsGenomeScanID + ' from ' + gsSamplesheetFile + '.')
         sys.exit('FATAL ERROR!')
     if gsSampleProcessStepID in gsSamplesheetDataHashmap:
