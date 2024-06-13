@@ -117,7 +117,7 @@ function executeVip () {
 	local -r _sequencing_method=""
 	local -r _sequencing_platform="nanopore"
 	local -r _adaptive_sampling="${_adaptive_sampling_files[0]}"
-	local -r _fastq="$(join ',' ${_fastq_files}")"
+	local -r _fastq="$(join ',' ${_fastq_files})"
 	echo -e "project_id\tfamily_id\tindividual_id\tpaternal_id\tmaternal_id\tsex\taffected\tproband\thpo_ids\tsequencing_method\tsequencing_platform\tadaptive_sampling\tfastq" > "${_project_vip_samplesheet_file}"
 	echo -e "${_project_id}\t${_family_id}\t${_individual_id}\t${_paternal_id}\t${_maternal_id}\t${_sex}\t${_affected}\t${_proband}\t${_hpo_ids}\t${_sequencing_method}\t${_sequencing_platform}\t${_adaptive_sampling}\t${_fastq}" >> "${_project_vip_samplesheet_file}"
 
