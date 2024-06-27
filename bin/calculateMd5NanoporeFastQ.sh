@@ -26,18 +26,18 @@ function calculate() {
 		exit 1
 	}
 	
-	readarray -t _array< <(find -maxdepth 1 -mindepth 1 -name "*.${type}*")
+	readarray -t _array< <(find . -maxdepth 1 -mindepth 1 -name "*.${type}*")
 	
 	if [[ "${#_array[@]}" -eq '0' ]]
 	then
 		echo "There are no correct files in the folder ${fullPath}/${type}_pass"
-		continue
+		return
 	else
 		echo "Start checksumming ${type}"
-		count=1
 		for arrayFile in "${_array[@]}"
 		do
 			md5sum "${arrayFile}" >> checksums.md5 || {
+				echo "Something went wrong calculating the checksums" \
 				2>&1 | tee -a "${LOGS_DIR}/${sample}/calculateMd5s.started"
 				mv "${LOGS_DIR}/${sample}/calculateMd5s."{started,failed} 
 				exit 1
