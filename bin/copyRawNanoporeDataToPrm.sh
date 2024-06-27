@@ -25,8 +25,6 @@ INSTALLATION_DIR="$(cd -P "$(dirname "${0}")/.." && pwd)"
 LIB_DIR="${INSTALLATION_DIR}/lib"
 CFG_DIR="${INSTALLATION_DIR}/etc"
 HOSTNAME_SHORT="$(hostname -s)"
-ROLE_USER="$(whoami)"
-REAL_USER="$(logname 2>/dev/null || echo 'no login name')"
 
 #
 ##
@@ -61,9 +59,9 @@ Options:
 	-h	Show this help.
 	-g [group]
 		Group for which to process data.
-	-d [diagnostic_server_location]
-		location of the diagnostic server 
-		e.g. wh-porch+wingedhelix
+	-r [remote_server]
+		address of the remote_server
+		e.g. 145.39.79.24
 	-l [level]
 		Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
@@ -93,7 +91,7 @@ EOH
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
-while getopts ":g:l:d:h" opt
+while getopts ":g:l:r:h" opt
 do
 	case "${opt}" in
 		h)
@@ -102,8 +100,8 @@ do
 		g)
 			group="${OPTARG}"
 			;;
-		d)
-			diagnostic_server_location="${OPTARG}"
+		r)
+			remote_machine="${OPTARG}"
 			;;
 		l)
 			l4b_log_level="${OPTARG^^}"
@@ -127,6 +125,11 @@ done
 if [[ -z "${group:-}" ]]
 then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
+fi
+
+if [[ -z "${remote_machine:-}" ]]
+then
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a remote_machine with -r.'
 fi
 
 #
@@ -158,19 +161,6 @@ do
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Config file ${configFile} missing or not accessible."
 	fi
 done
-## parsed after config files loaded
-if [[ -z "${diagnostic_server_location:-}" ]]
-then
-	if [[ "${ROLE_USER}" != "${DATA_MANAGER}" ]]
-	then
-		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "This script must be executed by user ${DATA_MANAGER}, but you are ${ROLE_USER} (${REAL_USER})."
-	fi
-
-	diagnostic_server_location="${HOSTNAME_TMP}"
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Using alternative diagnostic_server_location, is set to ${HOSTNAME_TMP}."
-
-fi
-
 
 #
 # Make sure only one copy of this script runs simultaneously
@@ -203,9 +193,10 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 
 REMOTE_USER="grid"
-REMOTE_MACHINE="145.39.79.24"
+#REMOTE_MACHINE="145.39.79.24"
 PRM_SAMPLESHEET_DIR="${PRM_ROOT_DIR}/nanopore/Samplesheets"
 SOURCE_DIR="/data/Diagnostiek/"
+SOURCE_LOGS_DIR="/data/logs/Diagnostiek/"
 DESTINATION_DIR="${PRM_ROOT_DIR}/rawdata/nanopore/"
 
 #
@@ -216,7 +207,7 @@ declare -a runs
 # Parse nanopore folder.
 #
 # shellcheck disable=SC2029
-readarray -t runs < <(ssh "${REMOTE_USER}"@"${REMOTE_MACHINE}" "find \"${SOURCE_DIR}\" -maxdepth 1 -mindepth 1 -type d")
+readarray -t runs < <(ssh "${REMOTE_USER}"@"${remote_machine}" "find \"${SOURCE_DIR}\" -maxdepth 1 -mindepth 1 -type d")
 
 for run in "${runs[@]}"
 do
@@ -238,13 +229,22 @@ do
 		# Determine whether an rsync is required for this run, which is the case when
 		# raw data production has finished successfully and this copy script has not.
 		#
-		if rsync "${REMOTE_USER}@${REMOTE_MACHINE}:${SOURCE_DIR}/${runName}/${runName}/*/sample_sheet_*.csv" 2>/dev/null
+		if rsync "${REMOTE_USER}@${remote_machine}:${SOURCE_DIR}/${runName}/${runName}/*/sample_sheet_*.csv" 2>/dev/null
 		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${REMOTE_USER}@${REMOTE_MACHINE}:${SOURCE_DIR}/${runName}/${runName}/*/sample_sheet_"*".csv present."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${REMOTE_USER}@${remote_machine}:${SOURCE_DIR}/${runName}/${runName}/*/sample_sheet_"*".csv present."
 			finished="true"
 		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${REMOTE_USER}@${REMOTE_MACHINE}:${SOURCE_DIR}/${runName}/${runName}/*/sample_sheet_*.csv absent."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${REMOTE_USER}@${remote_machine}:${SOURCE_DIR}/${runName}/${runName}/*/sample_sheet_*.csv absent."
 			finished="false"
+		fi
+
+		if rsync "${REMOTE_USER}@${remote_machine}:${SOURCE_LOGS_DIR}/${runName}/calculateMd5s.finished" 2>/dev/null
+		then
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${REMOTE_USER}@${remote_machine}:${SOURCE_LOGS_DIR}/${runName}/calculateMd5s.finished present."
+			md5finished="true"
+		else
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${REMOTE_USER}@${remote_machine}:${SOURCE_LOGS_DIR}/${runName}/calculateMd5s.finished absent."
+			md5finished="false"
 		fi
 
 		if [[ -e "${PRM_SAMPLESHEET_DIR}/${runName}.csv" ]]
@@ -255,8 +255,10 @@ do
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${PRM_SAMPLESHEET_DIR}/${runName}.csv absent."
 			samplesheetPresent="false"
 		fi
+		
+		
 
-		if [[ "${finished}" == "true" && "${samplesheetPresent}" == "true" ]]
+		if [[ "${finished}" == "true" && "${samplesheetPresent}" == "true" && "${md5finished}" == "true" ]]
 		then
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing everything from ${runName}"
 			touch "${JOB_CONTROLE_FILE_BASE}.started"
@@ -268,18 +270,18 @@ do
 				--omit-link-times \
 				--exclude '*_fail' \
 				--exclude 'bam_*' \
-				"${REMOTE_USER}@${REMOTE_MACHINE}:${SOURCE_DIR}/${runName}" \
+				"${REMOTE_USER}@${remote_machine}:${SOURCE_DIR}/${runName}" \
 				"${DESTINATION_DIR}" \
 				|| {
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${runName}"
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "from ${REMOTE_USER}@${REMOTE_MACHINE}:${SOURCE_DIR}/${runName}"
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "from ${REMOTE_USER}@${remote_machine}:${SOURCE_DIR}/${runName}"
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "to ${DESTINATION_DIR}"
 				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 				continue
 				}
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred the data from ${REMOTE_USER}@${REMOTE_MACHINE}:${SOURCE_DIR}/${runName} to ${diagnostic_server_location}:${DESTINATION_DIR}"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred the data from ${REMOTE_USER}@${remote_machine}:${SOURCE_DIR}/${runName} to ${diagnostic_server_location}:${DESTINATION_DIR}"
 		else
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer is busy producing data, or Samplesheet is missing: skipping ${runName}."
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer is busy producing data, Samplesheet is missing or md5s are still being calculated: skipping ${runName}."
 			continue
 		fi
 
