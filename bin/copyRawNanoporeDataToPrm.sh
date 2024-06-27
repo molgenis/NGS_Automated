@@ -25,8 +25,6 @@ INSTALLATION_DIR="$(cd -P "$(dirname "${0}")/.." && pwd)"
 LIB_DIR="${INSTALLATION_DIR}/lib"
 CFG_DIR="${INSTALLATION_DIR}/etc"
 HOSTNAME_SHORT="$(hostname -s)"
-ROLE_USER="$(whoami)"
-REAL_USER="$(logname 2>/dev/null || echo 'no login name')"
 
 #
 ##
