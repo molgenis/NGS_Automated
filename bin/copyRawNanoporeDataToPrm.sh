@@ -264,6 +264,7 @@ do
 			touch "${JOB_CONTROLE_FILE_BASE}.started"
 
 			/usr/bin/rsync -vrltD \
+				--checksum \
 				--log-file="${JOB_CONTROLE_FILE_BASE}.log" \
 				--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
 				--omit-dir-times \
