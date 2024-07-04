@@ -239,7 +239,7 @@ do
 		touch "${JOB_CONTROLE_FILE_BASE}.started"
 
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing ${run} to ${diagnostic_server_location}:${TMP_ROOT_DIR}/rawdata/nanopore/"
-		rsync -rltDvc --rsync-path="sudo -u ${group}-ateambot rsync" "${run}" "${diagnostic_server_location}:${TMP_ROOT_DIR}/rawdata/nanopore/" \
+		rsync -rltDvc --rsync-path="sudo -u ${group}-ateambot rsync" "${run}" --exclude 'pod5_pass' "${diagnostic_server_location}:${TMP_ROOT_DIR}/rawdata/nanopore/" \
 		|| {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${runName}"
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from ${PRM_ROOT_DIR}/rawdata/nanopore/"
