@@ -690,7 +690,7 @@ else
 					if [[ $(((dateInSecNow - dateInSecAnalysisData) / 86400)) -gt 6 ]]
 					then
 						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${gsBatch} from tmp because the pipeline is finished and the file is older than 6 days"
-						rmdir "${TMP_ROOT_DIR}/${gsBatch}"
+						rm -rf "${TMP_ROOT_DIR}/${gsBatch}"
 					else
 						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " the pipeline.finished is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove the ${gsBatch} folder from tmp the ${TMP_ROOT_DIR}/logs/${projectName}/run01.pipeline.finished needs to be at least 6 days old"
 						continue

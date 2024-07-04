@@ -285,9 +285,11 @@ else
 			cd "${TMP_ROOT_DIR}/nextflow/${project}"
 			type=$(echo "${project#*-}" | awk 'BEGIN {FS="_"}{print $1}')
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "type=[${type}], ${type} project detected."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" "0" "rerunning/resuming: nextflow run -resume --samplesheet \"${sampleSheet}\" --tmpdir \"${TMP_LFS}\" --group \"${group}\" -w \"${TMP_ROOT_DIR}/nextflow/${project}\" \"${EBROOTNF_NGS_DNA}/${type,,}.nf\""
 			nextflow run --samplesheet "${sampleSheet}" --tmpdir "${TMP_LFS}" --group "${group}" -w "${TMP_ROOT_DIR}/nextflow/${project}" "${EBROOTNF_NGS_DNA}/${type,,}.nf" \
 			|| {
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" "0" "pipeline crashed, it might be due to one of the following variables: samplesheet:[${sampleSheet}] tmpdir:[${TMP_LFS}] group:[${group}] workdir:[${TMP_ROOT_DIR}/nextflow/${project}] type/workflow:[${type,,}.nf]"
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" "0" "To rerun: navigate to ${TMP_ROOT_DIR}/nextflow/${project} and then execute the following: nextflow run --samplesheet \"${sampleSheet}\" --tmpdir \"${TMP_LFS}\" --group \"${group}\" -w \"${TMP_ROOT_DIR}/nextflow/${project}\" \"${EBROOTNF_NGS_DNA}/${type,,}.nf\""
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			continue
 			}
