@@ -297,7 +297,7 @@ else
 				REPLACEDPIPELINECOLUMN="${REPLACEDPIPELINECOLUMN}_${sampleType}"
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "renaming ${valueInSamplesheetSampleType[0]} into ${REPLACEDPIPELINECOLUMN}"
 			else
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no column [sampleType] in the samplesheet, we need this information to determine which pipeline to run (DNA, RNA),"
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no column [sampleType] in the samplesheet, we need this information to determine which pipeline to run (DNA, RNA), EXITING"
 				exit 1
 			fi
 			perl -p -e "s|${valueInSamplesheet[0]}|${REPLACEDPIPELINECOLUMN}|" "${samplesheet}" > "${samplesheet}.tmp"

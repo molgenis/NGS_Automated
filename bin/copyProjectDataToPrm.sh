@@ -203,7 +203,7 @@ function checkRawdata(){
 			if [[ "${pipeline}" == 'GAP' ]]
 			then
 				sequenceRun=$(echo "${rawdataFile}" | awk 'BEGIN {FS="_"}{print $1}')
-			elif [[ "${pipeline}" == 'NGS_DNA' ]]
+			elif [[ "${pipeline}" == 'NGS_DNA' || "${pipeline}" == 'NGS_RNA' ]]
 			then
 				sequenceRun=$(echo "${rawdataFile}" | cut -d "_" -f 1-4 --output-delimiter="_")
 			fi
