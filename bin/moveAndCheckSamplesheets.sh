@@ -199,6 +199,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 
 samplesheetsSource="${DAT_ROOT_DIR}/samplesheets/new/"
 samplesheetsSourceFolderChecked="${DAT_ROOT_DIR}/samplesheets/"
+sampleType='DNA'
 #
 # Find samplesheets.
 #
@@ -287,7 +288,18 @@ else
 			_pipelineFieldIndex=$((${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]} + 1))
 			## In future this valueInSamplesheet will be replaced by DARWIN to the real value.
 			readarray -t valueInSamplesheet < <(tail -n +2 "${samplesheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_pipelineFieldIndex}" | sort | uniq )
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "renaming ${valueInSamplesheet[0]} into ${REPLACEDPIPELINECOLUMN}"
+			if [[ -n "${_sampleSheetColumnOffsets['sampleType']+isset}" ]] 
+			then
+				_sampleTypeFieldIndex=$((${_sampleSheetColumnOffsets['sampleType']} + 1))
+				## In future this valueInSamplesheet will be replaced by DARWIN to the real value.
+				readarray -t valueInSamplesheetSampleType < <(tail -n +2 "${samplesheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_sampleTypeFieldIndex}" | sort | uniq )
+				sampleType="${valueInSamplesheetSampleType[0]}"
+				REPLACEDPIPELINECOLUMN="${REPLACEDPIPELINECOLUMN}_${sampleType}"
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "renaming ${valueInSamplesheetSampleType[0]} into ${REPLACEDPIPELINECOLUMN}"
+			else
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no column [sampleType] in the samplesheet, we need this information to determine which pipeline to run (DNA, RNA), EXITING"
+				exit 1
+			fi
 			perl -p -e "s|${valueInSamplesheet[0]}|${REPLACEDPIPELINECOLUMN}|" "${samplesheet}" > "${samplesheet}.tmp"
 			mv "${samplesheet}.tmp" "${samplesheet}"
 		else
@@ -387,8 +399,17 @@ do
 			firstStepOfPipeline=''
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a DRAGEN project samplesheet, the first step of the pipeline will be set to an empty string (samplesheet will be put in correct bucket in a later stage of the pipeline)."
 		else
-			firstStepOfPipeline="NGS_DNA"
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a project samplesheet (no NGS_Demultiplexing); firstStepOfPipeline was set to ${firstStepOfPipeline}."
+			if [[ -n "${_sampleSheetColumnOffsets['sampleType']+isset}" ]] 
+			then
+				_sampleTypeFieldIndex=$((${_sampleSheetColumnOffsets['sampleType']} + 1))
+				## In future this valueInSamplesheet will be replaced by DARWIN to the real value.
+				readarray -t valueInSamplesheetSampleType < <(tail -n +2 "${samplesheetChecked}" | cut -d "${SAMPLESHEET_SEP}" -f "${_sampleTypeFieldIndex}" | sort | uniq )
+				sampleType="${valueInSamplesheetSampleType[0]}"
+				firstStepOfPipeline="NGS_${sampleType}"
+			else
+				firstStepOfPipeline="NGS_DNA"
+			fi
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a project samplesheet (no NGS_Demultiplexing); firstStepOfPipeline was set to ${firstStepOfPipeline}."
 		fi
 	fi
 	# shellcheck disable=SC2153
