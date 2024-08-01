@@ -277,7 +277,7 @@ function submitJobScripts () {
 	#
 	printf '' > "${_controlFileBase}.pipeline.started"
 	# shellcheck disable=SC2248
-	bash submit.sh ${_submitOptions:-} >> "${_controlFileBaseForFunction}.started" 2>&1 \
+	bash submit.sh "${_submitOptions:-}" >> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to submit jobs for ${_project}/${_run} ."
 			mv -v "${_controlFileBaseForFunction}."{started,failed}
