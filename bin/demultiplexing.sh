@@ -230,8 +230,9 @@ do
 		cp -v "${SCR_ROOT_DIR}/Samplesheets/${pipeline}/${run}.csv" "${run}.csv"
 		cp -v "${EBROOTNGS_DEMULTIPLEXING}/generate_template.sh" ./ 
 		bash generate_template.sh "${run}" "${SCR_ROOT_DIR}" "${group}"
-		cd "${SCR_ROOT_DIR}/runs/${pipeline}/${run}/jobs"
-		bash submit.sh
+		cd "${SCR_ROOT_DIR}/runs/${pipeline}/${run}/jobs")
+		tmpDirectory="$(basename "${SCR_ROOT_DIR}")"
+		bash submit.sh --constraint "${tmpDirectory}"
 	} >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "jobs submitted"
 	#

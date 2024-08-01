@@ -243,7 +243,8 @@ else
 			cp -v "${EBROOTAGCT}/templates/generate_template.sh" ./
 			bash generate_template.sh 
 			cd "${SCR_ROOT_DIR}/runs/AGCT/${project}/run01/jobs"
-			bash submit.sh 
+			tmpDirectory="$(basename "${SCR_ROOT_DIR}")"
+			bash submit.sh --constraint "${tmpDirectory}"
 			} >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "jobs submitted"
 			#
