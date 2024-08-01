@@ -192,11 +192,11 @@ function submitJobScripts () {
 	_tmpDirectory="$(basename "${TMP_ROOT_DIR}")"
 	if [[ "${group}" == 'umcg-atd' || "${group}" == 'umcg-gsad' ]]
 	then
-		_submitOptions='--qos=leftover --constraint ${_tmpDirectory}'
+		_submitOptions="--qos=leftover --constraint ${_tmpDirectory}"
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Detected development group ${group}: using low priority QoS."
 	elif [[ "${_priority}" == 'true' ]]
 	then
-		_submitOptions='--qos=priority --constraint ${_tmpDirectory}'
+		_submitOptions="--qos=priority --constraint ${_tmpDirectory}"
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Detected _priority ${_priority}: using high priority QoS."
 	fi
 	if [[ -n "${_submitOptions:-}" ]]
