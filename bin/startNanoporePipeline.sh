@@ -126,8 +126,9 @@ function executeVip () {
 	#
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "execute VIP"
 	local -r _vip_version="v7.9.0"
+	local -r _vip_config_version="v1.0.0"
 	local -r _vip_dir="${_pipeline_software_dir}/vip/${_vip_version}"
-	local -r _vip_config_file="${_pipeline_software_dir}/resources/run.cfg"
+	local -r _vip_config_file="${_pipeline_software_dir}/resources/run_${_vip_config_version}.cfg"
 	local -r _vip_output_dir="${TMP_ROOT_DIR}/projects/nanopore/${_project}/${_run}/results"
 
 	local args=()
