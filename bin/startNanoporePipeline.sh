@@ -79,18 +79,11 @@ EOH
 function executeVip () {
 	local -r _project="${1}"
 	local -r _run="${2}"
-	local _controlFileBase="${3}"
+	local -r _individual_id="${3}"
+	local -r _sex="${4}"
+	local -r _regions="${5}"
+	local _controlFileBase="${6}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${SCRIPT_NAME}_${FUNCNAME[0]}"
-
-	if [[ -e "${_controlFileBaseForFunction}.finished" ]]
-	then
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished is present -> Skipping."
-
-		return
-	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
-		printf '' > "${_controlFileBaseForFunction}.started"
-	fi
 
 	local -r _pipeline_software_dir="${TMP_ROOT_DIR}/software/nanopore"
 	local -r _project_rawdata_dir="${TMP_ROOT_DIR}/rawdata/nanopore/${_project}/${_project}"
@@ -107,10 +100,8 @@ function executeVip () {
 	local -r _project_vip_samplesheet_file="${_project_tmp_dir}/sample_sheet.tsv"
 	local -r _project_id="${_project}"
 	local -r _family_id=""
-	local -r _individual_id="sample"
 	local -r _paternal_id=""
 	local -r _maternal_id=""
-	local -r _sex=""
 	local -r _affected="true"
 	local -r _proband="true"
 	local -r _hpo_ids=""
@@ -118,8 +109,8 @@ function executeVip () {
 	local -r _sequencing_platform="nanopore"
 	local -r _adaptive_sampling="${_adaptive_sampling_files[0]}"
 	local -r _fastq="$(IFS=, ; echo "${_fastq_files[*]}")"
-	echo -e "project_id\tfamily_id\tindividual_id\tpaternal_id\tmaternal_id\tsex\taffected\tproband\thpo_ids\tsequencing_method\tsequencing_platform\tadaptive_sampling\tfastq" > "${_project_vip_samplesheet_file}"
-	echo -e "${_project_id}\t${_family_id}\t${_individual_id}\t${_paternal_id}\t${_maternal_id}\t${_sex}\t${_affected}\t${_proband}\t${_hpo_ids}\t${_sequencing_method}\t${_sequencing_platform}\t${_adaptive_sampling}\t${_fastq}" >> "${_project_vip_samplesheet_file}"
+	echo -e "project_id\tfamily_id\tindividual_id\tpaternal_id\tmaternal_id\tsex\taffected\tproband\thpo_ids\tsequencing_method\tsequencing_platform\tadaptive_sampling\tfastq\tregions" > "${_project_vip_samplesheet_file}"
+	echo -e "${_project_id}\t${_family_id}\t${_individual_id}\t${_paternal_id}\t${_maternal_id}\t${_sex}\t${_affected}\t${_proband}\t${_hpo_ids}\t${_sequencing_method}\t${_sequencing_platform}\t${_adaptive_sampling}\t${_fastq}\t${_regions}" >> "${_project_vip_samplesheet_file}"
 
 	#
 	# step 2: execute vip
@@ -292,7 +283,81 @@ else
 		
 		printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 		
-		executeVip "${project}" "${pipelineRun}" "${controlFileBase}"
+		#
+		# Parse sample sheet header
+		#
+		declare -a sampleSheetColumnNames=()
+		declare -A sampleSheetColumnOffsets=()
+		declare    sampleSheetFieldIndex
+		IFS="${SAMPLESHEET_SEP}" read -r -a sampleSheetColumnNames <<< "$(head -1 "${sampleSheet}")"
+		
+		#
+		# Map sample sheet column names to indices
+		#
+		for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]} ; offset++ ))
+		do
+			sampleSheetColumnOffsets["${columnName}"]="${offset}"
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${columnName} and sampleSheetColumnOffsets[${columnName}] offset ${offset}"
+		done
+
+		#
+		# Extract data from sample sheet, validate data, map data to VIP sample sheet values
+		#
+		local _individual_id=""
+		local _sex=""
+		local _bed_file=""
+
+		# column: externalSampleID
+		sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['externalSampleID']} + 1))
+		externalSampleId=$(tail -n 1 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
+		
+		if [ -z "${externalSampleId}" ]; then
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${sampleSheet} column 'externalSampleID' is empty."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping ${project} due to error in sample sheet."
+			continue
+		else
+			_individual_id="${externalSampleId}"
+		fi
+
+		# column: Gender
+		sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['Gender']} + 1))
+		gender=$(tail -n 1 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
+
+		if [ -z "${gender}" ]; then
+			_sex=""
+		elif [ "${gender}" == "Female" ]; then
+			_sex="female"
+		elif [ "${gender}" == "Male" ]; then
+			_sex="male"
+		else
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${sampleSheet} column 'Gender' contains invalid value '${gender}', valid values are 'Female' or 'Male'."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping ${project} due to error in sample sheet."
+			continue
+		fi
+
+		# column: testCode
+		sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['testCode']} + 1))
+		testCode=$(tail -n 1 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
+
+		if [ "${testCode}" == "LX001" ]; then
+			_bed_file="${TMP_ROOT_DIR}/software/nanopore/resources/LX001_v1.0.0.bed"
+		elif [ "${testCode}" == "LX002" ]; then
+			_bed_file="${TMP_ROOT_DIR}/software/nanopore/resources/LX002_v1.0.0.bed"
+		elif [ "${testCode}" == "LX003" ]; then
+			_bed_file="${TMP_ROOT_DIR}/software/nanopore/resources/LX003_v1.0.0.bed"
+		elif [ "${testCode}" == "LX004" ]; then
+			# LX004 implies running VIP without a .bed file
+			_bed_file=""
+		else
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${sampleSheet} column 'testCode' contains invalid value '${testCode}', valid values are 'LX001', 'LX002', 'LX003' or 'LX004'."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping ${project} due to error in sample sheet."
+			continue
+		fi
+
+		#
+		# Execute VIP
+		#
+		executeVip "${project}" "${pipelineRun}" "${_individual_id}" "${_sex}" "${_bed_file}" "${controlFileBase}"
 
 		if [[ -e "${JOB_CONTROLE_FILE_BASE}_executeVip.finished" ]]
 		then
