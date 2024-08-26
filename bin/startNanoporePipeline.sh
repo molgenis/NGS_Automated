@@ -85,7 +85,7 @@ function executeVip () {
 	local _controlFileBase="${6}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${SCRIPT_NAME}_${FUNCNAME[0]}"
 
-    #
+	#
 	# Check if function previously finished successfully for this data.
 	#
 	if [[ -e "${_controlFileBaseForFunction}.finished" ]]
