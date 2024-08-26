@@ -303,32 +303,32 @@ else
 		#
 		# Extract data from sample sheet, validate data, map data to VIP sample sheet values
 		#
-		local _individual_id=""
-		local _sex=""
-		local _bed_file=""
+		individual_id=""
+		sex=""
+		bed_file=""
 
 		# column: externalSampleID
 		sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['externalSampleID']} + 1))
 		externalSampleId=$(tail -n 1 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
 		
-		if [ -z "${externalSampleId}" ]; then
+		if [[ -z "${externalSampleId}" ]]; then
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${sampleSheet} column 'externalSampleID' is empty."
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping ${project} due to error in sample sheet."
 			continue
 		else
-			_individual_id="${externalSampleId}"
+			individual_id="${externalSampleId}"
 		fi
 
 		# column: Gender
 		sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['Gender']} + 1))
 		gender=$(tail -n 1 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
 
-		if [ -z "${gender}" ]; then
-			_sex=""
-		elif [ "${gender}" == "Female" ]; then
-			_sex="female"
-		elif [ "${gender}" == "Male" ]; then
-			_sex="male"
+		if [[ -z "${gender}" ]]; then
+			sex=""
+		elif [[ "${gender}" == "Female" ]]; then
+			sex="female"
+		elif [[ "${gender}" == "Male" ]]; then
+			sex="male"
 		else
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${sampleSheet} column 'Gender' contains invalid value '${gender}', valid values are 'Female' or 'Male'."
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping ${project} due to error in sample sheet."
@@ -339,15 +339,15 @@ else
 		sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['testCode']} + 1))
 		testCode=$(tail -n 1 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
 
-		if [ "${testCode}" == "LX001" ]; then
-			_bed_file="${TMP_ROOT_DIR}/software/nanopore/resources/LX001_v1.0.0.bed"
-		elif [ "${testCode}" == "LX002" ]; then
-			_bed_file="${TMP_ROOT_DIR}/software/nanopore/resources/LX002_v1.0.0.bed"
-		elif [ "${testCode}" == "LX003" ]; then
-			_bed_file="${TMP_ROOT_DIR}/software/nanopore/resources/LX003_v1.0.0.bed"
-		elif [ "${testCode}" == "LX004" ]; then
+		if [[ "${testCode}" == "LX001" ]]; then
+			bed_file="${TMP_ROOT_DIR}/software/nanopore/resources/LX001_v1.0.0.bed"
+		elif [[ "${testCode}" == "LX002" ]]; then
+			bed_file="${TMP_ROOT_DIR}/software/nanopore/resources/LX002_v1.0.0.bed"
+		elif [[ "${testCode}" == "LX003" ]]; then
+			bed_file="${TMP_ROOT_DIR}/software/nanopore/resources/LX003_v1.0.0.bed"
+		elif [[ "${testCode}" == "LX004" ]]; then
 			# LX004 implies running VIP without a .bed file
-			_bed_file=""
+			bed_file=""
 		else
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${sampleSheet} column 'testCode' contains invalid value '${testCode}', valid values are 'LX001', 'LX002', 'LX003' or 'LX004'."
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping ${project} due to error in sample sheet."
@@ -357,7 +357,7 @@ else
 		#
 		# Execute VIP
 		#
-		executeVip "${project}" "${pipelineRun}" "${_individual_id}" "${_sex}" "${_bed_file}" "${controlFileBase}"
+		executeVip "${project}" "${pipelineRun}" "${individual_id}" "${sex}" "${bed_file}" "${controlFileBase}"
 
 		if [[ -e "${JOB_CONTROLE_FILE_BASE}_executeVip.finished" ]]
 		then
