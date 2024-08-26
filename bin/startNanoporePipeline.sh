@@ -85,6 +85,19 @@ function executeVip () {
 	local _controlFileBase="${6}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${SCRIPT_NAME}_${FUNCNAME[0]}"
 
+    #
+	# Check if function previously finished successfully for this data.
+	#
+	if [[ -e "${_controlFileBaseForFunction}.finished" ]]
+	then
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished is present -> Skipping."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} ${_project}/${_run}. OK"
+		return
+	else
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
+		printf '' > "${_controlFileBaseForFunction}.started"
+	fi
+
 	local -r _pipeline_software_dir="${TMP_ROOT_DIR}/software/nanopore"
 	local -r _project_rawdata_dir="${TMP_ROOT_DIR}/rawdata/nanopore/${_project}/${_project}"
 	local -r _project_tmp_dir="${TMP_ROOT_DIR}/tmp/nanopore/${_project}/${_run}/vip"
@@ -130,15 +143,21 @@ function executeVip () {
 
 	# NXF_JVM_ARGS="-Xmx2g" prevents 'java.lang.OutOfMemoryError: Java heap space' in case of thousands of input fastqs in the sample sheet
 	module load Java/11.0.20
-	NXF_JVM_ARGS="-Xmx2g" NXF_HOME="${_project_tmp_dir}/.nxf.home" NXF_TEMP="${_project_tmp_dir}/.nxf.tmp" NXF_WORK="${_project_tmp_dir}/.nxf.work" "${_vip_dir}/vip" "${args[@]}"
+	NXF_JVM_ARGS="-Xmx2g" NXF_HOME="${_project_tmp_dir}/.nxf.home" NXF_TEMP="${_project_tmp_dir}/.nxf.tmp" NXF_WORK="${_project_tmp_dir}/.nxf.work" "${_vip_dir}/vip" "${args[@]}" || {
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to generate scripts. See ${_controlFileBaseForFunction}.failed for details."
+		mv "${_controlFileBaseForFunction}."{started,failed}
+		return
+	}
 
 	#
 	# step 3: cleanup results
 	#
 	rm -rf "${_vip_output_dir}/.nextflow"
 
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for ${_project}/${_run}."
 	rm -f "${_controlFileBaseForFunction}.failed"
-	mv "${_controlFileBaseForFunction}."{started,finished}
+	mv -v "${_controlFileBaseForFunction}."{started,finished}
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
 }
 
 #
