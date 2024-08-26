@@ -296,6 +296,7 @@ else
 		#
 		for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]} ; offset++ ))
 		do
+			columnName="${sampleSheetColumnNames[${offset}]}"
 			sampleSheetColumnOffsets["${columnName}"]="${offset}"
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${columnName} and sampleSheetColumnOffsets[${columnName}] offset ${offset}"
 		done
