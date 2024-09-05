@@ -210,6 +210,7 @@ declare -a runs
 readarray -t runs < <(ssh "${REMOTE_USER}"@"${remote_machine}" "find \"${SOURCE_DIR}\" -maxdepth 1 -mindepth 1 -type d")
 
 rsync -v "${EBROOTNGS_AUTOMATED}/bin/calculateMd5NanoporeFastQ.sh" "${REMOTE_USER}@${remote_machine}:${SOURCE_DIR}/"
+# shellcheck disable=SC2029
 ssh "${REMOTE_USER}@${remote_machine}" "bash ${SOURCE_DIR}/calculateMd5NanoporeFastQ.sh"
 for run in "${runs[@]}"
 do
