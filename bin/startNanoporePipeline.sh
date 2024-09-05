@@ -76,15 +76,22 @@ EOH
 	exit 0
 }
 
-function executePreVip () {
+function executeVip () {
 	local -r _project="${1}"
 	local -r _run="${2}"
-	local _controlFileBase="${3}"
+	local -r _individual_id="${3}"
+	local -r _sex="${4}"
+	local -r _regions="${5}"
+	local _controlFileBase="${6}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${SCRIPT_NAME}_${FUNCNAME[0]}"
 
+	#
+	# Check if function previously finished successfully for this data.
+	#
 	if [[ -e "${_controlFileBaseForFunction}.finished" ]]
 	then
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished is present -> Skipping."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} ${_project}/${_run}. OK"
 		return
 	else
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
@@ -93,93 +100,39 @@ function executePreVip () {
 
 	local -r _pipeline_software_dir="${TMP_ROOT_DIR}/software/nanopore"
 	local -r _project_rawdata_dir="${TMP_ROOT_DIR}/rawdata/nanopore/${_project}/${_project}"
-	local -r _project_tmp_dir="${TMP_ROOT_DIR}/tmp/nanopore/${_project}/${_run}/pre_vip"
-	mkdir -p "${_project_tmp_dir}"
-
-	#
-	# step 1: merge and decompress the passed fastq files
-	#
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "merge and decompress the passed fastq files"
-	local -r _merged_fastq_file="${_project_tmp_dir}/${_project}.fastq"
-	local -r _merged_fastq_gz_file="${_merged_fastq_file}.gz"
-	cat "${_project_rawdata_dir}/"*"/fastq_pass/"*".fastq.gz" > "${_merged_fastq_gz_file}"
-	gunzip -f "${_merged_fastq_gz_file}"
-
-	#
-	# step 2: extract read IDs of interest based on decision in csv file
-	#
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "extract read IDs of interest based on decision in csv file"
-	local -r _adaptive_sampling_files=( "${_project_rawdata_dir}/"*"/other_reports/adaptive_sampling_"*".csv" )
-	local -r _adaptive_sampling_file="${_adaptive_sampling_files[0]}"
-	local -r _read_ids_file="${_project_tmp_dir}/stop_receiving_read_ids.txt"
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "adaptive_sampling_file: ${_adaptive_sampling_files[0]}"
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "_read_ids_file: ${_read_ids_file}"
-	grep stop_receiving "${_adaptive_sampling_file}" | cut -d , -f 5 > "${_read_ids_file}"
-
-	#
-	# step 3: extract reads and save to new file
-	#
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "extract reads and save to new file"
-	local -r _seqtk_image_file="${_pipeline_software_dir}/images/seqtk-1.4.sif"
-	local -r _stop_receiving_fastq_file="${_project_tmp_dir}/${_project}_stop_receiving.fastq"
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "COMMAND to EXECUTE: apptainer exec --no-mount home --bind \"${TMP_ROOT_DIR}\" \"${_seqtk_image_file}\" seqtk subseq \"${_merged_fastq_file}\" \"${_read_ids_file}\" > \"${_stop_receiving_fastq_file}\""
-	apptainer exec --no-mount home --bind "${TMP_ROOT_DIR}" "${_seqtk_image_file}" seqtk subseq "${_merged_fastq_file}" "${_read_ids_file}" > "${_stop_receiving_fastq_file}"
-	gzip -f "${_stop_receiving_fastq_file}"
-
-
-	rm -f "${_controlFileBaseForFunction}.failed"
-	mv "${_controlFileBaseForFunction}."{started,finished}
-
-	}
-
-	function executeVip () {
-	local -r _project="${1}"
-	local -r _run="${2}"
-	local _controlFileBase="${3}"
-	local _controlFileBaseForFunction="${_controlFileBase}.${SCRIPT_NAME}_${FUNCNAME[0]}"
-
-	if [[ -e "${_controlFileBaseForFunction}.finished" ]]
-	then
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished is present -> Skipping."
-
-		return
-	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
-		printf '' > "${_controlFileBaseForFunction}.started"
-	fi
-
-	local -r _pipeline_software_dir="${TMP_ROOT_DIR}/software/nanopore"
-	local -r _project_preprocessed_data_dir="${TMP_ROOT_DIR}/tmp/nanopore/${_project}/${_run}/pre_vip"
 	local -r _project_tmp_dir="${TMP_ROOT_DIR}/tmp/nanopore/${_project}/${_run}/vip"
 	mkdir --parents "${_project_tmp_dir}"
-
+	
 	#
 	# step 1: create sample sheet
 	#
+	local -r _adaptive_sampling_files=( "${_project_rawdata_dir}/"*"/other_reports/adaptive_sampling_"*".csv" )
+	local -r _fastq_files=( "${_project_rawdata_dir}/"*"/fastq_pass/"*".fastq.gz" )
+	
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "create VIP sample sheet"
 	local -r _project_vip_samplesheet_file="${_project_tmp_dir}/sample_sheet.tsv"
 	local -r _project_id="${_project}"
 	local -r _family_id=""
-	local -r _individual_id="sample"
 	local -r _paternal_id=""
 	local -r _maternal_id=""
-	local -r _sex=""
 	local -r _affected="true"
 	local -r _proband="true"
 	local -r _hpo_ids=""
 	local -r _sequencing_method=""
 	local -r _sequencing_platform="nanopore"
-	local -r _fastq="${_project_preprocessed_data_dir}/${_project}_stop_receiving.fastq.gz"
-	echo -e "project_id\tfamily_id\tindividual_id\tpaternal_id\tmaternal_id\tsex\taffected\tproband\thpo_ids\tsequencing_method\tsequencing_platform\tfastq" > "${_project_vip_samplesheet_file}"
-	echo -e "${_project_id}\t${_family_id}\t${_individual_id}\t${_paternal_id}\t${_maternal_id}\t${_sex}\t${_affected}\t${_proband}\t${_hpo_ids}\t${_sequencing_method}\t${_sequencing_platform}\t${_fastq}" >> "${_project_vip_samplesheet_file}"
+	local -r _adaptive_sampling="${_adaptive_sampling_files[0]}"
+	local -r _fastq="$(IFS=, ; echo "${_fastq_files[*]}")"
+	echo -e "project_id\tfamily_id\tindividual_id\tpaternal_id\tmaternal_id\tsex\taffected\tproband\thpo_ids\tsequencing_method\tsequencing_platform\tadaptive_sampling\tfastq\tregions" > "${_project_vip_samplesheet_file}"
+	echo -e "${_project_id}\t${_family_id}\t${_individual_id}\t${_paternal_id}\t${_maternal_id}\t${_sex}\t${_affected}\t${_proband}\t${_hpo_ids}\t${_sequencing_method}\t${_sequencing_platform}\t${_adaptive_sampling}\t${_fastq}\t${_regions}" >> "${_project_vip_samplesheet_file}"
 
 	#
 	# step 2: execute vip
 	#
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "execute VIP"
-	local -r _vip_version="v7.7.1"
+	local -r _vip_version="v7.9.0"
+	local -r _vip_config_version="v1.0.0"
 	local -r _vip_dir="${_pipeline_software_dir}/vip/${_vip_version}"
-	local -r _vip_config_file="${_pipeline_software_dir}/resources/run.cfg"
+	local -r _vip_config_file="${_pipeline_software_dir}/resources/run_${_vip_config_version}.cfg"
 	local -r _vip_output_dir="${TMP_ROOT_DIR}/projects/nanopore/${_project}/${_run}/results"
 
 	local args=()
@@ -188,59 +141,24 @@ function executePreVip () {
 	args+=("--output" "${_vip_output_dir}")
 	args+=("--config" "${_vip_config_file}")
 
+	# NXF_JVM_ARGS="-Xmx2g" prevents 'java.lang.OutOfMemoryError: Java heap space' in case of thousands of input fastqs in the sample sheet
 	module load Java/11.0.20
-	NXF_HOME="${_project_tmp_dir}/.nxf.home" NXF_TEMP="${_project_tmp_dir}/.nxf.tmp" NXF_WORK="${_project_tmp_dir}/.nxf.work" "${_vip_dir}/vip" "${args[@]}"
+	NXF_JVM_ARGS="-Xmx2g" NXF_HOME="${_project_tmp_dir}/.nxf.home" NXF_TEMP="${_project_tmp_dir}/.nxf.tmp" NXF_WORK="${_project_tmp_dir}/.nxf.work" "${_vip_dir}/vip" "${args[@]}" || {
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to generate scripts. See ${_controlFileBaseForFunction}.failed for details."
+		mv "${_controlFileBaseForFunction}."{started,failed}
+		return
+	}
 
 	#
 	# step 3: cleanup results
 	#
 	rm -rf "${_vip_output_dir}/.nextflow"
 
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for ${_project}/${_run}."
 	rm -f "${_controlFileBaseForFunction}.failed"
-	mv "${_controlFileBaseForFunction}."{started,finished}
+	mv -v "${_controlFileBaseForFunction}."{started,finished}
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Created ${_controlFileBaseForFunction}.finished."
 }
-
-function executePostVip () {
-	local -r _project="${1}"
-	local -r _run="${2}"
-	local _controlFileBase="${3}"
-	local _controlFileBaseForFunction="${_controlFileBase}.${SCRIPT_NAME}_${FUNCNAME[0]}"
-
-	if [[ -e "${_controlFileBaseForFunction}.finished" ]]
-	then
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished is present -> Skipping."
-		return
-	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
-		printf '' > "${_controlFileBaseForFunction}.started"
-	fi
-
-	local -r _vip_version="v7.7.1"
-	local -r _pipeline_software_dir="${TMP_ROOT_DIR}/software/nanopore"
-	local -r _vip_dir="${_pipeline_software_dir}/vip/${_vip_version}"
-	local -r _reference_fasta="${_vip_dir}/resources/GRCh38/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna.gz"
-	local -r _vip_output_dir="${TMP_ROOT_DIR}/projects/nanopore/${_project}/${_run}/results"
-	local -r _cram="${_vip_output_dir}/intermediates/${_project}_fam0_sample.cram"
-
-	module load SAMtools/1.16.1-GCCcore-11.3.0
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "creating coverage file"
-	local -r _coverage_file="${_vip_output_dir}/${_project}_coverage.tsv"
-	samtools coverage --reference "${_reference_fasta}" "${_cram}" > "${_coverage_file}"
-	gzip -f "${_coverage_file}"
-	
-	rsync -v "${TMP_ROOT_DIR}/Samplesheets/nanopore/${_project}.csv" "${TMP_ROOT_DIR}/projects/nanopore/${_project}/${_run}/results/"
-	
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "creating depth file"
-	local -r _depth_file="${_vip_output_dir}/${_project}_depth.tsv"
-	samtools depth --reference "${_reference_fasta}" "${_cram}" > "${_depth_file}"
-	gzip -f "${_depth_file}"
-	
-	
-	rm -f "${_controlFileBaseForFunction}.failed"
-	mv "${_controlFileBaseForFunction}."{started,finished}
-	
-}
-
 
 #
 # Get commandline arguments.
@@ -384,24 +302,86 @@ else
 		
 		printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 		
-		executePreVip "${project}" "${pipelineRun}" "${controlFileBase}"
+		#
+		# Parse sample sheet header
+		#
+		declare -a sampleSheetColumnNames=()
+		declare -A sampleSheetColumnOffsets=()
+		declare    sampleSheetFieldIndex
+		IFS="${SAMPLESHEET_SEP}" read -r -a sampleSheetColumnNames <<< "$(head -1 "${sampleSheet}")"
 		
-		if [[ -e "${JOB_CONTROLE_FILE_BASE}_executePreVip.finished" ]]
-		then
-			executeVip "${project}" "${pipelineRun}" "${controlFileBase}"
+		#
+		# Map sample sheet column names to indices
+		#
+		for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]} ; offset++ ))
+		do
+			columnName="${sampleSheetColumnNames[${offset}]}"
+			sampleSheetColumnOffsets["${columnName}"]="${offset}"
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${columnName} and sampleSheetColumnOffsets[${columnName}] offset ${offset}"
+		done
+
+		#
+		# Extract data from sample sheet, validate data, map data to VIP sample sheet values
+		#
+		individual_id=""
+		sex=""
+		bed_file=""
+
+		# column: externalSampleID
+		sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['externalSampleID']} + 1))
+		externalSampleId=$(tail -n 1 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
+		
+		if [[ -z "${externalSampleId}" ]]; then
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${sampleSheet} column 'externalSampleID' is empty."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping ${project} due to error in sample sheet."
+			continue
 		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${JOB_CONTROLE_FILE_BASE}_executePreVip.finished absent -> sanityChecking failed."
-		fi
-		if [[ -e "${JOB_CONTROLE_FILE_BASE}_executeVip.finished" ]]
-		then
-			executePostVip "${project}" "${pipelineRun}" "${controlFileBase}"
-		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${JOB_CONTROLE_FILE_BASE}_executeVip.finished absent -> sanityChecking failed."
+			individual_id="${externalSampleId}"
 		fi
 
-		if [[ -e "${JOB_CONTROLE_FILE_BASE}_executePostVip.finished" ]]
+		# column: Gender
+		sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['Gender']} + 1))
+		gender=$(tail -n 1 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
+
+		if [[ -z "${gender}" ]]; then
+			sex=""
+		elif [[ "${gender}" == "Female" ]]; then
+			sex="female"
+		elif [[ "${gender}" == "Male" ]]; then
+			sex="male"
+		else
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${sampleSheet} column 'Gender' contains invalid value '${gender}', valid values are 'Female' or 'Male'."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping ${project} due to error in sample sheet."
+			continue
+		fi
+
+		# column: testCode
+		sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['testCode']} + 1))
+		testCode=$(tail -n 1 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
+
+		if [[ "${testCode}" == "LX001" ]]; then
+			bed_file="${TMP_ROOT_DIR}/software/nanopore/resources/LX001_v1.0.0.bed"
+		elif [[ "${testCode}" == "LX002" ]]; then
+			bed_file="${TMP_ROOT_DIR}/software/nanopore/resources/LX002_v1.0.0.bed"
+		elif [[ "${testCode}" == "LX003" ]]; then
+			bed_file="${TMP_ROOT_DIR}/software/nanopore/resources/LX003_v1.0.0.bed"
+		elif [[ "${testCode}" == "LX004" ]]; then
+			# LX004 implies running VIP without a .bed file
+			bed_file=""
+		else
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${sampleSheet} column 'testCode' contains invalid value '${testCode}', valid values are 'LX001', 'LX002', 'LX003' or 'LX004'."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping ${project} due to error in sample sheet."
+			continue
+		fi
+
+		#
+		# Execute VIP
+		#
+		executeVip "${project}" "${pipelineRun}" "${individual_id}" "${sex}" "${bed_file}" "${controlFileBase}"
+
+		if [[ -e "${JOB_CONTROLE_FILE_BASE}_executeVip.finished" ]]
 		then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${JOB_CONTROLE_FILE_BASE}_executePostVip.finished present -> processing completed for project ${project}."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${JOB_CONTROLE_FILE_BASE}_executeVip.finished present -> processing completed for project ${project}."
 			rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing project ${project}."
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
@@ -409,7 +389,7 @@ else
 			touch "${TMP_ROOT_DIR}/logs/${project}/run01.pipeline.finished"
 			touch "${TMP_ROOT_DIR}/logs/${project}/run01.rawDataCopiedToPrm.finished"
 		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${JOB_CONTROLE_FILE_BASE}_executePostVip.finished absent -> processing failed for project ${project}."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${JOB_CONTROLE_FILE_BASE}_executeVip.finished absent -> processing failed for project ${project}."
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process project ${project}}."
 		fi
 	done
