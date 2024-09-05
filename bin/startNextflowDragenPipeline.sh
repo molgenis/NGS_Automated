@@ -293,6 +293,11 @@ else
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			continue
 			}
+			if [[ -f "${TMP_ROOT_DIR}/projects/NGS_DNA/${project}/${pipelineRun}/results/qc/statsRenamed.tsv" ]]
+			then
+				mv -fv "${TMP_ROOT_DIR}/projects/NGS_DNA/${project}/${pipelineRun}/results/qc/statsRenamed.tsv" "${TMP_ROOT_DIR}/projects/NGS_DNA/${project}/${pipelineRun}/results/qc/stats.tsv"
+			fi
+			
 			touch "${TMP_ROOT_DIR}/logs/${project}/run01.pipeline.finished"
 			cd "${thisDir}"
 		fi
