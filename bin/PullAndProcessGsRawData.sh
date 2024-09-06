@@ -1114,8 +1114,8 @@ else
 				projectName=$(echo "${uniqProjects[0]}" | grep -Eo 'GS_[0-9]+')
 				captkit=$(echo "${uniqProjects[0]}" | awk 'BEGIN {FS="-"}{print $NF}')
 				if [[ "${captkit}" == *"RNA"* ]]
-					then
-						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "This is RNA, do not merge"
+				then
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "This is RNA, do not merge"
 				else
 					projectName="${projectName}-${captkit}"
 					# shellcheck disable=SC2174
