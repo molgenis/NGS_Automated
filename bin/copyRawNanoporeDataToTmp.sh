@@ -224,7 +224,7 @@ do
 	# shellcheck disable=SC2174
 	mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${runName}/"
 	
-	if [[ ! -e "${PRM_ROOT_DIR}/logs/${runName}/run01.copyRawNanoporeDataToPrm.finished" ]]
+	if [[ ! -e "${PRM_ROOT_DIR}/logs/${runName}/${runName}.copyRawNanoporeDataToPrm.finished" ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${runName}, because the the data is not copied to prm completely."
 		continue
