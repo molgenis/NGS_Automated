@@ -283,7 +283,7 @@ do
 				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 				continue
 				}
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred the data from ${REMOTE_USER}@${remote_machine}:${SOURCE_DIR}/${runName} to ${diagnostic_server_location}:${DESTINATION_DIR}"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred the data from ${REMOTE_USER}@${remote_machine}:${SOURCE_DIR}/${runName} to ${HOSTNAME_SHORT}:${DESTINATION_DIR}"
 		else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer is busy producing data, Samplesheet is missing or md5s are still being calculated: skipping ${runName}."
 			continue
