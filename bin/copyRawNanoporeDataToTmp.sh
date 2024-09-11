@@ -224,7 +224,7 @@ do
 	# shellcheck disable=SC2174
 	mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${runName}/"
 	
-	if [[ ! -e "${PRM_ROOT_DIR}/logs/${runName}/run01.copyRawNanoporeDataToPrm.finished" ]]
+	if [[ ! -e "${PRM_ROOT_DIR}/logs/${runName}/${runName}.copyRawNanoporeDataToPrm.finished" ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping ${runName}, because the the data is not copied to prm completely."
 		continue
@@ -252,15 +252,15 @@ do
 		## Copy samplesheet to tmp that is the signal for the next step to start
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Rsyncing samplesheet ${PRM_ROOT_DIR}/Samplesheets/${runName}.csv to ${diagnostic_server_location}:${TMP_ROOT_DIR}/Samplesheets/nanopore/"
 		
-		rsync -rltDvc --rsync-path="sudo -u ${group}-ateambot rsync" "${PRM_ROOT_DIR}/Samplesheets/${runName}.csv" "${diagnostic_server_location}:${TMP_ROOT_DIR}/Samplesheets/nanopore/" \
+		rsync -rltDvc --rsync-path="sudo -u ${group}-ateambot rsync" "${PRM_ROOT_DIR}/nanopore/Samplesheets/${runName}.csv" "${diagnostic_server_location}:${TMP_ROOT_DIR}/Samplesheets/nanopore/" \
 		|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync samplesheet ${runName}.csv"
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from ${PRM_ROOT_DIR}/Samplesheets/"
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from ${PRM_ROOT_DIR}/nanopore/Samplesheets/"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    to ${diagnostic_server_location}:${TMP_ROOT_DIR}/Samplesheets/nanopore/"
 			mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			continue
 		}
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred the samplesheet from ${PRM_ROOT_DIR}/Samplesheets/${runName}.csv to ${diagnostic_server_location}:${TMP_ROOT_DIR}/Samplesheets/nanopore/"
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred the samplesheet from ${PRM_ROOT_DIR}/nanopore/Samplesheets/${runName}.csv to ${diagnostic_server_location}:${TMP_ROOT_DIR}/Samplesheets/nanopore/"
 	fi
 
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Successfully transferred all the data from ${run} to ${diagnostic_server_location}:${TMP_ROOT_DIR}/Samplesheets/nanopore/"
