@@ -1113,11 +1113,16 @@ else
 				mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
 				projectName=$(echo "${uniqProjects[0]}" | grep -Eo 'GS_[0-9]+')
 				captkit=$(echo "${uniqProjects[0]}" | awk 'BEGIN {FS="-"}{print $NF}')
-				projectName="${projectName}-${captkit}"
-				# shellcheck disable=SC2174
-				mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${projectName}/"
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Creating ${TMP_ROOT_DIR}/logs/${projectName}/${RAWDATAPROCESSINGFINISHED}"
-				touch "${TMP_ROOT_DIR}/logs/${projectName}/${RAWDATAPROCESSINGFINISHED}"
+				if [[ "${captkit}" == *"RNA"* ]]
+				then
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "This is RNA, do not merge"
+				else
+					projectName="${projectName}-${captkit}"
+					# shellcheck disable=SC2174
+					mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${projectName}/"
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Creating ${TMP_ROOT_DIR}/logs/${projectName}/${RAWDATAPROCESSINGFINISHED}"
+					touch "${TMP_ROOT_DIR}/logs/${projectName}/${RAWDATAPROCESSINGFINISHED}"
+				fi
 				rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing batch ${gsBatch}."
