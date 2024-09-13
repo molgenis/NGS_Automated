@@ -301,9 +301,9 @@ function splitSamplesheetPerProject() {
 		fi
 		if [[ "${_project}" == *"RNA_v"* ]]
 		then
+			# shellcheck disable=SC2029
 			if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished"
 			then
-				# shellcheck disable=SC2029
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
 			else
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
