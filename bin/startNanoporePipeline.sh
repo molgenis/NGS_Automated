@@ -360,9 +360,9 @@ else
 		testCode=$(tail -n 1 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
 
 		if [[ "${testCode}" == "LX001" ]]; then
-			bed_file="${TMP_ROOT_DIR}/software/nanopore/resources/LX001_v1.0.0.bed"
+			bed_file="${TMP_ROOT_DIR}/software/nanopore/resources/LX001_v1.0.1.bed"
 		elif [[ "${testCode}" == "LX002" ]]; then
-			bed_file="${TMP_ROOT_DIR}/software/nanopore/resources/LX002_v1.0.0.bed"
+			bed_file="${TMP_ROOT_DIR}/software/nanopore/resources/LX002_v1.0.1.bed"
 		elif [[ "${testCode}" == "LX003" ]]; then
 			bed_file="${TMP_ROOT_DIR}/software/nanopore/resources/LX003_v1.0.0.bed"
 		elif [[ "${testCode}" == "LX004" ]]; then
