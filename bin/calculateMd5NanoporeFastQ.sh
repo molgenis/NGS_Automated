@@ -20,7 +20,7 @@ function calculate() {
 	local type="$1"
 	touch "${LOGS_DIR}/${sample}/${type}.calculateMd5s.started"
 	## Navigate to folder with ${type} files
-	cd "${fullPath}/${type}_pass/" || {
+	cd "${fullPath}/${type}/" || {
 		echo "${fullPath}/${type}_pass/ is not existing" >> "${LOGS_DIR}/${sample}/calculateMd5s.started" 
 		mv "${LOGS_DIR}/${sample}/calculateMd5s."{started,failed} 
 		exit 1
@@ -30,7 +30,7 @@ function calculate() {
 	
 	if [[ "${#_array[@]}" -eq '0' ]]
 	then
-		echo "There are no correct files in the folder ${fullPath}/${type}_pass"
+		echo "There are no correct files in the folder ${fullPath}/${type}"
 		return
 	else
 		echo "Start checksumming ${type}"
@@ -93,7 +93,7 @@ do
 		then
 			echo "checksums for fastQ files already calculated"
 		else
-			calculate "fastq"
+			calculate "fastq_pass"
 		fi
 		
 		if [[ -e "${LOGS_DIR}/${sample}/pod5.calculateMd5s.finished" ]]
