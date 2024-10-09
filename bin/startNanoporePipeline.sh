@@ -386,6 +386,7 @@ else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing project ${project}."
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 			
+			rsync -v "${sampleSheet}" "${TMP_ROOT_DIR}/projects/nanopore/${project}/${pipelineRun}/results/"
 			touch "${TMP_ROOT_DIR}/logs/${project}/run01.pipeline.finished"
 			touch "${TMP_ROOT_DIR}/logs/${project}/run01.rawDataCopiedToPrm.finished"
 		else

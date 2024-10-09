@@ -283,7 +283,7 @@ function splitSamplesheetPerProject() {
 		#
 		local _captkit
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "mergedSamplesheet = ${mergedSamplesheet}."
-		if [[ "${mergedSamplesheet}" == 'true' ]]
+		if [[ "${mergedSamplesheet}" == 'true' && "${_project}" != *"RNA_v"* ]]
 		then
 			_projectGS=$(echo "${_project}" | grep -Eo 'GS_[0-9]+')
 			_captkit=$(echo "${_project}" | awk 'BEGIN {FS="-"}{print $NF}')
@@ -296,10 +296,22 @@ function splitSamplesheetPerProject() {
 			else
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
 				mv "${_controlFileBaseForFunction}."{started,failed}
-				
 			fi
 			break
 		fi
+		if [[ "${_project}" == *"RNA_v"* ]]
+		then
+			# shellcheck disable=SC2029
+			if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished"
+			then
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
+			else
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
+				mv "${_controlFileBaseForFunction}."{started,failed}
+			fi
+			break
+		fi
+
 		if [[ "${archiveMode}" == 'false' ]]; then
 			#
 			# Skip project if demultiplexing only.
