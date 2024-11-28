@@ -254,6 +254,20 @@ do
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${PRM_SAMPLESHEET_DIR}/${runName}.csv present."
 			samplesheetPresent="true"
+
+			#
+			# Make sure
+			#  1. The last line ends with a line end character.
+			#  2. We have the right line end character: convert any carriage return (\r) to newline (\n).
+			#  3. We remove empty lines.
+			#
+			samplesheet="${PRM_SAMPLESHEET_DIR}/${runName}.csv"
+			cp "${samplesheet}"{,.converted}
+			printf '\n'     >> "${samplesheet}.converted"
+			sed -i 's/\r/\n/g' "${samplesheet}.converted"
+			sed -i "/^[\s${SAMPLESHEET_SEP}]*$/d" "${samplesheet}.converted"
+			mv "${samplesheet}.converted" "${samplesheet}"
+
 		else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${PRM_SAMPLESHEET_DIR}/${runName}.csv absent."
 			samplesheetPresent="false"
