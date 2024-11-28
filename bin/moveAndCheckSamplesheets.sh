@@ -238,7 +238,7 @@ else
 		sed 's/\r/\n/g' "${samplesheet}.converted" > "${samplesheet}.converted2"
 		sed "/^[\s${SAMPLESHEET_SEP}]*$/d" "${samplesheet}.converted2" > "${samplesheet}.converted3"
 		mv "${samplesheet}.converted3" "${samplesheet}"
-		rm *.converted*
+		rm "${samplesheet}.converted"*
 
 		declare -a _sampleSheetColumnNames=()
 		declare -A _sampleSheetColumnOffsets=()
