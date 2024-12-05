@@ -86,6 +86,9 @@ function executeVip () {
 	local _controlFileBase="${7}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${SCRIPT_NAME}_${FUNCNAME[0]}"
 
+	local -r _vip_version="v8.0.0"
+	local -r _vip_config_version="v2.0.0"
+
 	#
 	# Check if function previously finished successfully for this data.
 	#
@@ -138,8 +141,6 @@ function executeVip () {
 	# step 3: execute vip
 	#
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "execute VIP"
-	local -r _vip_version="v8.0.0"
-	local -r _vip_config_version="v2.0.0"
 	local -r _vip_dir="${_pipeline_software_dir}/vip/${_vip_version}"
 	local -r _vip_output_dir="${TMP_ROOT_DIR}/projects/nanopore/${_project}/${_run}/results"
 
