@@ -133,7 +133,7 @@ function executeVip () {
 	local -r _vip_config_template_file="${_pipeline_software_dir}/resources/run_${_vip_config_version}.cfg.template"
 	local -r _project_vip_config_file="${_project_tmp_dir}/run_${_vip_config_version}.cfg"
 
-	export VIP_CONFIG_TEST_CODE="${_test_code}" envsubst < "${_vip_config_template_file}" > "${_project_vip_config_file}"
+	VIP_CONFIG_TEST_CODE="${_test_code}" envsubst < "${_vip_config_template_file}" > "${_project_vip_config_file}"
 
 	#
 	# step 3: execute vip
