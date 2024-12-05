@@ -120,7 +120,6 @@ function executeVip () {
 	local -r _proband="true"
 	local -r _hpo_ids=""
 	local -r _sequencing_method=""
-	local -r _regions="${_regions}"
 	local -r _sequencing_platform="nanopore"
 	local -r _adaptive_sampling="${_adaptive_sampling_files[0]}"
 	local -r _fastq="$(IFS=, ; echo "${_fastq_files[*]}")"
