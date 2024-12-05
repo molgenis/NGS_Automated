@@ -82,8 +82,12 @@ function executeVip () {
 	local -r _individual_id="${3}"
 	local -r _sex="${4}"
 	local -r _regions="${5}"
-	local _controlFileBase="${6}"
+	local -r _test_code="${6}"
+	local _controlFileBase="${7}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${SCRIPT_NAME}_${FUNCNAME[0]}"
+
+	local -r _vip_version="v8.0.0"
+	local -r _vip_config_version="v2.0.0"
 
 	#
 	# Check if function previously finished successfully for this data.
@@ -122,24 +126,29 @@ function executeVip () {
 	local -r _sequencing_platform="nanopore"
 	local -r _adaptive_sampling="${_adaptive_sampling_files[0]}"
 	local -r _fastq="$(IFS=, ; echo "${_fastq_files[*]}")"
-	echo -e "project_id\tfamily_id\tindividual_id\tpaternal_id\tmaternal_id\tsex\taffected\tproband\thpo_ids\tsequencing_method\tsequencing_platform\tadaptive_sampling\tfastq\tregions" > "${_project_vip_samplesheet_file}"
-	echo -e "${_project_id}\t${_family_id}\t${_individual_id}\t${_paternal_id}\t${_maternal_id}\t${_sex}\t${_affected}\t${_proband}\t${_hpo_ids}\t${_sequencing_method}\t${_sequencing_platform}\t${_adaptive_sampling}\t${_fastq}\t${_regions}" >> "${_project_vip_samplesheet_file}"
+	echo -e "project_id\tfamily_id\tindividual_id\tpaternal_id\tmaternal_id\tsex\taffected\tproband\thpo_ids\tsequencing_method\tregions\tsequencing_platform\tadaptive_sampling\tfastq\tregions" > "${_project_vip_samplesheet_file}"
+	echo -e "${_project_id}\t${_family_id}\t${_individual_id}\t${_paternal_id}\t${_maternal_id}\t${_sex}\t${_affected}\t${_proband}\t${_hpo_ids}\t${_sequencing_method}\t${_regions}\t${_sequencing_platform}\t${_adaptive_sampling}\t${_fastq}\t${_regions}" >> "${_project_vip_samplesheet_file}"
 
 	#
-	# step 2: execute vip
+	# step 2: create config
+	#
+	local -r _vip_config_template_file="${_pipeline_software_dir}/resources/run_${_vip_config_version}.cfg.template"
+	local -r _project_vip_config_file="${_project_tmp_dir}/run_${_vip_config_version}.cfg"
+
+	VIP_CONFIG_TEST_CODE="${_test_code}" envsubst < "${_vip_config_template_file}" > "${_project_vip_config_file}"
+
+	#
+	# step 3: execute vip
 	#
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "execute VIP"
-	local -r _vip_version="v7.9.0"
-	local -r _vip_config_version="v1.0.0"
 	local -r _vip_dir="${_pipeline_software_dir}/vip/${_vip_version}"
-	local -r _vip_config_file="${_pipeline_software_dir}/resources/run_${_vip_config_version}.cfg"
 	local -r _vip_output_dir="${TMP_ROOT_DIR}/projects/nanopore/${_project}/${_run}/results"
 
 	local args=()
 	args+=("--workflow" "fastq")
 	args+=("--input" "${_project_vip_samplesheet_file}")
 	args+=("--output" "${_vip_output_dir}")
-	args+=("--config" "${_vip_config_file}")
+	args+=("--config" "${_project_vip_config_file}")
 
 	# NXF_JVM_ARGS="-Xmx2g" prevents 'java.lang.OutOfMemoryError: Java heap space' in case of thousands of input fastqs in the sample sheet
 	module load Java/11.0.20
@@ -359,16 +368,7 @@ else
 		sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['testCode']} + 1))
 		testCode=$(tail -n 1 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
 
-		if [[ "${testCode}" == "LX001" ]]; then
-			bed_file="${TMP_ROOT_DIR}/software/nanopore/resources/LX001_v1.0.0.bed"
-		elif [[ "${testCode}" == "LX002" ]]; then
-			bed_file="${TMP_ROOT_DIR}/software/nanopore/resources/LX002_v1.0.0.bed"
-		elif [[ "${testCode}" == "LX003" ]]; then
-			bed_file="${TMP_ROOT_DIR}/software/nanopore/resources/LX003_v1.0.0.bed"
-		elif [[ "${testCode}" == "LX004" ]]; then
-			# LX004 implies running VIP without a .bed file
-			bed_file=""
-		else
+		if [[ "${testCode}" != "LX001" ]] && [[ "${testCode}" != "LX002" ]] && [[ "${testCode}" != "LX003" ]] && [[ "${testCode}" != "LX004" ]]; then
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${sampleSheet} column 'testCode' contains invalid value '${testCode}', valid values are 'LX001', 'LX002', 'LX003' or 'LX004'."
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping ${project} due to error in sample sheet."
 			continue
@@ -377,7 +377,7 @@ else
 		#
 		# Execute VIP
 		#
-		executeVip "${project}" "${pipelineRun}" "${individual_id}" "${sex}" "${bed_file}" "${controlFileBase}"
+		executeVip "${project}" "${pipelineRun}" "${individual_id}" "${sex}" "${bed_file}" "${testCode}" "${controlFileBase}"
 
 		if [[ -e "${JOB_CONTROLE_FILE_BASE}_executeVip.finished" ]]
 		then
