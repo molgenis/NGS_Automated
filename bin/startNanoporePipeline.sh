@@ -334,7 +334,10 @@ else
 		#
 		individual_id=""
 		sex=""
-		bed_file=""
+		
+		# find bed file
+		bed_files=( "${_project_rawdata_dir}/"*"/bedfile/"*".bed" )
+		bed_file="${bed_files[0]}"
 
 		# column: externalSampleID
 		sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['externalSampleID']} + 1))
