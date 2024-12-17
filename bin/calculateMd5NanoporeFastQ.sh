@@ -17,27 +17,27 @@ set -u # Raise exception if variable is unbound. Combined with set -e will halt 
 set -o pipefail # Fail when any command in series of piped commands failed as opposed to only when the last command failed.
 
 function copybed(){
-        local type='copybed'
-        touch "${LOGS_DIR}/${sample}/${type}.calculateMd5s.started"
-        ## Navigate to folder with ${type} files
-        cd "${fullPath}/" || {
-                echo "${fullPath} is not existing" >> "${LOGS_DIR}/${sample}/${type}.calculateMd5s.started"
-                mv "${LOGS_DIR}/${sample}/${type}.calculateMd5s."{started,failed}
-                exit 1
-        }
+	local type='copybed'
+	touch "${LOGS_DIR}/${sample}/${type}.calculateMd5s.started"
+	## Navigate to folder with ${type} files
+	cd "${fullPath}/" || {
+		echo "${fullPath} is not existing" >> "${LOGS_DIR}/${sample}/${type}.calculateMd5s.started"
+		mv "${LOGS_DIR}/${sample}/${type}.calculateMd5s."{started,failed}
+		exit 1
+		}
 
 regex='\"bed_file=\\"(.*)\\"\",'
 
 report=$(cat report_*.json | /home/grid/jq-linux-amd64 -r '.protocol_run_info | .args')
 if [[ "${report}" =~ ${regex} ]];then
-  bedfile_path="${BASH_REMATCH[1]}"
-  mkdir -p bedfile
-  cp -v "${bedfile_path}" bedfile/
+	bedfile_path="${BASH_REMATCH[1]}"
+	mkdir -p bedfile
+	cp -v "${bedfile_path}" bedfile/
 else
-  echo "${report} doesn't match" >&2 # this could get noisy if there are a lot of non-matching files
+	echo "${report} doesn't match" >&2 # this could get noisy if there are a lot of non-matching files
 fi
-        cd -
-        mv "${LOGS_DIR}/${sample}/${type}.calculateMd5s."{started,finished}
+		cd -
+	mv "${LOGS_DIR}/${sample}/${type}.calculateMd5s."{started,finished}
 }
 
 function calculate() {
