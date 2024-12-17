@@ -141,7 +141,6 @@ function executeVip () {
 	# step 3: execute vip
 	#
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "execute VIP"
-	local -r _vip_dir="${_pipeline_software_dir}/vip/${_vip_version}"
 	local -r _vip_output_dir="${TMP_ROOT_DIR}/projects/nanopore/${_project}/${_run}/results"
 
 	local args=()
@@ -151,8 +150,8 @@ function executeVip () {
 	args+=("--config" "${_project_vip_config_file}")
 
 	# NXF_JVM_ARGS="-Xmx2g" prevents 'java.lang.OutOfMemoryError: Java heap space' in case of thousands of input fastqs in the sample sheet
-	module load Java/11.0.20
-	NXF_JVM_ARGS="-Xmx2g" NXF_HOME="${_project_tmp_dir}/.nxf.home" NXF_TEMP="${_project_tmp_dir}/.nxf.tmp" NXF_WORK="${_project_tmp_dir}/.nxf.work" "${_vip_dir}/vip" "${args[@]}" || {
+	module load vip/"${_vip_version}"
+	NXF_JVM_ARGS="-Xmx2g" NXF_HOME="${_project_tmp_dir}/.nxf.home" NXF_TEMP="${_project_tmp_dir}/.nxf.tmp" NXF_WORK="${_project_tmp_dir}/.nxf.work" vip "${args[@]}" || {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to generate scripts. See ${_controlFileBaseForFunction}.failed for details."
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
