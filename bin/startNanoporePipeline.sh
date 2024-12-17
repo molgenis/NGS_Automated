@@ -334,7 +334,11 @@ else
 		#
 		individual_id=""
 		sex=""
-		bed_file=""
+		
+		# find bed file
+		project_rawdata_dir="${TMP_ROOT_DIR}/rawdata/nanopore/${project}/${project}"
+		bed_files=( "${project_rawdata_dir}/"*"/bedfile/"*".bed" )
+		bed_file="${bed_files[0]}"
 
 		# column: externalSampleID
 		sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['externalSampleID']} + 1))
