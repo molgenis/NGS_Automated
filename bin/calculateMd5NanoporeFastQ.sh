@@ -16,18 +16,43 @@ set -e # Exit if any subcommand or pipeline returns a non-zero exit status.
 set -u # Raise exception if variable is unbound. Combined with set -e will halt execution when an unbound variable is encountered.
 set -o pipefail # Fail when any command in series of piped commands failed as opposed to only when the last command failed.
 
+function copybed(){
+        local type='copybed'
+        touch "${LOGS_DIR}/${sample}/${type}.calculateMd5s.started"
+        ## Navigate to folder with ${type} files
+        cd "${fullPath}/" || {
+                echo "${fullPath} is not existing" >> "${LOGS_DIR}/${sample}/${type}.calculateMd5s.started"
+                mv "${LOGS_DIR}/${sample}/${type}.calculateMd5s."{started,failed}
+                exit 1
+        }
+
+regex='\"bed_file=\\"(.*)\\"\",'
+
+report=$(cat report_*.json | /home/grid/jq-linux-amd64 -r '.protocol_run_info | .args')
+if [[ "${report}" =~ ${regex} ]];then
+  bedfile_path="${BASH_REMATCH[1]}"
+  mkdir -p bedfile
+  cp -v "${bedfile_path}" bedfile/
+else
+  echo "${report} doesn't match" >&2 # this could get noisy if there are a lot of non-matching files
+fi
+        cd -
+        mv "${LOGS_DIR}/${sample}/${type}.calculateMd5s."{started,finished}
+}
+
 function calculate() {
 	local type="$1"
 	touch "${LOGS_DIR}/${sample}/${type}.calculateMd5s.started"
 	## Navigate to folder with ${type} files
 	cd "${fullPath}/${type}/" || {
-		echo "${fullPath}/${type}_pass/ is not existing" >> "${LOGS_DIR}/${sample}/calculateMd5s.started" 
-		mv "${LOGS_DIR}/${sample}/calculateMd5s."{started,failed} 
+		echo "${fullPath}/${type}/ is not existing" >> "${LOGS_DIR}/${sample}/${type}.calculateMd5s.started" 
+		mv "${LOGS_DIR}/${sample}/${type}.calculateMd5s."{started,failed} 
 		exit 1
 	}
-	
-	readarray -t _array< <(find . -maxdepth 1 -mindepth 1 -name "*.${type}*")
-	
+	type_short=$(echo "${type}" | cut -d "_" -f 1)
+
+	readarray -t _array< <(find . -maxdepth 1 -mindepth 1 -name "*.${type_short}*")
+
 	if [[ "${#_array[@]}" -eq '0' ]]
 	then
 		echo "There are no correct files in the folder ${fullPath}/${type}"
@@ -38,8 +63,8 @@ function calculate() {
 		do
 			md5sum "${arrayFile}" >> checksums.md5 || {
 				echo "Something went wrong calculating the checksums" \
-				2>&1 | tee -a "${LOGS_DIR}/${sample}/calculateMd5s.started"
-				mv "${LOGS_DIR}/${sample}/calculateMd5s."{started,failed} 
+				2>&1 | tee -a "${LOGS_DIR}/${sample}/${type}.calculateMd5s.started"
+				mv "${LOGS_DIR}/${sample}/${type}.calculateMd5s."{started,failed} 
 				exit 1
 			}
 		done
@@ -47,7 +72,6 @@ function calculate() {
 	cd -
 	mv "${LOGS_DIR}/${sample}/${type}.calculateMd5s."{started,finished}
 }
-
 
 SOURCE_DIR="/data/Diagnostiek"
 LOGS_DIR="/data/logs/Diagnostiek"
@@ -88,6 +112,13 @@ do
 		touch "${LOGS_DIR}/${sample}/calculateMd5s.started"
 		echo "Processing ${sample}.."
 		echo "logging can be found in: ${LOGS_DIR}/${sample}/"
+
+		if [[ -e "${LOGS_DIR}/${sample}/copybed.calculateMd5s.finished" ]]
+		then
+			echo "Bed file already copied."
+		else
+			copybed
+		fi
 		
 		if [[ -e "${LOGS_DIR}/${sample}/fastq.calculateMd5s.finished" ]]
 		then
