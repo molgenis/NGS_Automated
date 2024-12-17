@@ -336,7 +336,8 @@ else
 		sex=""
 		
 		# find bed file
-		bed_files=( "${_project_rawdata_dir}/"*"/bedfile/"*".bed" )
+		project_rawdata_dir="${TMP_ROOT_DIR}/rawdata/nanopore/${project}/${project}"
+		bed_files=( "${project_rawdata_dir}/"*"/bedfile/"*".bed" )
 		bed_file="${bed_files[0]}"
 
 		# column: externalSampleID
