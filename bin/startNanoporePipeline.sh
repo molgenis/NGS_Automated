@@ -86,9 +86,6 @@ function executeVip () {
 	local _controlFileBase="${7}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${SCRIPT_NAME}_${FUNCNAME[0]}"
 
-	local -r _vip_version="v8.0.0"
-	local -r _vip_config_version="v2.0.0"
-
 	#
 	# Check if function previously finished successfully for this data.
 	#
@@ -132,8 +129,8 @@ function executeVip () {
 	#
 	# step 2: create config
 	#
-	local -r _vip_config_template_file="${_pipeline_software_dir}/resources/run_${_vip_config_version}.cfg.template"
-	local -r _project_vip_config_file="${_project_tmp_dir}/run_${_vip_config_version}.cfg"
+	local -r _vip_config_template_file="${EBROOTVIPMINUMCGMINCONFIGMINGD}/config/run.cfg.template"
+	local -r _project_vip_config_file="${_project_tmp_dir}/run.cfg"
 
 	VIP_CONFIG_TEST_CODE="${_test_code}" envsubst < "${_vip_config_template_file}" > "${_project_vip_config_file}"
 
@@ -150,7 +147,6 @@ function executeVip () {
 	args+=("--config" "${_project_vip_config_file}")
 
 	# NXF_JVM_ARGS="-Xmx2g" prevents 'java.lang.OutOfMemoryError: Java heap space' in case of thousands of input fastqs in the sample sheet
-	module load vip/"${_vip_version}"
 	NXF_JVM_ARGS="-Xmx2g" NXF_HOME="${_project_tmp_dir}/.nxf.home" NXF_TEMP="${_project_tmp_dir}/.nxf.tmp" NXF_WORK="${_project_tmp_dir}/.nxf.work" vip "${args[@]}" || {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to generate scripts. See ${_controlFileBaseForFunction}.failed for details."
 		mv "${_controlFileBaseForFunction}."{started,failed}
