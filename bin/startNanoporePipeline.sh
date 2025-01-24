@@ -129,7 +129,7 @@ function executeVip () {
 	#
 	# step 2: create config
 	#
-	local -r _vip_config_template_file="${EBROOTVIPMINUMCGMINCONFIGMINGD}/config/run.cfg.template"
+	local -r _vip_config_template_file="${EBROOTVIPMINCONFIGMINUMCGMINGD}/config/run.cfg.template"
 	local -r _project_vip_config_file="${_project_tmp_dir}/run.cfg"
 
 	VIP_CONFIG_TEST_CODE="${_test_code}" envsubst < "${_vip_config_template_file}" > "${_project_vip_config_file}"
