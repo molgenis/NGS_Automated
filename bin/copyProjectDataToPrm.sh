@@ -629,20 +629,30 @@ else
 										continue
 									fi
 
-									rm -f "${JOB_CONTROLE_FILE_BASE}.failed" "${JOB_CONTROLE_FILE_BASE}.started"
 									#
 									# Add info for colleagues that will process the results.
 									# This will appear in the messeages send by notifications.sh
 									#
+									echo '' > "${JOB_CONTROLE_FILE_BASE}.started"
 									log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The data is available at ${PRM_ROOT_DIR}/projects/${project}/${run}/."
 									mountedCifsDevice="$(awk -v mountpoint="${PRM_ROOT_DIR}" '$2==mountpoint && $3=="cifs" {print $1}' /proc/mounts)"
 									if [[ -n "${mountedCifsDevice:-}" ]]; then
 										printf 'file:%s/projects/%s/%s/\n' \
 											"${mountedCifsDevice}" "${project}" "${run}" \
-											> "${JOB_CONTROLE_FILE_BASE}.finished"
-									else
-										touch "${JOB_CONTROLE_FILE_BASE}.finished"
+											>> "${JOB_CONTROLE_FILE_BASE}.started"
 									fi
+									# shellcheck disable=SC2029
+									if ssh "${DATA_MANAGER}@${HOSTNAME_TMP}" "touch ${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.projectDataCopiedToPrm.finished"
+									then
+										log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.projectDataCopiedToPrm.finished on ${HOSTNAME_TMP}"
+									else
+										log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.projectDataCopiedToPrm.finished on ${HOSTNAME_TMP}"
+										mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+										continue
+									fi
+									
+									rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
+									mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 									log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing project ${project}."
 									log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished. Setting track & trace state to finished :)."
 									dateFinished=$(date +%FT%T%z -r "${JOB_CONTROLE_FILE_BASE}.finished")
