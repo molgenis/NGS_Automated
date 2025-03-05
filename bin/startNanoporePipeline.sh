@@ -368,8 +368,11 @@ else
 		sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['testCode']} + 1))
 		testCode=$(tail -n 1 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
 
-		if [[ "${testCode}" != "LX001" ]] && [[ "${testCode}" != "LX002" ]] && [[ "${testCode}" != "LX003" ]] && [[ "${testCode}" != "LX004" ]]; then
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${sampleSheet} column 'testCode' contains invalid value '${testCode}', valid values are 'LX001', 'LX002', 'LX003' or 'LX004'."
+    # use comment lines below to re-enable LX001, LX003 and LX004 functionality
+		# if [[ "${testCode}" != "LX001" ]] && [[ "${testCode}" != "LX002" ]] && [[ "${testCode}" != "LX003" ]] && [[ "${testCode}" != "LX004" ]]; then
+		#	log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${sampleSheet} column 'testCode' contains invalid value '${testCode}', valid values are 'LX001', 'LX002', 'LX003' or 'LX004'."
+		if [[ "${testCode}" != "LX002" ]]; then
+    	log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${sampleSheet} column 'testCode' contains invalid value '${testCode}', valid values are 'LX002'."
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping ${project} due to error in sample sheet."
 			continue
 		fi
