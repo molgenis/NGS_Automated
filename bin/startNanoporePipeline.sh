@@ -138,7 +138,8 @@ function executeVip () {
 	# step 3: execute vip
 	#
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "execute VIP"
-	local -r _vip_output_dir="${TMP_ROOT_DIR}/projects/nanopore/${_project}/${_run}/results"
+	local -r _vip_output_run_dir="${TMP_ROOT_DIR}/projects/nanopore/${_project}/${_run}"
+	local -r _vip_output_dir="${_vip_output_run_dir}/results"
 
 	local args=()
 	args+=("--workflow" "fastq")
@@ -155,9 +156,29 @@ function executeVip () {
 	}
 
 	#
-	# step 3: cleanup results
+	# step 4: cleanup and reorganize results dir
 	#
-	rm -rf "${_vip_output_dir}/.nextflow"
+
+	# move all results to tmp run dir
+	local -r _vip_output_tmp_dir="${_vip_output_run_dir}.tmp/results"
+	mkdir -p "${_vip_output_tmp_dir}"
+	mv "${_vip_output_dir}"/* "${_vip_output_tmp_dir}/"
+
+	# move back and reorganize data to run dir
+
+	# sample sheet
+	mv "${_vip_output_tmp_dir}"/*.csv "${_vip_output_dir}"
+	# vip report
+	mv "${_vip_output_tmp_dir}"/[!nxf_]*.html "${_vip_output_dir}"
+	# vip report data
+	mv "${_vip_output_tmp_dir}"/*.vcf.gz "${_vip_output_dir}"
+	mv "${_vip_output_tmp_dir}"/*.vcf.gz.csi "${_vip_output_dir}"
+
+	# crams
+  local -r _vip_output_alignment_dir="${_vip_output_dir}/alignment"
+	mkdir -p "${_vip_output_alignment_dir}"
+	mv "${_vip_output_tmp_dir}/intermediates/"*.cram "${_vip_output_alignment_dir}"
+	mv "${_vip_output_tmp_dir}/intermediates/"*.cram.crai "${_vip_output_alignment_dir}"
 
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for ${_project}/${_run}."
 	rm -f "${_controlFileBaseForFunction}.failed"
