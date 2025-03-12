@@ -146,6 +146,7 @@ function executeVip () {
 	args+=("--output" "${_vip_output_dir}")
 	args+=("--config" "${_project_vip_config_file}")
 
+	mkdir --parents "${_project_tmp_dir}/.nxf.tmp"
 	# NXF_JVM_ARGS="-Xmx2g" prevents 'java.lang.OutOfMemoryError: Java heap space' in case of thousands of input fastqs in the sample sheet
 	NXF_JVM_ARGS="-Xmx2g" NXF_HOME="${_project_tmp_dir}/.nxf.home" NXF_TEMP="${_project_tmp_dir}/.nxf.tmp" NXF_WORK="${_project_tmp_dir}/.nxf.work" vip "${args[@]}" || {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to generate scripts. See ${_controlFileBaseForFunction}.failed for details."
