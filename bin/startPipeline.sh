@@ -258,11 +258,11 @@ function submitJobScripts () {
 	_tmpDirectory="$(basename "${TMP_ROOT_DIR}")"
 	if [[ "${group}" == 'umcg-atd' || "${group}" == 'umcg-gsad' ]]
 	then
-		_submitOptions="--qos=leftover --constraint ${_tmpDirectory}"
+		_submitOptions="--qos=leftover"
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Detected development group ${group}: using low priority QoS."
 	elif [[ "${_priority}" == 'true' ]]
 	then
-		_submitOptions="--qos=priority --constraint ${_tmpDirectory}"
+		_submitOptions="--qos=priority"
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Detected _priority ${_priority}: using high priority QoS."
 	fi
 	if [[ -n "${_submitOptions:-}" ]]
@@ -277,7 +277,7 @@ function submitJobScripts () {
 	#
 	printf '' > "${_controlFileBase}.pipeline.started"
 	# shellcheck disable=SC2248
-	bash submit.sh "${_submitOptions:-}" >> "${_controlFileBaseForFunction}.started" 2>&1 \
+	bash submit.sh  "--constraint ${_tmpDirectory}" "${_submitOptions:-}" >> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to submit jobs for ${_project}/${_run} ."
 			mv -v "${_controlFileBaseForFunction}."{started,failed}
