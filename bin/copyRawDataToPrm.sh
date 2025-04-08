@@ -281,36 +281,17 @@ function splitSamplesheetPerProject() {
 		#  * either only demultiplexing was requested via the samplesheet
 		#  * or when disabled on the commandline by enabling "archiveMode".
 		#
-		local _captkit
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "mergedSamplesheet = ${mergedSamplesheet}."
-		if [[ "${mergedSamplesheet}" == 'true' && "${_project}" != *"RNA_v"* ]]
-		then
-			_projectGS=$(echo "${_project}" | grep -Eo 'GS_[0-9]+')
-			_captkit=$(echo "${_project}" | awk 'BEGIN {FS="-"}{print $NF}')
-			_project="${_projectGS}-${_captkit}"
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "project will now be ${_project}."
+	
 			# shellcheck disable=SC2029
-			if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished"
-			then
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
-			else
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
-				mv "${_controlFileBaseForFunction}."{started,failed}
-			fi
-			break
-		fi
-		if [[ "${_project}" == *"RNA_v"* ]]
+		if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished"
 		then
-			# shellcheck disable=SC2029
-			if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished"
-			then
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
-			else
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
-				mv "${_controlFileBaseForFunction}."{started,failed}
-			fi
-			break
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
+		else
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
+			mv "${_controlFileBaseForFunction}."{started,failed}
 		fi
+		break
+		
 
 		if [[ "${archiveMode}" == 'false' ]]; then
 			#
@@ -567,10 +548,8 @@ fi
 if [[ -z "${finishedPrevStep:-}" ]]
 then
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Previous step is: ${RAWDATAPROCESSINGFINISHED}"
-	mergedSamplesheet='false'
 else
 	RAWDATAPROCESSINGFINISHED="${finishedPrevStep}"
-	mergedSamplesheet='true'
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Previous step is: ${RAWDATAPROCESSINGFINISHED}"
 fi
 

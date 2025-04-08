@@ -31,7 +31,7 @@ def printNewSamplesheet(_projectSamplesheetPath, _gsSamplesheetDataHashmap, _sam
         #  * version of Darwin code that produced the samplesheet
         #  * whether were prepped at GenomeScan or in our own lab.
         #
-        _potentiallyMissingColumns = ['barcode', 'barcode1', 'barcode2', 'GS_ID', 'gsBatch', 'originalproject']
+        _potentiallyMissingColumns = ['barcode', 'barcode1', 'barcode2', 'GS_ID', 'gsBatch']
         for _potentiallyMissingColumn in _potentiallyMissingColumns:
             if not _potentiallyMissingColumn in _headers:
                 _headers.append(_potentiallyMissingColumn)
@@ -64,10 +64,6 @@ def printNewSamplesheet(_projectSamplesheetPath, _gsSamplesheetDataHashmap, _sam
                             _newRowValues.append(_gsSamplesheetDataHashmap[_sampleProcessStepID]['GS_ID'])
                         elif _header == 'gsBatch':
                             _newRowValues.append(_gsSamplesheetDataHashmap[_sampleProcessStepID]['gsBatch'])
-                        elif _header == 'originalproject':
-                            _newRowValues.append(_gsSamplesheetDataHashmap[_sampleProcessStepID]['project'])
-                        elif _header == 'project':
-                            _newRowValues.append(_gsSamplesheetDataHashmap[_sampleProcessStepID]['mergedproject'])
                         else:
                             #
                             # Copy other, unmodified columns + their values from the original samplesheet to the new row.
@@ -204,11 +200,6 @@ for row in gsReader:
         b = re.match("(^[0-9]+-[0-9]+)-([0-9]+)$", row['GS_ID'])
         gsBatch= b.group(1)
         gsProjects.append(gsProject)
-        c = re.match("(^[a-zA-Z0-9_]+)-([a-zA-Z0-9_]+)$", gsProject)
-        mergedproject = c.group(1)
-        mergedprojectType = c.group(2)
-        mergedproject = mergedproject[:-1]
-        mergedproject = mergedproject +"-"+ mergedprojectType
         gsBarcodesAndGenomeScanID = row['Index1'] + '-' + row['Index2'] + '-' + gsGenomeScanID
     else:
         logging.critical('Cannot parse gsBatch name and project from "' + row[gsGenomeScanID] + '" in column ' + gsGenomeScanID + ' from ' + gsSamplesheetFile + '.')
@@ -228,8 +219,9 @@ for row in gsReader:
     #        'FastQs': [{'lane': '7', 'sequencingStartDate': '181128', 'run': '0363', 'sequencer': 'K00296', 'flowcell': 'H2TGVBBXY', 'barcodes': 'CAGAGAGG-TCTACTCT'}, 
     #                   {'lane': '8', 'sequencingStartDate': '181128', 'run': '0364', 'sequencer': 'K00296', 'flowcell': 'HYKGJBBXX', 'barcodes': 'CAGAGAGG-TCTACTCT'}]}}
     #
+    
     gsSamplesheetDataHashmap[gsSampleProcessStepID] = {
-        'project': gsProject, 'GS_ID': gsGenomeScanID, 'gsBatch': gsBatch, 'mergedproject': mergedproject
+        'project': gsProject, 'GS_ID': gsGenomeScanID, 'gsBatch': gsBatch
     }
 gsSamplesheetFileHandle.close()
 #

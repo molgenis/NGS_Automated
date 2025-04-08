@@ -99,6 +99,7 @@ function sanityChecking(){
 	local _batch="${1}"
 	local _controlFileBase="${2}"
 	local _dataType="${3}"
+	local _originalbatch="${4}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${_dataType}_${FUNCNAME[0]}"
 	
 	#
@@ -115,7 +116,7 @@ function sanityChecking(){
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
 		printf '' > "${_controlFileBaseForFunction}.started"
 	fi
-	
+		
 	local _numberOfSamplesheets
 	_numberOfSamplesheets=$(find "${TMP_ROOT_DIR}/${_batch}/" -maxdepth 1 -mindepth 1 -name 'UMCG_CSV_*.'"${SAMPLESHEET_EXT}" 2>/dev/null | wc -l)
 	
@@ -162,6 +163,71 @@ function sanityChecking(){
 	fi
 	
 	#
+	# Check if there are known missing samples
+	#
+	csvFile="${_gsSampleSheet}"
+	batchDir="${TMP_ROOT_DIR}/${_batch}/"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Checking for known missing samples "
+	awk -v batchDir="${batchDir}" 'BEGIN {FS=","}{if (NR>1){if ($7=="Y"){print $0}else{ print $2 > batchDir"/missing.txt" }}else{print $0}}' "${csvFile}" > "${csvFile}.checked.csv"
+	mv -v "${csvFile}.checked.csv" "${csvFile}"
+	
+	if [[ -e "${batchDir}/missing.txt" ]]
+	then
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "WARN: There are samples missing, ${batchDir}/missing.txt is created with the missing sample(s)"
+		rsync -v "${batchDir}/missing.txt" "${_controlFileBaseForFunction}.missingSamples"
+		
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "sample(s) will be removed from inhouse samplesheet and UMCG_CSV"
+		
+		mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "awk 'BEGIN {FS=\",\"}{if (NR>1){print \$2}}' \"${csvFile}\" | awk 'BEGIN {FS=\"-\"}{print \$1\"-\"\$2}' | sort -V  | uniq"
+		
+		projectName="${uniqProjects[0]}"
+		projectNumber=$(echo "${projectName}" | awk 'BEGIN {FS="-"}{print $1}')
+		projectSuffix=$(echo "${projectName}" | awk 'BEGIN {FS="-"}{print $2}')
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "projectNumber=${projectNumber}, projectSuffix=${projectSuffix}"
+		newSamplesheetName=''
+		
+		#if [[ "${projectNumber: -1}" == "G" ]]
+		if [[ "${projectNumber: -1}" == "A" ]]
+		then
+			newProjectName="${projectNumber%?}H-${projectSuffix}"
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "new samplesheet name will be ${newProjectName}.csv"
+		elif [[ "${projectNumber: -1}" == "H" ]]	
+		then
+			newProjectName="${projectNumber%?}I-${projectSuffix}"
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "new samplesheet name will be ${newProjectName}.csv"
+		else
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "This is too much reanalysis: projectname options are G,H or I"
+			break
+		fi
+		if [[ ! -e "${TMP_ROOT_DIR}/Samplesheets/${projectName}.csv.original" ]]
+		then
+			rsync -v "${TMP_ROOT_DIR}/Samplesheets/${projectName}.csv" "${TMP_ROOT_DIR}/Samplesheets/${projectName}.csv.original"
+		fi
+		
+		count=0
+		while read line 
+		do
+			sampleProcessStepID=$(echo "${line}" | awk 'BEGIN {FS="-"}{print $3}')
+			
+			if [[ "${count}" == '0' ]]
+			then 
+				head -1 "${TMP_ROOT_DIR}/Samplesheets/${projectName}.csv" > "${TMP_ROOT_DIR}/Samplesheets/${newProjectName}.csv"
+			fi
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Adding missing sample to new samplesheet: ${TMP_ROOT_DIR}/Samplesheets/${newProjectName}.csv"
+			grep "${sampleProcessStepID}" "${TMP_ROOT_DIR}/Samplesheets/${projectName}.csv" >> "${TMP_ROOT_DIR}/Samplesheets/${newProjectName}.csv"
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Removing missing sample from old samplesheet: ${TMP_ROOT_DIR}/Samplesheets/${projectName}.csv (created ${TMP_ROOT_DIR}/Samplesheets/${projectName}.original"
+			sed -i "/${sampleProcessStepID}/d" "${TMP_ROOT_DIR}/Samplesheets/${projectName}.csv"
+			
+			count=1	
+		done<"${batchDir}/missing.txt"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Changing projectName ${projectName} into new project name ${newProjectName}"
+		perl -p -e "s|${projectName}|${newProjectName}|g" "${TMP_ROOT_DIR}/Samplesheets/${newProjectName}.csv" > "${TMP_ROOT_DIR}/Samplesheets/${newProjectName}.csv.tmp"
+		mv "${TMP_ROOT_DIR}/Samplesheets/${newProjectName}.csv.tmp" "${TMP_ROOT_DIR}/Samplesheets/${newProjectName}.csv"
+	
+	fi
+	
+	#
 	# Count Bam/gVCF files present on disk 
 	#
 	
@@ -169,7 +235,7 @@ function sanityChecking(){
 	local _countBamFilesOnDisk
 	local _countgVcfFilesOnDisk
 
-	_countSamplesInSamplesheet=$(grep -o "${_batch}-[0-9][0-9]*" "${_gsSampleSheet}" | sort -u | wc -l)
+	_countSamplesInSamplesheet=$(grep -o "${_originalbatch}-[0-9][0-9]*" "${csvFile}" | sort -u | wc -l)
 	_countBamFilesOnDisk=$(find "${TMP_ROOT_DIR}/${_batch}/${analysisFolder}/" -maxdepth 2 -mindepth 2 -name '*bam' | wc -l)
 	_countgVcfFilesOnDisk=$(find "${TMP_ROOT_DIR}/${_batch}/${analysisFolder}/" -maxdepth 2 -mindepth 2 -name '*.gvcf.gz' | wc -l)
 	if [[ "${_countBamFilesOnDisk}" -ne "${_countSamplesInSamplesheet}" ]]
@@ -237,6 +303,7 @@ function mergeSamplesheets(){
 	local _batch="${1}"
 	local _controlFileBase="${2}"
 	local _dataType="${3}"
+	local _originalbatch="${4}"
 	local _controlFileBaseForFunction="${_controlFileBase}.${_dataType}_${FUNCNAME[0]}"
 	
 	if [[ -e "${_controlFileBaseForFunction}.finished" ]]
@@ -285,38 +352,49 @@ function mergeSamplesheets(){
 
 
 	csvFile=$(ls -1 "${TMP_ROOT_DIR}/${gsBatch}/UMCG_CSV_"*".csv")
-
-	# Combine samplesheets 
 	mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
-	count=0
-	local _projectName
-	local _capturingKit
-	for i in "${uniqProjects[@]}"
-	do
-		samplesheet="${TMP_ROOT_DIR}/${_batch}/${i}.csv"
-		cp "${samplesheet}"{,.converted}
-		printf '\n'     >> "${samplesheet}.converted"
-		sed -i 's/\r/\n/g' "${samplesheet}.converted"
-		sed -i "/^[\s${SAMPLESHEET_SEP}]*$/d" "${samplesheet}.converted"
-		mv "${samplesheet}.converted" "${samplesheet}"
-		
-		if [[ "${count}" -eq '0' ]]
-		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Creating new combined samplesheet for the processing of the Analysis data"
-			#Renaming samplesheet to solely the GS_XX (e.g. GS_182.. so without the A,B,C etc suffix)
-			_projectName=$(echo "${i}" | grep -Eo 'GS_[0-9]+')
-			_capturingKit=$(echo "${i}" | awk 'BEGIN {FS="-"}{print $NF}')
-			_projectName="${_projectName}-${_capturingKit}"
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "new samplesheet name: ${_projectName}.csv"
-			cp "${samplesheet}" "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
-			count=$((${count}+1))
-		else
-			tail -n+2 "${samplesheet}" >> "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
-		fi
-		mv "${samplesheet}" "${TMP_ROOT_DIR}/Samplesheets/archive/${i}.csv"
-	done
-	
-	mv -v "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv" "${TMP_ROOT_DIR}/Samplesheets/NGS_DNA/${_projectName}.csv"
+	if [[ "${#uniqProjects[@]}" -eq '0' ]]
+	then
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "There are no projects, ERROR"
+		break
+	elif [[ "${#uniqProjects[@]}" > '1' ]]
+	then
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "There is more than 1 project (NUMBER:${#uniqProjects[@]})"
+		break
+	fi
+		# 	then
+	samplesheet="${TMP_ROOT_DIR}/${_batch}/${uniqProjects[0]}.csv"
+	# # Combine samplesheets
+	# mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
+	# count=0
+	# local _projectName
+	# local _capturingKit
+	# for i in "${uniqProjects[@]}"
+	# do
+	# 	samplesheet="${TMP_ROOT_DIR}/${_batch}/${i}.csv"
+	# 	cp "${samplesheet}"{,.converted}
+	# 	printf '\n'     >> "${samplesheet}.converted"
+	# 	sed -i 's/\r/\n/g' "${samplesheet}.converted"
+	# 	sed -i "/^[\s${SAMPLESHEET_SEP}]*$/d" "${samplesheet}.converted"
+	# 	mv "${samplesheet}.converted" "${samplesheet}"
+	#
+	# 	if [[ "${count}" -eq '0' ]]
+	# 	then
+	# 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Creating new combined samplesheet for the processing of the Analysis data"
+	# 		#Renaming samplesheet to solely the GS_XX (e.g. GS_182.. so without the A,B,C etc suffix)
+	# 		_projectName=$(echo "${i}" | grep -Eo 'GS_[0-9]+')
+	# 		_capturingKit=$(echo "${i}" | awk 'BEGIN {FS="-"}{print $NF}')
+	# 		_projectName="${_projectName}-${_capturingKit}"
+	# 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "new samplesheet name: ${_projectName}.csv"
+	# 		cp "${samplesheet}" "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
+	# 		count=$((${count}+1))
+	# 	else
+	# 		tail -n+2 "${samplesheet}" >> "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
+	# 	fi
+	# 	mv "${samplesheet}" "${TMP_ROOT_DIR}/Samplesheets/archive/${i}.csv"
+	# done
+	log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Moving ${samplesheet} to ${TMP_ROOT_DIR}/Samplesheets/NGS_DNA/"
+	mv -v "${samplesheet}" "${TMP_ROOT_DIR}/Samplesheets/NGS_DNA/"
 	rm -f "${_controlFileBaseForFunction}.failed"
 	mv -v "${_controlFileBaseForFunction}."{started,finished}
 }
@@ -576,6 +654,12 @@ else
 	for gsBatch in "${gsBatches[@]}"
 	do
 		gsBatch="$(basename "${gsBatch}")"
+ 		if [[ "${gsBatch}" == *"_"* ]]
+ 		then
+ 			originalBatch=$(echo "${gsBatch}" | awk 'BEGIN {FS="_"}{print $1}')
+			else
+				originalBatch="${gsBatch}"
+ 		fi
 		controlFileBase="${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}"
 		export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing process analysis batch ${gsBatch}..."
@@ -595,7 +679,7 @@ else
 				if [[ -e "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished" ]]
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished present -> Data transfer completed; let's process batch ${gsBatch}..."
-					sanityChecking "${gsBatch}" "${controlFileBase}" "${analysisFolder}"
+					sanityChecking "${gsBatch}" "${controlFileBase}" "${analysisFolder}" "${originalBatch}"
 				else
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished absent -> Data transfer not yet completed; skipping batch ${gsBatch}."
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Data transfer not yet completed; skipping batch ${gsBatch}."
@@ -603,7 +687,7 @@ else
 				fi
 				if [[ -e "${controlFileBase}.${analysisFolder}_sanityChecking.finished" ]]
 				then
-					mergeSamplesheets "${gsBatch}" "${controlFileBase}" "${analysisFolder}"
+					mergeSamplesheets "${gsBatch}" "${controlFileBase}" "${analysisFolder}" "${originalBatch}"
 				else
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.sanityChecking.finished absent -> sanityChecking failed."
 				fi
@@ -647,16 +731,22 @@ else
 			if [[ -d "${TMP_ROOT_DIR}/${gsBatch}/" ]]
 			then
 				gsBatch="$(basename "${gsBatch}")"
-				if [[ ! -e "${TMP_ROOT_DIR}/${gsBatch}/UMCG_CSV_${gsBatch}.csv" ]]
+				if [[ "${gsBatch}" == *"_"* ]]
 				then
-					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no UMCG_CSV_${gsBatch}.csv, cannot proceed with the clean up"
+					originalBatch=$(echo "${gsBatch}" | awk 'BEGIN {FS="_"}{print $1}')
+				else
+					originalBatch="${gsBatch}"
+				fi
+				if [[ ! -e "${TMP_ROOT_DIR}/${gsBatch}/UMCG_CSV_${originalBatch}.csv" ]]
+				then
+					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no UMCG_CSV_${originalBatch}.csv, cannot proceed with the clean up"
 					continue
 				fi
 				csvFile=$(ls -1 "${TMP_ROOT_DIR}/${gsBatch}/UMCG_CSV_"*".csv")
 				mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
-				projectName=$(echo "${uniqProjects[0]}" | grep -Eo 'GS_[0-9]+')
-				captkit=$(echo "${uniqProjects[0]}" | awk 'BEGIN {FS="-"}{print $NF}')
-				projectName="${projectName}-${captkit}"
+				projectName="${uniqProjects[0]}"
+				# captkit=$(echo "${uniqProjects[0]}" | awk 'BEGIN {FS="-"}{print $NF}')
+# 				projectName="${projectName}-${captkit}"
 				#
 				# Convert date to seconds for easier calculation of the date difference.
 				# 86400 = 1 day in seconds.
