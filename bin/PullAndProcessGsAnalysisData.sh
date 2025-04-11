@@ -163,31 +163,65 @@ function sanityChecking(){
 	fi
 	
 	#
-	# Check if there are known missing samples
+	# Check if there are known missing samples. Columnname available [Y/N]
 	#
 	csvFile="${_gsSampleSheet}"
 	batchDir="${TMP_ROOT_DIR}/${_batch}/"
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Checking for known missing samples "
-	awk -v batchDir="${batchDir}" 'BEGIN {FS=","}{if (NR>1){if ($7=="Y"){print $0}else{ print $2 > batchDir"/missing.txt" }}else{print $0}}' "${csvFile}" > "${csvFile}.checked.csv"
-	mv -v "${csvFile}.checked.csv" "${csvFile}"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Check if available column header is there"
 	
-	if [[ -e "${batchDir}/missing.txt" ]]
+	declare -a sampleSheetColumnNames=()
+	declare -A sampleSheetColumnOffsets=()
+	declare    sampleSheetFieldIndex
+	declare    sampleSheetFieldValueCount
+
+	IFS="," read -r -a sampleSheetColumnNames <<< "$(head -1 "${csvFile}")"
+	for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]} ; offset++ ))
+	do
+		columnName="${sampleSheetColumnNames[${offset}]}"
+		sampleSheetColumnOffsets["${columnName}"]="${offset}"
+	done
+
+	if [[ -n "${sampleSheetColumnOffsets['ID']+isset}" ]]; then
+	  idFieldIndex=$((${sampleSheetColumnOffsets['ID']} + 1))
+	fi
+
+	if [[ -n "${sampleSheetColumnOffsets['available']+isset}" ]]; then
+	  availableFieldIndex=$((${sampleSheetColumnOffsets['available']} + 1))
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "headername [available] found, now checking for known missing samples"
+	else
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "columnname [available] not found"
+		continue
+	fi
+	
+	awk -v batchDir="${batchDir}" -v aFI="${availableFieldIndex}" -v iFI="${idFieldIndex}" 'BEGIN {FS=","}{if (NR>1){if ($aFI=="Y"){print $0}else{ print $iFI > batchDir"/missing_samples.txt" }}else{print $0}}' "${csvFile}" > "${csvFile}.checked.csv"
+	mv -v "${csvFile}.checked.csv" "${csvFile}"
+
+	if [[ -e "${batchDir}/missing_samples.txt" ]]
 	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "WARN: There are samples missing, ${batchDir}/missing.txt is created with the missing sample(s)"
-		rsync -v "${batchDir}/missing.txt" "${_controlFileBaseForFunction}.missingSamples"
-		
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "WARN: There are samples missing, ${batchDir}/missing_samples.txt is created with the missing sample(s)"
+		rsync -v "${batchDir}/missing_samples.txt" "${_controlFileBaseForFunction}.missingSamples"
+	
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "sample(s) will be removed from inhouse samplesheet and UMCG_CSV"
-		
-		mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "awk 'BEGIN {FS=\",\"}{if (NR>1){print \$2}}' \"${csvFile}\" | awk 'BEGIN {FS=\"-\"}{print \$1\"-\"\$2}' | sort -V  | uniq"
+	
+		mapfile -t uniqProjects< <(awk -v iFI="${idFieldIndex}" 'BEGIN {FS=","}{if (NR>1){print $iFI}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "awk -v iFI=\"${idFieldIndex}\" 'BEGIN {FS=\",\"}{if (NR>1){print \$iFI}}' \"${csvFile}\" | awk 'BEGIN {FS=\"-\"}{print \$1\"-\"\$2}' | sort -V  | uniq"
+		if [[ "${#uniqProjects[@]}" -eq '0' ]]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "There are no projects in the samplesheet! (${csvFile})"
+			break
+		elif [[ "${#uniqProjects[@]}" -gt '1' ]]
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "There is more than 1 project in the samplesheet, is this an old GS samplesheet? (${csvFile})"
+			break
+		fi
 		
 		projectName="${uniqProjects[0]}"
-		projectNumber=$(echo "${projectName}" | awk 'BEGIN {FS="-"}{print $1}')
-		projectSuffix=$(echo "${projectName}" | awk 'BEGIN {FS="-"}{print $2}')
+		splittedProjectName=(${projectName//-/ })
+		projectNumber="${splittedProjectName[0]}"
+		projectSuffix="${splittedProjectName[1]}"
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "projectNumber=${projectNumber}, projectSuffix=${projectSuffix}"
 		newSamplesheetName=''
-		
-		#if [[ "${projectNumber: -1}" == "G" ]]
+	
 		if [[ "${projectNumber: -1}" == "A" ]]
 		then
 			newProjectName="${projectNumber%?}H-${projectSuffix}"
@@ -197,34 +231,40 @@ function sanityChecking(){
 			newProjectName="${projectNumber%?}I-${projectSuffix}"
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "new samplesheet name will be ${newProjectName}.csv"
 		else
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "This is too much reanalysis: projectname options are G,H or I"
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "This was too much reanalysis, projectname options are G,H or I"
 			break
 		fi
 		if [[ ! -e "${TMP_ROOT_DIR}/Samplesheets/${projectName}.csv.original" ]]
 		then
 			rsync -v "${TMP_ROOT_DIR}/Samplesheets/${projectName}.csv" "${TMP_ROOT_DIR}/Samplesheets/${projectName}.csv.original"
 		fi
-		
-		count=0
+	
+		header='yes'
 		while read line 
 		do
 			sampleProcessStepID=$(echo "${line}" | awk 'BEGIN {FS="-"}{print $3}')
-			
-			if [[ "${count}" == '0' ]]
+			if [[ "${header}" == 'yes' ]]
 			then 
 				head -1 "${TMP_ROOT_DIR}/Samplesheets/${projectName}.csv" > "${TMP_ROOT_DIR}/Samplesheets/${newProjectName}.csv"
 			fi
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Adding missing sample to new samplesheet: ${TMP_ROOT_DIR}/Samplesheets/${newProjectName}.csv"
-			grep "${sampleProcessStepID}" "${TMP_ROOT_DIR}/Samplesheets/${projectName}.csv" >> "${TMP_ROOT_DIR}/Samplesheets/${newProjectName}.csv"
+			if grep -q "${sampleProcessStepID}" "${TMP_ROOT_DIR}/Samplesheets/${projectName}.csv"
+			then	
+				grep "${sampleProcessStepID}" "${TMP_ROOT_DIR}/Samplesheets/${projectName}.csv" >> "${TMP_ROOT_DIR}/Samplesheets/${newProjectName}.csv"
+			else
+				log4Bash 'WARN' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Mmm, the sampleProcessStepID ${sampleProcessStepID} is not found in ${TMP_ROOT_DIR}/Samplesheets/${projectName}.csv"
+			fi
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Removing missing sample from old samplesheet: ${TMP_ROOT_DIR}/Samplesheets/${projectName}.csv (created ${TMP_ROOT_DIR}/Samplesheets/${projectName}.original"
-			sed -i "/${sampleProcessStepID}/d" "${TMP_ROOT_DIR}/Samplesheets/${projectName}.csv"
-			
-			count=1	
-		done<"${batchDir}/missing.txt"
+			sed -i "/,${sampleProcessStepID},/d" "${TMP_ROOT_DIR}/Samplesheets/${projectName}.csv"
+		
+			header='done'
+		done <"${batchDir}/missing_samples.txt"
+	
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Changing projectName ${projectName} into new project name ${newProjectName}"
 		perl -p -e "s|${projectName}|${newProjectName}|g" "${TMP_ROOT_DIR}/Samplesheets/${newProjectName}.csv" > "${TMP_ROOT_DIR}/Samplesheets/${newProjectName}.csv.tmp"
 		mv "${TMP_ROOT_DIR}/Samplesheets/${newProjectName}.csv.tmp" "${TMP_ROOT_DIR}/Samplesheets/${newProjectName}.csv"
-	
+	else
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "There are no samples missing."
 	fi
 	
 	#
@@ -342,6 +382,7 @@ function mergeSamplesheets(){
 		--genomeScanInputDir "${TMP_ROOT_DIR}/${_batch}/" \
 		--inhouseSamplesheetsInputDir "${TMP_ROOT_DIR}/Samplesheets/" \
 		--samplesheetsOutputDir "${TMP_ROOT_DIR}/${_batch}/" \
+		--batchName "${_batch}" \
 		--logLevel "${_pythonLogLevel}" \
 		>> "${_controlFileBaseForFunction}.started" 2>&1 \
 	|| {
@@ -658,7 +699,7 @@ else
  		then
  			originalBatch=$(echo "${gsBatch}" | awk 'BEGIN {FS="_"}{print $1}')
 			else
-				originalBatch="${gsBatch}"
+			originalBatch="${gsBatch}"
  		fi
 		controlFileBase="${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}"
 		export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"

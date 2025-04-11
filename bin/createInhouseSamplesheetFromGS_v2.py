@@ -31,7 +31,7 @@ def printNewSamplesheet(_projectSamplesheetPath, _gsSamplesheetDataHashmap, _sam
         #  * version of Darwin code that produced the samplesheet
         #  * whether were prepped at GenomeScan or in our own lab.
         #
-        _potentiallyMissingColumns = ['barcode', 'barcode1', 'barcode2', 'GS_ID', 'gsBatch']
+        _potentiallyMissingColumns = ['barcode', 'barcode1', 'barcode2', 'GS_ID', 'gsBatch','gsBatchFolderName']
         for _potentiallyMissingColumn in _potentiallyMissingColumns:
             if not _potentiallyMissingColumn in _headers:
                 _headers.append(_potentiallyMissingColumn)
@@ -64,6 +64,8 @@ def printNewSamplesheet(_projectSamplesheetPath, _gsSamplesheetDataHashmap, _sam
                             _newRowValues.append(_gsSamplesheetDataHashmap[_sampleProcessStepID]['GS_ID'])
                         elif _header == 'gsBatch':
                             _newRowValues.append(_gsSamplesheetDataHashmap[_sampleProcessStepID]['gsBatch'])
+                        elif _header == 'gsBatchFolderName':
+                            _newRowValues.append(_gsSamplesheetDataHashmap[_sampleProcessStepID]['gsBatchFolderName'])
                         else:
                             #
                             # Copy other, unmodified columns + their values from the original samplesheet to the new row.
@@ -116,6 +118,7 @@ parser = argparse.ArgumentParser(description='Commandline parameters:')
 parser.add_argument("--genomeScanInputDir", type=readableDir, required=True, help='Input directory containing one GenomeScan batch (*.csv, checksums.m5 and *.fastq.gz files).')
 parser.add_argument("--inhouseSamplesheetsInputDir", type=readableDir, required=True, help='Input directory containing incomplete new inhouse samplesheets.')
 parser.add_argument("--samplesheetsOutputDir", type=readableDir, required=True, help='Directory where complete, merged inhouse samplesheets are stored.')
+parser.add_argument("--batchName", required=True, help='name of the folder of the batch')
 parser.add_argument("--logLevel", required=False, default='INFO', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'])
 args = parser.parse_args()
 #
@@ -219,10 +222,16 @@ for row in gsReader:
     #        'FastQs': [{'lane': '7', 'sequencingStartDate': '181128', 'run': '0363', 'sequencer': 'K00296', 'flowcell': 'H2TGVBBXY', 'barcodes': 'CAGAGAGG-TCTACTCT'}, 
     #                   {'lane': '8', 'sequencingStartDate': '181128', 'run': '0364', 'sequencer': 'K00296', 'flowcell': 'HYKGJBBXX', 'barcodes': 'CAGAGAGG-TCTACTCT'}]}}
     #
-    
-    gsSamplesheetDataHashmap[gsSampleProcessStepID] = {
-        'project': gsProject, 'GS_ID': gsGenomeScanID, 'gsBatch': gsBatch
-    }
+    if args.batchName == gsBatch:
+        logging.debug('args.batchName ' + args.batchName + ' is the same as ' + gsBatch)
+        gsSamplesheetDataHashmap[gsSampleProcessStepID] = {
+            'project': gsProject, 'GS_ID': gsGenomeScanID, 'gsBatch': gsBatch
+        }
+    else:
+        logging.debug('args.batchName: ' + args.batchName + ' , is NOT the same as: ' + gsBatch)
+        gsSamplesheetDataHashmap[gsSampleProcessStepID] = {
+           'project': gsProject, 'GS_ID': gsGenomeScanID, 'gsBatch': gsBatch, 'gsBatchFolderName': args.batchName
+        }
 gsSamplesheetFileHandle.close()
 #
 # Get list of uniq project names and count number of samples per project.
