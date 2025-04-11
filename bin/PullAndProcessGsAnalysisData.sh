@@ -405,35 +405,7 @@ function mergeSamplesheets(){
 	fi
 		# 	then
 	samplesheet="${TMP_ROOT_DIR}/${_batch}/${uniqProjects[0]}.csv"
-	# # Combine samplesheets
-	# mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
-	# count=0
-	# local _projectName
-	# local _capturingKit
-	# for i in "${uniqProjects[@]}"
-	# do
-	# 	samplesheet="${TMP_ROOT_DIR}/${_batch}/${i}.csv"
-	# 	cp "${samplesheet}"{,.converted}
-	# 	printf '\n'     >> "${samplesheet}.converted"
-	# 	sed -i 's/\r/\n/g' "${samplesheet}.converted"
-	# 	sed -i "/^[\s${SAMPLESHEET_SEP}]*$/d" "${samplesheet}.converted"
-	# 	mv "${samplesheet}.converted" "${samplesheet}"
-	#
-	# 	if [[ "${count}" -eq '0' ]]
-	# 	then
-	# 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Creating new combined samplesheet for the processing of the Analysis data"
-	# 		#Renaming samplesheet to solely the GS_XX (e.g. GS_182.. so without the A,B,C etc suffix)
-	# 		_projectName=$(echo "${i}" | grep -Eo 'GS_[0-9]+')
-	# 		_capturingKit=$(echo "${i}" | awk 'BEGIN {FS="-"}{print $NF}')
-	# 		_projectName="${_projectName}-${_capturingKit}"
-	# 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "new samplesheet name: ${_projectName}.csv"
-	# 		cp "${samplesheet}" "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
-	# 		count=$((${count}+1))
-	# 	else
-	# 		tail -n+2 "${samplesheet}" >> "${TMP_ROOT_DIR}/${_batch}/${_projectName}.csv"
-	# 	fi
-	# 	mv "${samplesheet}" "${TMP_ROOT_DIR}/Samplesheets/archive/${i}.csv"
-	# done
+	
 	log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Moving ${samplesheet} to ${TMP_ROOT_DIR}/Samplesheets/NGS_DNA/"
 	mv -v "${samplesheet}" "${TMP_ROOT_DIR}/Samplesheets/NGS_DNA/"
 	rm -f "${_controlFileBaseForFunction}.failed"
