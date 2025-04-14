@@ -182,11 +182,11 @@ function sanityChecking(){
 	done
 
 	if [[ -n "${sampleSheetColumnOffsets['ID']+isset}" ]]; then
-	  idFieldIndex=$((${sampleSheetColumnOffsets['ID']} + 1))
+		idFieldIndex=$((${sampleSheetColumnOffsets['ID']} + 1))
 	fi
 
 	if [[ -n "${sampleSheetColumnOffsets['available']+isset}" ]]; then
-	  availableFieldIndex=$((${sampleSheetColumnOffsets['available']} + 1))
+		availableFieldIndex=$((${sampleSheetColumnOffsets['available']} + 1))
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "headername [available] found, now checking for known missing samples"
 	else
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "columnname [available] not found"
@@ -667,12 +667,12 @@ else
 	for gsBatch in "${gsBatches[@]}"
 	do
 		gsBatch="$(basename "${gsBatch}")"
- 		if [[ "${gsBatch}" == *"_"* ]]
- 		then
- 			originalBatch=$(echo "${gsBatch}" | awk 'BEGIN {FS="_"}{print $1}')
+		if [[ "${gsBatch}" == *"_"* ]]
+		then
+			originalBatch=$(echo "${gsBatch}" | awk 'BEGIN {FS="_"}{print $1}')
 			else
 			originalBatch="${gsBatch}"
- 		fi
+		fi
 		controlFileBase="${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}"
 		export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing process analysis batch ${gsBatch}..."
@@ -767,7 +767,7 @@ else
 				if [[ -f "${TMP_ROOT_DIR}/logs/${projectName}/run01.pipeline.finished" ]]
 				then
 					dateInSecAnalysisData="$(date -d"$(rsync "${TMP_ROOT_DIR}/logs/${projectName}/run01.pipeline.finished" | awk '{print $3}')" +%s)"
-			
+
 					#
 					# When the pipeline is finished, a run01.pipeline.finished is created
 					# If this file is older than 2 days, the genomescan batch will be removed from the data staging machine.
