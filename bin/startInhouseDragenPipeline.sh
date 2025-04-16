@@ -218,10 +218,10 @@ do
 	module load nextflow
 	thisDir=$(pwd)
 	cd "${TMP_ROOT_DIR}/nextflow/${run}"
-
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" "0" "rerunning/resuming: nextflow run -resume --samplesheet \"${samplesheet}\" --tmpdir \"${TMP_LFS}\" --group \"${group}\" -w \"${TMP_ROOT_DIR}/nextflow/${run}\" -c \"${EBROOTNF_NGS_DNA}/dragen.config\" \"${EBROOTNF_NGS_DNA}/workflow_dragen.nf\""
+	thisHost=$(hostname)
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" "0" "rerunning/resuming: nextflow run -resume --samplesheet \"${samplesheet}\" --tmpdir \"${TMP_LFS}\" --group \"${group}\" --cluster \"${thisHost}\" -w \"${TMP_ROOT_DIR}/nextflow/${run}\" -c \"${EBROOTNF_NGS_DNA}/dragen.config\" \"${EBROOTNF_NGS_DNA}/workflow_dragen.nf\""
 	
-	nextflow run -resume --samplesheet "${samplesheet}" --tmpdir "${TMP_LFS}" --group "${group}" -profile slurm -w "${TMP_ROOT_DIR}/nextflow/${run}" -c "${EBROOTNF_NGS_DNA}/dragen.config" "${EBROOTNF_NGS_DNA}/workflow_dragen.nf" \
+	nextflow run -resume --samplesheet "${samplesheet}" --tmpdir "${TMP_LFS}" --group "${group}" --cluster "${thisHost}" -profile slurm -w "${TMP_ROOT_DIR}/nextflow/${run}" -c "${EBROOTNF_NGS_DNA}/dragen.config" "${EBROOTNF_NGS_DNA}/workflow_dragen.nf" \
 	|| {
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" "0" "pipeline crashed, it might be due to one of the following variables: samplesheet:[${samplesheet}] tmpdir:[${TMP_LFS}] group:[${group}] workdir:[${TMP_ROOT_DIR}/nextflow/${run}] type/workflow:[workflow_dragen.nf]"
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" "0" "To rerun: navigate to ${TMP_ROOT_DIR}/nextflow/${project} and then execute the following: nextflow run --samplesheet \"${samplesheet}\" --tmpdir \"${TMP_LFS}\" --group \"${group}\" -w \"${TMP_ROOT_DIR}/nextflow/${run}\" \"${EBROOTNF_NGS_DNA}/workflow_dragen.nf\""
