@@ -171,8 +171,6 @@ function sanityChecking(){
 	
 	declare -a sampleSheetColumnNames=()
 	declare -A sampleSheetColumnOffsets=()
-	declare    sampleSheetFieldIndex
-	declare    sampleSheetFieldValueCount
 
 	IFS="," read -r -a sampleSheetColumnNames <<< "$(head -1 "${csvFile}")"
 	for (( offset = 0 ; offset < ${#sampleSheetColumnNames[@]} ; offset++ ))
@@ -190,7 +188,7 @@ function sanityChecking(){
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "headername [available] found, now checking for known missing samples"
 	else
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "columnname [available] not found"
-		continue
+		return
 	fi
 	
 	awk -v batchDir="${batchDir}" -v aFI="${availableFieldIndex}" -v iFI="${idFieldIndex}" 'BEGIN {FS=","}{if (NR>1){if ($aFI=="Y"){print $0}else{ print $iFI > batchDir"/missing_samples.txt" }}else{print $0}}' "${csvFile}" > "${csvFile}.checked.csv"
@@ -208,19 +206,19 @@ function sanityChecking(){
 		if [[ "${#uniqProjects[@]}" -eq '0' ]]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "There are no projects in the samplesheet! (${csvFile})"
-			break
+			return
 		elif [[ "${#uniqProjects[@]}" -gt '1' ]]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "There is more than 1 project in the samplesheet, is this an old GS samplesheet? (${csvFile})"
-			break
+			return
 		fi
 		
 		projectName="${uniqProjects[0]}"
-		splittedProjectName=(${projectName//-/ })
+		IFS="-" read  -r -a splittedProjectName <<< "${projectName}"
 		projectNumber="${splittedProjectName[0]}"
 		projectSuffix="${splittedProjectName[1]}"
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "projectNumber=${projectNumber}, projectSuffix=${projectSuffix}"
-		newSamplesheetName=''
+		newProjectName=''
 	
 		if [[ "${projectNumber: -1}" == "A" ]]
 		then
@@ -232,7 +230,7 @@ function sanityChecking(){
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "new samplesheet name will be ${newProjectName}.csv"
 		else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "This was too much reanalysis, projectname options are G,H or I"
-			break
+			return
 		fi
 		if [[ ! -e "${TMP_ROOT_DIR}/Samplesheets/${projectName}.csv.original" ]]
 		then
@@ -240,7 +238,7 @@ function sanityChecking(){
 		fi
 	
 		header='yes'
-		while read line 
+		while read -r line 
 		do
 			sampleProcessStepID=$(echo "${line}" | awk 'BEGIN {FS="-"}{print $3}')
 			if [[ "${header}" == 'yes' ]]
@@ -397,11 +395,11 @@ function mergeSamplesheets(){
 	if [[ "${#uniqProjects[@]}" -eq '0' ]]
 	then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "There are no projects, ERROR"
-		break
-	elif [[ "${#uniqProjects[@]}" > '1' ]]
+		continue
+	elif [[ "${#uniqProjects[@]}" -gt '1' ]]
 	then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "There is more than 1 project (NUMBER:${#uniqProjects[@]})"
-		break
+		continue
 	fi
 		# 	then
 	samplesheet="${TMP_ROOT_DIR}/${_batch}/${uniqProjects[0]}.csv"
