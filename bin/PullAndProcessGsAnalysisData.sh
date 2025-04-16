@@ -395,11 +395,11 @@ function mergeSamplesheets(){
 	if [[ "${#uniqProjects[@]}" -eq '0' ]]
 	then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "There are no projects, ERROR"
-		continue
+		return
 	elif [[ "${#uniqProjects[@]}" -gt '1' ]]
 	then
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "There is more than 1 project (NUMBER:${#uniqProjects[@]})"
-		continue
+		return
 	fi
 		# 	then
 	samplesheet="${TMP_ROOT_DIR}/${_batch}/${uniqProjects[0]}.csv"

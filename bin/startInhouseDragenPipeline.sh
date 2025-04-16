@@ -201,7 +201,6 @@ do
 	#
 	# Check if the run has already completed.
 	#
-	sequencer=$(echo "${run}" | awk 'BEGIN {FS="_"} {print $2}')
 	samplesheet="${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${run}.csv"
 	if [[ -f "${SEQ_INCOMING_DIR}/${run}/RunCompletionStatus.xml" ]]
 	then
