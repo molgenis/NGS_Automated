@@ -182,7 +182,8 @@ function notification() {
 				#
 				# Notify Track and Trace MOLGENIS Database.
 				#
-				trackAndTrace "${_projectStateFile}" "${_project}" "${_run}" "${_phase}" "${_state}" "${_action}" "${_controlFileBase}"
+				#trackAndTrace "${_projectStateFile}" "${_project}" "${_run}" "${_phase}" "${_state}" "${_action}" "${_controlFileBase}"
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "no trackandtrace actions will happen"
 			elif [[ "${_action}" == *'email'* || "${_action}" == *'channel'* ]]
 			then
 				#
