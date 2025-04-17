@@ -220,7 +220,7 @@ function sanityChecking(){
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "projectNumber=${projectNumber}, projectSuffix=${projectSuffix}"
 		newProjectName=''
 	
-		if [[ "${projectNumber: -1}" == "A" ]]
+		if [[ "${projectNumber: -1}" == "G" ]]
 		then
 			newProjectName="${projectNumber%?}H-${projectSuffix}"
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "new samplesheet name will be ${newProjectName}.csv"
