@@ -225,7 +225,7 @@ for row in gsReader:
     if args.batchName == gsBatch:
         logging.debug('args.batchName ' + args.batchName + ' is the same as ' + gsBatch)
         gsSamplesheetDataHashmap[gsSampleProcessStepID] = {
-            'project': gsProject, 'GS_ID': gsGenomeScanID, 'gsBatch': gsBatch
+            'project': gsProject, 'GS_ID': gsGenomeScanID, 'gsBatch': gsBatch, 'gsBatchFolderName': ""
         }
     else:
         logging.debug('args.batchName: ' + args.batchName + ' , is NOT the same as: ' + gsBatch)

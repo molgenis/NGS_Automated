@@ -191,13 +191,13 @@ function sanityChecking(){
 		return
 	fi
 	
-	awk -v batchDir="${batchDir}" -v aFI="${availableFieldIndex}" -v iFI="${idFieldIndex}" 'BEGIN {FS=","}{if (NR>1){if ($aFI=="Y"){print $0}else{ print $iFI > batchDir"/missing_samples.txt" }}else{print $0}}' "${csvFile}" > "${csvFile}.checked.csv"
-	mv -v "${csvFile}.checked.csv" "${csvFile}"
+	awk -v batchDir="${batchDir}" -v aFI="${availableFieldIndex}" -v iFI="${idFieldIndex}" 'BEGIN {FS=","}{if (NR>1){if ($aFI=="Y"){print $0}else{ print $iFI > batchDir"/missing_samples.txt" }}else{print $0}}' "${csvFile}" > "${csvFile}.checked"
+	mv -v "${csvFile}.checked" "${csvFile}"
 
 	if [[ -e "${batchDir}/missing_samples.txt" ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "WARN: There are samples missing, ${batchDir}/missing_samples.txt is created with the missing sample(s)"
-		rsync -v "${batchDir}/missing_samples.txt" "${_controlFileBaseForFunction}.missingSamples"
+		rsync -v "${batchDir}/missing_samples.txt" "${JOB_CONTROLE_FILE_BASE}.missingSamples"
 	
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "sample(s) will be removed from inhouse samplesheet and UMCG_CSV"
 	
@@ -375,7 +375,7 @@ function mergeSamplesheets(){
 	# Combine GenomeScan samplesheet per batch with inhouse samplesheet(s) per project.
 	#
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "combining GS samplesheet with inhouse samplesheet"
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "createInhouseSamplesheetFromGS_v2.py --genomeScanInputDir \"${TMP_ROOT_DIR}/${_batch}/\" --inhouseSamplesheetsInputDir \"${TMP_ROOT_DIR}/Samplesheets/\" --samplesheetsOutputDir \"${TMP_ROOT_DIR}/${_batch}/\" --logLevel \"${_pythonLogLevel}\" >> ${_controlFileBaseForFunction}.started"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "createInhouseSamplesheetFromGS_v2.py --genomeScanInputDir \"${TMP_ROOT_DIR}/${_batch}/\" --inhouseSamplesheetsInputDir \"${TMP_ROOT_DIR}/Samplesheets/\" --samplesheetsOutputDir \"${TMP_ROOT_DIR}/${_batch}/\" --batchName \"${_batch}\" --logLevel \"${_pythonLogLevel}\" >> ${_controlFileBaseForFunction}.started"
 	createInhouseSamplesheetFromGS_v2.py \
 		--genomeScanInputDir "${TMP_ROOT_DIR}/${_batch}/" \
 		--inhouseSamplesheetsInputDir "${TMP_ROOT_DIR}/Samplesheets/" \
