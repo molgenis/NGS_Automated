@@ -175,7 +175,7 @@ function executeVip () {
 	mv "${_vip_output_tmp_dir}"/*.vcf.gz.csi "${_vip_output_dir}"
 
 	# crams
-  local -r _vip_output_alignment_dir="${_vip_output_dir}/alignment"
+	local -r _vip_output_alignment_dir="${_vip_output_dir}/alignment"
 	mkdir -p "${_vip_output_alignment_dir}"
 	mv "${_vip_output_tmp_dir}/intermediates/"*.cram "${_vip_output_alignment_dir}"
 	mv "${_vip_output_tmp_dir}/intermediates/"*.cram.crai "${_vip_output_alignment_dir}"
@@ -389,11 +389,11 @@ else
 		sampleSheetFieldIndex=$((${sampleSheetColumnOffsets['testCode']} + 1))
 		testCode=$(tail -n 1 "${sampleSheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
 
-    # use comment lines below to re-enable LX001, LX003 and LX004 functionality
+		# use comment lines below to re-enable LX001, LX003 and LX004 functionality
 		# if [[ "${testCode}" != "LX001" ]] && [[ "${testCode}" != "LX002" ]] && [[ "${testCode}" != "LX003" ]] && [[ "${testCode}" != "LX004" ]]; then
 		#	log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${sampleSheet} column 'testCode' contains invalid value '${testCode}', valid values are 'LX001', 'LX002', 'LX003' or 'LX004'."
 		if [[ "${testCode}" != "LX002" ]]; then
-    	log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${sampleSheet} column 'testCode' contains invalid value '${testCode}', valid values are 'LX002'."
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${sampleSheet} column 'testCode' contains invalid value '${testCode}', valid values are 'LX002'."
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Skipping ${project} due to error in sample sheet."
 			continue
 		fi
