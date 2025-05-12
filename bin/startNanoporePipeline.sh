@@ -160,7 +160,8 @@ function executeVip () {
 	#
 
 	# move all results to tmp run dir
-	local -r _vip_output_tmp_dir="${_vip_output_run_dir}.tmp/results"
+	local -r _vip_output_tmp_dir_root="${_vip_output_run_dir}.tmp"
+	local -r _vip_output_tmp_dir="${_vip_output_tmp_dir_root}/results"
 	mkdir -p "${_vip_output_tmp_dir}"
 	# shellcheck disable=SC2250
 	for x in "${_vip_output_dir}"/{*,.[!.]*,..?*}; do
@@ -181,6 +182,8 @@ function executeVip () {
 	mkdir -p "${_vip_output_alignment_dir}"
 	mv "${_vip_output_tmp_dir}/intermediates/"*.cram "${_vip_output_alignment_dir}"
 	mv "${_vip_output_tmp_dir}/intermediates/"*.cram.crai "${_vip_output_alignment_dir}"
+
+	rm -rf "${_vip_output_tmp_dir_root}"
 
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} succeeded for ${_project}/${_run}."
 	rm -f "${_controlFileBaseForFunction}.failed"
