@@ -166,10 +166,9 @@ function executeVip () {
 
 	# move back and reorganize data to run dir
 
-	# sample sheet
-	mv "${_vip_output_tmp_dir}"/*.csv "${_vip_output_dir}"
 	# vip report
 	mv "${_vip_output_tmp_dir}"/[!nxf_]*.html "${_vip_output_dir}"
+
 	# vip report data
 	mv "${_vip_output_tmp_dir}"/*.vcf.gz "${_vip_output_dir}"
 	mv "${_vip_output_tmp_dir}"/*.vcf.gz.csi "${_vip_output_dir}"
