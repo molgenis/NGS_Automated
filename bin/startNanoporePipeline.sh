@@ -162,8 +162,9 @@ function executeVip () {
 	# move all results to tmp run dir
 	local -r _vip_output_tmp_dir="${_vip_output_run_dir}.tmp/results"
 	mkdir -p "${_vip_output_tmp_dir}"
+	# shellcheck disable=SC2250
 	for x in "${_vip_output_dir}"/{*,.[!.]*,..?*}; do
-		if [ -e "$x" ]; then mv -- "$x" "${_vip_output_tmp_dir}"/; fi
+		if [[ -e "$x" ]]; then mv -- "$x" "${_vip_output_tmp_dir}"/; fi
 	done
 
 	# move back and reorganize data to run dir
