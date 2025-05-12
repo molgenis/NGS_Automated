@@ -162,7 +162,7 @@ function executeVip () {
 	# move all results to tmp run dir
 	local -r _vip_output_tmp_dir="${_vip_output_run_dir}.tmp/results"
 	mkdir -p "${_vip_output_tmp_dir}"
-	mv "${_vip_output_dir}"/* "${_vip_output_tmp_dir}/"
+	mv "${_vip_output_dir}"/{*,.*} "${_vip_output_tmp_dir}/"
 
 	# move back and reorganize data to run dir
 
