@@ -451,6 +451,8 @@ function postMessageToChannel() {
 	#
 	# Compile message in JSON format.
 	# JSON cannot contain any double quotes, so replace all double quotes in the message body with single quotes.
+	# The backslash is special in JSON and used for escape sequences;
+	# escape all backslashes in the message body to print a literal backslash.
 	#
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Compiling JSON message ..."
 	local _jsonMessage
@@ -465,7 +467,7 @@ function postMessageToChannel() {
 	else
 		_messageBody="$(tr \" \' < "${_projectStateFile}")"
 	fi
-	
+	_messageBody="${_messageBody//\\/\\\\}"
 	_jsonMessage=$(cat <<-EOM
 		{
 		"title": "${ROLE_USER}@${HOSTNAME_SHORT}: Project ${_project}/${_run} has state ${_state} for phase ${_phase} at ${_timestamp}.",
