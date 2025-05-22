@@ -115,7 +115,7 @@ function processBatch(){
 	if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${gsBatch} already processed, no need process the data again."
-		continue
+		return
 	else
 		# shellcheck disable=SC2174
 		mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/"
@@ -131,7 +131,7 @@ function processBatch(){
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished absent -> Data transfer not yet completed; skipping batch ${gsBatch}."
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Data transfer not yet completed; skipping batch ${gsBatch}."
-				continue
+				return
 			fi
 			if [[ -e "${controlFileBase}.${analysisFolder}_sanityChecking.finished" ]]
 			then
@@ -141,7 +141,7 @@ function processBatch(){
 			fi
 		else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.${analysisFolder}_rsyncData.finished absent, waiting for ${gsBatch} to finish rsyncing before starting to sanity check"
-			continue
+			return
 		fi
 	fi
 	if [[ -e "${controlFileBase}.${analysisFolder}_mergeSamplesheets.finished" ]]
