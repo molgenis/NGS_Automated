@@ -95,6 +95,69 @@ function rsyncData(){
 	mv "${_controlFileBaseForFunction}."{started,finished}
 
 }
+
+function processBatch(){
+	local _batch="${1}"
+	local _controlFileBase="${2}"
+	local _dataType="${3}"
+	local _controlFileBaseForFunction="${_controlFileBase}.${_dataType}_${FUNCNAME[0]}"
+
+	if [[ "${gsBatch}" == *"_"* ]]
+	then
+		originalBatch=$(echo "${gsBatch}" | awk 'BEGIN {FS="_"}{print $1}')
+		else
+		originalBatch="${gsBatch}"
+	fi
+	controlFileBase="${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}"
+	export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing process analysis batch ${gsBatch}..."
+
+	if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
+	then
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${gsBatch} already processed, no need process the data again."
+		return
+	else
+		# shellcheck disable=SC2174
+		mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/"
+		# shellcheck disable=SC2174
+		mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${gsBatch}/"
+		printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
+		if [[ -e "${controlFileBase}.${analysisFolder}_rsyncData.finished" ]]
+		then
+			if [[ -e "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished" ]]
+			then
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished present -> Data transfer completed; let's process batch ${gsBatch}..."
+				sanityChecking "${gsBatch}" "${controlFileBase}" "${analysisFolder}" "${originalBatch}"
+			else
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished absent -> Data transfer not yet completed; skipping batch ${gsBatch}."
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Data transfer not yet completed; skipping batch ${gsBatch}."
+				return
+			fi
+			if [[ -e "${controlFileBase}.${analysisFolder}_sanityChecking.finished" ]]
+			then
+				mergeSamplesheets "${gsBatch}" "${controlFileBase}" "${analysisFolder}" "${originalBatch}"
+			else
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.sanityChecking.finished absent -> sanityChecking failed."
+			fi
+		else
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.${analysisFolder}_rsyncData.finished absent, waiting for ${gsBatch} to finish rsyncing before starting to sanity check"
+			return
+		fi
+	fi
+	if [[ -e "${controlFileBase}.${analysisFolder}_mergeSamplesheets.finished" ]]
+	then
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.mergeSamplesheets.finished present -> processing completed for batch ${gsBatch}..."
+		rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing batch ${gsBatch}."
+		mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+	else
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.mergeSamplesheets.finished absent -> processing failed for batch ${gsBatch}."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process batch ${gsBatch}."
+		mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+	fi
+
+}
+
 function sanityChecking(){
 	local _batch="${1}"
 	local _controlFileBase="${2}"
@@ -645,6 +708,9 @@ then
 				fi
 				rsyncData "${gsBatch}" "${controlFileBase}" "${analysisFolder}"
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "rsyncing done"
+
+				processBatch "${gsBatch}" "${controlFileBase}" "${analysisFolder}"
+
 			fi
 		done
 	fi
@@ -654,7 +720,7 @@ fi
 
 #
 ##
-### process Analysis data
+### process local Analysis data
 ##
 #
 readarray -t gsBatches< <(rsync -f"+ */" -f"- *" "${TMP_ROOT_DIR}/" | awk '{if ($5 != "" && $5 != "." && $5 ~/-/){print $5}}')
@@ -664,13 +730,6 @@ then
 else
 	for gsBatch in "${gsBatches[@]}"
 	do
-		gsBatch="$(basename "${gsBatch}")"
-		if [[ "${gsBatch}" == *"_"* ]]
-		then
-			originalBatch=$(echo "${gsBatch}" | awk 'BEGIN {FS="_"}{print $1}')
-			else
-			originalBatch="${gsBatch}"
-		fi
 		controlFileBase="${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}"
 		export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing process analysis batch ${gsBatch}..."
@@ -679,45 +738,10 @@ else
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${gsBatch} already processed, no need process the data again."
 			continue
-		else
-			# shellcheck disable=SC2174
-			mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/"
-			# shellcheck disable=SC2174
-			mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${gsBatch}/"
-			printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
-			if [[ -e "${controlFileBase}.${analysisFolder}_rsyncData.finished" ]]
-			then
-				if [[ -e "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished" ]]
-				then
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished present -> Data transfer completed; let's process batch ${gsBatch}..."
-					sanityChecking "${gsBatch}" "${controlFileBase}" "${analysisFolder}" "${originalBatch}"
-				else
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/${gsBatch}/${gsBatch}.finished absent -> Data transfer not yet completed; skipping batch ${gsBatch}."
-					log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Data transfer not yet completed; skipping batch ${gsBatch}."
-					continue
-				fi
-				if [[ -e "${controlFileBase}.${analysisFolder}_sanityChecking.finished" ]]
-				then
-					mergeSamplesheets "${gsBatch}" "${controlFileBase}" "${analysisFolder}" "${originalBatch}"
-				else
-					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.sanityChecking.finished absent -> sanityChecking failed."
-				fi
-			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.${analysisFolder}_rsyncData.finished absent, waiting for ${gsBatch} to finish rsyncing before starting to sanity check"
-				continue
-			fi
 		fi
-		if [[ -e "${controlFileBase}.${analysisFolder}_mergeSamplesheets.finished" ]]
-		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.mergeSamplesheets.finished present -> processing completed for batch ${gsBatch}..."
-			rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing batch ${gsBatch}."
-			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
-		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.mergeSamplesheets.finished absent -> processing failed for batch ${gsBatch}."
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process batch ${gsBatch}."
-			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-		fi
+
+		processBatch "${gsBatch}" "${controlFileBase}" "${analysisFolder}"
+
 	done
 fi
 

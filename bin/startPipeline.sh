@@ -255,7 +255,7 @@ function submitJobScripts () {
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Submitting jobs for ${_project}/${_run} ..."
 	local _submitOptions
 	local _tmpDirectory
-	_tmpDirectory="$(basename "${TMP_ROOT_DIR}")"
+	_tmpDirectory="$(basename "${SCR_ROOT_DIR}")"
 	if [[ "${group}" == 'umcg-atd' || "${group}" == 'umcg-gsad' ]]
 	then
 		_submitOptions="--qos=leftover"

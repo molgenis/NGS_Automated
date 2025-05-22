@@ -434,12 +434,16 @@ function postMessageToChannel() {
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_lfsRootDir}/logs/${_phase}.notification_webhooks."
 		readarray -t _webhooks < "${_lfsRootDir}/logs/${_phase}.notification_webhooks"
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsed ${_phase}.notification_webhooks."
+	else
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "This webhook: ${_lfsRootDir}/logs/${_phase}.notification_webhooks IS NOT READABLE"
 	fi
 	if [[ -r "${_lfsRootDir}/logs/${_phase}.{_state}.notification_webhooks" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_lfsRootDir}/logs/${_phase}.{_state}.notification_webhooks for more fine grained control over recipients for state {_state}."
 		readarray -t _webhooks < "${_lfsRootDir}/logs/${_phase}.{_state}.notification_webhooks"
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsed ${_phase}.{_state}.notification_webhooks."
+	else
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "This webhook: ${_lfsRootDir}/logs/${_phase}.{_state}.notification_webhooks IS NOT READABLE"
 	fi
 	if [[ "${#_webhooks[@]}" -lt '1' ]]
 	then

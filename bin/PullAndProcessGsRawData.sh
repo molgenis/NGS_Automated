@@ -1014,8 +1014,7 @@ then
 						rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${rawdataFolder}/" \
 						> "${logDir}/${gsBatch}.uploadCompletedListing_${logTimeStamp}.log"
 					else
-						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no Raw_data folder, skipping"
-						mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no Raw_data folder, skipping"
 						continue
 					fi
 				else
