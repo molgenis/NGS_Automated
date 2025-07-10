@@ -677,12 +677,6 @@ then
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${gsBatch} already processed, no need to transfer the data again."
 				continue
 			else
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing pulling analysis batch ${gsBatch}..."
-				# shellcheck disable=SC2174
-				mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/"
-				# shellcheck disable=SC2174
-				mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${gsBatch}/"
-				printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 
 				#
 				# Check if gsBatch is supposed to be complete (*.finished present).
@@ -690,27 +684,33 @@ then
 				gsBatchUploadCompleted='false'
 				if rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${gsBatch}.finished" 2>/dev/null
 				then
-						checkIfRawDataFolderExists=$(rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/")
-						if [[ "${checkIfRawDataFolderExists}" == *"${analysisFolder}"* ]]
-						then
-							gsBatchUploadCompleted='true'
-							logTimeStamp=$(date '+%Y-%m-%d-T%H%M')
+					log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing pulling analysis batch ${gsBatch}..."
+					# shellcheck disable=SC2174
+					mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/"
+					# shellcheck disable=SC2174
+					mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${gsBatch}/"
+
+					printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
+
+					checkIfRawDataFolderExists=$(rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/")
+					if [[ "${checkIfRawDataFolderExists}" == *"${analysisFolder}"* ]]
+					then
+						gsBatchUploadCompleted='true'
+						logTimeStamp=$(date '+%Y-%m-%d-T%H%M')
 							rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${analysisFolder}/" \
-								> "${logDir}/${gsBatch}.uploadCompletedListing_${logTimeStamp}.log"
-						else
-							log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no Analysis folder, skipping"
-							mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-							continue
-						fi
+							> "${logDir}/${gsBatch}.uploadCompletedListing_${logTimeStamp}.log"
+					else
+						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no Analysis folder, skipping"
+						mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+						continue
+					fi
 				else
 					log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "${GENOMESCAN_HOME_DIR}/${gsBatch}/${gsBatch}.finished does not exist"
 					continue
 				fi
 				rsyncData "${gsBatch}" "${controlFileBase}" "${analysisFolder}"
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "rsyncing done"
-
 				processBatch "${gsBatch}" "${controlFileBase}" "${analysisFolder}"
-
 			fi
 		done
 	fi
@@ -763,23 +763,29 @@ else
 	else
 		for gsBatch in "${gsBatchesSourceServer[@]}"
 		do
-			if [[ -d "${TMP_ROOT_DIR}/${gsBatch}/" ]]
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "checking gsBatch: ${gsBatch} on ${TMP_ROOT_DIR}"
+			if [[ -d "${TMP_ROOT_DIR}/logs/${gsBatch}/" ]]
 			then
-				gsBatch="$(basename "${gsBatch}")"
-				if [[ "${gsBatch}" == *"_"* ]]
+				if [[ -e "${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}.dataCleanedOnTransferServer" ]]
 				then
-					originalBatch=$(echo "${gsBatch}" | awk 'BEGIN {FS="_"}{print $1}')
-				else
-					originalBatch="${gsBatch}"
-				fi
-				if [[ ! -e "${TMP_ROOT_DIR}/${gsBatch}/UMCG_CSV_${originalBatch}.csv" ]]
-				then
-					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no UMCG_CSV_${originalBatch}.csv, cannot proceed with the clean up"
+					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Data already cleaned, continue"
 					continue
 				fi
-				csvFile=$(ls -1 "${TMP_ROOT_DIR}/${gsBatch}/UMCG_CSV_"*".csv")
+				
+				gsBatch="$(basename "${gsBatch}")"
+				if [[ ! -e "${TMP_ROOT_DIR}/${gsBatch}/UMCG_CSV_${gsBatch}.csv" ]]
+				then
+					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no UMCG_CSV_${gsBatch}.csv, file will be downloaded from the transfer server to ${TMP_ROOT_DIR}/logs/${gsBatch}/ to work with"
+					rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/UMCG_CSV_${gsBatch}.csv" "${TMP_ROOT_DIR}/logs/${gsBatch}/"
+					csvFileLocation="${TMP_ROOT_DIR}/logs/${gsBatch}/UMCG_CSV_${gsBatch}.csv"
+				else
+					csvFileLocation="${TMP_ROOT_DIR}/${gsBatch}/UMCG_CSV_${gsBatch}.csv"
+				fi
+				
+				csvFile=$(ls -1 "${csvFileLocation}")
 				mapfile -t uniqProjects< <(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${csvFile}" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | sort -V  | uniq)
 				projectName="${uniqProjects[0]}"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "projectName=${projectName}"
 				# captkit=$(echo "${uniqProjects[0]}" | awk 'BEGIN {FS="-"}{print $NF}')
 # 				projectName="${projectName}-${captkit}"
 				#
@@ -789,7 +795,7 @@ else
 				if [[ -f "${TMP_ROOT_DIR}/logs/${projectName}/run01.pipeline.finished" ]]
 				then
 					dateInSecAnalysisData="$(date -d"$(rsync "${TMP_ROOT_DIR}/logs/${projectName}/run01.pipeline.finished" | awk '{print $3}')" +%s)"
-
+					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "run01.pipeline.finished"
 					#
 					# When the pipeline is finished, a run01.pipeline.finished is created
 					# If this file is older than 2 days, the genomescan batch will be removed from the data staging machine.
@@ -802,24 +808,15 @@ else
 						# Create an empty dir (source dir) to sync with the destination dir && then remove source dir.
 						#
 						mkdir -p "${HOME}/empty_dir/"
-						rsync -rv --delete -e 'ssh -p 443' "${HOME}/empty_dir/" "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${analysisFolder}"
+						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "rsync -rv --delete -e 'ssh -p 443' \"${HOME}/empty_dir/\" \"${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}\""
+						rsync -rv --delete -e 'ssh -p 443' "${HOME}/empty_dir/" "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}"
 						rmdir "${HOME}/empty_dir/"
 					else
 						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " the pipeline.finished is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove the Analysis folder the ${TMP_ROOT_DIR}/logs/${projectName}/run01.pipeline.finished needs to be at least 2 days old"
 						continue
 					fi
-					#
-					# When the pipeline is finished, a run01.pipeline.finished is created
-					# If this file is older than 6 days, the genomescan batch will be removed from tmp.
-					#
-					if [[ $(((dateInSecNow - dateInSecAnalysisData) / 86400)) -gt 6 ]]
-					then
-						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${gsBatch} from tmp because the pipeline is finished and the file is older than 6 days"
-						rm -rf "${TMP_ROOT_DIR}/${gsBatch:?}"
-					else
-						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " the pipeline.finished is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove the ${gsBatch} folder from tmp the ${TMP_ROOT_DIR}/logs/${projectName}/run01.pipeline.finished needs to be at least 6 days old"
-						continue
-					fi
+					touch "${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}.dataCleanedOnTransferServer"
+					
 				else
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/logs/${projectName}/run01.pipeline.finished does not exist, skipping"
 					continue
