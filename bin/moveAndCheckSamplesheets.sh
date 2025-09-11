@@ -56,7 +56,8 @@ Usage:
 Options:
 	-h	Show this help.
 	-d	DAT_DIR
-	-g	Group.
+	-g	Group. (main group, umcg-gd or umcg-atd)
+	-a	Alternative group (group to copy samplesheet to umcg-genomescan, umcg-gst, if left empty it will go to Group)
 	-l	Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
@@ -83,7 +84,7 @@ EOH
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
-while getopts ":g:l:d:h" opt
+while getopts ":g:a:l:d:h" opt
 do
 	case "${opt}" in
 		h)
@@ -91,6 +92,9 @@ do
 			;;
 		g)
 			group="${OPTARG}"
+			;;
+		a)
+			alternativegroup="${OPTARG}"
 			;;
 		d)
 			dat_dir="${OPTARG}"
@@ -414,7 +418,12 @@ do
 		fi
 	fi
 	# shellcheck disable=SC2153
-	samplesheetDestination="${HOSTNAME_TMP}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/${firstStepOfPipeline}/"
+	if [[ "${sampleType}" == 'RNA' ]];
+	then
+		samplesheetDestination="${HOSTNAME_TMP}:/groups/${alternativegroup}/${SCR_LFS}/Samplesheets/${firstStepOfPipeline}/"
+	else
+		samplesheetDestination="${HOSTNAME_TMP}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/${firstStepOfPipeline}/"
+	fi
 	#
 	# Move samplesheets with rsync
 	#
