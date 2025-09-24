@@ -171,7 +171,11 @@ else
 					rsync -av \
 					"${SEQ_INCOMING_DIR}/${run}/RunCompletionStatus.xml" \
 					"${SEQ_DIR}/${run}/"
-		
+
+					rsync -av \
+					"${SEQ_INCOMING_DIR}/${run}/RunCompletionStatus.xml" \
+					"${NEW_SEQ_DIR}/${run}/"
+
 					touch "${JOB_CONTROLE_FILE_BASE}.transferCompleted"
 				else
 					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to rsync ${SEQ_INCOMING_DIR}/${run}/."

@@ -214,12 +214,12 @@ do
 		#
 		# Check if the run has already completed.
 		#
-		if [[	! -e ${SEQ_INCOMING_DIR}/${run} ]]
+		if [[	! -e ${NEW_SEQ_DIR}/${run} ]]
 		then
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no bcl data available at all for: ${run}."
 			continue
 		fi
-		if [[ -f "${SEQ_INCOMING_DIR}/${run}/RunCompletionStatus.xml" ]]
+		if [[ -f "${NEW_SEQ_DIR}/${run}/RunCompletionStatus.xml" ]]
 		then
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer has completed data generation for: ${run}."
 		else
