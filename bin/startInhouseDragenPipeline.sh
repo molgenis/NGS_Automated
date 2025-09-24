@@ -200,7 +200,6 @@ do
 	#
 	# Check if the rawdata(fastQ) available 
 	#
-	fastqAvailable='no'
 	workflow='workflow_dragen.nf'
 	samplesheet="${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${run}.csv"
 	if [[ -d "/groups/${group}/${TMP_LFS}/rawdata/ngs/${run}" ]]
