@@ -173,8 +173,8 @@ then
 else
 	for project in "${projects[@]}"
 	do
-		daysTillRemoval=7
-		daysTillRemovalTmpFolder=2
+		daysTillRemoval="${cleanUpDataProject}"
+		daysTillRemovalTmpFolder="${cleanUpDataTmp}"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Check for data for which the pipeline was finished at least ${daysTillRemovalTmpFolder}(tmp) or ${daysTillRemoval}(projects, generatedscripts) days ago and will delete the data from ${TMP_ROOT_DIR} ..."
 		projectName="$(basename "${project}")" 
 		
@@ -201,7 +201,7 @@ else
 			continue
 		fi
 		#
-		# Removing tmp folder after 2 days 
+		# Removing tmp folder after ${cleanUpDataTmp} days 
 		#
 		if [[ $(((dateInSecNow - dateInSecAnalysisData) / 86400)) -gt "${daysTillRemovalTmpFolder}" ]]
 		then
