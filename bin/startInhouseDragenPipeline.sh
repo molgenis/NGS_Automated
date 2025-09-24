@@ -206,7 +206,6 @@ do
 	if [[ -d "/groups/${group}/${TMP_LFS}/rawdata/ngs/${run}" ]]
 	then
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rawdata is available for ${run}."
-		fastqAvailable='yes'
 		workflow='workflow_dragen_solo.nf'
 	else
 		
@@ -229,12 +228,6 @@ do
 		fi
 	fi
 
-#	if [[ "${fastqAvailable}" == 'yes' ]]
-#	then
-#		awk 'BEGIN{FS=","}{if(NR>1){print $0",yes"}else{print $0,"fastqAvailable"}}' ${samplesheet} > "${samplesheet}.tmp"
-#	else
-#		awk 'BEGIN{FS=","}{if(NR>1){print $0",no"}else{print $0,"fastqAvailable"}}' ${samplesheet} > "${samplesheet}.tmp"
-#	fi
 	
 	touch "${jobControleFileBase}.started"
 	#
