@@ -173,12 +173,14 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 # Sequencer is writing to this location: ${SEQ_INCOMING_DIR}
 # Looping through sub dirs to see if all files.
 #
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "find ${SEQ_INCOMING_DIR}/ -mindepth 1 -maxdepth 1 -type d -o -type l"
-mapfile -t runs < <(find "${SEQ_INCOMING_DIR}/" -mindepth 1 -maxdepth 1 -type d -o -type l)
+
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "find ${TMP_ROOT_DIR}/Samplesheets/DRAGEN// -mindepth 1 -maxdepth 1 -name \"*.${SAMPLESHEET_EXT}\""
+
+readarray -t runs < <(find "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/" -mindepth 1 -maxdepth 1 -name "*.${SAMPLESHEET_EXT}" )
 
 for i in "${runs[@]}"
 do
-	run=$(basename "${i}")
+	run=$(basename "${i}" ".csv")
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking ${run} ..."
 	jobControleFileBase="${TMP_ROOT_DIR}/logs/${run}/run01.startInhouseDragenPipeline"
 	if [[ -f "${jobControleFileBase}.finished" ]]
@@ -189,26 +191,44 @@ do
 	then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${jobControleFileBase}.started: Skipping ${run}, which is already getting processed."
 		continue
-	elif [[ ! -f "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${run}.csv" ]]
-	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheet found: skipping ${run}."
-		continue
 	fi
 	export JOB_CONTROLE_FILE_BASE="${jobControleFileBase}"
 	# shellcheck disable=SC2174
 	mkdir -m 770 -p "${TMP_ROOT_DIR}/logs/${run}/"
-
+	
+	
 	#
-	# Check if the run has already completed.
+	# Check if the rawdata(fastQ) available 
 	#
+	workflow='workflow_dragen.nf'
 	samplesheet="${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${run}.csv"
-	if [[ -f "${SEQ_INCOMING_DIR}/${run}/RunCompletionStatus.xml" ]]
+	if [[ -d "/groups/${group}/${TMP_LFS}/rawdata/ngs/${run}" ]]
 	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer has completed data generation for: ${run}."
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rawdata is available for ${run}."
+		workflow='workflow_dragen_solo.nf'
 	else
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer is busy producing data: skipping ${run}."
-		continue
+		
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if bcl data is available."
+		#
+		# Check if the run has already completed.
+		#
+		if [[	! -e ${NEW_SEQ_DIR}/${run} ]]
+		then
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no bcl data available at all for: ${run}."
+			continue
+		fi
+		if [[ -f "${NEW_SEQ_DIR}/${run}/RunCompletionStatus.xml" ]]
+		then
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer has completed data generation for: ${run}."
+		else
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer is busy producing data: skipping ${run}."
+		
+			continue
+		fi
 	fi
+
+	
+	touch "${jobControleFileBase}.started"
 	#
 	# All ingredients are present and the run has not been processed yet.
 	#
@@ -219,12 +239,12 @@ do
 	thisDir=$(pwd)
 	cd "${TMP_ROOT_DIR}/nextflow/${run}"
 	thisHost=$(hostname)
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" "0" "rerunning/resuming: nextflow run -resume --samplesheet \"${samplesheet}\" --tmpdir \"${TMP_LFS}\" --group \"${group}\" --cluster \"${thisHost}\" -w \"${TMP_ROOT_DIR}/nextflow/${run}\" -c \"${EBROOTNF_NGS_DNA}/dragen.config\" \"${EBROOTNF_NGS_DNA}/workflow_dragen.nf\""
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" "0" "rerunning/resuming: nextflow run -resume --samplesheet \"${samplesheet}\" --tmpdir \"${TMP_LFS}\" --group \"${group}\" --cluster \"${thisHost}\" -w \"${TMP_ROOT_DIR}/nextflow/${run}\" -c \"${EBROOTNF_NGS_DNA}/dragen.config\" \"${EBROOTNF_NGS_DNA}/${workflow}\""
 	
-	nextflow run -resume --samplesheet "${samplesheet}" --tmpdir "${TMP_LFS}" --group "${group}" --cluster "${thisHost}" -profile slurm -w "${TMP_ROOT_DIR}/nextflow/${run}" -c "${EBROOTNF_NGS_DNA}/dragen.config" "${EBROOTNF_NGS_DNA}/workflow_dragen.nf" \
+	nextflow run -resume --samplesheet "${samplesheet}" --tmpdir "${TMP_LFS}" --group "${group}" --cluster "${thisHost}" -profile slurm -w "${TMP_ROOT_DIR}/nextflow/${run}" -c "${EBROOTNF_NGS_DNA}/dragen.config" "${EBROOTNF_NGS_DNA}/${workflow}" \
 	|| {
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" "0" "pipeline crashed, it might be due to one of the following variables: samplesheet:[${samplesheet}] tmpdir:[${TMP_LFS}] group:[${group}] workdir:[${TMP_ROOT_DIR}/nextflow/${run}] type/workflow:[workflow_dragen.nf]"
-	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" "0" "To rerun: navigate to ${TMP_ROOT_DIR}/nextflow/${project} and then execute the following: nextflow run --samplesheet \"${samplesheet}\" --tmpdir \"${TMP_LFS}\" --group \"${group}\" -w \"${TMP_ROOT_DIR}/nextflow/${run}\" \"${EBROOTNF_NGS_DNA}/workflow_dragen.nf\""
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" "0" "pipeline crashed, it might be due to one of the following variables: samplesheet:[${samplesheet}] tmpdir:[${TMP_LFS}] group:[${group}] workdir:[${TMP_ROOT_DIR}/nextflow/${run}] type/workflow:[${workflow}]"
+	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" "0" "To rerun: navigate to ${TMP_ROOT_DIR}/nextflow/${run} and then execute the following: nextflow run --samplesheet \"${samplesheet}\" --tmpdir \"${TMP_LFS}\" --group \"${group}\" -w \"${TMP_ROOT_DIR}/nextflow/${run}\" \"${EBROOTNF_NGS_DNA}/${workflow}\""
 	mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 	continue
 	}
@@ -233,13 +253,13 @@ do
 	cd "${thisDir}"
 	if [[ -e "${TMP_ROOT_DIR}/logs/${run}/run01.pipeline.finished" ]]
 	then
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/logs/${run}/run01.pipeline.finished present -> processing completed for ${run}/${pipelineRun} ..."
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/logs/${run}/run01.pipeline.finished present -> processing completed for ${run} ..."
 		rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing ${run}/${pipelineRun}."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing ${run}."
 		mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 	else
-		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/logs/${project}/run01.pipeline.finished absent -> processing failed for ${run}/${pipelineRun}."
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process ${run}/${pipelineRun}."
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${TMP_ROOT_DIR}/logs/${project}/run01.pipeline.finished absent -> processing failed for ${run}."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process ${run}."
 		mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 	fi
 done

@@ -278,7 +278,6 @@ else
 			thisDir=$(pwd)
 			
 			cd "${TMP_ROOT_DIR}/nextflow/${project}"
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "type=[${type}], ${type} project detected."
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" "0" "rerunning/resuming: nextflow run -resume --samplesheet \"${sampleSheet}\" --tmpdir \"${TMP_LFS}\" --group \"${group}\" -w \"${TMP_ROOT_DIR}/nextflow/${project}\" \"${EBROOTNF_NGS_DNA}/post_dragen.nf\""
 			nextflow run --samplesheet "${sampleSheet}" --tmpdir "${TMP_LFS}" --group "${group}" -w "${TMP_ROOT_DIR}/nextflow/${project}" "${EBROOTNF_NGS_DNA}/post_dragen.nf" \
 			|| {
