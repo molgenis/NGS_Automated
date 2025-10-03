@@ -204,8 +204,31 @@ do
 	samplesheet="${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${run}.csv"
 	if [[ -d "/groups/${group}/${TMP_LFS}/rawdata/ngs/${run}" ]]
 	then
-		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rawdata is available for ${run}."
-		workflow='workflow_dragen_solo.nf'
+		readarray -t fastQFiles < <(find "/groups/${group}/${TMP_LFS}/rawdata/ngs/${run}" -name "*.gz")
+
+		if [[ "${#fastQFiles[@]}" -gt 2 ]]
+		then
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "yes more than 2 fastq files"
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Rawdata is available for ${run}. workflow will be workflow_dragen_solo"
+				workflow='workflow_dragen_solo.nf'
+		else
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if bcl data is available."
+			#
+			# Check if the run has already completed.
+			#
+			if [[	! -e ${NEW_SEQ_DIR}/${run} ]]
+			then
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no bcl data available at all for: ${run}."
+				continue
+			fi
+			if [[ -f "${NEW_SEQ_DIR}/${run}/RunCompletionStatus.xml" ]]
+			then
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer has completed data generation for: ${run}."
+			else
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencer is busy producing data: skipping ${run}."
+				continue
+			fi
+		fi
 	else
 		
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking if bcl data is available."
