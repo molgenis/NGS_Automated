@@ -273,20 +273,38 @@ else
 		else
 			####### NEXTFLOW ######
 			mkdir -p "${TMP_ROOT_DIR}/nextflow/${project}"
-		
+
 			module load nextflow
 			thisDir=$(pwd)
 			
 			cd "${TMP_ROOT_DIR}/nextflow/${project}"
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" "0" "rerunning/resuming: nextflow run -resume --samplesheet \"${sampleSheet}\" --tmpdir \"${TMP_LFS}\" --group \"${group}\" -w \"${TMP_ROOT_DIR}/nextflow/${project}\" \"${EBROOTNF_NGS_DNA}/post_dragen.nf\""
-			nextflow run --samplesheet "${sampleSheet}" --tmpdir "${TMP_LFS}" --group "${group}" -w "${TMP_ROOT_DIR}/nextflow/${project}" "${EBROOTNF_NGS_DNA}/post_dragen.nf" \
+			
+			if [[ "${project}" == *"GS_"* ]]
+			then
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "GS samplesheet detected"
+				type=$(echo "${project#*-}" | awk 'BEGIN {FS="_"}{print $1}')
+
+			else
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No GS samplesheet detected, this is an inhouse run"
+				type='post_dragen'
+			fi
+
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "type=[${type}], ${type} project detected."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" "0" "rerunning/resuming: nextflow run -resume --samplesheet \"${sampleSheet}\" --tmpdir \"${TMP_LFS}\" --group \"${group}\" -w \"${TMP_ROOT_DIR}/nextflow/${project}\" \"${EBROOTNF_NGS_DNA}/${type,,}.nf\""
+			nextflow run --samplesheet "${sampleSheet}" --tmpdir "${TMP_LFS}" --group "${group}" -w "${TMP_ROOT_DIR}/nextflow/${project}" "${EBROOTNF_NGS_DNA}/${type,,}.nf" \
 			|| {
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" "0" "pipeline crashed, it might be due to one of the following variables: samplesheet:[${sampleSheet}] tmpdir:[${TMP_LFS}] group:[${group}] workdir:[${TMP_ROOT_DIR}/nextflow/${project}] workflow:post_dragen.nf]"
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" "0" "To rerun: navigate to ${TMP_ROOT_DIR}/nextflow/${project} and then execute the following: nextflow run --samplesheet \"${sampleSheet}\" --tmpdir \"${TMP_LFS}\" --group \"${group}\" -w \"${TMP_ROOT_DIR}/nextflow/${project}\" \"${EBROOTNF_NGS_DNA}/post_dragen.nf\""
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" "0" "pipeline crashed, it might be due to one of the following variables: samplesheet:[${sampleSheet}] tmpdir:[${TMP_LFS}] group:[${group}] workdir:[${TMP_ROOT_DIR}/nextflow/${project}] type/workflow:[${type,,}.nf]"
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" "0" "To rerun: navigate to ${TMP_ROOT_DIR}/nextflow/${project} and then execute the following: nextflow run --samplesheet \"${sampleSheet}\" --tmpdir \"${TMP_LFS}\" --group \"${group}\" -w \"${TMP_ROOT_DIR}/nextflow/${project}\" \"${EBROOTNF_NGS_DNA}/${type,,}.nf\""
 			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			continue
 			}
-			
+			if [[ "${project}" == *"GS_"* ]]
+			then
+				if [[ -f "${TMP_ROOT_DIR}/projects/NGS_DNA/${project}/${pipelineRun}/results/qc/statsRenamed.tsv" ]]
+				then
+					mv -fv "${TMP_ROOT_DIR}/projects/NGS_DNA/${project}/${pipelineRun}/results/qc/statsRenamed.tsv" "${TMP_ROOT_DIR}/projects/NGS_DNA/${project}/${pipelineRun}/results/qc/stats.tsv"
+				fi
+			fi
 			touch "${TMP_ROOT_DIR}/logs/${project}/run01.pipeline.finished"
 			cd "${thisDir}"
 		fi

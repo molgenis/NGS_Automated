@@ -109,14 +109,44 @@ do
 	esac
 done
 
+
+export GROUP="umcg-lab"
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config files ..."
+declare -a configFiles=(
+	"${CFG_DIR}/${HOSTNAME_SHORT}.cfg"
+	"${CFG_DIR}/sharedConfig.cfg"
+)
+
+for configFile in "${configFiles[@]}"
+do
+	if [[ -f "${configFile}" && -r "${configFile}" ]]
+	then
+		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sourcing config file ${configFile} ..."
+		#
+		# In some Bash versions the source command does not work properly with process substitution.
+		# Therefore we source a first time with process substitution for proper error handling
+		# and a second time without just to make sure we can use the content from the sourced files.
+		#
+		# Disable shellcheck code syntax checking for config files.
+		# shellcheck source=/dev/null
+		mixed_stdouterr=$(source "${configFile}" 2>&1) || log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" "${?}" "Cannot source ${configFile}."
+		# shellcheck source=/dev/null
+		source "${configFile}"  # May seem redundant, but is a mandatory workaround for some Bash versions.
+	else
+		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "Config file ${configFile} missing or not accessible."
+	fi
+done
+
 #
 # Check commandline options.
 #
 if [[ -z "${tmpDir:-}" ]]
 then
-	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a tmpDir with -t'
+	tmpDir="${TMP_LFS}"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'No tmpDir specified, cluster specific TMP_LFS is used ${TMP_LFS}'
 fi
-ATEAMBOTUSER="umcg-lab-ateambot"
+
+ATEAMBOTUSER="${GROUP}-ateambot"
 #
 # Make sure to use an account for cron jobs and *without* write access to prm storage.
 #
@@ -124,12 +154,6 @@ if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]
 then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
 fi
-
-#
-# Sequencer is writing to this location: ${SEQ_INCOMING_DIR}
-#
-SEQ_INCOMING_DIR="/groups/umcg-lab/${tmpDir}/sequencers_incoming/"
-SEQ_DIR="/groups/umcg-lab/${tmpDir}/sequencers/"
 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "find ${SEQ_INCOMING_DIR}/ -mindepth 1 -maxdepth 1 -type d -o -type l"
 mapfile -t runs < <(find "${SEQ_INCOMING_DIR}/" -mindepth 1 -maxdepth 1 -type d -o -type l)
@@ -165,51 +189,5 @@ else
 			touch "${JOB_CONTROLE_FILE_BASE}.started"
 			if [[ ! -f "${JOB_CONTROLE_FILE_BASE}.transferCompleted" ]]
 			then
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencing run completed: ${run}. Copy data from ${SEQ_INCOMING_DIR} to ${SEQ_DIR}."
-				if rsync -av --checksum --exclude="RunCompletionStatus.xml" "${SEQ_INCOMING_DIR}/${run}"	"${SEQ_DIR}"
-				then	
-					rsync -av \
-					"${SEQ_INCOMING_DIR}/${run}/RunCompletionStatus.xml" \
-					"${SEQ_DIR}/${run}/"
-
-					rsync -av \
-					"${SEQ_INCOMING_DIR}/${run}/RunCompletionStatus.xml" \
-					"${NEW_SEQ_DIR}/${run}/"
-
-					touch "${JOB_CONTROLE_FILE_BASE}.transferCompleted"
-				else
-					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to rsync ${SEQ_INCOMING_DIR}/${run}/."
-					mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-					exit 1
-				fi
-			fi
-		else
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencing run is not (yet) finished."
-			continue
-		fi
-
-		if [[ -f "${JOB_CONTROLE_FILE_BASE}.transferCompleted" ]]
-		then
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Transfer completed for run ${run}."
-			dateInSecRawData="$(date -d"$(rsync "${JOB_CONTROLE_FILE_BASE}.transferCompleted" | awk '{print $3}')" +%s)"
-			dateInSecNow=$(date +%s)
-			if [[ $(((dateInSecNow - dateInSecRawData) / 86400)) -gt 2 ]]
-			then
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Transfer completed more than 2 days ago, ${run} will be removed from ${SEQ_INCOMING_DIR}"
-				runDir="${SEQ_INCOMING_DIR}/${run}"
-				rm -rf "${runDir:?}"
-				rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
-				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
-			else
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Data removal on hold for ${run}: Transfer completed is less than 2 days ago"	
-			fi
-		else
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to rsync ${SEQ_INCOMING_DIR}/${run}/."
-			mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-		fi
-
-
-	done
-fi
-trap - EXIT
-exit 0
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencing run completed: ${run}. Copy data from ${SEQ_INCOMING_DIR} to ${SEQ_DIR} and ${NEW_SEQ_DIR}"
+				##SEQ DIR
