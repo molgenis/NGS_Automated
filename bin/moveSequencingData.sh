@@ -191,3 +191,60 @@ else
 			then
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencing run completed: ${run}. Copy data from ${SEQ_INCOMING_DIR} to ${SEQ_DIR} and ${NEW_SEQ_DIR}"
 				##SEQ DIR
+				if rsync -av --checksum --exclude="RunCompletionStatus.xml" "${SEQ_INCOMING_DIR}/${run}"	"${SEQ_DIR}"
+					then	
+						rsync -av \
+						"${SEQ_INCOMING_DIR}/${run}/RunCompletionStatus.xml" \
+						"${SEQ_DIR}/${run}/"
+
+						touch "${JOB_CONTROLE_FILE_BASE}.transferCompleted"
+					else
+						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to rsync ${SEQ_INCOMING_DIR}/${run}/."
+						mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+						exit 1
+					fi
+				fi
+				##NEW_SEQ DIR
+				if rsync -av --checksum --exclude="RunCompletionStatus.xml" "${SEQ_INCOMING_DIR}/${run}" "${NEW_SEQ_DIR}"
+					then	
+						rsync -av \
+						"${SEQ_INCOMING_DIR}/${run}/RunCompletionStatus.xml" \
+						"${NEW_SEQ_DIR}/${run}/"
+
+						touch "${JOB_CONTROLE_FILE_BASE}.transferCompleted"
+					else
+						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to rsync ${SEQ_INCOMING_DIR}/${run}/."
+						mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+						exit 1
+					fi
+				fi
+			else
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencing run is not (yet) finished."
+				continue
+			fi
+
+			if [[ -f "${JOB_CONTROLE_FILE_BASE}.transferCompleted" ]]
+			then
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Transfer completed for run ${run}."
+				dateInSecRawData="$(date -d"$(rsync "${JOB_CONTROLE_FILE_BASE}.transferCompleted" | awk '{print $3}')" +%s)"
+				dateInSecNow=$(date +%s)
+				if [[ $(((dateInSecNow - dateInSecRawData) / 86400)) -gt 2 ]]
+				then
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Transfer completed more than 2 days ago, ${run} will be removed from ${SEQ_INCOMING_DIR}"
+					runDir="${SEQ_INCOMING_DIR}/${run}"
+					rm -rf "${runDir:?}"
+					rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
+					mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+				else
+					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Data removal on hold for ${run}: Transfer completed is less than 2 days ago"	
+				fi
+			else
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to rsync ${SEQ_INCOMING_DIR}/${run}/."
+				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+			fi
+
+
+		done
+	fi
+	trap - EXIT
+	exit 0
