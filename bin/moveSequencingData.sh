@@ -164,7 +164,6 @@ then
 else
 	for i in "${runs[@]}"
 	do
-	
 		run=$(basename "${i}")
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking ${run} ..."
 		moveSequencingDataJobControleFileBase="/groups/umcg-lab/${tmpDir}/logs/${run}/run01.moveSequencingData"
@@ -193,17 +192,15 @@ else
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencing run completed: ${run}. Copy data from ${SEQ_INCOMING_DIR} to ${SEQ_DIR} and ${NEW_SEQ_DIR}"
 				##SEQ DIR
 				if rsync -av --checksum --exclude="RunCompletionStatus.xml" "${SEQ_INCOMING_DIR}/${run}"	"${SEQ_DIR}"
-					then	
-						rsync -av \
-						"${SEQ_INCOMING_DIR}/${run}/RunCompletionStatus.xml" \
-						"${SEQ_DIR}/${run}/"
-
-						touch "${JOB_CONTROLE_FILE_BASE}.transferCompleted"
-					else
-						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to rsync ${SEQ_INCOMING_DIR}/${run}/."
-						mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-						exit 1
-					fi
+				then	
+					rsync -av \
+					"${SEQ_INCOMING_DIR}/${run}/RunCompletionStatus.xml" \
+					"${SEQ_DIR}/${run}/"
+					touch "${JOB_CONTROLE_FILE_BASE}.transferCompleted"
+				else
+					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to rsync ${SEQ_INCOMING_DIR}/${run}/."
+					mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+					exit 1
 				fi
 				##NEW_SEQ DIR
 				if rsync -av --checksum --exclude="RunCompletionStatus.xml" "${SEQ_INCOMING_DIR}/${run}" "${NEW_SEQ_DIR}"
