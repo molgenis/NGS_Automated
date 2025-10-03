@@ -157,6 +157,7 @@ fi
 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "find ${SEQ_INCOMING_DIR}/ -mindepth 1 -maxdepth 1 -type d -o -type l"
 mapfile -t runs < <(find "${SEQ_INCOMING_DIR}/" -mindepth 1 -maxdepth 1 -type d -o -type l)
+
 if [[ "${#runs[@]}" -eq '0' ]]
 then
 	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No runs found at ${SEQ_INCOMING_DIR}/"
@@ -206,17 +207,16 @@ else
 				fi
 				##NEW_SEQ DIR
 				if rsync -av --checksum --exclude="RunCompletionStatus.xml" "${SEQ_INCOMING_DIR}/${run}" "${NEW_SEQ_DIR}"
-					then	
-						rsync -av \
-						"${SEQ_INCOMING_DIR}/${run}/RunCompletionStatus.xml" \
-						"${NEW_SEQ_DIR}/${run}/"
+				then	
+					rsync -av \
+					"${SEQ_INCOMING_DIR}/${run}/RunCompletionStatus.xml" \
+					"${NEW_SEQ_DIR}/${run}/"
 
-						touch "${JOB_CONTROLE_FILE_BASE}.transferCompleted"
-					else
-						log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to rsync ${SEQ_INCOMING_DIR}/${run}/."
-						mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-						exit 1
-					fi
+					touch "${JOB_CONTROLE_FILE_BASE}.transferCompleted"
+				else
+					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to rsync ${SEQ_INCOMING_DIR}/${run}/."
+					mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+					exit 1
 				fi
 			else
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencing run is not (yet) finished."
@@ -242,9 +242,8 @@ else
 				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to rsync ${SEQ_INCOMING_DIR}/${run}/."
 				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			fi
-
-
-		done
-	fi
-	trap - EXIT
-	exit 0
+		fi
+	done
+fi
+trap - EXIT
+exit 0
