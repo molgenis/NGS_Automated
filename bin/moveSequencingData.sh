@@ -143,7 +143,7 @@ done
 if [[ -z "${tmpDir:-}" ]]
 then
 	tmpDir="${TMP_LFS}"
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' 'No tmpDir specified, cluster specific TMP_LFS is used ${TMP_LFS}'
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No tmpDir specified, cluster specific TMP_LFS is used ${TMP_LFS}"
 fi
 
 ATEAMBOTUSER="${GROUP}-ateambot"
