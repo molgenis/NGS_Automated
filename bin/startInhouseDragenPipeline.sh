@@ -204,7 +204,7 @@ do
 	samplesheet="${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${run}.csv"
 	if [[ -d "/groups/${group}/${TMP_LFS}/rawdata/ngs/${run}" ]]
 	then
-		readarray -t fastQFiles < <(find /groups/umcg-atd/tmp16//rawdata/ngs/250922_NB552735_0328_AHFF5LBGYX/ -name *.gz)
+		readarray -t fastQFiles < <(find "/groups/${group}/${TMP_LFS}/rawdata/ngs/${run}" -name *.gz)
 
 		if [[ ${#fastQFiles[@]} > 2 ]]
 		then
