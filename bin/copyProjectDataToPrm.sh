@@ -619,15 +619,6 @@ else
 										mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 										return
 									fi
-									# shellcheck disable=SC2029
-									if ssh "${DATA_MANAGER}@${HOSTNAME_TMP}" "touch ${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.projectDataCopiedToPrm.finished"
-									then
-										log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.projectDataCopiedToPrm.finished on ${HOSTNAME_TMP}"
-									else
-										log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.projectDataCopiedToPrm.finished on ${HOSTNAME_TMP}"
-										mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
-										continue
-									fi
 
 									#
 									# Add info for colleagues that will process the results.

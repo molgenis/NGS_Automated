@@ -283,7 +283,11 @@ else
 			then
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "GS samplesheet detected"
 				type=$(echo "${project#*-}" | awk 'BEGIN {FS="_"}{print $1}')
-
+				if [[ "${type}" == "Exoom" ]]
+				then
+					#it will run the post_dragen workflow
+					type="post_dragen"
+				fi
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "No GS samplesheet detected, this is an inhouse run"
 				type='post_dragen'

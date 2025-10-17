@@ -174,14 +174,53 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 # Looping through sub dirs to see if all files.
 #
 
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "find ${TMP_ROOT_DIR}/Samplesheets/DRAGEN// -mindepth 1 -maxdepth 1 -name \"*.${SAMPLESHEET_EXT}\""
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "find ${TMP_ROOT_DIR}/Samplesheets/DRAGEN/ -mindepth 1 -maxdepth 1 -name \"*.${SAMPLESHEET_EXT}\""
 
-readarray -t runs < <(find "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/" -mindepth 1 -maxdepth 1 -name "*.${SAMPLESHEET_EXT}" )
+readarray -t samplesheets < <(find "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/" -mindepth 1 -maxdepth 1 -name "*.${SAMPLESHEET_EXT}" )
 
-for i in "${runs[@]}"
+for samplesheet in "${samplesheets[@]}"
 do
-	run=$(basename "${i}" ".csv")
+
+	run=$(basename "${samplesheet}" ".csv")
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Checking ${run} ..."
+	
+	## first check which rawdata belongs to the samplesheet
+	declare -a samplesheetColumnNames=()
+	declare -A samplesheetColumnOffsets=()
+
+	IFS=',' read -r -a samplesheetColumnNames <<< "$(head -1 "${samplesheet}")"
+
+	for (( offset = 0 ; offset < ${#samplesheetColumnNames[@]} ; offset++ ))
+	do
+		columnName="${samplesheetColumnNames[${offset}]}"
+		samplesheetColumnOffsets["${columnName}"]="${offset}"
+	done
+	
+	sampleSheetFieldIndex=$((${samplesheetColumnOffsets['sequencingStartDate']} + 1))
+	sequencingStartDate=$(tail -n 1 "${samplesheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
+
+	sampleSheetFieldIndex=$((${samplesheetColumnOffsets['sequencer']} + 1))
+	sequencer=$(tail -n 1 "${samplesheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
+	
+	sampleSheetFieldIndex=$((${samplesheetColumnOffsets['run']} + 1))
+	runNumber=$(tail -n 1 "${samplesheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
+	
+	sampleSheetFieldIndex=$((${samplesheetColumnOffsets['flowcell']} + 1))
+	flowcell=$(tail -n 1 "${samplesheet}" | awk -v sampleSheetFieldIndex="${sampleSheetFieldIndex}" 'BEGIN {FS=","}{print $sampleSheetFieldIndex}')
+	
+	runPrefix="${sequencingStartDate}_${sequencer}_${runNumber}_${flowcell}"
+	
+	if [[ "${runPrefix}" == "${run}" ]]
+	then
+		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Samplesheet name is in rawdata format. This is the correct format"
+	else
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Projectname ${run} can not be used in the DRAGEN bucket"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Samplesheet name is in projectname format (${run}.csv) and will be renamed to rawdata format: ${runPrefix}.csv"
+		
+		mv "${samplesheet}" "${runPrefix}.csv"
+		run="${runPrefix}"
+	fi
+
 	jobControleFileBase="${TMP_ROOT_DIR}/logs/${run}/run01.startInhouseDragenPipeline"
 	if [[ -f "${jobControleFileBase}.finished" ]]
 	then
