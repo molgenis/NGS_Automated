@@ -288,21 +288,27 @@ else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "column [${PIPELINECOLUMN}] is found in the samplesheet"
 			_pipelineFieldIndex=$((${_sampleSheetColumnOffsets["${PIPELINECOLUMN}"]} + 1))
 			## In future this valueInSamplesheet will be replaced by DARWIN to the real value.
+			
+			
 			readarray -t valueInSamplesheet < <(tail -n +2 "${samplesheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_pipelineFieldIndex}" | sort | uniq )
 			if [[ -n "${_sampleSheetColumnOffsets['sampleType']+isset}" ]] 
 			then
 				_sampleTypeFieldIndex=$((${_sampleSheetColumnOffsets['sampleType']} + 1))
 				## In future this valueInSamplesheet will be replaced by DARWIN to the real value.
 				readarray -t valueInSamplesheetSampleType < <(tail -n +2 "${samplesheet}" | cut -d "${SAMPLESHEET_SEP}" -f "${_sampleTypeFieldIndex}" | sort | uniq )
-				sampleType="${valueInSamplesheetSampleType[0]}"
-				REPLACEDPIPELINECOLUMN="${REPLACEDPIPELINECOLUMN}_${sampleType}"
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "renaming ${valueInSamplesheetSampleType[0]} into ${REPLACEDPIPELINECOLUMN}"
+				if [[ "${valueInSamplesheetSampleType[0]}" == "RNA" ]]
+				then
+					sampleType="${valueInSamplesheetSampleType[0]}"
+					REPLACEDPIPELINECOLUMN="DRAGEN+NGS_RNA"
+					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "REPLACEDPIPELINECOLUMN=DRAGEN+NGS_RNA"
+				fi
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "renaming ${valueInSamplesheet[0]} into ${REPLACEDPIPELINECOLUMN}"
 			else
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no column [sampleType] in the samplesheet, we need this information to determine which pipeline to run (DNA, RNA), EXITING"
-				exit 1
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no column [sampleType] in the samplesheet"
 			fi
-			perl -p -e "s|${valueInSamplesheet[0]}|${REPLACEDPIPELINECOLUMN}|" "${samplesheet}" > "${samplesheet}.tmp"
+			sed "s|${valueInSamplesheet[0]}|${REPLACEDPIPELINECOLUMN}|g" "${samplesheet}" > "${samplesheet}.tmp"
 			mv "${samplesheet}.tmp" "${samplesheet}"
+
 		else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no column [${PIPELINECOLUMN}] in the samplesheet, creating dummy entry:"
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "header: ${PIPELINECOLUMN} and value: ${REPLACEDPIPELINECOLUMN}"
@@ -363,7 +369,7 @@ do
 		projectSamplesheet="false"
 	elif [[ "${samplesheetChecked}" == *"GS_"* ]]
 	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is a GS samplesheet. No samplesheetCheck (yet).. A lot of required columns for in house are not required for GS"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${samplesheetChecked} > This is a GS samplesheet. No samplesheetCheck (yet).. A lot of required columns for in house are not required for GS"
 		projectSamplesheet="true"
 	elif [[ "${group}" == "patho" ]]
 	then
@@ -405,17 +411,23 @@ do
 				_sampleTypeFieldIndex=$((${_sampleSheetColumnOffsets['sampleType']} + 1))
 				## In future this valueInSamplesheet will be replaced by DARWIN to the real value.
 				readarray -t valueInSamplesheetSampleType < <(tail -n +2 "${samplesheetChecked}" | cut -d "${SAMPLESHEET_SEP}" -f "${_sampleTypeFieldIndex}" | sort | uniq )
-				sampleType="${valueInSamplesheetSampleType[0]}"
-				firstStepOfPipeline="NGS_${sampleType}"
+				if [[ "${valueInSamplesheetSampleType[0]}" == "RNA" ]]
+				then
+					sampleType="${valueInSamplesheetSampleType[0]}"
+					REPLACEDPIPELINECOLUMN="${REPLACEDPIPELINECOLUMN}_${sampleType}"
+					firstStepOfPipeline="NGS_${sampleType}"
+				else
+					sampleType="${valueInSamplesheetSampleType[0]}"
+					firstStepOfPipeline="POST_DRAGEN"
+				fi
 			else
-				firstStepOfPipeline="NGS_DNA"
+				firstStepOfPipeline="POST_DRAGEN"
 			fi
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a project samplesheet (no NGS_Demultiplexing); firstStepOfPipeline was set to ${firstStepOfPipeline}."
 		fi
 	fi
 	# shellcheck disable=SC2153
-	samplesheetDestination="${HOSTNAME_TMP}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/${firstStepOfPipeline}/"
-
+	samplesheetDestination="${HOSTNAME_TMP}:/groups/${GROUP}/${TMP_LFS}/Samplesheets/${firstStepOfPipeline}/"
 	#
 	# Move samplesheets with rsync
 	#

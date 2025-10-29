@@ -110,15 +110,15 @@ function rsyncRuns() {
 		# Transfer data.
 		#
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' \
-			"Rsyncing ${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${_rawDataType}/${_rawDataItem} to ${PRM_ROOT_DIR}/rawdata/${_rawDataType}/ ..."
+			"Rsyncing ${DATA_MANAGER}@${sourceServerFQDN}:${TMP_ROOT_DIR}/rawdata/${_rawDataType}/${_rawDataItem} to ${PRM_ROOT_DIR}/rawdata/${_rawDataType}/ ..."
 		rsync -vrltDL "${dryrun:---progress}" \
 			--log-file="${_controlFileBaseForFunction}.started" \
 			--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
-			"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${_rawDataType}/${_rawDataItem}" \
+			"${DATA_MANAGER}@${sourceServerFQDN}:${TMP_ROOT_DIR}/rawdata/${_rawDataType}/${_rawDataItem}" \
 			"${PRM_ROOT_DIR}/rawdata/${_rawDataType}/" \
 		|| {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Failed to rsync ${_rawDataItem}"
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from ${sourceServerFQDN}:${SCR_ROOT_DIR}/rawdata/${_rawDataType}/${_rawDataItem}/"
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    from ${sourceServerFQDN}:${TMP_ROOT_DIR}/rawdata/${_rawDataType}/${_rawDataItem}/"
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "    to ${PRM_ROOT_DIR}/rawdata/${_rawDataType}/"
 			mv "${_controlFileBaseForFunction}."{started,failed}
 			return
@@ -133,7 +133,7 @@ function rsyncRuns() {
 		local _countFilesRunDirScr
 		local _countFilesRunDirPrm
 		# shellcheck disable=SC2029
-		_countFilesRunDirScr="$(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${SCR_ROOT_DIR}/rawdata/${_rawDataType}/${_rawDataItem}/\"* -type f | wc -l")"
+		_countFilesRunDirScr="$(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${TMP_ROOT_DIR}/rawdata/${_rawDataType}/${_rawDataItem}/\"* -type f | wc -l")"
 		_countFilesRunDirPrm="$(find "${PRM_ROOT_DIR}/rawdata/${_rawDataType}/${_rawDataItem}/"* -type f | wc -l)"
 		local _checksumVerification='unknown'
 		if [[ "${_countFilesRunDirScr}" -ne "${_countFilesRunDirPrm}" ]]; then
@@ -216,11 +216,11 @@ function splitSamplesheetPerProject() {
 	rsync -vrltD "${dryrun:---progress}" \
 		--log-file="${_controlFileBaseForFunction}.started" \
 		--chmod='Du=rwx,Dg=rsx,Fu=rw,Fg=r,o-rwx' \
-		"${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/${pipeline}/${_run}.${SAMPLESHEET_EXT}" \
+		"${DATA_MANAGER}@${sourceServerFQDN}:${TMP_ROOT_DIR}/Samplesheets/${pipeline}/${_run}.${SAMPLESHEET_EXT}" \
 		"${PRM_ROOT_DIR}/Samplesheets/archive/" \
 	|| {
 		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' \
-			"Failed to rsync ${SCR_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}. See ${_controlFileBaseForFunction}.failed for details."
+			"Failed to rsync ${TMP_ROOT_DIR}/Samplesheets/${_run}.${SAMPLESHEET_EXT}. See ${_controlFileBaseForFunction}.failed for details."
 		mv "${_controlFileBaseForFunction}."{started,failed}
 		return
 	}
@@ -283,11 +283,11 @@ function splitSamplesheetPerProject() {
 		#
 	
 			# shellcheck disable=SC2029
-		if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished"
+		if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${TMP_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished"
 		then
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${TMP_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
 		else
-			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${TMP_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
 			mv "${_controlFileBaseForFunction}."{started,failed}
 		fi
 		break
@@ -329,11 +329,11 @@ function splitSamplesheetPerProject() {
 						## create a rawDataCopiedToPrm.finished file to tell the copyProjectDataToPrm that the copying of the rawdata to prm for this project has been finished
 						#
 						# shellcheck disable=SC2029
-						if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished"
+						if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${TMP_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished"
 						then
-							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
+							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${TMP_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
 						else
-							log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${SCR_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
+							log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${TMP_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
 							mv "${_controlFileBaseForFunction}."{started,failed}
 							return
 						fi
@@ -357,13 +357,13 @@ function splitSamplesheetPerProject() {
 	# remove samplesheet on sourceServerFQDN
 	#
 	# shellcheck disable=SC2029
-	if ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "mv \"${SCR_ROOT_DIR}/Samplesheets/${pipeline}/${_run}.${SAMPLESHEET_EXT}\" \"${SCR_ROOT_DIR}/Samplesheets/archive/\" "
+	if ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "mv \"${TMP_ROOT_DIR}/Samplesheets/${pipeline}/${_run}.${SAMPLESHEET_EXT}\" \"${TMP_ROOT_DIR}/Samplesheets/archive/\" "
 	then
 		rm -f "${_controlFileBaseForFunction}.failed"
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}.${SAMPLESHEET_EXT} moved to ${SCR_ROOT_DIR}/Samplesheets/archive/ on ${sourceServerFQDN}."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}.${SAMPLESHEET_EXT} moved to ${TMP_ROOT_DIR}/Samplesheets/archive/ on ${sourceServerFQDN}."
 		mv "${_controlFileBaseForFunction}."{started,finished}
 	else
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}.${SAMPLESHEET_EXT} cannot be removed from ${SCR_ROOT_DIR}/Samplesheets/${pipeline}/ on ${sourceServerFQDN}."
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "${_run}.${SAMPLESHEET_EXT} cannot be removed from ${TMP_ROOT_DIR}/Samplesheets/${pipeline}/ on ${sourceServerFQDN}."
 		mv "${_controlFileBaseForFunction}."{started,failed}
 	fi
 }
@@ -404,9 +404,9 @@ Options:
 		e.g. run01.processGsRawData.finished 
 	-r	[root]
 		Root dir on the server specified with -s and from where the raw data will be fetched (optional).
-		By default this is the SCR_ROOT_DIR variable, which is compiled from variables specified in the
+		By default this is the TMP_ROOT_DIR variable, which is compiled from variables specified in the
 		<group>.cfg, <source_host>.cfg and sharedConfig.cfg config files (see below.)
-		You need to override SCR_ROOT_DIR when the data is to be fetched from a non default path,
+		You need to override TMP_ROOT_DIR when the data is to be fetched from a non default path,
 		which is for example the case when fetching data from another group.
 
 Config and dependencies:
@@ -538,12 +538,12 @@ do
 done
 
 #
-# Overrule group's SCR_ROOT_DIR if necessary.
+# Overrule group's TMP_ROOT_DIR if necessary.
 #
 if [[ -n "${sourceServerRootDir:-}" ]]
 then
-	SCR_ROOT_DIR="${sourceServerRootDir}"
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Using alternative sourceServerRootDir ${sourceServerRootDir} as SCR_ROOT_DIR."
+	TMP_ROOT_DIR="${sourceServerRootDir}"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Using alternative sourceServerRootDir ${sourceServerRootDir} as TMP_ROOT_DIR."
 fi
 if [[ -z "${finishedPrevStep:-}" ]]
 then
@@ -581,7 +581,7 @@ fi
 
 #
 # Make sure only one copy of this script runs simultaneously
-# per data collection we want to copy to prm -> one copy per group per combination of ${sourceServer} and ${SCR_ROOT_DIR}.
+# per data collection we want to copy to prm -> one copy per group per combination of ${sourceServer} and ${TMP_ROOT_DIR}.
 # Therefore locking must be done after
 # * sourcing the file containing the lock function,
 # * sourcing config files,
@@ -589,11 +589,11 @@ fi
 # but before doing the actual data transfers.
 #
 # As servernames and folders may contain various characters that would require escaping in (lock) file names,
-# we compute a hash for the combination of ${sourceServer} and ${SCR_ROOT_DIR} to append to the ${SCRIPT_NAME}
-# for creating unique lock file. We write the combination of ${sourceServer} and ${SCR_ROOT_DIR} in the lock file
-# to make it easier to detect which combination of ${sourceServer} and ${SCR_ROOT_DIR} the lock file is for.
+# we compute a hash for the combination of ${sourceServer} and ${TMP_ROOT_DIR} to append to the ${SCRIPT_NAME}
+# for creating unique lock file. We write the combination of ${sourceServer} and ${TMP_ROOT_DIR} in the lock file
+# to make it easier to detect which combination of ${sourceServer} and ${TMP_ROOT_DIR} the lock file is for.
 #
-hashedSource="$(printf '%s:%s' "${sourceServer}" "${SCR_ROOT_DIR}" | md5sum | awk '{print $1}')"
+hashedSource="$(printf '%s:%s' "${sourceServer}" "${TMP_ROOT_DIR}" | md5sum | awk '{print $1}')"
 lockFile="${PRM_ROOT_DIR}/logs/${SCRIPT_NAME}_${hashedSource}.lock"
 thereShallBeOnlyOne "${lockFile}"
 
@@ -621,11 +621,11 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 #
 declare -a sampleSheetsFromSourceServer
 # shellcheck disable=SC2029
-readarray -t sampleSheetsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${SCR_ROOT_DIR}/Samplesheets/${pipeline}/\" -mindepth 1 -maxdepth 1 -type f -name '*.${SAMPLESHEET_EXT}'")
+readarray -t sampleSheetsFromSourceServer< <(ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" "find \"${TMP_ROOT_DIR}/Samplesheets/${pipeline}/\" -mindepth 1 -maxdepth 1 -type f -name '*.${SAMPLESHEET_EXT}'")
 
 if [[ "${#sampleSheetsFromSourceServer[@]}" -eq '0' ]]
 then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheets found at ${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/Samplesheets/${pipeline}/*.${SAMPLESHEET_EXT}."
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheets found at ${DATA_MANAGER}@${sourceServerFQDN}:${TMP_ROOT_DIR}/Samplesheets/${pipeline}/*.${SAMPLESHEET_EXT}."
 else
 	for sampleSheet in "${sampleSheetsFromSourceServer[@]}"
 	do
@@ -640,11 +640,11 @@ else
 		# Determine whether an rsync is required for this run, which is the case when
 		# raw data production has finished successfully and this copy script has not.
 		#
-		if ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" test -e "${SCR_ROOT_DIR}/logs/${filePrefix}/${RAWDATAPROCESSINGFINISHED}"
+		if ssh "${DATA_MANAGER}"@"${sourceServerFQDN}" test -e "${TMP_ROOT_DIR}/logs/${filePrefix}/${RAWDATAPROCESSINGFINISHED}"
 		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/logs/${filePrefix}/${RAWDATAPROCESSINGFINISHED} present."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${TMP_ROOT_DIR}/logs/${filePrefix}/${RAWDATAPROCESSINGFINISHED} present."
 		else
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${SCR_ROOT_DIR}/logs/${filePrefix}/${RAWDATAPROCESSINGFINISHED} absent."
+			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${sourceServerFQDN}:${TMP_ROOT_DIR}/logs/${filePrefix}/${RAWDATAPROCESSINGFINISHED} absent."
 			continue
 		fi
 		# shellcheck disable=SC2174
@@ -767,11 +767,11 @@ else
 			fi
 
 			# shellcheck disable=SC2029
-			if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${SCR_ROOT_DIR}/logs/${filePrefix}/run01.rawDataCopiedToPrm.finished"
+			if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${TMP_ROOT_DIR}/logs/${filePrefix}/run01.rawDataCopiedToPrm.finished"
 			then
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${SCR_ROOT_DIR}/logs/${filePrefix}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${TMP_ROOT_DIR}/logs/${filePrefix}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
 			else
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${SCR_ROOT_DIR}/logs/${filePrefix}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
+				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${TMP_ROOT_DIR}/logs/${filePrefix}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
 				mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 			fi
 		else
