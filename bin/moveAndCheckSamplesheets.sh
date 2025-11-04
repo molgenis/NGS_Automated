@@ -56,7 +56,7 @@ Usage:
 Options:
 	-h	Show this help.
 	-d	DAT_DIR
-	-g	Group. (main group, umcg-gd or umcg-atd)
+	-g	Group.
 	-l	Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
@@ -83,7 +83,7 @@ EOH
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
-while getopts ":g::l:d:h" opt
+while getopts ":g:l:d:h" opt
 do
 	case "${opt}" in
 		h)
