@@ -868,6 +868,10 @@ if [[ -z "${group:-}" ]]
 then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' 'Must specify a group with -g.'
 fi
+if [[ -z "${splitoption:-}" ]]
+then
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' 'Must specify a splitoption pull|process|cleanup|al with -s.'
+fi
 
 case "${splitoption}" in
 	pull|process|cleanup|all)
