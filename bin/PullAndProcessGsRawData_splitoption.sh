@@ -806,7 +806,7 @@ Usage:
 Options:
 	-h	Show this help.
 	-g	Group.
-	-s	SplitOption to run only part of the script or the whole script pull|process|cleanup|al
+	-s	SplitOption to run only part of the script or the whole script pull|process|cleanup|all
 	-l	Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
@@ -870,7 +870,7 @@ then
 fi
 if [[ -z "${splitoption:-}" ]]
 then
-	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' 'Must specify a splitoption pull|process|cleanup|al with -s.'
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' 'Must specify a splitoption pull|process|cleanup|all with -s.'
 fi
 
 case "${splitoption}" in
@@ -993,18 +993,19 @@ then
 	else
 		for gsBatch in "${gsBatchesSourceServer[@]}"
 		do
-			#
-			# Process this batch.
-			#
-			gsBatch="$(basename "${gsBatch}")"
-			controlFileBase="${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}"
-			export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
-			#
-			# ToDo: change location of log files back to ${TMP_ROOT_DIR} once we have a 
-			#       proper prm mount on the GD clusters and this script can run a GD cluster
-			#       instead of on a research cluster.
-			#
 			if [[ "${splitoption}" == "all" ]] || [[ "${splitoption}" == "pull" ]]; then
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "splitoption: ${splitoption}"
+				#
+				# Process this batch.
+				#
+				gsBatch="$(basename "${gsBatch}")"
+				controlFileBase="${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}"
+				export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
+				#
+				# ToDo: change location of log files back to ${TMP_ROOT_DIR} once we have a 
+				#       proper prm mount on the GD clusters and this script can run a GD cluster
+				#       instead of on a research cluster.
+				#
 				if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 				then
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${gsBatch} already processed, no need to transfer the data again."
@@ -1017,7 +1018,6 @@ then
 					# shellcheck disable=SC2174
 					mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${gsBatch}/"
 					printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
-	
 					#
 					# Check if gsBatch is supposed to be complete (*.finished present).
 					#
@@ -1080,15 +1080,16 @@ else
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${gsBatch} already processed, no need process the data again."
 			continue
 		else
-			# shellcheck disable=SC2174
-			mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/"
-			# shellcheck disable=SC2174
-			mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${gsBatch}/"
-			printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
-			#
-			# Step 1: Sanity Check if transfer of raw data has finished.
-			#
 			if [[ "${splitoption}" == "all" ]] || [[ "${splitoption}" == "pull" ]]; then
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "splitoption: ${splitoption}"
+				# shellcheck disable=SC2174
+				mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/"
+				# shellcheck disable=SC2174
+				mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${gsBatch}/"
+				printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
+				#
+				# Step 1: Sanity Check if transfer of raw data has finished.
+				#
 				if [[ -e "${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}.${rawdataFolder}_rsyncData.finished" ]]
 				then
 					
@@ -1100,10 +1101,11 @@ else
 					continue
 				fi
 			fi
-				#
-				# Step 2: Rename FastQs if Sanity check has finished.
-				#
+			#
+			# Step 2: Rename FastQs if Sanity check has finished.
+			#
 			if [[ "${splitoption}" == "all" ]] || [[ "${splitoption}" == "process" ]]; then
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "splitoption: ${splitoption}"
 				if [[ -e "${controlFileBase}.${rawdataFolder}_sanityChecking.finished" ]]
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.${rawdataFolder}_sanityChecking.finished present -> sanityChecking completed; let's renameFastQs for batch ${gsBatch}..."
@@ -1160,6 +1162,7 @@ fi
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' 'Finished processing all batches.'
 	
 if [[ "${splitoption}" == "all" ]] || [[ "${splitoption}" == "cleanup" ]]; then
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "splitoption: ${splitoption}"
 	if [[ "${CLEANUP}" == "false" ]]
 	then
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "this is a testgroup, data should not be removed after 14 days"
