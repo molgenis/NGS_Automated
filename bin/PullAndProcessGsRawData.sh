@@ -1075,7 +1075,7 @@ else
 			continue
 		else
 			if [[ "${splitoption}" == "all" ]] || [[ "${splitoption}" == "pull" ]]; then
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "splitoption: ${splitoption}"
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "starting splitoption: ${splitoption}"
 				# shellcheck disable=SC2174
 				mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/"
 				# shellcheck disable=SC2174
@@ -1094,6 +1094,7 @@ else
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Data transfer not yet completed; skipping batch ${gsBatch}."
 					continue
 				fi
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "finished splitoption: pull, running splitoption: ${splitoption}"
 			fi
 			#
 			# Step 2: Rename FastQs if Sanity check has finished.
@@ -1148,6 +1149,7 @@ else
 					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process batch ${gsBatch}."
 					mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 				fi
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "finished splitoption: process, running splitoption: ${splitoption}"
 			fi
 		fi
 	done
@@ -1207,6 +1209,7 @@ if [[ "${splitoption}" == "all" ]] || [[ "${splitoption}" == "cleanup" ]]; then
 			done
 		fi
 	fi
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "finished splitoption: cleanup, running splitoption: ${splitoption}"
 fi
 
 trap - EXIT
