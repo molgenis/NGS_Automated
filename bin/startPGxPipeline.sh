@@ -218,7 +218,7 @@ else
 				for sentrixBarcode in "${sentrixBarcodes[@]}"
 				do
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "copying ${sentrixBarcode} to ${TMP_ROOT_DIR}/rawdata/gtc/"
-					rsync -rv "/groups/umcg-gap/${TMP_LFS}/rawdata/array/GTC/${sentrixBarcode}" "${TMP_ROOT_DIR}/rawdata/gtc/"
+					rsync -rv "/groups/umcg-pgx/${TMP_LFS}/rawdata/array/GTC/${sentrixBarcode}" "${TMP_ROOT_DIR}/rawdata/gtc/"
 				done
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "running ${EBROOTPGX}/pgx_pre_preprocess.sh -p ${originalproject}"
 				bash "${EBROOTPGX}/pgx_pre_preprocess.sh" -p "${originalproject}" \

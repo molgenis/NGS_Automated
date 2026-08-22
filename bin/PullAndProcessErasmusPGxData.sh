@@ -275,11 +275,11 @@ then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "projectFieldIndex=${_projectFieldIndex}"
 					folder=$(date +%Y-%m)
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "checking which batch to create for this month: ${folder}"
-					if [[ ! -f "${TMP_ROOT_DIR}/runs/AGCT/${folder}_batch1" ]]
+					if [[ ! -d "${TMP_ROOT_DIR}/runs/AGCT/${folder}_batch1" ]]
 					then
 						newProjectName="${folder}_batch1"
 						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "batch1 is selected for creation"
-					elif [[ ! -f "${TMP_ROOT_DIR}/runs/AGCT/${folder}_batch2" ]]
+					elif [[ ! -d "${TMP_ROOT_DIR}/runs/AGCT/${folder}_batch2" ]]
 					then
 						newProjectName="${folder}_batch2"
 						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "batch2 is selected for creation"
