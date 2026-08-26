@@ -200,7 +200,8 @@ function notification() {
 				then
 					if [[ "${_check: -1}" == "t" ]]
 					then
-					_maxTimeMin=$((${_check}*60))
+					_maxTimeMin=$((${_check%t}*60))
+					_maxTime="${_check%t}"
 					_oldPhaseStateFile=$(find "${_projectStateFile}" -mmin +"${_maxTimeMin}")
 					if [[ -z "${_oldPhaseStateFile:-}" ]]
 					then
