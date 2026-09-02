@@ -502,6 +502,10 @@ function postMessageToChannel() {
 		_messageBody="$(tr \" \' < "${_projectStateFile}")"
 	fi
 	#_messageBody="${_messageBody//\\/\\\\}"
+
+	# Convert '\n' newlines to '<br>' to display newlines in email body.
+	_messageBody="${_messageBody//$'\n'/<br>}"
+
 	_jsonMessage=$(cat <<-EOM
 		{
 		"title": "${ROLE_USER}@${HOSTNAME_SHORT}: Project ${_project}/${_run} has state ${_state} for phase ${_phase} at ${_timestamp}.",
