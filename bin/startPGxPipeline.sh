@@ -214,7 +214,6 @@ else
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "There are no sentrixBarcodes in the samplesheet!"
 				continue
 			else
-				module load PGx
 				for sentrixBarcode in "${sentrixBarcodes[@]}"
 				do
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "copying ${sentrixBarcode} to ${TMP_ROOT_DIR}/rawdata/gtc/"

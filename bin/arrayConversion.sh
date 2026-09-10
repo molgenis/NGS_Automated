@@ -162,21 +162,21 @@ fi
 # * and parsing commandline arguments,
 # but before doing the actual data transfers.
 #
-lockFile="${SCR_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
+lockFile="${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
 thereShallBeOnlyOne "${lockFile}"
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile} ..."
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${SCR_ROOT_DIR}/logs ..."
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${TMP_ROOT_DIR}/logs ..."
 
 #
 # Sequencer is writing to this location: ${SEQ_DIR}
 # Looping through sub dirs to see if all files.
 #
-log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "find ${SCR_ROOT_DIR}/Samplesheets/AGCT/*.${SAMPLESHEET_EXT}"
-readarray -t sampleSheets< <(find "${SCR_ROOT_DIR}/Samplesheets/AGCT/" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name '*.csv')
+log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "find ${TMP_ROOT_DIR}/Samplesheets/AGCT/*.${SAMPLESHEET_EXT}"
+readarray -t sampleSheets< <(find "${TMP_ROOT_DIR}/Samplesheets/AGCT/" -mindepth 1 -maxdepth 1 \( -type l -o -type f \) -name '*.csv')
 
 if [[ "${#sampleSheets[@]}" -eq '0' ]]
 then
-	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found at ${SCR_ROOT_DIR}/Samplesheets/AGCT/*.${SAMPLESHEET_EXT}."
+	log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "No sample sheets found at ${TMP_ROOT_DIR}/Samplesheets/AGCT/*.${SAMPLESHEET_EXT}."
 else
 	for sampleSheet in "${sampleSheets[@]}"
 	do
@@ -185,9 +185,9 @@ else
 		# Create log dir with job control file for sequence run.
 		#
 		# shellcheck disable=SC2174
-		mkdir -m 2770 -p "${SCR_ROOT_DIR}/logs/${project}/"
+		mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${project}/"
 		
-		export JOB_CONTROLE_FILE_BASE="${SCR_ROOT_DIR}/logs/${project}/run01.arrayConversion"
+		export JOB_CONTROLE_FILE_BASE="${TMP_ROOT_DIR}/logs/${project}/run01.arrayConversion"
 		if [[ -f "${JOB_CONTROLE_FILE_BASE}.finished" ]]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished: Skipping finished ${project}."
@@ -196,13 +196,13 @@ else
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.started: Skipping ${project}, which is already getting processed."
 			continue
-		elif [[ ! -f "${SCR_ROOT_DIR}/Samplesheets/AGCT/${project}.csv" ]]
+		elif [[ ! -f "${TMP_ROOT_DIR}/Samplesheets/AGCT/${project}.csv" ]]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "No samplesheet found: skipping ${project}."
 			continue
 		fi
 		
-		export TRACE_FAILED="${SCR_ROOT_DIR}/logs/${project}/trace.failed"
+		export TRACE_FAILED="${TMP_ROOT_DIR}/logs/${project}/trace.failed"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing project ${project} ..."
 
 		head -1 "${sampleSheet}"
@@ -214,36 +214,35 @@ else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "total number of plateNumbers: ${numberOfPlateNumbers}"
 		for plateNumber in "${plateNumbers[@]}"
 		do
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "check ${SCR_ROOT_DIR}/rawdata/array/IDAT/${plateNumber}/${plateNumber}_qc.txt"
-			if [[ -e "${SCR_ROOT_DIR}/rawdata/array/IDAT/${plateNumber}/${plateNumber}_qc.txt" ]]
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "check ${TMP_ROOT_DIR}/rawdata/array/IDAT/${plateNumber}/${plateNumber}_qc.txt"
+			if [[ -e "${TMP_ROOT_DIR}/rawdata/array/IDAT/${plateNumber}/${plateNumber}_qc.txt" ]]
 			then
-				if grep -q "<ScanSettings" "${SCR_ROOT_DIR}/rawdata/array/IDAT/${plateNumber}/${plateNumber}_qc.txt"
+				if grep -q "<ScanSettings" "${TMP_ROOT_DIR}/rawdata/array/IDAT/${plateNumber}/${plateNumber}_qc.txt"
 				then
 					count=$((count+1))
 				else
 					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${plateNumber}_qc.txt does exist but the project is not finished yet, ${project} cannot be continued"
 				fi
 			else
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${SCR_ROOT_DIR}/rawdata/array/IDAT/${plateNumber}/ does not exist"
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/rawdata/array/IDAT/${plateNumber}/ does not exist"
 			fi
 		done
 
 		if [[ "${count}" == "${numberOfPlateNumbers}" ]]
 		then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Generating and submitting jobs for ${project} ..." | tee -a "${JOB_CONTROLE_FILE_BASE}.started"
-			echo "started: $(date +%FT%T%z)" > "${SCR_ROOT_DIR}/logs/${project}/run01.arrayConversion.totalRuntime"
+			echo "started: $(date +%FT%T%z)" > "${TMP_ROOT_DIR}/logs/${project}/run01.arrayConversion.totalRuntime"
 
 			{
 			# shellcheck disable=SC2174
-			mkdir -m 2770 -v -p "${SCR_ROOT_DIR}/generatedscripts/AGCT/${project}/"
-			cd "${SCR_ROOT_DIR}/generatedscripts/AGCT/${project}/"
-			cp -v "${SCR_ROOT_DIR}/Samplesheets/AGCT/${project}.csv" ./
-			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "copying ${EBROOTAGCT}/templates/generate_template.sh to ${SCR_ROOT_DIR}/generatedscripts/AGCT/${project}/"
+			mkdir -m 2770 -v -p "${TMP_ROOT_DIR}/generatedscripts/AGCT/${project}/"
+			cd "${TMP_ROOT_DIR}/generatedscripts/AGCT/${project}/"
+			cp -v "${TMP_ROOT_DIR}/Samplesheets/AGCT/${project}.csv" ./
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "copying ${EBROOTAGCT}/templates/generate_template.sh to ${TMP_ROOT_DIR}/generatedscripts/AGCT/${project}/"
 			cp -v "${EBROOTAGCT}/templates/generate_template.sh" ./
 			bash generate_template.sh 
-			cd "${SCR_ROOT_DIR}/runs/AGCT/${project}/run01/jobs"
-			tmpDirectory="$(basename "${SCR_ROOT_DIR}")"
-			bash submit.sh --constraint "${tmpDirectory}"
+			cd "${TMP_ROOT_DIR}/runs/AGCT/${project}/run01/jobs"
+			bash submit.sh --constraint "${SCR_LFS}"
 			} >> "${JOB_CONTROLE_FILE_BASE}.started" 2>&1
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "jobs submitted"
 			#
