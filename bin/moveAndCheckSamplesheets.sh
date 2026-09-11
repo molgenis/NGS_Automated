@@ -313,6 +313,7 @@ else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no column [${PIPELINECOLUMN}] in the samplesheet, creating dummy entry:"
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "header: ${PIPELINECOLUMN} and value: ${REPLACEDPIPELINECOLUMN}"
 			awk -v pipeline="${REPLACEDPIPELINECOLUMN}" -v pipelineColumn="${PIPELINECOLUMN}" 'BEGIN {FS=","}{if (NR==1){print $0","pipelineColumn}else{ print $0","pipeline}}' "${samplesheet}" > "${samplesheet}.tmp"
+			sync
 			mv "${samplesheet}.tmp" "${samplesheet}"
 		fi
 		firstStepOfPipeline="${REPLACEDPIPELINECOLUMN%%+*}"
@@ -427,14 +428,8 @@ do
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a project samplesheet (no NGS_Demultiplexing); firstStepOfPipeline was set to ${firstStepOfPipeline}."
 		fi
 	fi
-	if [[ "${group}" == "umcg-genomescan" ]]
-	then
-		# shellcheck disable=SC2153
-		samplesheetDestination="${HOSTNAME_TMP}:/groups/${GROUP}/${SCR_LFS}/Samplesheets/${firstStepOfPipeline}/"
-	else
 		# shellcheck disable=SC2153
 		samplesheetDestination="${HOSTNAME_TMP}:/groups/${GROUP}/${TMP_LFS}/Samplesheets/${firstStepOfPipeline}/"
-	fi
 	#
 	# Move samplesheets with rsync
 	#
