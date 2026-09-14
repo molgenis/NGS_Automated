@@ -554,7 +554,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 					
 				if [[ -e "${controlFileBase}.${analysisFolder}_sanityChecking.finished" ]]
 				then
-					mergeSamplesheets "${gsBatch}" "${controlFileBase}" "${analysisFolder}" "${originalBatch}" "${_projectName}"
+					mergeSamplesheets "${gsBatch}" "${controlFileBase}" "${analysisFolder}" "${originalBatch}" "${projectName}"
 				else
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.sanityChecking.finished absent -> sanityChecking failed."
 				fi
@@ -567,7 +567,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 					mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 				else
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.mergeSamplesheets.finished absent -> processing failed for batch ${gsBatch}."
-					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process batch ${gsBatch}. (project=${_projectName})"
+					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to process batch ${gsBatch}. (project=${projectName})"
 					mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 				fi
 
