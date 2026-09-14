@@ -356,7 +356,7 @@ function showHelp() {
 	#
 	cat <<EOH
 ===============================================================================================================
-Script to pull data from a Data Staging (DS) server.
+Script to process genomescan analysis data.
 
 Usage:
 	$(basename "${0}") OPTIONS
