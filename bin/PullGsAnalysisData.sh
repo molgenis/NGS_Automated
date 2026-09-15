@@ -302,8 +302,8 @@ then
 				gsBatchUploadCompleted='false'
 				if rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${gsBatch}.finished" 2>/dev/null
 				then
-					checkIfRawDataFolderExists=$(rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/")
-					if [[ "${checkIfRawDataFolderExists}" == *"${analysisFolder}"* ]]
+					checkIfAnalysisFolderExists=$(rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/")
+					if [[ "${checkIfAnalysisFolderExists}" == *"${analysisFolder}"* ]]
 					then
 						gsBatchUploadCompleted='true'
 							rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${analysisFolder}/" 
