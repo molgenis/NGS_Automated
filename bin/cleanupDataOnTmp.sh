@@ -187,9 +187,9 @@ then
 			#
 			## Cleaning GsAnalysisData
 			#
-			if [[ -e "${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}.PullAndProcessGsAnalysisData.finished" ]]
+			if [[ -e "${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}.ProcessGsAnalysisData.finished" ]]
 			then
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${gsBatch}.PullAndProcessGsAnalysisData.finished"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${gsBatch}.ProcessGsAnalysisData.finished"
 				gsProjectName=$(awk 'BEGIN {FS=","}{if (NR>1){print $2}}' "${gsRun}/UMCG_CSV_${gsBatch}.csv" | awk 'BEGIN {FS="-"}{print $1"-"$2}' | head -1)
 				if [[ -e "${TMP_ROOT_DIR}/logs/${gsProjectName}/run01.projectDataCopiedToPrm.finished" ]]
 				then
