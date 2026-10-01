@@ -186,9 +186,9 @@ else
 		#
 		if [[ -f "${SEQ_INCOMING_DIR}/${run}/CopyComplete.txt" ]]
 		then
-			touch "${JOB_CONTROLE_FILE_BASE}.started"
 			if [[ ! -f "${JOB_CONTROLE_FILE_BASE}.transferCompleted" ]]
 			then
+				touch "${JOB_CONTROLE_FILE_BASE}.started"
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencing run completed: ${run}. Copy data from ${SEQ_INCOMING_DIR} to ${SEQ_DIR} and ${NEW_SEQ_DIR}"
 				##SEQ DIR
 				if rsync -av --checksum --exclude="RunCompletionStatus.xml" "${SEQ_INCOMING_DIR}/${run}"	"${SEQ_DIR}"
@@ -217,28 +217,26 @@ else
 				fi
 			else
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencing run is not (yet) finished."
-			fi
-
-			if [[ -f "${JOB_CONTROLE_FILE_BASE}.transferCompleted" ]]
-			then
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Transfer completed for run ${run}."
-				dateInSecRawData="$(date -d"$(rsync "${JOB_CONTROLE_FILE_BASE}.transferCompleted" | awk '{print $3}')" +%s)"
-				dateInSecNow=$(date +%s)
-				if [[ $(((dateInSecNow - dateInSecRawData) / 86400)) -gt 2 ]]
-				then
-					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Transfer completed more than 2 days ago, ${run} will be removed from ${SEQ_INCOMING_DIR}"
-					runDir="${SEQ_INCOMING_DIR}/${run}"
-					rm -rf "${runDir:?}"
-					rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
-					mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
-				else
-					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Data removal on hold for ${run}: Transfer completed is less than 2 days ago"	
-				fi
-			else
-				log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to rsync ${SEQ_INCOMING_DIR}/${run}/."
-				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+				continue
 			fi
 		fi
+		if [[ -f "${JOB_CONTROLE_FILE_BASE}.transferCompleted" ]]
+		then
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Transfer completed for run ${run}."
+			dateInSecRawData="$(date -d"$(rsync "${JOB_CONTROLE_FILE_BASE}.transferCompleted" | awk '{print $3}')" +%s)"
+			dateInSecNow=$(date +%s)
+			if [[ $(((dateInSecNow - dateInSecRawData) / 86400)) -gt 2 ]]
+			then
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Transfer completed more than 2 days ago, ${run} will be removed from ${SEQ_INCOMING_DIR}"
+				runDir="${SEQ_INCOMING_DIR}/${run}"
+				rm -rf "${runDir:?}"
+				rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
+				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+			else
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Data removal on hold for ${run}: Transfer completed is less than 2 days ago"	
+			fi
+		fi
+	
 	done
 fi
 trap - EXIT
