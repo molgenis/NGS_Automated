@@ -288,7 +288,7 @@ function submitJobScripts () {
 #
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
-while getopts ":g:l:r:p:h" opt; do
+while getopts ":g:l:r:t:p:h" opt; do
 	case "${opt}" in
 		h)
 			showHelp
@@ -301,6 +301,9 @@ while getopts ":g:l:r:p:h" opt; do
 			;;
 		p)
 			pipeline="${OPTARG}"
+			;;
+		t)
+			overrulingTMP_LFS="${OPTARG}"
 			;;
 		l)
 			# shellcheck disable=SC2034
@@ -366,6 +369,15 @@ do
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Config file ${configFile} missing or not accessible."
 	fi
 done
+
+if [[ -n "${overrulingTMP_LFS:-}" ]]
+then
+	TMP_LFS="${overrulingTMP_LFS}"
+	# shellcheck disable=SC1091
+	source "${CFG_DIR}/sharedConfig.cfg"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "TMP_LFS= ${TMP_LFS}"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "TMP_ROOT_DIR= ${TMP_ROOT_DIR}"
+fi
 
 #
 # Make sure to use an account for cron jobs and *without* write access to prm storage.

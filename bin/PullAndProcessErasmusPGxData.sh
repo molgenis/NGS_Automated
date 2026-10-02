@@ -297,7 +297,7 @@ then
 					rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 					mv "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 				else
-					log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "${GAP_HOME_DIR}/${gapBatch}/${gapBatch}.finished does not exist"
+					log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "${GAP_HOME_DIR}/${gapBatchFile}.md5 does not exist"
 					continue
 				fi
 			fi

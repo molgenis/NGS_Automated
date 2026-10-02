@@ -319,6 +319,8 @@ function splitSamplesheetPerProject() {
 						if ssh "${DATA_MANAGER}@${sourceServerFQDN}" "touch ${TMP_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished"
 						then
 							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Succesfully created ${TMP_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
+							rm -f "${_controlFileBaseForFunction}.failed"
+							mv "${_controlFileBaseForFunction}."{started,finished}
 						else
 							log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '0' "Could not create ${TMP_ROOT_DIR}/logs/${_project}/run01.rawDataCopiedToPrm.finished on ${sourceServerFQDN}"
 							mv "${_controlFileBaseForFunction}."{started,failed}
