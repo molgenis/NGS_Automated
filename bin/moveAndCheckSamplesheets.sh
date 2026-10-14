@@ -166,14 +166,6 @@ else
 fi
 
 #
-# Make sure to use an account for cron jobs and *without* write access to prm storage.
-#
-if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]
-then
-	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
-fi
-
-#
 # Make sure only one copy of this script runs simultaneously
 # per data collection we want to copy to prm -> one copy per group.
 # Therefore locking must be done after
