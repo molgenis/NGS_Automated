@@ -313,15 +313,12 @@ else
 			else
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no column [sampleType] in the samplesheet"
 			fi
-			sed "s|${valueInSamplesheet[0]}|${REPLACEDPIPELINECOLUMN}|g" "${samplesheet}" > "${samplesheet}.tmp"
-			mv "${samplesheet}.tmp" "${samplesheet}"
+			sed "s|${valueInSamplesheet[0]}|${REPLACEDPIPELINECOLUMN}|g" "${samplesheet}" > "${samplesheet}.tmp" && mv "${samplesheet}.tmp" "${samplesheet}"
 
 		else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no column [${PIPELINECOLUMN}] in the samplesheet, creating dummy entry:"
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "header: ${PIPELINECOLUMN} and value: ${REPLACEDPIPELINECOLUMN}"
-			awk -v pipeline="${REPLACEDPIPELINECOLUMN}" -v pipelineColumn="${PIPELINECOLUMN}" 'BEGIN {FS=","}{if (NR==1){print $0","pipelineColumn}else{ print $0","pipeline}}' "${samplesheet}" > "${samplesheet}.tmp"
-			sync
-			mv "${samplesheet}.tmp" "${samplesheet}"
+			awk -v pipeline="${REPLACEDPIPELINECOLUMN}" -v pipelineColumn="${PIPELINECOLUMN}" 'BEGIN {FS=","}{if (NR==1){print $0","pipelineColumn}else{ print $0","pipeline}}' "${samplesheet}" > "${samplesheet}.tmp" &&	mv "${samplesheet}.tmp" "${samplesheet}"
 		fi
 		firstStepOfPipeline="${REPLACEDPIPELINECOLUMN%%+*}"
 		
