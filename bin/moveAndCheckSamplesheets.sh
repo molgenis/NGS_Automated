@@ -24,8 +24,6 @@ INSTALLATION_DIR="$(cd -P "$(dirname "${0}")/.." && pwd)"
 LIB_DIR="${INSTALLATION_DIR}/lib"
 CFG_DIR="${INSTALLATION_DIR}/etc"
 HOSTNAME_SHORT="$(hostname -s)"
-ROLE_USER="$(whoami)"
-REAL_USER="$(logname 2>/dev/null || echo 'no login name')"
 
 #
 ##
@@ -163,14 +161,6 @@ else
 	else
 		log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "${DAT_ROOT_DIR} does not exist, exit!"
 	fi
-fi
-
-#
-# Make sure to use an account for cron jobs and *without* write access to prm storage.
-#
-if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]
-then
-	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
 fi
 
 #
@@ -313,15 +303,12 @@ else
 			else
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no column [sampleType] in the samplesheet"
 			fi
-			sed "s|${valueInSamplesheet[0]}|${REPLACEDPIPELINECOLUMN}|g" "${samplesheet}" > "${samplesheet}.tmp"
-			mv "${samplesheet}.tmp" "${samplesheet}"
+			sed "s|${valueInSamplesheet[0]}|${REPLACEDPIPELINECOLUMN}|g" "${samplesheet}" > "${samplesheet}.tmp" && mv "${samplesheet}.tmp" "${samplesheet}"
 
 		else
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no column [${PIPELINECOLUMN}] in the samplesheet, creating dummy entry:"
 			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "header: ${PIPELINECOLUMN} and value: ${REPLACEDPIPELINECOLUMN}"
-			awk -v pipeline="${REPLACEDPIPELINECOLUMN}" -v pipelineColumn="${PIPELINECOLUMN}" 'BEGIN {FS=","}{if (NR==1){print $0","pipelineColumn}else{ print $0","pipeline}}' "${samplesheet}" > "${samplesheet}.tmp"
-			sync
-			mv "${samplesheet}.tmp" "${samplesheet}"
+			awk -v pipeline="${REPLACEDPIPELINECOLUMN}" -v pipelineColumn="${PIPELINECOLUMN}" 'BEGIN {FS=","}{if (NR==1){print $0","pipelineColumn}else{ print $0","pipeline}}' "${samplesheet}" > "${samplesheet}.tmp" &&	mv "${samplesheet}.tmp" "${samplesheet}"
 		fi
 		firstStepOfPipeline="${REPLACEDPIPELINECOLUMN%%+*}"
 		
