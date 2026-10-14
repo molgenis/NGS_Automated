@@ -181,9 +181,6 @@ function checkRawdata(){
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${_controlFileBaseForFunction}.finished not present -> Continue..."
 		printf '' > "${_controlFileBaseForFunction}.started"
 	fi
-	
-	# shellcheck disable=SC2174
-	mkdir -m 2770 -p "${PRM_ROOT_DIR}/logs/${_project}/"
 
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_project}/${_run} ..." \
 	2>&1 | tee -a "${_controlFileBaseForFunction}.started"
@@ -593,7 +590,7 @@ else
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${project}/${run}."
 					continue
 				fi
-				
+
 				if ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${run}.calculateProjectMd5s.finished"
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "found: ${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/${run}.calculateProjectMd5s.finished"
@@ -601,6 +598,9 @@ else
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "CalculateProjectMd5s is not finished yet, the pipeline is still running"
 					continue
 				fi
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${PRM_ROOT_DIR}/logs/${project}/"
+				mkdir -p "${PRM_ROOT_DIR}/logs/${project}/"
+
 				if [[ "${skipRawdataCheck}" == 'false' ]]
 				then
 					if ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.rawDataCopiedToPrm.finished"
@@ -609,11 +609,8 @@ else
 					else
 						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.rawDataCopiedToPrm.finished not FOUND"
 						log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "check if the rawdata is stored on PRM"
-						log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${PRM_ROOT_DIR}/logs/${project}/"
-						mkdir -p "${PRM_ROOT_DIR}/logs/${project}/"
 						touch "${JOB_CONTROLE_FILE_BASE}.started"
 						checkRawdata "${project}" "${run}" "${controlFileBase}"
-						
 						if [[ -e "${controlFileBase}.checkRawdata.finished" ]]
 						then
 							log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${controlFileBase}.checkRawData.finished present -> checkRawData completed"
@@ -624,17 +621,16 @@ else
 					fi
 				else
 					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Creating logs folder: ${PRM_ROOT_DIR}/logs/${project}/"
-					mkdir -p "${PRM_ROOT_DIR}/logs/${project}/"
 					touch "${JOB_CONTROLE_FILE_BASE}.started"
 				fi
-				
+
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "archiving samplesheet in ${PRM_ROOT_DIR}/Samplesheets/archive/"
 				rsync -av "${DATA_MANAGER}@${HOSTNAME_TMP}:${TMP_ROOT_DIAGNOSTICS_DIR}/projects/${pipeline}/${project}/${run}/results/${project}.${SAMPLESHEET_EXT}" "${PRM_ROOT_DIR}/Samplesheets/archive/"
 				sampleType="$(set -e; getSampleType "${PRM_ROOT_DIR}/Samplesheets/archive/${project}.${SAMPLESHEET_EXT}")"
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "sampleType =${sampleType}"
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing run ${project}/${run} ..."
 				rsyncProjectRun "${project}" "${run}" "${controlFileBase}"
-			
+
 				if [[ -e "${controlFileBase}.rsyncProjectRun.finished" ]]
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.rsyncProjectRun.finished present -> rsyncProjectRun completed; let's sanityCheck for project ${project}..."
@@ -643,7 +639,7 @@ else
 					continue
 				fi
 				sanityCheck "${project}" "${run}" "${sampleType}" "${controlFileBase}"
-				
+
 				if [[ -e "${controlFileBase}.sanityCheck.finished" ]]
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.sanityCheck.finished present -> sanityCheck completed; let's upload data to Track and Trace for project ${project}..."
@@ -691,7 +687,7 @@ else
 				dateFinished=$(date +%FT%T%z -r "${JOB_CONTROLE_FILE_BASE}.finished")
 				printf '"%s"\n' "${dateFinished}" > "${JOB_CONTROLE_FILE_BASE}.trace_putFromFile_projects.csv"
 				echo "finished: $(date +%FT%T%z)" >> "${JOB_CONTROLE_FILE_BASE}.totalRunTime"
-				
+
 			done
 		fi
 	done

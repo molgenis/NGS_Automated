@@ -58,6 +58,7 @@ Options:
 	-h	Show this help.
 	-g	Group.
 	-s	run dragen solo
+	-d	run demultiplexing only
 	-l	Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
@@ -85,7 +86,8 @@ EOH
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
 declare runDragenSolo='false'
-while getopts ":g:l:sh" opt
+declare runDemultiplexingOnly='false'
+while getopts ":g:l:sdh" opt
 do
 	case "${opt}" in
 		h)
@@ -97,6 +99,10 @@ do
 		s)
 			runDragenSolo='true'
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Run Dragen solo activated"
+			;;
+		d) 
+			runDemultiplexingOnly='true'
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Run Demultiplexing only activated"
 			;;
 		l)
 			l4b_log_level="${OPTARG^^}"
@@ -295,7 +301,7 @@ do
 	cd "${TMP_ROOT_DIR}/nextflow/${run}"
 	thisHost=$(hostname)
 
-	if [[ "${group}" == 'umcg-labgnkbh' ]]
+	if [[ "${runDemultiplexingOnly}" == 'true' ]]
 	then
 		nextflow run -resume --samplesheet "${samplesheet}" --tmpdir "${TMP_LFS}" --group "${group}" --cluster "${thisHost}" -profile slurm -w "${TMP_ROOT_DIR}/nextflow/${run}" -c "${EBROOTNF_NGS_DNA}/dragen.config" "${EBROOTNF_NGS_DNA}/workflow_demultiplexing.nf" \
 		|| {

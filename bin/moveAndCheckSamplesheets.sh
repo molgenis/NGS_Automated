@@ -225,6 +225,13 @@ else
 		mkdir -m 2770 -p "${logDir}"
 		touch "${logDir}"
 		export JOB_CONTROLE_FILE_BASE="${logDir}/${sampleSheetName}.${SCRIPT_NAME}"
+		
+		if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]] 
+		then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already processed batch ${samplesheet}."
+			continue
+		fi
+		
 		printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 
 		#
@@ -389,7 +396,7 @@ do
 			fi
 		fi
 	fi
-	
+
 	if [[ -n "${_sampleSheetColumnOffsets["build"]+isset}" ]] 
 	then
 		log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Build column present"
@@ -401,12 +408,17 @@ do
 	#
 	# When samplesheet is GENOMESCAN the samplesheet has to go to the Samplesheets root folder (no bucket)
 	#
+	pipelineRNA='false'
 	if [[ "${projectSamplesheet}" == "true" ]]
 	then
 		if [[ "${REPLACEDPIPELINECOLUMN}" == *"DRAGEN"* ]]
 		then
 			firstStepOfPipeline=''
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a DRAGEN project samplesheet, the first step of the pipeline will be set to an empty string (samplesheet will be put in correct bucket in a later stage of the pipeline)."
+			if [[ "${valueInSamplesheetSampleType[0]}" == "RNA" ]]
+			then
+				pipelineRNA='true'
+			fi
 		else
 			if [[ -n "${_sampleSheetColumnOffsets['sampleType']+isset}" ]] 
 			then
@@ -418,6 +430,7 @@ do
 					sampleType="${valueInSamplesheetSampleType[0]}"
 					REPLACEDPIPELINECOLUMN="${REPLACEDPIPELINECOLUMN}_${sampleType}"
 					firstStepOfPipeline="NGS_${sampleType}"
+					
 				else
 					sampleType="${valueInSamplesheetSampleType[0]}"
 					firstStepOfPipeline="POST_DRAGEN"
@@ -425,38 +438,38 @@ do
 			else
 				firstStepOfPipeline="POST_DRAGEN"
 			fi
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a project samplesheet (no NGS_Demultiplexing); firstStepOfPipeline was set to ${firstStepOfPipeline}."
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a project samplesheet (no demultiplexing); firstStepOfPipeline was set to ${firstStepOfPipeline}."
 		fi
 	fi
-		# shellcheck disable=SC2153
-		samplesheetDestination="${HOSTNAME_TMP}:/groups/${GROUP}/${TMP_LFS}/Samplesheets/${firstStepOfPipeline}/"
-	#
-	# Move samplesheets with rsync
-	#
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pushing samplesheet ${samplesheetChecked} using rsync to ${samplesheetDestination} ..."
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "See ${logDir}/rsync.log for details ..."
-	transactionStatus='Ok'
-
-		/usr/bin/rsync -vt \
-		--log-file="${logDir}/rsync.log" \
-		"${samplesheetChecked}" \
-		"${samplesheetDestination}" \
-	&& rm -v "${samplesheetChecked}" >> "${JOB_CONTROLE_FILE_BASE}.started" \
-	|| {
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to move ${samplesheetChecked}."
-		transactionStatus='Failed'
-	}
-
-	if [[ "${transactionStatus}" == 'Ok' ]]
+	declare -a lfs_dirs=()
+	if [[ "${pipelineRNA}" == "true" ]]
 	then
-		rm -f "${samplesheetChecked}"{,.log}
-		rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
-		mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
-	
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This is RNA data, will push samplesheet to ${TMP_LFS} and ${SCR_LFS}"
+		lfs_dirs=("${TMP_LFS}" "${SCR_LFS}")
+
 	else
-		rm -f "${JOB_CONTROLE_FILE_BASE}.finished"
-		mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "push samplesheet to ${TMP_LFS}"
+		lfs_dirs=("${TMP_LFS}")
 	fi
+
+	for lfs_dir in "${lfs_dirs[@]}"
+	do
+		# shellcheck disable=SC2153
+		samplesheetDestination="${HOSTNAME_TMP}:/groups/${GROUP}/${lfs_dir}/Samplesheets/${firstStepOfPipeline}/"
+		#
+		# Move samplesheets with rsync
+		#
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Pushing samplesheet ${samplesheetChecked} using rsync to ${samplesheetDestination} ..."
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "See ${logDir}/rsync.log for details ..."
+
+			/usr/bin/rsync -vt \
+			--log-file="${logDir}/rsync.log" \
+			"${samplesheetChecked}" \
+			"${samplesheetDestination}" \
+			>> "${JOB_CONTROLE_FILE_BASE}.started" || exit 1
+	done
+	rm -fv "${samplesheetChecked}"
+	mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 done
 
 #

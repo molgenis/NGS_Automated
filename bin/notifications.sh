@@ -149,28 +149,7 @@ function notification() {
 		# ${JOB_CONTROLE_FILE_BASE} is is used for tracking the overall succes of this notifiction script as a whole.
 		#
 		local _controlFileBase="${_lfsRootDir}/logs/${_project}/${_run}"
-		#
-		# In case a pipeline failed check if jobs were already resubmitted
-		# and only notify if the failure was reproducible and the pipeline failed again.
-		#
-		if [[ "${_phase}" == 'pipeline' && "${_state}" == 'failed' ]]
-		then
-			log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Pipeline has state failed; checking if jobs were already resubmitted ..."
-			if [[ ! -e "${_projectStateFile%.pipeline.failed}.startPipeline.resubmitted" ]]
-			then
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Jobs for project ${_project} were not resubmitted yet -> skip notification for state failed of phase pipeline."
-				continue
-			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${_projectStateFile%.pipeline.failed}.startPipeline.resubmitted"
-				if [[ "${_projectStateFile}" -nt "${_projectStateFile%.pipeline.failed}.startPipeline.resubmitted" ]]
-				then
-					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Pipeline for project ${_project} failed again -> notify for state failed of phase pipeline."
-				else
-					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Jobs for project ${_project} were resubmitted and pipeline did not fail again yet -> skip notification for state failed of phase pipeline."
-					continue
-				fi
-			fi
-		fi
+		
 		#
 		# Perform notification action for this state of this phase in the workflow.
 		#
@@ -214,25 +193,25 @@ function notification() {
 					elif [[ "${_check: -1}" == "f" ]]
 					then
 						numberOfSkips=0
-						if grep 'thiswasthesecondskip' "${_projectStateFile}"
+						if grep 'thiswasthesecondfailure' "${_projectStateFile}"
 						then
 							numberOfSkips=2
-						elif grep 'thiswasthefirstskip' "${_projectStateFile}"
+						elif grep 'thiswasthefirstfailure' "${_projectStateFile}"
 						then
 							numberOfSkips=1
-							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "adding thiswasthesecondskip to ${_projectStateFile}"
-							echo "thiswasthesecondskip" >> "${_projectStateFile}"
+							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "adding thiswasthesecondfailure to ${_projectStateFile}"
+							echo "thiswasthesecondfailure" >> "${_projectStateFile}"
 						else
-							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "adding thiswasthefirstskip to ${_projectStateFile}"
-							echo "thiswasthefirstskip" >> "${_projectStateFile}"
+							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "adding thiswasthefirstfailure to ${_projectStateFile}"
+							echo "thiswasthefirstfailure" >> "${_projectStateFile}"
 						fi
 					
 						if [[ "${numberOfSkips}" == '0' ||  "${numberOfSkips}" == '1' ]]
 						then
-							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Waiting with sending a notification, this was only skip #${numberOfSkips}"
+							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Waiting with sending a notification, this was only failure #${numberOfSkips}"
 							continue
 						else
-							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "There were 2 skips already, lets continue with sending a notification"	
+							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "There were 2 failures already, lets continue with sending a notification"	
 						fi
 					fi
 				else
