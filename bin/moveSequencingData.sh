@@ -186,44 +186,48 @@ else
 		#
 		if [[ -f "${SEQ_INCOMING_DIR}/${run}/CopyComplete.txt" ]]
 		then
-			if [[ ! -f "${JOB_CONTROLE_FILE_BASE}.transferCompleted" ]]
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencing run completed: ${run}."
+			##SEQ DIR
+			if [[ ! -f "${JOB_CONTROLE_FILE_BASE}.transferCompletedToTmp0X" ]]
 			then
 				touch "${JOB_CONTROLE_FILE_BASE}.started"
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencing run completed: ${run}. Copy data from ${SEQ_INCOMING_DIR} to ${SEQ_DIR} and ${NEW_SEQ_DIR}"
-				##SEQ DIR
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Copy data from ${SEQ_INCOMING_DIR} to ${SEQ_DIR}"
+
 				if rsync -av --checksum --exclude="RunCompletionStatus.xml" "${SEQ_INCOMING_DIR}/${run}"	"${SEQ_DIR}"
 				then	
 					rsync -av \
 					"${SEQ_INCOMING_DIR}/${run}/RunCompletionStatus.xml" \
 					"${SEQ_DIR}/${run}/"
-					touch "${JOB_CONTROLE_FILE_BASE}.transferCompleted"
+					touch "${JOB_CONTROLE_FILE_BASE}.transferCompletedToTmp0X"
 				else
 					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to rsync ${SEQ_INCOMING_DIR}/${run}/."
 					mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 					exit 1
-				fi
-				##NEW_SEQ DIR
+			fi
+			##NEW_SEQ DIR
+			if [[ ! -f "${JOB_CONTROLE_FILE_BASE}.transferCompletedToTmp1X" ]]
+			then
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Copy data from ${SEQ_INCOMING_DIR} to ${NEW_SEQ_DIR}"
 				if rsync -av --checksum --exclude="RunCompletionStatus.xml" "${SEQ_INCOMING_DIR}/${run}" "${NEW_SEQ_DIR}"
 				then	
 					rsync -av \
 					"${SEQ_INCOMING_DIR}/${run}/RunCompletionStatus.xml" \
 					"${NEW_SEQ_DIR}/${run}/"
 
-					touch "${JOB_CONTROLE_FILE_BASE}.transferCompleted"
+					touch "${JOB_CONTROLE_FILE_BASE}.transferCompletedToTmp1X"
 				else
 					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to rsync ${SEQ_INCOMING_DIR}/${run}/."
 					mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 					exit 1
 				fi
-			else
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencing run is not (yet) finished."
-				continue
 			fi
+		else
+			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Sequencing run is not (yet) finished."
 		fi
-		if [[ -f "${JOB_CONTROLE_FILE_BASE}.transferCompleted" ]]
+		if [[ -f "${JOB_CONTROLE_FILE_BASE}.transferCompletedToTmp0X" && -f "${JOB_CONTROLE_FILE_BASE}.transferCompletedToTmp1X" ]]
 		then
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Transfer completed for run ${run}."
-			dateInSecRawData="$(date -d"$(rsync "${JOB_CONTROLE_FILE_BASE}.transferCompleted" | awk '{print $3}')" +%s)"
+			dateInSecRawData="$(date -d"$(rsync "${JOB_CONTROLE_FILE_BASE}.transferCompletedToTmp1X" | awk '{print $3}')" +%s)"
 			dateInSecNow=$(date +%s)
 			if [[ $(((dateInSecNow - dateInSecRawData) / 86400)) -gt 2 ]]
 			then
