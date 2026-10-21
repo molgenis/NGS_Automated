@@ -217,12 +217,8 @@ else
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "check ${TMP_ROOT_DIR}/rawdata/array/IDAT/${plateNumber}/${plateNumber}_qc.txt"
 			if [[ -e "${TMP_ROOT_DIR}/rawdata/array/IDAT/${plateNumber}/${plateNumber}_qc.txt" ]]
 			then
-				if grep -q "<ScanSettings" "${TMP_ROOT_DIR}/rawdata/array/IDAT/${plateNumber}/${plateNumber}_qc.txt"
-				then
-					count=$((count+1))
-				else
-					log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${plateNumber}_qc.txt does exist but the project is not finished yet, ${project} cannot be continued"
-				fi
+				count=$((count+1))
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${plateNumber}_qc.txt exists"
 			else
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "${TMP_ROOT_DIR}/rawdata/array/IDAT/${plateNumber}/ does not exist"
 			fi
