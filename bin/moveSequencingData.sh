@@ -203,6 +203,7 @@ else
 					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to rsync ${SEQ_INCOMING_DIR}/${run}/."
 					mv -v "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 					exit 1
+				fi
 			fi
 			##NEW_SEQ DIR
 			if [[ ! -f "${JOB_CONTROLE_FILE_BASE}.transferCompletedToTmp1X" ]]
