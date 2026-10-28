@@ -402,6 +402,9 @@ do
 		then
 			firstStepOfPipeline=''
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "The samplesheet is a DRAGEN project samplesheet, the first step of the pipeline will be set to an empty string (samplesheet will be put in correct bucket in a later stage of the pipeline)."
+			_sampleTypeFieldIndex=$((${_sampleSheetColumnOffsets['sampleType']} + 1))
+			## In future this valueInSamplesheet will be replaced by DARWIN to the real value.
+			readarray -t valueInSamplesheetSampleType < <(tail -n +2 "${samplesheetChecked}" | cut -d "${SAMPLESHEET_SEP}" -f "${_sampleTypeFieldIndex}" | sort | uniq )
 			if [[ "${valueInSamplesheetSampleType[0]}" == "RNA" ]]
 			then
 				pipelineRNA='true'
