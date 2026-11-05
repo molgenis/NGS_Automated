@@ -92,6 +92,7 @@ function rsyncData(){
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "No .finished file for ${gsBatch} present yet: nothing to sync."
 	fi
 	rm -f "${_controlFileBaseForFunction}.failed"
+	
 	mv "${_controlFileBaseForFunction}."{started,finished}
 
 }
@@ -306,20 +307,45 @@ then
 					if [[ "${checkIfAnalysisFolderExists}" == *"${analysisFolder}"* ]]
 					then
 						gsBatchUploadCompleted='true'
-							rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${analysisFolder}/" 
+						if grep -q 'duration' "${controlFileBase}.${SCRIPT_NAME}.uploadTiming" 2>/dev/null
+						then
+							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "already created uploadTiming"
+						else
+							echo -e "finish upload\t$(date "+%Y/%m/%d %H:%M:%S")" >> "${controlFileBase}.${SCRIPT_NAME}.uploadTiming"
+							starttimeU=$(head -1 "${controlFileBase}.${SCRIPT_NAME}.uploadTiming" | awk 'BEGIN {FS="\t"}{print $2}')
+							startEpochU=$(date -d "${starttimeU}" +%s 2>/dev/null)
+							endtimeU=$(head -2 "${controlFileBase}.${SCRIPT_NAME}.uploadTiming" | tail -1 | awk 'BEGIN {FS="\t"}{print $2}')
+							endEpochU=$(date -d "${endtimeU}" +%s 2>/dev/null)
+							durationSecU=$((endEpochU - startEpochU))
+							hoursU=$((durationSecU / 3600))
+							minutesU=$(( (durationSecU % 3600) / 60 ))
+							secondsU=$((durationSecU % 60))
+							durationU="${hoursU}h:${minutesU}m:${secondsU}s"
+							echo -e "duration\t${durationU}" >> "${controlFileBase}.${SCRIPT_NAME}.uploadTiming"
+						fi
+						rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/${analysisFolder}/" 
 					else
 						log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "There is no Analysis folder, skipping"
 						continue
 					fi
 				else
 					log4Bash 'WARN' "${LINENO}" "${FUNCNAME:-main}" '0' "${GENOMESCAN_HOME_DIR}/${gsBatch}/${gsBatch}.finished does not exist"
+					if [[ ! -e "${controlFileBase}.${SCRIPT_NAME}.uploadingStarted" ]]
+					then
+						if rsync -e 'ssh -p 443' "${HOSTNAME_DATA_STAGING}::${GENOMESCAN_HOME_DIR}/${gsBatch}/Analysis/" 2>/dev/null
+						then
+							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Data transfer is started"
+							logDir="${TMP_ROOT_DIR}/logs/${gsBatch}/"
+							# shellcheck disable=SC2174
+							mkdir -m 2770 -p "${logDir}"
+							echo -e "start upload\t$(date "+%Y/%m/%d %H:%M:%S")" > "${controlFileBase}.${SCRIPT_NAME}.uploadTiming"
+						fi
+					fi
 					continue
 				fi
 
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing pulling analysis batch ${gsBatch}..."
 				logDir="${TMP_ROOT_DIR}/logs/${gsBatch}/"
-				# shellcheck disable=SC2174
-				mkdir -m 2770 -p "${logDir}"
 				printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 				rsyncData "${gsBatch}" "${controlFileBase}" "${analysisFolder}"
 
@@ -328,6 +354,33 @@ then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.${analysisFolder}_rsyncData.finished present -> rsyncing completed for batch ${gsBatch}..."
 					rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished rsyncing batch ${gsBatch}."
+					rsyncLogFile=${logDir}/rsync-from-${HOSTNAME_DATA_STAGING%%.*}.log
+					numberOfSamples=$(grep 'hard-filtered.vcf.gz.tbi' "${rsyncLogFile}" | wc -l)
+					#
+					# starttime
+					startdateT=$(head -1 "${rsyncLogFile}" | awk 'BEGIN {FS=" "}{print $1}')
+					starttimeT=$(head -1 "${rsyncLogFile}" | awk 'BEGIN {FS=" "}{print $2}')
+					startEpochT=$(date -d "${startdateT} ${starttimeT}" +%s 2>/dev/null)
+
+					#
+					## transfer time from transfer server to diagnostics cluster
+					enddateT=$(tail -1 "${rsyncLogFile}"  | awk 'BEGIN {FS=" "}{print $1}')
+					endtimeT=$(tail -1 "${rsyncLogFile}"  | awk 'BEGIN {FS=" "}{print $2}')
+					endEpochT=$(date -d "${enddateT} ${endtimeT}" +%s 2>/dev/null)
+					durationSecT=$((endEpochT - startEpochT))
+					hoursT=$((durationSecT / 3600))
+					minutesT=$(( (durationSecT % 3600) / 60 ))
+					secondsT=$((durationSecT % 60))
+					durationT="${hoursT}h:${minutesT}m:${secondsT}s"
+					durationSecPerSampleT=$((durationSecT / numberOfSamples))
+					minutesPerSampleT=$(( (durationSecPerSampleT % 3600) / 60 ))
+					secondsPerSampleT=$((durationSecPerSampleT % 60))
+					durationPerSampleT="${minutesPerSampleT}m:${secondsPerSampleT}s"
+					echo -e "start transfer\t${startdateT}\t${starttimeT}" > "${controlFileBase}.${SCRIPT_NAME}.transferTiming"
+					echo -e "end transfer\t${enddateT}\t${endtimeT}" >> "${controlFileBase}.${SCRIPT_NAME}.transferTiming"
+					echo -e "duration\t${durationT}" >> "${controlFileBase}.${SCRIPT_NAME}.transferTiming"
+					echo -e "number of Samples: ${numberOfSamples}" >> "${controlFileBase}.${SCRIPT_NAME}.transferTiming"
+					
 					mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 				else
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.${analysisFolder}_rsyncData.finished absent -> rsyncing failed for batch ${gsBatch}."

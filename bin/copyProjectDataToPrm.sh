@@ -428,7 +428,7 @@ if [[ -n "${sourceServerRootDir:-}" ]]
 then
 	SCR_ROOT_DIR="${sourceServerRootDir}"
 	TMP_ROOT_DIAGNOSTICS_DIR="${SCR_ROOT_DIR}"
-	lockFileSuffix=$(echo "${sourceServerRootDir}" | awk 'BEGIN {FS="/"}{print $2}') 
+	lockFileSuffix=$(echo "${sourceServerRootDir}" | awk 'BEGIN {FS="/"}{print $3}') 
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Using alternative sourceServerRootDir ${sourceServerRootDir} as SCR_ROOT_DIR."
 
 fi
@@ -595,9 +595,27 @@ else
 					mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 					continue
 				fi
-
+				
+				
+				
 				rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
+				if ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/PullGsAnalysisData.uploadTiming"  
+				then
+					rsync -v "${DATA_MANAGER}"@"${HOSTNAME_TMP}":"${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/PullGsAnalysisData."*"Timing" "${PRM_ROOT_DIR}/logs/${project}/"
+					cat "${PRM_ROOT_DIR}/logs/${project}/PullGsAnalysisData.uploadTiming" >> "${JOB_CONTROLE_FILE_BASE}.finished"
+					cat "${PRM_ROOT_DIR}/logs/${project}/PullGsAnalysisData.transferTiming" >> "${JOB_CONTROLE_FILE_BASE}.finished"
+					starttime=$(awk 'BEGIN {FS="\t"}{print $2}' ${PRM_ROOT_DIR}/logs/${project}/PullGsAnalysisData.uploadTiming | head -1)
+					startEpoch=$(awk 'BEGIN {FS="\t"}{print $2}' ${PRM_ROOT_DIR}/logs/${project}/PullGsAnalysisData.uploadTiming | head -1 | xargs -I {} date -d "{}" +%s)
+					dateNow=$(date "+%Y/%m/%d %H:%M:%S")
+					endEpoch=$(date +%s)
+					durationSec=$((endEpoch - startEpoch))
+					hours=$((durationSec / 3600))
+					minutes=$(( (durationSec % 3600) / 60 ))
+					seconds=$((durationSec % 60))
+					duration="${hours}h:${minutes}m:${seconds}s"
+					echo -e "Total runtime: ${duration}\t(${starttime} - ${dateNow})" >> "${JOB_CONTROLE_FILE_BASE}.finished"
+				fi
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing project ${project}."
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished. Setting track & trace state to finished :)."
 				dateFinished=$(date +%FT%T%z -r "${JOB_CONTROLE_FILE_BASE}.finished")
