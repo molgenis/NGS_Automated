@@ -476,7 +476,7 @@ function postMessageToChannel() {
 	if [[ "${_numberOfLines}" -gt 10 ]]
 	then
 		head="$(head -n 6 "${_projectStateFile}" | tr \" \')"
-		tail="$(tail -n 4 "${_projectStateFile}" | tr \" \')"
+		tail="$(tail -n 10 "${_projectStateFile}" | tr \" \')"
 		_messageBody="$(printf '%s\n(.....)\n%s' "${head}" "${tail}")"
 	else
 		_messageBody="$(tr \" \' < "${_projectStateFile}")"
