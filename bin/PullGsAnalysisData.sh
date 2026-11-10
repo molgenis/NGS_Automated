@@ -307,7 +307,14 @@ then
 					if [[ "${checkIfAnalysisFolderExists}" == *"${analysisFolder}"* ]]
 					then
 						gsBatchUploadCompleted='true'
-						if grep -q 'duration' "${controlFileBase}.${SCRIPT_NAME}.uploadTiming" 2>/dev/null
+						if [[ ! -f "${controlFileBase}.${SCRIPT_NAME}.uploadTiming" ]]
+						then
+							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This data was pushed at once without the execution of this script, uploadtime cannot be specified. Will put same start and end"
+							mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${gsBatch}/"
+							echo -e "start upload\t$(date "+%Y/%m/%d %H:%M:%S")" > "${controlFileBase}.${SCRIPT_NAME}.uploadTiming"
+							echo -e "finish upload\t$(date "+%Y/%m/%d %H:%M:%S")" >> "${controlFileBase}.${SCRIPT_NAME}.uploadTiming"
+							echo -e "duration\t0h:0m:0s" >> "${controlFileBase}.${SCRIPT_NAME}.uploadTiming"
+						elif grep -q 'duration' "${controlFileBase}.${SCRIPT_NAME}.uploadTiming" 2>/dev/null
 						then
 							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "already created uploadTiming"
 						else
@@ -343,9 +350,10 @@ then
 					fi
 					continue
 				fi
-
+				
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing pulling analysis batch ${gsBatch}..."
 				logDir="${TMP_ROOT_DIR}/logs/${gsBatch}/"
+				mkdir -m 2770 -p "${logDir}"
 				printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 				rsyncData "${gsBatch}" "${controlFileBase}" "${analysisFolder}"
 
