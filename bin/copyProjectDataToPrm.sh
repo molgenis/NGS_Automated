@@ -628,13 +628,7 @@ else
 					minutes=$(( (durationSec % 3600) / 60 ))
 					seconds=$((durationSec % 60))
 					duration="${hours}h:${minutes}m:${seconds}s"
-					echo "#####" >> "${JOB_CONTROLE_FILE_BASE}.started"
-					echo -e "number of samples :\t${numberOfSamples}" >> "${JOB_CONTROLE_FILE_BASE}.started"
-					echo -e "Total running time:\t${duration}\t(${startU} - ${enddate})" >> "${JOB_CONTROLE_FILE_BASE}.started"
-					echo -e "genomescan to server:\t${durationU}\t(${startU} - ${endU})" >> "${JOB_CONTROLE_FILE_BASE}.started"
-					echo -e "server to gd cluster:\t${durationT}\t(${startT} - ${endT})" >> "${JOB_CONTROLE_FILE_BASE}.started"
-					echo -e "gd cluster to (prm) :\t${durationC}\t(${startC} - ${endC})" >> "${JOB_CONTROLE_FILE_BASE}.started"
-					echo "#####" >> "${JOB_CONTROLE_FILE_BASE}.started"
+					echo -e "#####\nnumber of samples :\t${numberOfSamples}\nTotal running time:\t${duration}\t(${startU} - ${enddate})\ngenomescan to server:\t${durationU}\t(${startU} - ${endU})\nserver to gd cluster:\t${durationT}\t(${startT} - ${endT})\ngd cluster to (prm) :\t${durationC}\t(${startC} - ${endC})\n#####" >> "${JOB_CONTROLE_FILE_BASE}.started"
 				fi
 				
 				# shellcheck disable=SC2029

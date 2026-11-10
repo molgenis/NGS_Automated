@@ -310,6 +310,7 @@ then
 						if [[ ! -f "${controlFileBase}.${SCRIPT_NAME}.uploadTiming" ]]
 						then
 							log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "This data was pushed at once without the execution of this script, uploadtime cannot be specified. Will put same start and end"
+							# shellcheck disable=SC2174
 							mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${gsBatch}/"
 							echo -e "start upload\t$(date "+%Y/%m/%d %H:%M:%S")" > "${controlFileBase}.${SCRIPT_NAME}.uploadTiming"
 							echo -e "finish upload\t$(date "+%Y/%m/%d %H:%M:%S")" >> "${controlFileBase}.${SCRIPT_NAME}.uploadTiming"
@@ -353,6 +354,7 @@ then
 				
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing pulling analysis batch ${gsBatch}..."
 				logDir="${TMP_ROOT_DIR}/logs/${gsBatch}/"
+				# shellcheck disable=SC2174
 				mkdir -m 2770 -p "${logDir}"
 				printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
 				rsyncData "${gsBatch}" "${controlFileBase}" "${analysisFolder}"
@@ -363,7 +365,7 @@ then
 					rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished rsyncing batch ${gsBatch}."
 					rsyncLogFile=${logDir}/rsync-from-${HOSTNAME_DATA_STAGING%%.*}.log
-					numberOfSamples=$(grep 'hard-filtered.vcf.gz.tbi' "${rsyncLogFile}" | wc -l)
+					numberOfSamples=$(grep -c 'hard-filtered.vcf.gz.tbi' "${rsyncLogFile}")
 					#
 					# starttime
 					startdateT=$(head -1 "${rsyncLogFile}" | awk 'BEGIN {FS=" "}{print $1}')
@@ -380,15 +382,7 @@ then
 					minutesT=$(( (durationSecT % 3600) / 60 ))
 					secondsT=$((durationSecT % 60))
 					durationT="${hoursT}h:${minutesT}m:${secondsT}s"
-					durationSecPerSampleT=$((durationSecT / numberOfSamples))
-					minutesPerSampleT=$(( (durationSecPerSampleT % 3600) / 60 ))
-					secondsPerSampleT=$((durationSecPerSampleT % 60))
-					durationPerSampleT="${minutesPerSampleT}m:${secondsPerSampleT}s"
-					echo -e "start transfer\t${startdateT}\t${starttimeT}" > "${controlFileBase}.${SCRIPT_NAME}.transferTiming"
-					echo -e "end transfer\t${enddateT}\t${endtimeT}" >> "${controlFileBase}.${SCRIPT_NAME}.transferTiming"
-					echo -e "duration\t${durationT}" >> "${controlFileBase}.${SCRIPT_NAME}.transferTiming"
-					echo -e "number of Samples: ${numberOfSamples}" >> "${controlFileBase}.${SCRIPT_NAME}.transferTiming"
-					
+					echo -e "start transfer\t${startdateT}\t${starttimeT}\nend transfer\t${enddateT}\t${endtimeT}\nduration\t${durationT}\nnumber of Samples: ${numberOfSamples}" > "${controlFileBase}.${SCRIPT_NAME}.transferTiming"
 					mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 				else
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.${analysisFolder}_rsyncData.finished absent -> rsyncing failed for batch ${gsBatch}."
