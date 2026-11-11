@@ -306,7 +306,6 @@ else
 				rm -Rfv "${TMP_ROOT_DIR}/results/${runName}"
 				mv "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${runName}" "${TMP_ROOT_DIR}/Samplesheets/archive/"
 				rm -Rfv "${TMP_ROOT_DIR}/rawdata/ngs/${runName}/"
-				mv "${TMP_ROOT_DIR}/logs/${runName}" "${TMP_ROOT_DIR}/logs/archive_${year}/"
 				mv -vf "${TMP_ROOT_DIR}/logs/${runName}}" "${TMP_ROOT_DIR}/logs/archive_${year}/"
 			else
 				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " the rawDataCopiedToPrm is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove the nextflow and rawdata/ngs/ folders the ${TMP_ROOT_DIR}/logs/${run}/run01.rawDataCopiedToPrm.finished needs to be at least ${daysTillRemoval} days old"
