@@ -168,10 +168,12 @@ done
 year=$(date +%Y)
 
 mkdir -p "${TMP_ROOT_DIR}/logs/archive_${year}"
+#
+##
+### CLEANING UP GENOMESCAN PROJECTS
+##
+#
 
-#
-## CLEANING UP GENOMESCAN PROJECTS
-#
 # shellcheck disable=SC2153
 if [[ "${GROUP}" == "umcg-genomescan" || "${GROUP}" == "umcg-gst" ]]
 then
@@ -214,10 +216,12 @@ then
 		done
 	fi
 fi
-##CLEANING UP PROJECT DATA
-# nextflow folder cleaning
-# moving logs to archive
 
+#
+##
+### CLEANING UP PROJECT DATA
+## nextflow folder cleaning
+# moving logs to archive
 
 mapfile -t projects < <(find "${TMP_ROOT_DIR}/projects/${pipeline}/" -maxdepth 1 -mindepth 1 -type d)
 if [[ "${#projects[@]}" -eq '0' ]]
@@ -235,7 +239,7 @@ else
 		# 86400 = 1 day in seconds.
 		#
 		# When the project data is copied to prm, a run01.projectDataCopiedToPrm.finished is created also on tmp.
-		# If this file is older than 10 days, the project and generatedscripts data will be deleted.
+		# If this file is older than X days, the project and generatedscripts data will be deleted.
 		#
 		if [[ -f "${TMP_ROOT_DIR}/logs/${projectName}/run01.projectDataCopiedToPrm.finished" ]]
 		then
@@ -268,7 +272,11 @@ else
 		fi
 	done
 fi
-##CLEANING UP RAWDATA AND DEMULTIPLEXING DATA
+#
+##
+### CLEANING UP RAWDATA 
+##
+#
 mapfile -t runs < <(find "${TMP_ROOT_DIR}/rawdata/ngs/" -maxdepth 1 -mindepth 1 -type d)
 if [[ "${#runs[@]}" -eq '0' ]]
 then
@@ -277,38 +285,31 @@ else
 	for run in "${runs[@]}"
 	do
 		daysTillRemoval=7
-		daysTillRemovalDemultiplexingData=2
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Check for rawdata that is copied to prm at least ${daysTillRemoval} days ago and will delete the data from ${TMP_ROOT_DIR} ..."
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Check for demultiplexing data (rawdata) that is copied to prm at least ${daysTillRemovalDemultiplexingData} days ago and will delete the data from ${TMP_ROOT_DIR} ..."
 		runName="$(basename "${run}")" 
 		
 		# Convert date to seconds for easier calculation of the date difference.
 		# 86400 = 1 day in seconds.
 		#
 		# When the project data is copied to prm, a run01.RawDataCopiedToPrm.finished is created also on tmp
-		# If this file is older than 10 days, the project, generatedscripts and tmp data will be deleted
+		# If this file is older than X days, the project, generatedscripts and tmp data will be deleted
 		#
 		if [[ -f "${TMP_ROOT_DIR}/logs/${runName}/run01.rawDataCopiedToPrm.finished" ]]
 		then
 			dateInSecAnalysisData="$(date -d"$(rsync "${TMP_ROOT_DIR}/logs/${runName}/run01.rawDataCopiedToPrm.finished" | awk '{print $3}')" +%s)"
 			dateInSecNow=$(date +%s)
+
 			if [[ $(((dateInSecNow - dateInSecAnalysisData) / 86400)) -gt "${daysTillRemoval}" ]]
 			then
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${runName} on tmp because the rawdata is on prm for at least ${daysTillRemoval} days"
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${runName} on tmp because the (rawdata) data is on prm for at least ${daysTillRemoval} days"
+				rm -Rfv "${TMP_ROOT_DIR}/nextflow/${runName}"
+				rm -Rfv "${TMP_ROOT_DIR}/results/${runName}"
+				mv "${TMP_ROOT_DIR}/Samplesheets/DRAGEN/${runName}" "${TMP_ROOT_DIR}/Samplesheets/archive/"
 				rm -Rfv "${TMP_ROOT_DIR}/rawdata/ngs/${runName}/"
 				mv "${TMP_ROOT_DIR}/logs/${runName}" "${TMP_ROOT_DIR}/logs/archive_${year}/"
+				mv -vf "${TMP_ROOT_DIR}/logs/${runName}}" "${TMP_ROOT_DIR}/logs/archive_${year}/"
 			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " the rawDataCopiedToPrm is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove rawdata/ngs folder the ${TMP_ROOT_DIR}/logs/${run}/run01.rawDataCopiedToPrm.finished needs to be at least ${daysTillRemoval} days old"
-				continue
-			fi
-
-			## Cleaning up of demultiplexing data
-			if [[ $(((dateInSecNow - dateInSecAnalysisData) / 86400)) -gt "${daysTillRemovalDemultiplexingData}" ]]
-			then
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Deleting ${runName} on tmp because the demultiplexing (rawdata) data is on prm for at least ${daysTillRemovalDemultiplexingData} days"
-				rm -Rfv "${TMP_ROOT_DIR}/"{runs,tmp,generatedscripts}"/NGS_Demultiplexing/${runName}/"
-			else
-				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " the rawDataCopiedToPrm is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove the NGS_Demultiplexing runs, tmp and generatedscripts folders the ${TMP_ROOT_DIR}/logs/${run}/run01.rawDataCopiedToPrm.finished needs to be at least ${daysTillRemovalDemultiplexingData} days old"
+				log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' " the rawDataCopiedToPrm is $(((dateInSecNow - dateInSecAnalysisData) / 86400)) day(s) old. To remove the nextflow and rawdata/ngs/ folders the ${TMP_ROOT_DIR}/logs/${run}/run01.rawDataCopiedToPrm.finished needs to be at least ${daysTillRemoval} days old"
 				continue
 			fi
 		else
