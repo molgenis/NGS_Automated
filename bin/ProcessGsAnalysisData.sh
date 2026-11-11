@@ -545,7 +545,7 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 				# shellcheck disable=SC2174
 				mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/${gsBatch}/"
 				printf '' > "${JOB_CONTROLE_FILE_BASE}.started"
-
+		
 				sanityChecking "${gsBatch}" "${controlFileBase}" "${analysisFolder}" "${originalBatch}" "${projectName}"
 					
 				if [[ -e "${controlFileBase}.${analysisFolder}_sanityChecking.finished" ]]
@@ -557,6 +557,8 @@ log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written 
 
 				if [[ -e "${controlFileBase}.${analysisFolder}_mergeSamplesheets.finished" ]]
 				then
+					rsync -v "${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}.PullGsAnalysisData.uploadTiming" "${TMP_ROOT_DIR}/logs/${projectName}/PullGsAnalysisData.uploadTiming"
+					rsync -v "${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}.PullGsAnalysisData.transferTiming" "${TMP_ROOT_DIR}/logs/${projectName}/PullGsAnalysisData.transferTiming" 
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.mergeSamplesheets.finished present -> processing completed for batch ${gsBatch}..."
 					rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing batch ${gsBatch}."

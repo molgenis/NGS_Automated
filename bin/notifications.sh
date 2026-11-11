@@ -473,10 +473,10 @@ function postMessageToChannel() {
 	local _messageBody
 	local _numberOfLines
 	_numberOfLines=$(wc -l "${_projectStateFile}" | awk '{print $1}')
-	if [[ "${_numberOfLines}" -gt 10 ]]
+	if [[ "${_numberOfLines}" -gt 20 ]]
 	then
 		head="$(head -n 6 "${_projectStateFile}" | tr \" \')"
-		tail="$(tail -n 4 "${_projectStateFile}" | tr \" \')"
+		tail="$(tail -n 10 "${_projectStateFile}" | tr \" \')"
 		_messageBody="$(printf '%s\n(.....)\n%s' "${head}" "${tail}")"
 	else
 		_messageBody="$(tr \" \' < "${_projectStateFile}")"

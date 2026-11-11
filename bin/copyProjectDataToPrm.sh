@@ -77,7 +77,7 @@ Config and dependencies:
 
 	This script needs 3 config files, which must be located in ${CFG_DIR}:
 	1. <group>.cfg       for the group specified with -g
-	2. <host>.cfg        for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
+	2. <host>.cfg	for this server. E.g.:"${HOSTNAME_SHORT}.cfg"
 	3. sharedConfig.cfg  for all groups and all servers.
 	In addition the library sharedFunctions.bash is required and this one must be located in ${LIB_DIR}.
 ===============================================================================================================
@@ -99,7 +99,7 @@ function rsyncProjectRun() {
 	#  2. or when a pipeline has updated the results after a previous execution of this script. 
 	#
 	# Temporarily check for "${TMP_ROOT_DIR}/logs/${_project}/${_project}.pipeline.finished"
-	#        in addition to "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished"
+	#	in addition to "${TMP_ROOT_DIR}/logs/${_project}/${_run}.pipeline.finished"
 	# for backwards compatibility with old NGS_Automated 1.x.
 	#
 	#
@@ -428,7 +428,7 @@ if [[ -n "${sourceServerRootDir:-}" ]]
 then
 	SCR_ROOT_DIR="${sourceServerRootDir}"
 	TMP_ROOT_DIAGNOSTICS_DIR="${SCR_ROOT_DIR}"
-	lockFileSuffix=$(echo "${sourceServerRootDir}" | awk 'BEGIN {FS="/"}{print $2}') 
+	lockFileSuffix=$(echo "${sourceServerRootDir}" | awk 'BEGIN {FS="/"}{print $3}') 
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Using alternative sourceServerRootDir ${sourceServerRootDir} as SCR_ROOT_DIR."
 
 fi
@@ -550,6 +550,22 @@ else
 				if [[ -e "${controlFileBase}.rsyncProjectRun.finished" ]]
 				then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.rsyncProjectRun.finished present -> rsyncProjectRun completed; let's sanityCheck for project ${project}..."
+					copyToPrmFile="${controlFileBase}.rsyncProjectRun.finished"
+					startdateC=$(head -3 "${copyToPrmFile}" | tail -1  | awk 'BEGIN {FS=" "}{print $1}')
+					starttimeC=$(head -3 "${copyToPrmFile}" | tail -1  | awk 'BEGIN {FS=" "}{print $2}')
+					enddateC=$(tail -1 "${copyToPrmFile}"  | awk 'BEGIN {FS=" "}{print $1}')
+					endtimeC=$(tail -1 "${copyToPrmFile}"  | awk 'BEGIN {FS=" "}{print $2}')
+					startEpochC=$(date -d "${startdateC} ${starttimeC}" +%s 2>/dev/null)
+					endEpochC=$(date -d "${enddateC} ${endtimeC}" +%s 2>/dev/null)
+					durationSecC=$((endEpochC - startEpochC))
+					hoursC=$((durationSecC / 3600))
+					minutesC=$(( (durationSecC % 3600) / 60 ))
+					secondsC=$((durationSecC % 60))
+
+					echo -e "start copyToPrm\t${startdateC}\t${starttimeC}" > "${PRM_ROOT_DIR}/logs/${project}/${SCRIPT_NAME}.copyTiming"
+					echo -e "end copyToPrm\t${enddateC}\t${endtimeC}" >> "${PRM_ROOT_DIR}/logs/${project}/${SCRIPT_NAME}.copyTiming"
+					echo -e "duration\t${hoursC}h:${minutesC}m:${secondsC}s" >> "${PRM_ROOT_DIR}/logs/${project}/${SCRIPT_NAME}.copyTiming"
+
 				else
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${controlFileBase}.rsyncProjectRun.finished absent -> rsyncProjectRun failed."
 					continue
@@ -586,6 +602,35 @@ else
 						"${mountedCifsDevice}" "${project}" "${run}" \
 						>> "${JOB_CONTROLE_FILE_BASE}.started"
 				fi
+				
+
+				if ssh "${DATA_MANAGER}"@"${HOSTNAME_TMP}" test -e "${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/PullGsAnalysisData.uploadTiming"  
+				then
+					uploadTiming="${PRM_ROOT_DIR}/logs/${project}/PullGsAnalysisData.uploadTiming"
+					transferTiming="${PRM_ROOT_DIR}/logs/${project}/PullGsAnalysisData.transferTiming"
+					copyTiming="${PRM_ROOT_DIR}/logs/${project}/copyProjectDataToPrm.copyTiming"
+					rsync -v "${DATA_MANAGER}"@"${HOSTNAME_TMP}":"${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/PullGsAnalysisData."*"Timing" "${PRM_ROOT_DIR}/logs/${project}/"
+					startU=$(head -1 "${uploadTiming}" | awk 'BEGIN {FS="\t"}{print $2" "$3}')
+					endU=$(head -2 "${uploadTiming}" | tail -1 | awk 'BEGIN {FS="\t"}{print $2" "$3}')
+					durationU=$(tail -1 "${uploadTiming}" | awk 'BEGIN {FS="\t"}{print $2}')
+					startT=$(head -1 "${transferTiming}" | awk 'BEGIN {FS="\t"}{print $2" "$3}')
+					endT=$(head -2 "${transferTiming}" | tail -1 | awk 'BEGIN {FS="\t"}{print $2" "$3}')
+					durationT=$(head -3 "${transferTiming}" | tail -1 | awk 'BEGIN {FS="\t"}{print $2}')
+					startC=$(head -1 "${copyTiming}" | awk 'BEGIN {FS="\t"}{print $2" "$3}')
+					endC=$(head -2 "${copyTiming}" | tail -1 | awk 'BEGIN {FS="\t"}{print $2" "$3}')
+					durationC=$(tail -1 "${copyTiming}" | awk 'BEGIN {FS="\t"}{print $2}')
+					numberOfSamples=$(grep 'number' "${transferTiming}")
+					startEpoch=$(echo "${startU}" | xargs -I {} date -d "{}" +%s)
+					enddate=$(date "+%Y/%m/%d %H:%M:%S")
+					endEpoch=$(date +%s)
+					durationSec=$((endEpoch - startEpoch))
+					hours=$((durationSec / 3600))
+					minutes=$(( (durationSec % 3600) / 60 ))
+					seconds=$((durationSec % 60))
+					duration="${hours}h:${minutes}m:${seconds}s"
+					echo -e "#####\nnumber of samples :\t${numberOfSamples}\nTotal running time:\t${duration}\t(${startU} - ${enddate})\ngenomescan to server:\t${durationU}\t(${startU} - ${endU})\nserver to gd cluster:\t${durationT}\t(${startT} - ${endT})\ngd cluster to (prm) :\t${durationC}\t(${startC} - ${endC})\n#####" >> "${JOB_CONTROLE_FILE_BASE}.started"
+				fi
+				
 				# shellcheck disable=SC2029
 				if ssh "${DATA_MANAGER}@${HOSTNAME_TMP}" "touch ${TMP_ROOT_DIAGNOSTICS_DIR}/logs/${project}/run01.projectDataCopiedToPrm.finished"
 				then
@@ -595,15 +640,10 @@ else
 					mv "${JOB_CONTROLE_FILE_BASE}."{started,failed}
 					continue
 				fi
-
+				
 				rm -f "${JOB_CONTROLE_FILE_BASE}.failed"
 				mv -v "${JOB_CONTROLE_FILE_BASE}."{started,finished}
 				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Finished processing project ${project}."
-				log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Found ${JOB_CONTROLE_FILE_BASE}.finished. Setting track & trace state to finished :)."
-				dateFinished=$(date +%FT%T%z -r "${JOB_CONTROLE_FILE_BASE}.finished")
-				printf '"%s"\n' "${dateFinished}" > "${JOB_CONTROLE_FILE_BASE}.trace_putFromFile_projects.csv"
-				echo "finished: $(date +%FT%T%z)" >> "${JOB_CONTROLE_FILE_BASE}.totalRunTime"
-
 			done
 		fi
 	done
