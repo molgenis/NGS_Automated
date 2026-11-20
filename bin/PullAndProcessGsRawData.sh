@@ -1075,8 +1075,6 @@ then
 			gsBatch="$(basename "${gsBatch}")"
 			controlFileBase="${TMP_ROOT_DIR}/logs/${gsBatch}/${gsBatch}"
 			export JOB_CONTROLE_FILE_BASE="${controlFileBase}.${SCRIPT_NAME}"
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing process analysis batch ${gsBatch}..."
-		
 			_projectName=$(head -2 "${TMP_ROOT_DIR}/${gsBatch}/UMCG_CSV_"*".csv" | tail -1 | awk 'BEGIN {FS=","}{print $2}' | awk 'BEGIN {FS="-"}{print $1"-"$2}')
 		
 			if [[ -e "${JOB_CONTROLE_FILE_BASE}.finished" ]]
@@ -1092,7 +1090,7 @@ then
 					log4Bash 'TRACE' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "There is no rawdataFolder folder, skipping processing"
 					continue
 				fi
-			
+				log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Processing process raw batch ${gsBatch}..."			
 				# shellcheck disable=SC2174
 				mkdir -m 2770 -p "${TMP_ROOT_DIR}/logs/"
 				# shellcheck disable=SC2174
